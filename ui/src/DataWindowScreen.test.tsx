@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
+import { foldedRanges } from "@codemirror/language";
 import * as files from "./body";
 import { DataWindowScreen } from "./DataWindowScreen";
 import type { DataPayload } from "./dataWindow";
@@ -364,7 +365,7 @@ describe("the right-click menu on a text surface", () => {
   it("copy waits for a selection, then copies it", async () => {
     await open(payload());
     fireEvent.contextMenu(screen.getByTestId("data-surface"), { clientX: 10, clientY: 10 });
-    expect(screen.getByRole("menuitem", { name: /^copy/ })).toHaveTextContent("select some text");
+    expect(screen.getByRole("menuitem", { name: /^copy(?! the)/ })).toHaveTextContent("select some text");
     fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
 
     act(() => {
@@ -372,7 +373,250 @@ describe("the right-click menu on a text surface", () => {
     });
     await waitFor(() => expect(footer()).toHaveTextContent("selection 4 characters"));
     fireEvent.contextMenu(screen.getByTestId("data-surface"), { clientX: 10, clientY: 10 });
-    fireEvent.click(screen.getByRole("menuitem", { name: /^copy/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^copy(?! the)/ }));
     expect(writeText).toHaveBeenLastCalledWith("plan");
+  });
+});
+
+const findBox = () => screen.getByRole("textbox", { name: "find" });
+const findCount = () => screen.getByTestId("find-count");
+const doc = () => view().state.doc.toString();
+
+function findFor(query: string) {
+  fireEvent.change(findBox(), { target: { value: query } });
+}
+
+function chooseIn(row: string, choice: string) {
+  fireEvent.click(screen.getByRole("button", { name: "more" }));
+  const group = within(screen.getByRole("menu", { name: "more" })).getByRole("group", { name: row });
+  fireEvent.click(within(group).getByRole("menuitemradio", { name: choice }));
+  fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+}
+
+function foldCount() {
+  let n = 0;
+  foldedRanges(view().state).between(0, view().state.doc.length, () => {
+    n += 1;
+  });
+  return n;
+}
+
+describe("find over a 2 MB JSON document", () => {
+  const big = JSON.stringify({ items: Array.from({ length: 22_000 }, (_, i) => ({ id: i, name: `item ${i}` })) }, null, 2);
+
+  it("⌘F focuses it; it counts every match and steps by Enter, ⇧Enter, ⌘G and ⇧⌘G, wrapping", async () => {
+    expect(big.length).toBeGreaterThan(1_000_000);
+    await open(payload({ text: big }));
+    key("f");
+    expect(findBox()).toHaveFocus();
+    findFor("ITEM 2199");
+    expect(findCount()).toHaveTextContent("1 of 11");
+    fireEvent.keyDown(findBox(), { key: "Enter" });
+    expect(findCount()).toHaveTextContent("2 of 11");
+    fireEvent.keyDown(findBox(), { key: "Enter", shiftKey: true });
+    fireEvent.keyDown(findBox(), { key: "Enter", shiftKey: true });
+    expect(findCount()).toHaveTextContent("11 of 11");
+    key("g");
+    expect(findCount()).toHaveTextContent("1 of 11");
+    key("g", { shiftKey: true });
+    expect(findCount()).toHaveTextContent("11 of 11");
+    fireEvent.click(screen.getByRole("button", { name: "next match" }));
+    expect(findCount()).toHaveTextContent("1 of 11");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("Esc clears it and returns to the surface", async () => {
+    await open(payload());
+    findFor("plan");
+    expect(findCount()).toHaveTextContent("1 of 1");
+    fireEvent.keyDown(findBox(), { key: "Escape" });
+    expect(findBox()).toHaveValue("");
+    expect(findCount()).toHaveTextContent("");
+    expect(view().hasFocus).toBe(true);
+  });
+
+  it("says no match, and its arrows wait for one", async () => {
+    await open(payload());
+    findFor("absent");
+    expect(findCount()).toHaveTextContent("no match");
+    expect(screen.getByRole("button", { name: "next match" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "previous match" })).toBeDisabled();
+  });
+
+  it("a hand edit is counted at once", async () => {
+    await open(payload());
+    findFor("team");
+    expect(findCount()).toHaveTextContent("1 of 1");
+    typeInto(1, '"team": 1,');
+    expect(findCount()).toHaveTextContent("1 of 2");
+  });
+
+  it("finds in a CRLF document at the surface's own positions", async () => {
+    await open(payload({ text: '{\r\n  "a": "x",\r\n  "b": "x"\r\n}' }));
+    findFor('"x"');
+    expect(findCount()).toHaveTextContent("1 of 2");
+    const marked = [...screen.getByTestId("data-surface").querySelectorAll(".cm-content .bg-wash-select, .cm-content .bg-wash-active")];
+    expect(marked.map((m) => m.textContent)).toEqual(['"x"', '"x"']);
+  });
+
+  it("is offered on text, not on a form table, hex or an image", async () => {
+    await open(payload({ text: "a=1", typeHint: "application/x-www-form-urlencoded" }));
+    expect(screen.queryByRole("textbox", { name: "find" })).toBeNull();
+  });
+});
+
+describe("indent and sort keys", () => {
+  const text = '{"b": {"y": 1, "x": 2}, "a": [1, 2]}';
+
+  it("each is a named step; undo walks them; the indent chosen is shown", async () => {
+    await open(payload({ text }));
+    chooseIn("indent", "4");
+    expect(doc()).toBe(JSON.stringify(JSON.parse(text), null, 4));
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(within(screen.getByRole("group", { name: "indent" })).getByRole("menuitemradio", { name: "4" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("menuitem", { name: /^sort keys/ }));
+    expect(doc()).toBe('{\n    "a": [\n        1,\n        2\n    ],\n    "b": {\n        "x": 2,\n        "y": 1\n    }\n}');
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 2 edits");
+    key("z");
+    expect(doc()).toBe(JSON.stringify(JSON.parse(text), null, 4));
+    key("z");
+    expect(doc()).toBe(text);
+    expect(screen.queryByTestId("modified")).toBeNull();
+  });
+
+  it("minified and sorted, a number past 2^53 and a repeated key stay as written", async () => {
+    await open(payload({ text: '{ "id": 9007199254740993, "a": 1, "a": 2 }' }));
+    fireEvent.click(moreItem(/^sort keys/));
+    chooseIn("indent", "minified");
+    expect(doc()).toBe('{"a":1,"a":2,"id":9007199254740993}');
+    fireEvent.click(moreItem(/^restore original/));
+    key("s");
+    expect(saved.mock.lastCall![0]).toEqual(encode('{ "id": 9007199254740993, "a": 1, "a": 2 }'));
+  });
+
+  it("a CRLF document is laid out with CRLF", async () => {
+    await open(payload({ text: '{"a":1}\r\n' }));
+    chooseIn("indent", "2");
+    key("s");
+    expect(new TextDecoder().decode(saved.mock.lastCall![0])).toBe('{\r\n  "a": 1\r\n}\r\n');
+  });
+
+  it("a working copy that does not parse says where; indent and sort keys wait for it", async () => {
+    await open(payload({ text: '{\n  "a": \n}' }));
+    expect(screen.getByText(/^not valid JSON at line 3, column 1: expected a value/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    const indent = screen.getByRole("group", { name: "indent" });
+    expect(indent).toHaveAttribute("aria-disabled", "true");
+    expect(indent).toHaveTextContent("needs valid JSON");
+    expect(screen.getByRole("menuitem", { name: /^sort keys/ })).toHaveTextContent("needs valid JSON");
+    expect(screen.getByRole("group", { name: "fold to" })).not.toHaveAttribute("aria-disabled");
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    findFor("a");
+    expect(findCount()).toHaveTextContent("1 of 1");
+  });
+
+  it("an edit that breaks the JSON is named once typing pauses, and mending it clears the notice", async () => {
+    await open(payload());
+    typeInto(1, "x");
+    await waitFor(() => expect(screen.getByText(/^not valid JSON at line 1, column 2/)).toBeInTheDocument());
+    key("z");
+    await waitFor(() => expect(screen.queryByText(/^not valid JSON/)).toBeNull());
+  });
+
+  it("a read-only JSON text offers fold to, never a reformat", async () => {
+    await open(payload({ bytes: new Uint8Array([0x7b, 0x22, 0x61, 0x22, 0x3a, 0x22, 0xe9, 0x22, 0x7d]), text: undefined }));
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.queryByRole("group", { name: "indent" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /^sort keys/ })).toBeNull();
+    expect(screen.getByRole("group", { name: "fold to" })).toBeInTheDocument();
+  });
+});
+
+describe("fold to", () => {
+  const nested = JSON.stringify({ a: { b: { c: [1, 2] } }, d: [{ e: 1 }] }, null, 2);
+
+  it("folds from ⋯ to a depth, all, and none, showing the choice until the text changes", async () => {
+    await open(payload({ text: nested }));
+    chooseIn("fold to", "1");
+    expect(foldCount()).toBe(2);
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.getByRole("menuitemradio", { name: "1" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    chooseIn("fold to", "none");
+    expect(foldCount()).toBe(0);
+    chooseIn("fold to", "all");
+    expect(foldCount()).toBeGreaterThan(2);
+    typeInto(0, " ");
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(within(screen.getByRole("group", { name: "fold to" })).queryByRole("menuitemradio", { checked: true })).toBeNull();
+  });
+
+  it("is offered on XML too", async () => {
+    await open(payload({ text: "<a>\n  <b/>\n</a>", typeHint: "application/xml" }));
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.getByRole("group", { name: "fold to" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "indent" })).toBeNull();
+  });
+});
+
+describe("copy a node's path or value", () => {
+  const text = '{\n  "user": {\n    "roles": ["admin", "ops"],\n    "odd key": {"n": 9007199254740993}\n  }\n}';
+
+  function rightClickAt(offset: number) {
+    vi.spyOn(view(), "posAtCoords").mockReturnValue(offset);
+    fireEvent.contextMenu(screen.getByTestId("data-surface"), { clientX: 40, clientY: 40 });
+  }
+
+  it("from the right-click, at the node under the pointer", async () => {
+    await open(payload({ text }));
+    rightClickAt(text.indexOf('"ops"') + 1);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^copy the path/ }));
+    expect(writeText).toHaveBeenLastCalledWith("$.user.roles[1]");
+    await waitFor(() => expect(footer()).toHaveTextContent("copied"));
+
+    rightClickAt(text.indexOf("9007"));
+    fireEvent.click(screen.getByRole("menuitem", { name: /^copy the value/ }));
+    expect(writeText).toHaveBeenLastCalledWith("9007199254740993");
+
+    rightClickAt(text.indexOf('"odd key"') + 2);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^copy the path/ }));
+    expect(writeText).toHaveBeenLastCalledWith('$.user["odd key"]');
+    rightClickAt(text.indexOf('"odd key"') + 2);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^copy the value/ }));
+    expect(writeText).toHaveBeenLastCalledWith('{"n": 9007199254740993}');
+  });
+
+  it("from the keys, at the node under the cursor; a string's value is its text", async () => {
+    await open(payload({ text }));
+    act(() => {
+      view().dispatch({ selection: { anchor: text.indexOf("admin") } });
+    });
+    fireEvent.keyDown(view().contentDOM, { key: "ç", code: "KeyC", metaKey: true, altKey: true });
+    expect(writeText).toHaveBeenLastCalledWith("$.user.roles[0]");
+    fireEvent.keyDown(view().contentDOM, { key: "Ç", code: "KeyC", metaKey: true, altKey: true, shiftKey: true });
+    expect(writeText).toHaveBeenLastCalledWith("admin");
+  });
+
+  it("a container's value keeps the document's CRLF", async () => {
+    await open(payload({ text: '{\r\n  "a": [\r\n    1\r\n  ]\r\n}' }));
+    rightClickAt(9);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^copy the value/ }));
+    expect(writeText).toHaveBeenLastCalledWith("[\r\n    1\r\n  ]");
+  });
+
+  it("waits for the JSON to parse, and is never offered on text", async () => {
+    await open(payload({ text: '{"a": }' }));
+    rightClickAt(2);
+    expect(screen.getByRole("menuitem", { name: /^copy the path/ })).toHaveTextContent("needs valid JSON");
+    expect(screen.getByRole("menuitem", { name: /^copy the value/ })).toHaveTextContent("needs valid JSON");
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+    cleanup();
+    await open(payload({ text: "plain words", typeHint: "text/plain" }));
+    fireEvent.contextMenu(screen.getByTestId("data-surface"), { clientX: 10, clientY: 10 });
+    expect(screen.queryByRole("menuitem", { name: /^copy the path/ })).toBeNull();
   });
 });

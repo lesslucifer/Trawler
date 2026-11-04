@@ -6,6 +6,7 @@ import {
   canRedo,
   canUndo,
   commit,
+  currentStepName,
   editCount,
   isModified,
   redo,
@@ -41,6 +42,12 @@ describe("one history of named steps", () => {
     history = redo(redo(history));
     expect(workingText(history)).toBe("abc");
     expect(redo(history)).toBe(history);
+  });
+
+  it("names the step the working copy is at", () => {
+    const history = commit(startHistory("a"), "b", "minified");
+    expect(currentStepName(history)).toBe("minified");
+    expect(currentStepName(undo(history))).toBe("original");
   });
 
   it("a change that changes nothing adds no step", () => {

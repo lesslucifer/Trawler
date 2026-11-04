@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import {
   codeFolding,
   foldable,
-  foldAll,
   foldEffect,
   foldedRanges,
   foldGutter,
@@ -43,6 +42,9 @@ export interface LineInset {
 
 export interface EditSurfaceHandle {
   foldTo: (depth: FoldDepth) => void;
+  focus: () => void;
+  positionAt: (point: { x: number; y: number }) => number | null;
+  cursor: () => number;
 }
 
 export interface EditSurfaceProps {
@@ -52,6 +54,7 @@ export interface EditSurfaceProps {
   wrap?: boolean;
   matches?: TextRange[];
   current?: number;
+  reveal?: number;
   onChange?: (text: string, step: string, extend: boolean) => void;
   onSelect?: (text: string, line: number) => void;
   inset?: LineInset | null;
@@ -170,16 +173,16 @@ function foldRanges(state: EditorState): TextRange[] {
   return ranges;
 }
 
-function foldToDepth(view: EditorView, depth: number) {
+function foldWhere(view: EditorView, folds: (depth: number) => boolean) {
   const open: TextRange[] = [];
-  const atDepth: TextRange[] = [];
+  const chosen: TextRange[] = [];
   for (const range of foldRanges(view.state)) {
     while (open.length && open[open.length - 1].to < range.to) open.pop();
-    if (open.length === depth) atDepth.push(range);
+    if (folds(open.length)) chosen.push(range);
     open.push(range);
   }
   unfoldAll(view);
-  const effects = atDepth.map((range) => foldEffect.of(range));
+  const effects = chosen.map((range) => foldEffect.of(range));
   if (effects.length) view.dispatch({ effects });
 }
 
@@ -199,9 +202,9 @@ function revealAndScroll(view: EditorView, range: TextRange) {
 /**
  * EditSurface — the data window's whole-data surface: every byte of a JSON, XML or text document, editable, foldable and searchable, uncapped.
  * @tier T2 — owns the editor configuration (editable document, virtualised viewport, fold gutter, three-token highlight, find marks); the text, the one history and what a change means are the caller's
- * @anatomy line numbers (ink-mute) · fold gutter ▾/▸ with a "… N lines" wash-tint chip on a folded line · mono text-body document, syn-key/syn-str/syn-num, punctuation ink-mute, wrap on by default · find marks wash-select, current wash-active + 1px ink-mute outline · CodeMirror cursor and selection · an inset block under one line (the caller's node)
+ * @anatomy line numbers (ink-mute) · fold gutter ▾/▸ with a "… N lines" wash-tint chip on a folded line · mono text-body document, syn-key/syn-str/syn-num, punctuation ink-mute, wrap on by default · find marks wash-select, current wash-active + 1px ink-mute outline · CodeMirror cursor and selection · an inset block under one line (the caller's node) · fold to all folds every range inside the outermost, which stays open, so the top level reads as one line each
  * @use the data window only (DEC-70): its json / xml / text surface and a form shown encoded; read-only for a decoded result; the caller names the line break the text is written with, so an edit keeps the ones it did not touch
- * @avoid the body pane or any surface showing captured evidence (UC-5: that is SourceSurface, read-only, and the line between them is DEC-70 rule 5) · keeping its own undo history: every change goes to onChange so the caller's one history holds it, with extend set while CodeMirror's input grouping still holds · reformatting, sorting or decoding inside it — those are the caller's steps, handed back as text · a cap or a cut marker: the data window has none (DEC-70 rule 7) · marking the document edited (DEC-59: the screen says so in words) · overlaying the inset on the lines below it: it is a block in the document
+ * @avoid the body pane or any surface showing captured evidence (UC-5: that is SourceSurface, read-only, and the line between them is DEC-70 rule 5) · keeping its own undo history: every change goes to onChange so the caller's one history holds it, with extend set while CodeMirror's input grouping still holds · reformatting, sorting or decoding inside it — those are the caller's steps, handed back as text · a cap or a cut marker: the data window has none (DEC-70 rule 7) · marking the document edited (DEC-59: the screen says so in words) · overlaying the inset on the lines below it: it is a block in the document · scrolling to a match on its own: the current match is revealed only when the caller bumps reveal (a step, a new search), so an edit that moves the matches leaves the view where the user is
  * @states editable · read-only (selection, find and fold still work) · folded (view state) · with find marks · with an inset under one line. A json document that no longer parses stays json: the parser's recovery keeps highlighting and folding what still reads. No empty, error or loading state
  * @madeof CodeMirror 6 (T0) — view, state, language, lang-json, lang-xml, search decorations
  */
@@ -212,6 +215,7 @@ export function EditSurface({
   wrap = true,
   matches = NO_MATCHES,
   current = -1,
+  reveal = 0,
   onChange,
   onSelect,
   inset = null,
@@ -235,8 +239,17 @@ export function EditSurface({
       const editor = view.current;
       if (!editor) return;
       if (depth === "none") unfoldAll(editor);
-      else if (depth === "all") foldAll(editor);
-      else foldToDepth(editor, depth);
+      else if (depth === "all") foldWhere(editor, (at) => at > 0);
+      else foldWhere(editor, (at) => at === depth);
+    },
+    focus() {
+      view.current?.focus();
+    },
+    positionAt(point) {
+      return view.current?.posAtCoords(point) ?? null;
+    },
+    cursor() {
+      return view.current?.state.selection.main.head ?? 0;
     },
   }));
 
@@ -317,11 +330,13 @@ export function EditSurface({
     view.current?.dispatch({ effects: setMarks.of({ matches, current }) });
   }, [matches, current, text]);
 
+  const shownMarks = useRef({ matches, current });
+  shownMarks.current = { matches, current };
   useEffect(() => {
     const editor = view.current;
-    const target = matches[current];
-    if (editor && target && target.to <= editor.state.doc.length) revealAndScroll(editor, target);
-  }, [matches, current]);
+    const target = shownMarks.current.matches[shownMarks.current.current];
+    if (reveal && editor && target && target.to <= editor.state.doc.length) revealAndScroll(editor, target);
+  }, [reveal]);
 
   const insetLine = inset?.afterLine ?? null;
   useEffect(() => {

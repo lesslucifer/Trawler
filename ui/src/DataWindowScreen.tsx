@@ -1,13 +1,37 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import { byteLength, captionFilename, captionParts, decodeBody, hexDump, humanBytes, queryCount, saveBody } from "./body";
 import { claimOnce, takeDataPayload, type DataPayload } from "./dataWindow";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { addPairAfter, editPair, parsePairs, removePair, type PairPart } from "./formPairs";
 import {
+  findMatches,
+  indentChosen,
+  indentOf,
+  INDENTS,
+  nodeAt,
+  parseJson,
+  pathText,
+  reformatJson,
+  SORT_STEP,
+  surfaceText,
+  valueText,
+  type Indent,
+} from "./jsonTools";
+import {
   amend,
   canRedo,
   canUndo,
   commit,
+  currentStepName,
   editCount,
   isModified,
   lineBreakOf,
@@ -23,6 +47,7 @@ import {
 import {
   CopyButton,
   EditSurface,
+  Field,
   FormTable,
   HexView,
   IconButton,
@@ -32,16 +57,67 @@ import {
   Notice,
   Select,
   useCopy,
+  type EditSurfaceHandle,
+  type FoldDepth,
   type MenuItem,
   type MenuPoint,
+  type TextRange,
 } from "./components/index";
 
-type OpenMenu = { type: "more" } | { type: "context"; at: MenuPoint; row: number | null };
+type OpenMenu = { type: "more" } | { type: "context"; at: MenuPoint; row: number | null; offset?: number };
+type NodePart = "path" | "value";
 type ImageSize = "fit" | "actual";
 
 const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const NO_MATCHES: TextRange[] = [];
+const FOLD_CHOICES = [
+  { id: "1", label: "1" },
+  { id: "2", label: "2" },
+  { id: "3", label: "3" },
+  { id: "all", label: "all" },
+  { id: "none", label: "none" },
+];
+const NEEDS_JSON = "needs valid JSON";
+
+function FindBar({
+  query,
+  onQuery,
+  count,
+  total,
+  onStep,
+  onDismiss,
+  box,
+}: {
+  query: string;
+  onQuery: (query: string) => void;
+  count: string;
+  total: number;
+  onStep: (by: number) => void;
+  onDismiss: () => void;
+  box: RefObject<HTMLDivElement>;
+}) {
+  const onKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      onStep(event.shiftKey ? -1 : 1);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      onDismiss();
+    }
+  };
+  return (
+    <div ref={box} onKeyDown={onKeyDown} className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y">
+      <Field value={query} onChange={(event) => onQuery(event.target.value)} aria-label="find" placeholder="find" verbatim className="min-w-0 flex-1" />
+      <span data-testid="find-count" className="whitespace-nowrap font-ui text-chrome text-ink-mute">
+        {count}
+      </span>
+      <IconButton glyph="previous" label="previous match" onClick={() => onStep(-1)} disabled={total === 0} />
+      <IconButton glyph="next" label="next match" onClick={() => onStep(1)} disabled={total === 0} />
+    </div>
+  );
+}
 
 
 function Caption({ title }: { title: string }) {
@@ -91,7 +167,13 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const [selection, setSelection] = useState("");
   const [row, setRow] = useState<number | null>(null);
   const [size, setSize] = useState<ImageSize>("fit");
+  const [query, setQuery] = useState("");
+  const [at, setAt] = useState(0);
+  const [reveal, setReveal] = useState(0);
+  const [fold, setFold] = useState<{ id: string; text: string } | null>(null);
   const more = useRef<HTMLButtonElement>(null);
+  const surfaceHandle = useRef<EditSurfaceHandle>(null);
+  const findBox = useRef<HTMLDivElement>(null);
   const { state: copied, copy } = useCopy(payload);
   const settled = useSettled(history);
 
@@ -112,8 +194,66 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
   const lines = useMemo(() => lineCountOf(workingText(settled)), [settled]);
   const empty = payload.bytes.length === 0;
+  const onText = !empty && kind !== "image" && kind !== "hex" && !(kind === "form" && !lossy && !mixed);
+  const breakWith = lineBreak ?? "\n";
+  const found = useMemo(
+    () => (onText && query ? findMatches(surfaceText(text), query) : { ranges: NO_MATCHES, capped: false }),
+    [onText, query, text],
+  );
+  const total = found.ranges.length;
+  const current = total ? at % total : -1;
+  const settledJson = useMemo(
+    () => (kind === "json" && !empty ? parseJson(workingText(settled)) : null),
+    [kind, empty, settled],
+  );
+  const menuJson = useMemo(() => (kind === "json" && menu ? parseJson(surfaceText(text)) : null), [kind, menu, text]);
+  const parses = menuJson?.ok ?? false;
 
   const step = (next: string, name: string) => setHistory((h) => commit(h, next, name));
+  const stepFind = useCallback(
+    (by: number) => {
+      if (!total) return;
+      setAt((current + by + total) % total);
+      setReveal((n) => n + 1);
+    },
+    [current, total],
+  );
+  const search = (next: string) => {
+    setQuery(next);
+    setAt(0);
+    setReveal((n) => n + 1);
+  };
+  const dismissFind = () => {
+    search("");
+    surfaceHandle.current?.focus();
+  };
+  const reformat = (indent: Indent) => {
+    const name = INDENTS.find((choice) => choice.id === indent)?.step ?? indent;
+    setHistory((h) => {
+      const result = reformatJson(workingText(h), indent, false, breakWith);
+      return result.ok ? commit(h, result.text, name) : h;
+    });
+  };
+  const sortKeys = () =>
+    setHistory((h) => {
+      const working = workingText(h);
+      const result = reformatJson(working, indentOf(working), true, breakWith);
+      return result.ok ? commit(h, result.text, SORT_STEP) : h;
+    });
+  const foldTo = (id: string) => {
+    surfaceHandle.current?.foldTo(/^\d+$/.test(id) ? Number(id) : (id as FoldDepth));
+    setFold({ id, text });
+  };
+  const copyNode = useCallback(
+    (offset: number, part: NodePart) => {
+      const source = surfaceText(text);
+      const parsed = parseJson(source);
+      if (!parsed.ok) return;
+      const node = nodeAt(parsed.root, offset);
+      copy(part === "path" ? pathText(node.path) : valueText(source, node.node, breakWith));
+    },
+    [breakWith, copy, text],
+  );
   const currentBytes = () => shownBytes ?? workingBytes(history, payload.bytes);
   const onScreen = () => (shownBytes && kind === "hex" ? hexDump(shownBytes, shownBytes.length) : text);
   const save = useCallback(() => {
@@ -137,7 +277,18 @@ function Workbench({ payload }: { payload: DataPayload }) {
       const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
       if (!command || empty) return;
       const key = event.key.toLowerCase();
-      if (key === "s") {
+      if (key === "f" && onText) {
+        event.preventDefault();
+        const input = findBox.current?.querySelector("input");
+        input?.focus();
+        input?.select();
+      } else if (key === "g" && onText) {
+        event.preventDefault();
+        stepFind(event.shiftKey ? -1 : 1);
+      } else if (event.code === "KeyC" && event.altKey && kind === "json" && !typing && surfaceHandle.current) {
+        event.preventDefault();
+        copyNode(surfaceHandle.current.cursor(), event.shiftKey ? "value" : "path");
+      } else if (key === "s") {
         event.preventDefault();
         save();
       } else if (key === "z" && !typing && !readOnly) {
@@ -153,7 +304,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [copy, empty, kind, pairs, readOnly, removeRow, row, save]);
+  }, [copy, copyNode, empty, kind, onText, pairs, readOnly, removeRow, row, save, stepFind]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -169,6 +320,31 @@ function Workbench({ payload }: { payload: DataPayload }) {
         },
       ]);
     }
+    const foldRow: MenuItem = {
+      label: "fold to",
+      choices: FOLD_CHOICES,
+      value: fold?.text === text ? fold.id : null,
+      pick: foldTo,
+    };
+    if (kind === "json") {
+      sections.push([
+        ...(readOnly
+          ? []
+          : [
+              {
+                label: "indent",
+                choices: INDENTS.map(({ id, label }) => ({ id, label })),
+                value: parses ? indentChosen(currentStepName(history)) : null,
+                disabled: !parses,
+                why: NEEDS_JSON,
+                pick: (id: string) => reformat(id as Indent),
+              },
+              { label: "sort keys", disabled: !parses, why: NEEDS_JSON, run: sortKeys },
+            ]),
+        foldRow,
+      ]);
+    }
+    if (kind === "xml") sections.push([foldRow]);
     if (kind === "image") {
       sections.push([
         {
@@ -194,7 +370,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
     return sections;
   };
 
-  const contextSections = (target: number | null): MenuItem[][] => {
+  const contextSections = (target: number | null, offset: number | undefined): MenuItem[][] => {
     const pair = target === null ? undefined : pairs[target];
     if (kind === "form" && pair) {
       return [
@@ -205,13 +381,25 @@ function Workbench({ payload }: { payload: DataPayload }) {
         ],
       ];
     }
-    return [[{ label: "copy", keys: "⌘C", disabled: !selection, why: "select some text", run: () => copy(selection) }]];
+    const sections: MenuItem[][] = [
+      [{ label: "copy", keys: "⌘C", disabled: !selection, why: "select some text", run: () => copy(selection) }],
+    ];
+    if (kind === "json" && offset !== undefined) {
+      sections.push([
+        { label: "copy the path", keys: "⌥⌘C", disabled: !parses, why: NEEDS_JSON, run: () => copyNode(offset, "path") },
+        { label: "copy the value", keys: "⇧⌥⌘C", disabled: !parses, why: NEEDS_JSON, run: () => copyNode(offset, "value") },
+      ]);
+    }
+    return sections;
   };
 
   const onContext = (event: MouseEvent) => {
     if (readOnly || kind === "form") return;
     event.preventDefault();
-    setMenu({ type: "context", at: { x: event.clientX, y: event.clientY }, row: null });
+    const point = { x: event.clientX, y: event.clientY };
+    const handle = surfaceHandle.current;
+    const offset = handle ? (handle.positionAt(point) ?? handle.cursor()) : undefined;
+    setMenu({ type: "context", at: point, row: null, offset });
   };
 
   const surface = () => {
@@ -259,6 +447,13 @@ function Workbench({ payload }: { payload: DataPayload }) {
             </Notice>
           </div>
         )}
+        {settledJson && !settledJson.ok && (
+          <div className="border-b border-hairline px-4 py-chrome-y">
+            <Notice tone="warn" detail="find and fold still work; indent and sort keys wait for it to parse">
+              {`not valid JSON at line ${settledJson.line}, column ${settledJson.column}: ${settledJson.reason}`}
+            </Notice>
+          </div>
+        )}
         {lossy && (
           <div className="border-b border-hairline px-4 py-chrome-y">
             <Notice tone="warn" detail="an edit would rewrite those bytes too, so it stays read-only; hex shows every byte">
@@ -270,9 +465,13 @@ function Workbench({ payload }: { payload: DataPayload }) {
           text={text}
           language={kind === "form" ? "plain" : SURFACE_LANGUAGE[kind]}
           readOnly={lossy || mixed}
-          lineBreak={lineBreak ?? "\n"}
+          lineBreak={breakWith}
           onChange={(next, name, extend) => setHistory((h) => (extend ? amend(h, next, name) : commit(h, next, name)))}
           onSelect={(selected) => setSelection(selected)}
+          matches={found.ranges}
+          current={current}
+          reveal={reveal}
+          handle={surfaceHandle}
           testId="data-surface"
         />
       </div>
@@ -295,6 +494,18 @@ function Workbench({ payload }: { payload: DataPayload }) {
           </span>
         )}
       </header>
+
+      {onText && (
+        <FindBar
+          query={query}
+          onQuery={search}
+          count={!query ? "" : total ? `${current + 1} of ${total}${found.capped ? "+" : ""}` : "no match"}
+          total={total}
+          onStep={stepFind}
+          onDismiss={dismissFind}
+          box={findBox}
+        />
+      )}
 
       {surface()}
 
@@ -335,7 +546,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
         <Menu label="more" sections={moreSections()} anchor={more} onClose={() => setMenu(null)} />
       )}
       {menu?.type === "context" && (
-        <Menu label="the selection" sections={contextSections(menu.row)} at={menu.at} onClose={() => setMenu(null)} />
+        <Menu label="the selection" sections={contextSections(menu.row, menu.offset)} at={menu.at} onClose={() => setMenu(null)} />
       )}
     </div>
   );
