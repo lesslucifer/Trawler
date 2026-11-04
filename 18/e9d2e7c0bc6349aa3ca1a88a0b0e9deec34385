@@ -1,0 +1,44 @@
+schema: cr/v5
+scope: "WU one-app/e2e -> epic/one-app"
+epic: E-ONEAPP
+wu: E-ONEAPP.W5
+branch: wu/one-app/e2e
+base: ff74a6a5fa36bd8988abd33672687165cfaf180d
+head: 18e9d2e7c0bc6349aa3ca1a88a0b0e9deec34385
+diff_sha256: dfc4ac2c9dfef8b64dd946c111c78fbdd7996ba626077a1c774835211ebc29bc
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 7
+  stage_seconds:
+    gate0: 306
+    finders: 35
+    total: 328
+  by_finder:
+    correctness: { found: 5, verified: 5 }
+    efficiency: { found: 2, verified: 2 }
+findings: { found: 7, verified: 7, waived: 7 }
+waivers: []
+nits:
+  - finding: "service-attached.spec.ts after-hook destroys the current window without checking it is settings, so a failure before the switch would end the app and cascade into later spec files"
+    waived: "failure-path only: a red it() already reds the suite and names its cause; the passing path switches to settings before the hook runs"
+  - finding: "destroying the settings window may write its geometry into windows.json ahead of the layout specs"
+    waived: "the layout, layout-relaunched and layout-broken specs ran green after this spec in the full run; geometry is keyed per window label, so a settings entry does not touch main's"
+  - finding: "one-app.conf.ts onComplete removes the temp HOME but does not stop the app or core after a mid-spec failure"
+    waived: "the tauri-service ends the app it launched with the session, and the core's stdin lifeline makes it exit with the app (W2's integration test), so no orphan survives"
+  - finding: "J3's process.kill(pid, 0) liveness check also succeeds on an unreaped zombie app process"
+    waived: "the check polls for 15s and the launching service reaps its child; J3 passed in the full run, and a zombie holding the check would surface as a named red, not a false green"
+  - finding: "the owned suite points ANDROID_* at an empty SDK with no adb and nothing asserts the app tolerates that"
+    waived: "the full owned run exercised exactly that host and stayed green through onboarding; no-adb as 'no emulator' is the shell's existing contract, covered by setup.rs unit tests"
+  - finding: "the row-wait predicate in one-app.spec.ts reads each row's text in a separate WebDriver call per poll"
+    waived: "the owned list holds one row; the same pattern is used across the existing specs"
+  - finding: "xtask e2e runs the two suites sequentially"
+    waived: "deliberate: both suites launch the same app binary and windows on one desktop, so running them in parallel would race over window focus and app data"
+verdict: PASS
+date: 2026-11-04
