@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-STICKY
+base: 7cc251f48827a4fa6d8115d667b5f539da48cff6
+design_sha256: 0f05bc61dd54b2dc20842cde61cd9357a23cea642a202b27c4c873d86a9c1f0d
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/App.tsx
+    why: "Shell now holds the leg, the body mode and the remembered platform through useViewPrefs and passes them down; no element, copy, token or layout changes (W1)"
+  - path: ui/src/BodyViewer.tsx
+    why: "the pretty/raw choice becomes a controlled prop instead of local state; the same segmented control renders in the same place (W1)"
+  - path: ui/src/FlowDetail.tsx
+    why: "the request/response leg becomes a controlled prop instead of local state, and it forwards the body mode; the same segmented control renders in the same place (W1)"
+accounting: "THE EPIC'S HAND-OFF, END TO END. The epic carried no design run and added no surface or component design. W1 touched the three rendered files, each one moving state up to Shell with no visual change, and declared them undesigned; the epic-wide diff of those files is W1's alone (cb5fa6ef). W2 touched only e2e specs, launchers and the e2e overlay, and rendered nothing."
+date: 2026-11-04
