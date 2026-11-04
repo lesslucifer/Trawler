@@ -106,7 +106,18 @@ export function humanBytePair(shown: number, total: number): [string, string] {
 // Caps count characters (a rendered line is characters), but a cut marker states
 // bytes — the size the user would save. For non-ASCII the two differ.
 export function byteLength(text: string): number {
-  return new TextEncoder().encode(text).length;
+  let length = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    const next = text.charCodeAt(i + 1);
+    if (code < 0x80) length += 1;
+    else if (code < 0x800) length += 2;
+    else if (code >= 0xd800 && code < 0xdc00 && next >= 0xdc00 && next < 0xe000) {
+      length += 4;
+      i += 1;
+    } else length += 3;
+  }
+  return length;
 }
 
 // One dump, two consumers: HexRenderer tones the three parts separately, while

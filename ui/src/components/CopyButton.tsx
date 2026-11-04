@@ -14,6 +14,10 @@ export interface CopyButtonProps {
 
 const COPY_GLYPH = "⧉";
 
+export function writeClipboard(text: string): Promise<void> {
+  return Promise.resolve(navigator.clipboard?.writeText(text));
+}
+
 /**
  * CopyButton — labeled button that copies a derived payload and confirms inline; payload is not displayed.
  * @tier T1 — clipboard write + timed label-swap on a composed Button shell, no business logic
@@ -36,7 +40,7 @@ export function CopyButton({
 
   const copy = () => {
     const payload = getPayload ? getPayload() : (value ?? "");
-    Promise.resolve(navigator.clipboard?.writeText(payload)).then(
+    writeClipboard(payload).then(
       () => flash("confirming"),
       () => flash("error"),
     );

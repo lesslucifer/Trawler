@@ -3,7 +3,7 @@ export type { ButtonFrame, ButtonProps, ButtonShape, ButtonTone } from "./Button
 export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 export { CommandBlock } from "./CommandBlock";
-export { CopyButton } from "./CopyButton";
+export { CopyButton, writeClipboard } from "./CopyButton";
 export { CopyText } from "./CopyText";
 export { CutMarker, OpenWhole } from "./CutMarker";
 export type { OpenWholeAct } from "./CutMarker";

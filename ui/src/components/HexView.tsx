@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { writeClipboard } from "./CopyButton";
 import type { TextRange } from "./EditSurface";
 
 const WIDTH = 16;
@@ -49,11 +50,13 @@ export function HexView({
   bytes,
   matches = NO_MATCHES,
   current = -1,
+  onCopy = (text) => void writeClipboard(text),
   testId,
 }: {
   bytes: Uint8Array;
   matches?: TextRange[];
   current?: number;
+  onCopy?: (text: string) => void;
   testId?: string;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -106,7 +109,7 @@ export function HexView({
   const onKeyDown = (event: KeyboardEvent) => {
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "c" && selection) {
       event.preventDefault();
-      void navigator.clipboard?.writeText(copiedRange(bytes, selection));
+      onCopy(copiedRange(bytes, selection));
       return;
     }
     const by = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -WIDTH, ArrowDown: WIDTH }[event.key];

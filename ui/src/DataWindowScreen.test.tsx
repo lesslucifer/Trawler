@@ -162,6 +162,11 @@ describe("bytes the text cannot hold", () => {
     expect(new TextDecoder().decode(saved.mock.lastCall![0])).toBe("xone\r\ntwo\r\nthree");
   });
 
+  it("a CR-only text counts its lines by its own break", async () => {
+    await open(payload({ bytes: encode("a\rb\rc"), typeHint: "text/plain", text: undefined }));
+    expect(footer()).toHaveTextContent("3 lines");
+  });
+
   it("mixed line breaks stay read-only and say why", async () => {
     await open(payload({ bytes: encode("a\r\nb\nc"), typeHint: "text/plain", text: undefined }));
     expect(screen.getByText(/mixed line breaks/)).toBeInTheDocument();
@@ -196,6 +201,18 @@ describe("copy and save", () => {
     fireEvent.click(moreItem(/^save original/));
     expect(saved.mock.lastCall![0]).toBe(handed.bytes);
     expect(saved.mock.lastCall![1]).toBe("response-body-GET-api.example.com-v2-x-original.json");
+  });
+});
+
+describe("a copy from a menu or a key says how it went", () => {
+  it("copied, or copy failed, in the status bar", async () => {
+    await open(payload());
+    fireEvent.click(moreItem(/^copy original/));
+    expect(await within(footer()).findByText("copied")).toHaveClass("text-ok");
+
+    writeText.mockImplementationOnce(() => Promise.reject(new Error("denied")));
+    fireEvent.click(moreItem(/^copy original/));
+    expect(await within(footer()).findByText("copy failed")).toHaveClass("text-warn");
   });
 });
 

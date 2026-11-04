@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   amend,
-  utf8Length,
+  lineCountOf,
   lineBreakOf,
   decodeOriginal,
   canRedo,
@@ -151,8 +151,15 @@ describe("the line break a text is written with", () => {
   });
 });
 
-it("a text's UTF-8 length is counted without encoding it", () => {
-  for (const text of ["", "abc", "café", "日本", "a😀b", "\ud800"]) {
-    expect(utf8Length(text)).toBe(new TextEncoder().encode(text).length);
-  }
+describe("the lines a text holds", () => {
+  it.each([
+    ["", 1],
+    ["one", 1],
+    ["a\nb\nc", 3],
+    ["a\r\nb\r\n", 3],
+    ["a\rb\rc", 3],
+    ["a\r\nb\nc\rd", 4],
+  ])("%j has %i", (text, lines) => {
+    expect(lineCountOf(text)).toBe(lines);
+  });
 });

@@ -453,3 +453,12 @@ describe("captionFilename — a data window saves under its opener's caption", (
     expect(captionFilename("x".repeat(300), "text/plain")).toBe(`${"x".repeat(80)}.txt`);
   });
 });
+
+describe("byteLength — one UTF-8 length rule, counted without encoding", () => {
+  it.each(["", "abc", "café", "日本", "a😀b", "\ud800", "\udc00x", "\ud800\u0800", "\ud800é", "\ud800a", "x\ud800"])(
+    "%j matches TextEncoder",
+    (text) => {
+      expect(byteLength(text)).toBe(new TextEncoder().encode(text).length);
+    },
+  );
+});

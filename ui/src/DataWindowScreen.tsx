@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { captionFilename, hexDump, humanBytes, saveBody } from "./body";
+import { byteLength, captionFilename, hexDump, humanBytes, saveBody } from "./body";
 import { claimOnce, takeDataPayload, type DataPayload } from "./dataWindow";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { addPairAfter, editPair, parsePairs, removePair, type PairPart } from "./formPairs";
@@ -12,11 +12,11 @@ import {
   editCount,
   isModified,
   lineBreakOf,
+  lineCountOf,
   redo,
   restoreOriginal,
   startHistory,
   undo,
-  utf8Length,
   workingBytes,
   workingText,
   type History,
@@ -31,6 +31,8 @@ import {
   Menu,
   Notice,
   Select,
+  useConfirm,
+  writeClipboard,
   type MenuItem,
   type MenuPoint,
 } from "./components/index";
@@ -42,15 +44,6 @@ const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
-function lineCount(text: string): number {
-  let lines = 1;
-  for (let at = text.indexOf("\n"); at >= 0; at = text.indexOf("\n", at + 1)) lines += 1;
-  return lines;
-}
-
-function copy(text: string) {
-  void navigator.clipboard?.writeText(text);
-}
 
 function Workbench({ payload }: { payload: DataPayload }) {
   const detected = useMemo(() => detectKind(payload.typeHint, payload.bytes), [payload]);
@@ -63,6 +56,16 @@ function Workbench({ payload }: { payload: DataPayload }) {
   const [row, setRow] = useState<number | null>(null);
   const [size, setSize] = useState<ImageSize>("fit");
   const more = useRef<HTMLButtonElement>(null);
+  const { state: copied, flash } = useConfirm(payload);
+  const copy = useCallback(
+    (text: string) => {
+      writeClipboard(text).then(
+        () => flash("confirming"),
+        () => flash("error"),
+      );
+    },
+    [flash],
+  );
 
   const kind = override ?? detected.kind;
   const lineBreak = useMemo(() => lineBreakOf(original), [original]);
@@ -75,11 +78,11 @@ function Workbench({ payload }: { payload: DataPayload }) {
     [kind, history, payload.bytes],
   );
   const shownSize = useMemo(
-    () => (isModified(history) ? utf8Length(workingText(history)) : payload.bytes.length),
+    () => (isModified(history) ? byteLength(workingText(history)) : payload.bytes.length),
     [history, payload.bytes],
   );
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
-  const lines = useMemo(() => lineCount(text), [text]);
+  const lines = useMemo(() => lineCountOf(text), [text]);
   const empty = payload.bytes.length === 0;
 
   const step = (next: string, name: string) => setHistory((h) => commit(h, next, name));
@@ -122,7 +125,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [empty, kind, pairs, readOnly, removeRow, row, save]);
+  }, [copy, empty, kind, pairs, readOnly, removeRow, row, save]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -202,7 +205,7 @@ function Workbench({ payload }: { payload: DataPayload }) {
         </div>
       );
     }
-    if (kind === "hex") return <HexView bytes={currentBytes()} testId="data-surface" />;
+    if (kind === "hex") return <HexView bytes={currentBytes()} onCopy={copy} testId="data-surface" />;
     if (kind === "form" && !lossy && !mixed) {
       const edit = (index: number, part: PairPart, value: string) =>
         step(editPair(text, index, part, value), `edited the ${part} of pair ${index + 1}`);
@@ -284,6 +287,8 @@ function Workbench({ payload }: { payload: DataPayload }) {
         <span>{humanBytes(shownSize)}</span>
         {!readOnly && !empty && <span>{kind === "form" ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}
         <span className="ml-auto flex items-center gap-x-3">
+          {copied === "confirming" && <span className="text-ok">copied</span>}
+          {copied === "error" && <span className="text-warn">copy failed</span>}
           {selection && kind !== "form" && !readOnly && <span>selection {plural(selection.length, "character")}</span>}
           {readOnly ? (
             <span>read-only</span>
