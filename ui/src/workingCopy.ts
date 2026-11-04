@@ -13,19 +13,6 @@ export const ORIGINAL_STEP = "original";
 export const RESTORE_STEP = "restore original";
 export const HISTORY_BUDGET = 32 * 1024 * 1024;
 
-export interface DecodedOriginal {
-  text: string;
-  whole: boolean;
-}
-
-export function decodeOriginal(bytes: Uint8Array): DecodedOriginal {
-  try {
-    return { text: new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes), whole: true };
-  } catch {
-    return { text: new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes), whole: false };
-  }
-}
-
 interface Breaks {
   crlf: number;
   cr: number;

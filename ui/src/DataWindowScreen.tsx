@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
-import { byteLength, captionFilename, hexDump, humanBytes, saveBody } from "./body";
+import { byteLength, captionFilename, decodeBody, hexDump, humanBytes, saveBody } from "./body";
 import { claimOnce, takeDataPayload, type DataPayload } from "./dataWindow";
 import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { addPairAfter, editPair, parsePairs, removePair, type PairPart } from "./formPairs";
@@ -8,7 +8,6 @@ import {
   canRedo,
   canUndo,
   commit,
-  decodeOriginal,
   editCount,
   isModified,
   lineBreakOf,
@@ -47,7 +46,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function Workbench({ payload }: { payload: DataPayload }) {
   const detected = useMemo(() => detectKind(payload.typeHint, payload.bytes), [payload]);
-  const decoded = useMemo(() => decodeOriginal(payload.bytes), [payload]);
+  const decoded = useMemo(() => decodeBody(payload.bytes, { keepBom: true }), [payload]);
   const original = decoded.text;
   const [history, setHistory] = useState<History>(() => startHistory(original));
   const [override, setOverride] = useState<DataKind | null>(null);

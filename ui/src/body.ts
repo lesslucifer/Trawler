@@ -54,11 +54,11 @@ export interface DecodedBody {
 // downstream cannot tell a replacement character from one the body carried on
 // purpose. The strict pass is the same single decode the lenient one was; only
 // a body that fails it is decoded twice.
-export function decodeBody(bytes: Uint8Array): DecodedBody {
+export function decodeBody(bytes: Uint8Array, { keepBom = false } = {}): DecodedBody {
   try {
-    return { text: new TextDecoder("utf-8", { fatal: true }).decode(bytes), whole: true };
+    return { text: new TextDecoder("utf-8", { fatal: true, ignoreBOM: keepBom }).decode(bytes), whole: true };
   } catch {
-    return { text: bodyText(bytes), whole: false };
+    return { text: new TextDecoder("utf-8", { ignoreBOM: keepBom }).decode(bytes), whole: false };
   }
 }
 

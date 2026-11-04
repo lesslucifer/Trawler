@@ -55,6 +55,11 @@ describe("an edit re-encodes only its own pair", () => {
     expect(editPair("a+b=1%7e", 0, "key", "c d")).toBe("c%20d=1%7e");
     expect(editPair("flag", 0, "value", "on")).toBe("flag=on");
     expect(editPair("flag", 0, "key", "on air")).toBe("on%20air");
+  });
+
+  it("a lone surrogate in an edit is written as the replacement character, not thrown", () => {
+    expect(editPair("a=1", 0, "value", "x\ud800")).toBe("a=x%EF%BF%BD");
+    expect(editPair("a=1", 0, "key", "\udc00")).toBe("%EF%BF%BD=1");
     expect(parsePairs(editPair("%ZZ=ok", 0, "value", "new"))[0].kept).toBe(true);
   });
 });

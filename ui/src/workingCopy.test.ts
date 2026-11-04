@@ -3,7 +3,6 @@ import {
   amend,
   lineCountOf,
   lineBreakOf,
-  decodeOriginal,
   canRedo,
   canUndo,
   commit,
@@ -125,18 +124,6 @@ describe("the history is bounded", () => {
   });
 });
 
-describe("the original as text", () => {
-  it("valid UTF-8 decodes whole, a byte-order mark kept so it re-encodes", () => {
-    const bom = new Uint8Array([0xef, 0xbb, 0xbf, 0x61]);
-    const decoded = decodeOriginal(bom);
-    expect(decoded.whole).toBe(true);
-    expect(Array.from(new TextEncoder().encode(decoded.text))).toEqual(Array.from(bom));
-  });
-
-  it("bytes that are not UTF-8 decode lossily and say so", () => {
-    expect(decodeOriginal(new Uint8Array([0x61, 0xff]))).toEqual({ text: "a\ufffd", whole: false });
-  });
-});
 
 describe("the line break a text is written with", () => {
   it.each([

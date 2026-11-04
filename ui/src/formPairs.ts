@@ -32,13 +32,17 @@ function splitRaw(raw: string): [key: string, value: string] {
   return eq < 0 ? [raw, ""] : [raw.slice(0, eq), raw.slice(eq + 1)];
 }
 
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g;
+
+const encodePart = (text: string) => encodeURIComponent(text.replace(LONE_SURROGATE, "\ufffd"));
+
 export function editPair(text: string, index: number, part: PairPart, edited: string): string {
   return raws(text)
     .map((raw, i) => {
       if (i !== index) return raw;
       const [key, value] = splitRaw(raw);
-      if (part === "value") return `${key}=${encodeURIComponent(edited)}`;
-      return raw.includes("=") ? `${encodeURIComponent(edited)}=${value}` : encodeURIComponent(edited);
+      if (part === "value") return `${key}=${encodePart(edited)}`;
+      return raw.includes("=") ? `${encodePart(edited)}=${value}` : encodePart(edited);
     })
     .join("&");
 }

@@ -462,3 +462,17 @@ describe("byteLength — one UTF-8 length rule, counted without encoding", () =>
     },
   );
 });
+
+describe("decodeBody keeps a byte-order mark when asked", () => {
+  it("dropped by default, kept with keepBom so the text re-encodes to the same bytes", () => {
+    const bom = new Uint8Array([0xef, 0xbb, 0xbf, 0x61]);
+    expect(decodeBody(bom).text).toBe("a");
+    const kept = decodeBody(bom, { keepBom: true });
+    expect(kept.whole).toBe(true);
+    expect(Array.from(new TextEncoder().encode(kept.text))).toEqual(Array.from(bom));
+  });
+
+  it("bytes that are not UTF-8 decode lossily and say so, either way", () => {
+    expect(decodeBody(new Uint8Array([0x61, 0xff]), { keepBom: true })).toEqual({ text: "a\ufffd", whole: false });
+  });
+});
