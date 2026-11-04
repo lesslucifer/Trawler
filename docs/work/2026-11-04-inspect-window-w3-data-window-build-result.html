@@ -22,7 +22,7 @@
     <h2 id="outcome">Outcome</h2>
     <table data-item="outcome" data-c="outcome">
       <tr><th>Expected</th><th>Shipped</th><th></th></tr>
-      <tr><td>⧉ on the pane, or the cut marker's button, opens the window with what the pane holds</td><td>BodyViewer's ⧉,
+      <tr><td>↗ on the pane, or the cut marker's button, opens the window with what the pane holds</td><td>BodyViewer's ↗,
         ⌘⇧O, and CutMarker's Button through the OpenWhole context; pretty and raw are separate keys, raw goes without a
         hint</td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>2 MB JSON whole, editable, folds per node</td><td>EditSurface on CodeMirror's viewport; fold gutter, the
@@ -59,6 +59,14 @@
         the code reads the record before the build, and the two other rows are asserted</td><td>the mock runtime has no
         monitor, so it places nothing and records its own zero geometry; <code>placed()</code>'s unit tests hold
         placement and W7's e2e sees a real window</td></tr>
+      <tr><td>the pane's way in drawn as ⧉</td><td>↗</td><td>the user's look at the built window: ⧉ is CopyButton's
+        copy glyph, so the opener read as a copy</td></tr>
+      <tr><td>the header: the caption as one heading</td><td>the caption read in parts: what it is in a muted label
+        line; method, host, path and query on one truncated line with a parameter count; the whole caption on
+        hover</td><td>the user's look: a long URL wrapped the heading over four lines</td></tr>
+      <tr><td>Select: the popup opens below, no open-upward state</td><td><code>opens="above"</code>, used by the
+        footer's kind picker; the window never scrolls as a whole</td><td>the user's look: opened downward on the bottom
+        edge, the list's scroll-into-view scrolled the page and pushed the header out</td></tr>
       <tr><td>—</td><td>the archived run and W2's result link the four built components instead of their retired design
         files</td><td>the files left the tree in DEC-16's order; a dead link reds verify-doc</td></tr>
     </table>
@@ -99,7 +107,9 @@
         inside a line) and two importants (the copy outcome written by hand a third time; the footer scanning the whole
         text on every keystroke), fixed: EditSurface lets CodeMirror split on every break and reports the text joined with
         the original's; <code>useCopy</code> is the one copy contract, used by CopyButton, CopyText and the window; the
-        footer counts lines and size once typing pauses</td></tr>
+        footer counts lines and size once typing pauses. Round 7 PASS on <code>573d7cee</code>. The user's look at the
+        built window then brought <code>0c55a9ee</code> (the three deviations above), reviewed again on the tip that
+        carries this report</td></tr>
       <tr><td>docs</td><td><a href="../decisions/dec-69-the-data-window.html">DEC-69</a> rule 10 ·
         <a href="../decisions/decisions-index.html">decisions index</a> · the four design files retired</td></tr>
     </table>
