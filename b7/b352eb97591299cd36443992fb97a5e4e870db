@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: b7b352eb97591299cd36443992fb97a5e4e870db
+base: 768fb8905fc14c7b3e813483126e5c82da89be35
+tier: key
+signer: vuluu
+report: docs/work/2026-11-04-inspect-window-w5-form-text-hex-tools-result.html
+report_sha256: f2d16e34371cdd6a8271147a759b84a2d670c35aec8c341bd16c6384b88044b7
+date: 2026-11-04
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAQl0uch4ATP3Op6/vrgK7gL5RKKkmYkKXd57ZyVBsVBq/PexQkwfkoft
+  qNKamTDZrssQFdp1C/7k/GLuW6QkID
+  -----END SSH SIGNATURE-----
