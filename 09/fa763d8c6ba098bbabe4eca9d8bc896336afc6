@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-QUERY
+wu: E-QUERY.W2
+base: aa8584f11b1f903472e73bbabd3d720d7b7b30ec
+tip: 09fa763d8c6ba098bbabe4eca9d8bc896336afc6
+diff_sha256: e7c12a331390218c5206186aef2a2e769be4d6dd1e88271ade66923774315c16
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-04
