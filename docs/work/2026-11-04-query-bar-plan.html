@@ -8,63 +8,64 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-QUERY — plan: one bar to filter, search and command</h1>
-      <p>Four separate filter controls and a scatter of menus become one typed query bar. It understands filters such as <code>status:4xx host:api</code>, and with a <code>&gt;</code> prefix it runs commands.</p>
-      <div class="meta">v1 · 2026-11-04 · Trawler · T3 epic plan · <span class="badge id">E-QUERY</span> · branch <code>epic/query-bar</code> · worktree <code>../Trawler-query-bar</code></div>
+      <h1>E-QUERY — plan: one bar to filter and search</h1>
+      <p>Four separate filter controls become one query bar of filter chips. Typing <code>status:4xx</code> and accepting it adds a chip, and the list follows the chips.</p>
+      <div class="meta">v5 · 2026-11-04 · Trawler · T3 epic plan · <span class="badge id">E-QUERY</span> · branch <code>epic/query-bar</code> · worktree <code>../Trawler-query-bar</code></div>
     </div>
   </header>
   <main>
 
     <h2 id="intent">Intent</h2>
     <div data-item="intent">
-      <p>Narrowing the list means learning four controls with four different rules: a free-text field that searches only the URI, a host dropdown, a method dropdown, and a status field that takes <code>404</code> or <code>4xx</code>. Two filters the core already has (<code>content_type</code> and <code>source</code>) are unreachable from the app. Actions are scattered across an icon button, a menu, the detail pane and the native menu. The owner wants one place to type: one query bar whose grammar is visible as you type, with completions that teach it. This epic reverses UC-4's ruling that <em>“an exactly-matched filter is chosen rather than typed”</em>, so it carries a new DEC.</p>
+      <p>Narrowing the list means learning four controls with four different rules: a free-text field that searches only the URI, a host dropdown, a method dropdown, and a status field that takes <code>404</code> or <code>4xx</code>. Two filters the core already has (<code>content_type</code> and <code>source</code>) are unreachable from the app. The owner wants one place to type: one query bar where every filter is a chip, with suggestions that teach the grammar as you type. This epic reverses UC-4's ruling that <em>“an exactly-matched filter is chosen rather than typed”</em>, so it carries a new DEC.</p>
     </div>
 
     <h2 id="today">Today — what the bar absorbs</h2>
     <table data-c="today">
-      <tr><th>Control today</th><th>Where</th><th>Becomes</th></tr>
-      <tr><td>free text field (substring of the URI)</td><td><code>App.tsx:1123</code></td><td>a bare word, e.g. <code>login</code></td></tr>
-      <tr><td>host dropdown</td><td><code>App.tsx:1130</code></td><td><code>host:api.example</code>, with hosts seen offered as completions</td></tr>
+      <tr><th>Control today</th><th>Where</th><th>Becomes the chip</th></tr>
+      <tr><td>free text field (substring of the URI)</td><td><code>App.tsx:1123</code></td><td>a text chip, e.g. <code>login</code></td></tr>
+      <tr><td>host dropdown</td><td><code>App.tsx:1130</code></td><td><code>host:api.example</code>, with hosts seen offered as suggestions</td></tr>
       <tr><td>method dropdown</td><td><code>App.tsx:1138</code></td><td><code>method:POST</code></td></tr>
       <tr><td>status field (<code>404</code> / <code>4xx</code>)</td><td><code>App.tsx:1152</code></td><td><code>status:4xx</code></td></tr>
       <tr><td><em>no control</em>: core <code>content_type</code></td><td><code>store.rs:209</code></td><td><code>type:json</code></td></tr>
       <tr><td><em>no control</em>: core <code>source</code></td><td><code>store.rs:221</code></td><td><code>source:sent</code></td></tr>
-      <tr><td>clear ⌫ · export · import · new request · setup · settings · reset layout</td><td><code>CaptureControls.tsx</code>, <code>menu.rs</code></td><td><code>&gt;clear</code>, <code>&gt;export</code>, … (each existing control stays in place)</td></tr>
     </table>
-    <div class="callout warn" data-c="host-bug">Bug found during research: the host dropdown builds its options with <code>new URL().host</code>, which keeps the port (<code>flow.ts:109</code>). The core matches against <code>http::Uri::host()</code>, which drops it (<code>flow.rs:144</code>). Picking <code>localhost:8080</code> therefore matches nothing. W1 fixes this by matching <code>host:</code> against host or host:port.</div>
+    <div class="callout warn" data-c="host-bug">Bug found during research: the host dropdown builds its options with <code>new URL().host</code>, which keeps the port (<code>flow.ts:109</code>). The core matches against <code>http::Uri::host()</code>, which drops it (<code>flow.rs:144</code>). Picking <code>localhost:8080</code> therefore matches nothing. W1 fixes this by matching the host filter against host or host:port.</div>
 
     <h2 id="shape">Shape</h2>
     <div class="diagram" data-c="shape">
       <pre class="mermaid">
 flowchart LR
-  B["query bar<br/>status:4xx -method:GET login"] -- "?query=…" --> P["core: query parser<br/>(one grammar)"]
-  P --> F["FlowFilter<br/>(AND of predicates)"]
-  F --> L["GET /flows"]
-  F --> X["GET /flows/export"]
-  F --> D["DELETE /flows"]
-  P -- "400 + column of the bad token" --> B
-  B -- "&gt; prefix" --> C["command list<br/>(client)"]
+  T["draft text<br/>status:4xx"] --> P["client: parser"]
+  P -- "Enter · Tab · pick a suggestion" --> C["chips<br/>[status:4xx] [-method:GET] [host:a] [host:b]"]
+  P -- "does not parse:<br/>stays a draft, says why" --> T
+  C -- "chip added or removed<br/>status=4xx&amp;not_method=GET&amp;host=a&amp;host=b" --> L["GET /flows"]
+  C --> X["GET /flows/export"]
+  C --> D["DELETE /flows"]
+  L -- "400 naming the param" --> C
       </pre>
-      <div class="caption">The grammar lives in the core, so the list, export, clear and every API client read one language (API-first). Commands stay in the client.</div>
+      <div class="caption">The grammar is the app's, and the query is the chips: only adding or removing a chip refetches, never a keystroke. The core stays keyed parameters and gains lists, negation and <code>is</code> (Q1). An API client writes the same parameters directly.</div>
     </div>
 
     <table data-c="grammar">
-      <tr><th>Form</th><th>Means</th><th>Status</th></tr>
-      <tr><td><code>word</code> · <code>"two words"</code></td><td>substring of the URI (today's <code>q</code>)</td><td>exists</td></tr>
-      <tr><td><code>host:</code> <code>method:</code> <code>status:</code> <code>type:</code> <code>source:</code></td><td>today's five keyed predicates</td><td>exists in core</td></tr>
-      <tr><td><code>-key:value</code> · <code>-word</code></td><td>negation</td><td>new</td></tr>
-      <tr><td><code>method:GET,POST</code></td><td>OR within one key</td><td>new</td></tr>
-      <tr><td><code>is:pending</code> · <code>is:https</code></td><td>no response yet · scheme</td><td>new (Q2)</td></tr>
-      <tr><td>unknown key, bad status</td><td>400, naming the token and its position. The bar marks the token, and the list says why it is empty (DEC-30's “explained at the list”).</td><td>new</td></tr>
+      <tr><th>Draft typed</th><th>Chip</th><th>Sent as</th><th>Means</th><th>Status</th></tr>
+      <tr><td><code>login</code> · <code>"two words"</code></td><td>text</td><td><code>q=</code></td><td>substring of the URI</td><td>exists</td></tr>
+      <tr><td>two text chips: <code>login</code> <code>token</code></td><td>text ×2</td><td><code>q=login&amp;q=token</code></td><td>matches all of them (Q10)</td><td>new in core</td></tr>
+      <tr><td><code>host:</code> <code>method:</code> <code>status:</code> <code>type:</code> <code>source:</code></td><td>keyed</td><td><code>host=</code> <code>method=</code> <code>status=</code> <code>content_type=</code> <code>source=</code></td><td>today's five keyed predicates</td><td>exists</td></tr>
+      <tr><td>same key twice: <code>host:api</code> <code>host:auth</code></td><td>keyed ×2</td><td><code>host=api&amp;host=auth</code></td><td>matches any of them (Q2)</td><td>new in core</td></tr>
+      <tr><td><code>-key:value</code> · <code>-word</code></td><td>negated</td><td><code>not_&lt;key&gt;=</code> · <code>not_q=</code></td><td>matches none of them</td><td>new in core</td></tr>
+      <tr><td><code>is:pending</code> · <code>is:https</code></td><td>keyed</td><td><code>is=pending</code> · <code>is=https</code></td><td>no response yet · scheme</td><td>new in core</td></tr>
+      <tr><td>unknown key, unclosed quote, empty value, a status that is not a code or class</td><td><em>none</em></td><td><em>nothing</em></td><td>the draft stays a draft and says why beside it. The chips and the list are untouched.</td><td>new in client</td></tr>
+      <tr><td>a chip the core still refuses</td><td>marked</td><td>as typed</td><td>the core's 400 names the param. The chip that produced it is marked, and the row region explains it as a refused query is explained today.</td><td>exists</td></tr>
     </table>
 
     <h2 id="use-cases">Use-case requirements</h2>
     <div data-item="use-cases">
       <table>
         <tr><th>UC</th><th>Change</th></tr>
-        <tr><td><span class="badge id">UC-4</span></td><td>The four filter controls are replaced by one query bar. Typing narrows the list, completions offer the keys, the hosts seen, methods, status classes and sources, and a malformed query is explained rather than swallowed. A <code>&gt;</code> prefix lists commands. ⌘F / ⌘K focus the bar (Q3).</td></tr>
-        <tr><td><span class="badge id">UC-3 · UC-4</span> listing</td><td><code>GET /flows</code> gains <code>query=</code>. The existing keyed parameters stay and are AND-ed with it, so no current client breaks.</td></tr>
-        <tr><td><span class="badge id">UC-6</span> · <span class="badge id">UC-7</span></td><td>Export and clear take the same <code>query=</code>, so “export or clear what I see” still holds.</td></tr>
+        <tr><td><span class="badge id">UC-4</span></td><td>The four filter controls are replaced by one query bar holding filter chips. Typing writes a draft, and suggestions follow it: the keys while a key is being typed, then that key's values (the hosts seen, methods, status classes, types, sources, <code>is:</code> states). Picking a suggestion, Tab or Enter turns the draft into a chip. The list updates when a chip is added or removed, never on a keystroke. A draft that does not parse stays a draft and says why. A chip is removed by its × or by Backspace in an empty draft. ⌘F focuses the bar (Q3). The chips survive a relaunch, restored visibly in the bar (Q4).</td></tr>
+        <tr><td><span class="badge id">UC-3 · UC-4</span> listing</td><td><code>GET /flows</code> takes a repeated <code>q</code> as all of, any other repeated keyed parameter as any of, a <code>not_&lt;key&gt;=</code> form of each key (none of), and <code>is=pending|https</code>. A single parameter behaves exactly as today, so no current client breaks. There is no query-string grammar in the core.</td></tr>
+        <tr><td><span class="badge id">UC-6</span> · <span class="badge id">UC-7</span></td><td>Export and clear accept the same parameters, so “export or clear what I see” still holds.</td></tr>
       </table>
     </div>
 
@@ -72,12 +73,18 @@ flowchart LR
     <div data-item="expected">
       <table>
         <tr><th>Do</th><th>See</th></tr>
-        <tr><td>type <code>status:4xx host:api</code></td><td>only 4xx flows to hosts containing “api”</td></tr>
-        <tr><td>type <code>-method:OPTIONS type:json</code></td><td>JSON flows, preflights hidden</td></tr>
-        <tr><td>type <code>host:localhost:8080</code></td><td>that host's flows (today's empty-list bug is gone)</td></tr>
-        <tr><td>type <code>stauts:4xx</code></td><td>the token is marked; the list says <em>unknown key “stauts” — did you mean status?</em></td></tr>
-        <tr><td>type <code>&gt;exp</code>, Enter</td><td>HAR export of the current query</td></tr>
-        <tr><td><code>curl '…/flows?query=status:5xx'</code></td><td>the same rows the app shows for that query</td></tr>
+        <tr><td>focus the empty bar, type <code>st</code></td><td>key suggestions, narrowed to <code>status:</code> as <code>st</code> is typed; the list does not change</td></tr>
+        <tr><td>Tab, then type <code>4</code></td><td>the draft reads <code>status:4</code> and <code>4xx</code> is suggested; Tab makes a <code>status:4xx</code> chip, and only then does the list narrow to 4xx</td></tr>
+        <tr><td>type <code>host:</code></td><td>one suggestion per host seen, including any with a port</td></tr>
+        <tr><td>add <code>host:api</code> and <code>host:auth</code></td><td>flows to either host</td></tr>
+        <tr><td>add <code>-method:OPTIONS</code> and <code>type:json</code></td><td>JSON flows, preflights hidden</td></tr>
+        <tr><td>add <code>host:localhost:8080</code></td><td>that host's flows (today's empty-list bug is gone)</td></tr>
+        <tr><td>add text chips <code>login</code> and <code>token</code></td><td>flows whose URI contains both</td></tr>
+        <tr><td>type <code>stauts:4xx</code>, Enter</td><td>no chip is made; the draft says <em>unknown key “stauts” — did you mean status?</em> and the list is unchanged</td></tr>
+        <tr><td>Backspace in the empty draft</td><td>the last chip goes and the list widens</td></tr>
+        <tr><td>export from the capture menu</td><td>HAR export of exactly the chips' flows</td></tr>
+        <tr><td>relaunch the app</td><td>the chips are back in the bar, and the list follows them</td></tr>
+        <tr><td><code>curl '…/flows?status=5xx&amp;not_method=OPTIONS'</code></td><td>the same rows the app shows for the chips <code>status:5xx</code> <code>-method:OPTIONS</code></td></tr>
         <tr><td>header</td><td>one bar where four controls were</td></tr>
       </table>
     </div>
@@ -85,57 +92,54 @@ flowchart LR
     <h2 id="non-goals">Non-goals</h2>
     <div data-item="non-goals">
       <ul>
-        <li>Searching header values or body text, or filtering on duration or size. Each needs index and cost decisions of its own (Q2 records it as a roadmap row by default).</li>
-        <li>Saved queries, preset filters, tabs. These are the deferred <em>tabs &amp; presets</em> epic, which builds on this grammar.</li>
+        <li>A query grammar in the core (<code>?query=</code>). The core stays keyed parameters (Q1).</li>
+        <li>OR syntax within one key (<code>method:GET,POST</code>). Repeating the key covers it (Q2).</li>
+        <li>Searching header values or body text, or filtering on duration or size. Each needs index and cost decisions of its own and becomes a roadmap row.</li>
+        <li>Saved queries, preset filters, tabs. These are the deferred <em>tabs &amp; presets</em> epic, which builds on these chips.</li>
         <li>Filtering <code>GET /stream</code>; the UI keeps refetching on events.</li>
         <li>Changing the legacy embedded web shell's four inputs (UC-3).</li>
-        <li>Removing the existing buttons or menu items that the commands mirror.</li>
+        <li>Actions in the bar (export, clear, settings, …). They stay in the existing menus and buttons (Q8).</li>
       </ul>
     </div>
 
     <h2 id="wu-summaries">WU summaries</h2>
     <div data-item="wu-summaries">
       <div data-wu="E-QUERY.W1">
-        <p data-item="wu-summary"><b>Core query grammar.</b> A <code>query</code> module that parses a string into <code>FlowFilter</code>, with negation, OR within a key, quoting and <code>is:</code>. <code>?query=</code> on <code>GET /flows</code>, <code>/flows/export</code> and <code>DELETE /flows</code>, with a 400 that names the token and its offset. <code>host:</code> matches host or host:port.</p>
+        <p data-item="wu-summary"><b>Core: lists, negation and <code>is</code>.</b> Through the shared <code>FilterQuery</code>, so <code>GET /flows</code>, <code>/flows/export</code> and <code>DELETE /flows</code> all take: a repeated <code>q</code> (all of), any other keyed parameter repeated (any of), each key's <code>not_</code> form (none of), and <code>is=pending|https</code>. <code>FlowFilter</code> becomes include and exclude lists per key. Repeated keys need an extractor that reads them, because axum's <code>Query</code> (serde_urlencoded) refuses a duplicate key today. The host filter matches host or host:port.</p>
         <p data-item="wu-maps-to">UC-3·UC-4 listing, UC-6, UC-7, and the host bug.</p>
-        <p data-item="wu-expected">Every grammar form is covered by unit tests. An integration test proves that the listing, export and clear select the same flows for one query, and that the wire shape of the 400 is snapshot-locked.</p>
+        <p data-item="wu-expected">Unit tests cover each predicate, including a negated status on a pending flow and the all-of rule for <code>q</code>. An integration test proves that the listing, export and clear select the same flows for one parameter set, and that a single parameter behaves as it does today.</p>
         <p data-item="wu-deps">none</p>
       </div>
       <div data-wu="E-QUERY.W2">
-        <p data-item="wu-summary"><b>Design run: the query bar.</b> One design run for the header with the bar in place of the four controls, plus a component design for the bar and its completion popup (tokens, error mark, <code>&gt;</code> command mode). Closed after the owner's rounds, then archived for W3 and W4 to cite.</p>
+        <p data-item="wu-summary"><b>Design run: the query bar.</b> One design run for the header with the bar in place of the four controls, plus a component design for the bar: its chips (keyed, text, negated, refused by the core), the draft and its error, and the suggestion list and its highlighted entry. The chip is a new small control, so it composes DEC-18's small-control box and draws only from DEC-17's vocabulary. Closed after the owner's rounds, then archived for W3 to cite.</p>
         <p data-item="wu-maps-to">UC-4, under the design → build rule.</p>
         <p data-item="wu-expected">A closed design run that the owner has signed off.</p>
         <p data-item="wu-deps">none (can run beside W1)</p>
       </div>
       <div data-wu="E-QUERY.W3">
-        <p data-item="wu-summary"><b>Build the bar.</b> The registry component built from W2's design: tokenised highlighting, completions for keys and for values (hosts seen, methods, status classes, sources), and error marking from the core's 400. It replaces the four controls in <code>App.tsx</code>, and <code>useFlows</code> sends <code>query</code>. The query text persists through E-STICKY's store if that has landed (Q4).</p>
+        <p data-item="wu-summary"><b>Build the bar.</b> A client parser that turns a draft into a chip, or into a reason naming what is wrong. The registry component is built from W2's design: chips, a draft whose suggestions update on each keystroke for keys and for values (hosts seen, methods, status classes, types, sources, <code>is:</code> states), accepted by a click, Tab or Enter and moved through with ↑/↓, removal by × or Backspace, and a core refusal mapped back to its chip. Suggestions are computed in the client and need no request. The bar replaces the four controls in <code>App.tsx</code>; <code>useFlows</code> sends the chips' parameters only when a chip is added or removed, and the chips persist through E-STICKY's store (Q4).</p>
         <p data-item="wu-maps-to">UC-4.</p>
-        <p data-item="wu-expected">The header shows one bar, the list follows the query, and a typo is explained.</p>
+        <p data-item="wu-expected">Unit tests cover every grammar form and draft error in the parser. The header shows one bar, typing never refetches, a chip narrows the list, a typo stays a draft that says why, and the chips come back after a relaunch.</p>
         <p data-item="wu-deps">W1, W2</p>
       </div>
       <div data-wu="E-QUERY.W4">
-        <p data-item="wu-summary"><b>Commands.</b> <code>&gt;</code> mode lists the app's actions (clear, export, import, new request, set up a device, settings, reset layout, copy as curl or replay for the open flow) and runs each through the same handler as its existing control, with ⌘K to focus.</p>
-        <p data-item="wu-maps-to">UC-4 (the owner's “typing the command”).</p>
-        <p data-item="wu-expected">Every listed command does exactly what its button does, including the clear confirmation.</p>
-        <p data-item="wu-deps">W3</p>
-      </div>
-      <div data-wu="E-QUERY.W5">
-        <p data-item="wu-summary"><b>E2E and distillation.</b> A WebDriver spec over the query and command flows. Distil to UC-3/UC-4/UC-6/UC-7, plus a DEC: <em>one typed query replaces the chosen filters</em>.</p>
+        <p data-item="wu-summary"><b>E2E and distillation.</b> A WebDriver spec over the chip flows. Distil to UC-3/UC-4/UC-6/UC-7, and bring the DEC (landed before W1 and W2) up to what the build settled.</p>
         <p data-item="wu-maps-to">The whole epic.</p>
         <p data-item="wu-expected">The e2e suite is green, and the T2 docs state the grammar and the reversal.</p>
-        <p data-item="wu-deps">W3, W4</p>
+        <p data-item="wu-deps">W3</p>
       </div>
     </div>
 
     <h2 id="e2e-plan">E2E test plan</h2>
     <div data-item="e2e-plan">
-      <p>Run against a real ephemeral core with seeded flows of mixed host (one with a port), method, status, type and source. Each step asserts the list:</p>
+      <p>Run against a real ephemeral core with seeded flows of mixed host (one with a port), method, status, type and source. Each step asserts the chips and the list:</p>
       <ol>
-        <li>Type keyed, negated and OR queries.</li>
-        <li>Type a misspelt key and assert the explanation.</li>
-        <li>Use <code>&gt;export</code> and assert the HAR holds exactly the listed flows.</li>
-        <li>Use <code>&gt;clear</code> through its confirmation and assert that only the queried flows went.</li>
-        <li>Use ⌘K and then <code>&gt;settings</code>, and assert the Settings window opens.</li>
+        <li>Press ⌘F and assert the draft has focus. Build <code>status:4xx</code> and <code>host:localhost:8080</code> from suggestions alone (type a prefix, Tab). Assert the list holds still while typing and narrows at each chip.</li>
+        <li>Add keyed, negated and repeated-key chips, and two text chips.</li>
+        <li>Type a misspelt key, press Enter, and assert there is no chip, the draft explains, and the list is unchanged.</li>
+        <li>Remove a chip with Backspace and assert the list widens.</li>
+        <li>Export from the capture menu and assert the HAR holds exactly the listed flows.</li>
+        <li>Clear from the capture menu through its confirmation and assert that only the listed flows went and the chips stayed.</li>
       </ol>
       <p>Hermetic: local upstreams only.</p>
     </div>
@@ -143,23 +147,27 @@ flowchart LR
     <h2 id="distillation-plan">Distillation plan</h2>
     <div data-item="distillation-plan">
       <ul>
-        <li><code>docs/use-cases/web-ui.html</code>: UC-4's filter-bar text, the listing contract (UC-3·UC-4), UC-6 and UC-7, plus their index rows.</li>
-        <li>A new DEC that reverses UC-4's “chosen rather than typed” and records where the grammar lives and why.</li>
-        <li><code>docs/design-rules/</code>: any rule the design run settles, such as the completion-popup conventions.</li>
-        <li>The roadmap: strike the absorbed items, and add rows for header and body search (Q2).</li>
+        <li>A new DEC, landed on the epic branch as a docs-only commit before W1 and W2 start: it reverses UC-4's “chosen rather than typed”, and records that a filter is a chip, applied only as a chip, and that the grammar is the app's while the core stays keyed parameters (Q1). W4 updates it with what the build settled.</li>
+        <li><code>docs/use-cases/web-ui.html</code>: UC-4's filter-bar text, the listing contract (UC-3·UC-4: lists, <code>not_</code>, <code>is</code>), UC-6 and UC-7, plus their index rows.</li>
+        <li><code>docs/design-rules/</code>: any rule the design run settles, such as the chip and suggestion conventions.</li>
+        <li>The roadmap: strike the absorbed items, and add rows for header and body search, duration and size.</li>
       </ul>
     </div>
 
     <h2 id="open-questions">Open questions</h2>
     <div data-item="open-questions">
       <table>
-        <tr><th>#</th><th>Question</th><th>Proposed default</th></tr>
-        <tr><td>Q1</td><td>Should the grammar be parsed in the core (<code>?query=</code>) or translated to today's params in the client?</td><td>In the core. Export, clear and API clients then share it, and negation and OR need the core anyway.</td></tr>
-        <tr><td>Q2</td><td>Which new predicates belong in this epic?</td><td>Negation, OR within a key, <code>is:pending</code> and <code>is:https</code>. Header, body, duration and size become a roadmap row.</td></tr>
-        <tr><td>Q3</td><td>Which shortcuts should focus the bar: ⌘F, ⌘K, or both?</td><td>Both. ⌘F opens filter mode and ⌘K opens it with <code>&gt;</code> typed.</td></tr>
-        <tr><td>Q4</td><td>Should the query survive a relaunch?</td><td>Yes, through E-STICKY's store, restored visibly in the bar. If E-STICKY lands second, it adopts this.</td></tr>
-        <tr><td>Q5</td><td>When should a query apply: on every keystroke (debounced, as today) or on Enter?</td><td>Debounced as today. A parse error only marks the token and keeps the last valid result listed.</td></tr>
-        <tr><td>Q6</td><td>Should commands sit in the same bar or in a separate palette?</td><td>The same bar, with a <code>&gt;</code> prefix, as the owner asked.</td></tr>
+        <tr><th>#</th><th>Question</th><th>Answer</th></tr>
+        <tr><td>Q1</td><td>Should the grammar be parsed in the core (<code>?query=</code>) or translated to today's params in the client?</td><td><b>Decided:</b> in the client. The core gains what negation and lists need, but parses no query string.</td></tr>
+        <tr><td>Q2</td><td>Which new predicates belong in this epic?</td><td><b>Decided:</b> negation, <code>is:pending</code> and <code>is:https</code>. No OR syntax; the same key repeated becomes a list. Header, body, duration and size become roadmap rows.</td></tr>
+        <tr><td>Q3</td><td>Which shortcuts should focus the bar?</td><td><b>Decided:</b> ⌘F only.</td></tr>
+        <tr><td>Q4</td><td>Should the query survive a relaunch?</td><td><b>Decided:</b> yes, through E-STICKY's store, restored visibly in the bar. If E-STICKY lands second, it adopts this.</td></tr>
+        <tr><td>Q5</td><td>When should a query apply?</td><td><b>Decided:</b> when a chip is added or removed. Typing never refetches, so there is no keystroke debounce.</td></tr>
+        <tr><td>Q6</td><td>Should commands sit in the same bar or in a separate palette?</td><td><b>Decided:</b> neither. Commands stay out of the bar (Q8).</td></tr>
+        <tr><td>Q7</td><td>Should an accepted filter turn into a chip inside the bar, or stay highlighted text?</td><td><b>Decided:</b> a chip, text search included. A colon inside a value is never ambiguous, because the parser reads one draft at a time.</td></tr>
+        <tr><td>Q8</td><td>How are commands reached in the bar?</td><td><b>Decided:</b> they are not. Actions stay in the menus and buttons, and the bar only filters and searches.</td></tr>
+        <tr><td>Q9</td><td>What is the wire form of a negated key?</td><td><b>Decided:</b> <code>not_host=</code>, <code>not_method=</code>, … one per key, repeatable.</td></tr>
+        <tr><td>Q10</td><td>Do several text chips match any of them or all of them?</td><td><b>Decided:</b> all of them, so each text chip narrows. Every other repeated key matches any of them.</td></tr>
       </table>
     </div>
 
