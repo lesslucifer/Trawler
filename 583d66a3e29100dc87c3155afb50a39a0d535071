@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-ONEAPP
+wu: E-ONEAPP.W3
+base: 9b80515087fb502d8372fa47b7923e6fac84d072
+design_sha256: 6d46b3db0ffd200d0e2a11f4291a80939be89d9812a75138acc9c501f66df145
+verdict: PASS
+artifacts: [docs/work/2026-11-04-one-app-service-page-design-run.html]
+implements:
+  - path: docs/work/2026-11-04-one-app-service-page-design-run.html
+    blob: 222695cdc2bba9078ceb9042cedae577eb305c76
+    built: [ui/src/CaptureService.tsx, ui/src/LogTail.tsx, ui/src/NotAnswering.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "wraps the existing shell in the core-service provider and renders nothing new; every screen it draws is unchanged"
+  - path: ui/src/main.tsx
+    why: "chooses which root a window mounts, the existing app or the designed Capture service page, from the shell's page mark; it draws no element of its own"
+date: 2026-11-04
