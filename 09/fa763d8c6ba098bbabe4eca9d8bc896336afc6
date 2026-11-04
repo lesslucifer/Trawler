@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-QUERY
+wu: E-QUERY.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-04-query-bar-design-run.html"
+    tier: T3
+    action: added
+    distills: "The archived design run: a live mockup of the header with one query bar in place of the four filter controls, chips filtering the rows by W1's rules, the grammar and suggestion tables, the keyboard paths, proposals, the chip-store blocker and the owner's round (C1 took the alternative: Enter takes the highlight; C2 answered, quotes keep a space; C3-C11 held)."
+  - path: "docs/work/2026-11-04-query-bar-w2-design-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's requirement, mapping, decisions, expected result and test plan."
+  - path: "docs/work/2026-11-04-query-bar-w2-design-result.html"
+    tier: T3
+    action: added
+    distills: "W2's outcome, deviations, evidence, distillation and follow-ups for W3 and W4."
+  - path: "docs/work/components/query-bar.html"
+    tier: T3
+    action: added
+    distills: "The confirmed QueryBar component design (T2): identity, anatomy, behavior, states, forks, API with TSDoc, tokens and a live specimen; W3 builds it."
+t2_waived: "A design reaches UC-4, DEC-70 and the rulebook after it is built; W4 distills the built query bar, its keyboard vocabulary and the filter lexicon entry."
