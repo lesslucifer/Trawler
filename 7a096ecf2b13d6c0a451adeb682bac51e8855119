@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W4
+base: 70187414e774b27267f8ca9ed8e101402f5f97ad
+design_sha256: 17fbd253417f37ac9db485dfcd1d0da5eff9ed2ef905d204df3ddfa15c4c6f73
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-03-data-window-design-run.html
+    blob: e293ca845f6e10337b77bb7f5625c23c955a364a
+    built: [ui/src/DataWindowScreen.tsx, ui/src/components/EditSurface.tsx, ui/src/components/IconButton.tsx]
+date: 2026-11-04
