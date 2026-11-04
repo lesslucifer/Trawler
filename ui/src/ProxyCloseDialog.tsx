@@ -43,6 +43,16 @@ export const CLOSE_COPY = {
     emulator: (name: string) =>
       `${name} sends its traffic through Trawler, and has no internet once Trawler's capture service stops.`,
   },
+  quitStops: {
+    ours: (host: string) =>
+      `${capitalized(host)} sends its web traffic through Trawler. Quitting stops Trawler's capture service, and ${host} has no internet until you stop routing through Trawler.`,
+    unread: (host: string) =>
+      `Trawler couldn't read ${host}'s proxy. Quitting stops Trawler's capture service, so if it points at Trawler, ${host} has no internet.`,
+    devices:
+      "Devices on your network can use Trawler now. Quitting stops Trawler's capture service, and any still set to it have no internet.",
+    emulator: (name: string) =>
+      `${name} sends its traffic through Trawler. Quitting stops Trawler's capture service, and ${name} has no internet.`,
+  },
   byHand: "do it by hand",
   dontShowAgain: "don't show this again",
   quit: "quit",
@@ -53,14 +63,15 @@ export const CLOSE_COPY = {
   failed: "couldn't stop routing through Trawler — the steps below do it by hand.",
 } as const;
 
-function stakeOf(prompt: QuitPrompt, host: string): string {
+function stakeOf(prompt: QuitPrompt, host: string, quitStops: boolean): string {
+  const copy = quitStops ? CLOSE_COPY.quitStops : CLOSE_COPY.stake;
   switch (prompt.mode) {
     case "ours":
-      return prompt.answering ? CLOSE_COPY.stake.ours(host) : CLOSE_COPY.stake.stale(host);
+      return prompt.answering ? copy.ours(host) : CLOSE_COPY.stake.stale(host);
     case "unread":
-      return CLOSE_COPY.stake.unread(host);
+      return copy.unread(host);
     case "devices":
-      return prompt.emulator === null ? CLOSE_COPY.stake.devices : CLOSE_COPY.stake.emulator(prompt.emulator);
+      return prompt.emulator === null ? copy.devices : copy.emulator(prompt.emulator);
   }
 }
 
@@ -99,6 +110,7 @@ export function ProxyCloseDialog({
   onQuit,
   onCancel,
   notesShown = false,
+  quitStops = false,
 }: {
   prompt: QuitPrompt;
   os: HostOs;
@@ -107,6 +119,7 @@ export function ProxyCloseDialog({
   onQuit: (dontShowAgain: boolean) => void;
   onCancel: () => void;
   notesShown?: boolean;
+  quitStops?: boolean;
 }) {
   const answers = useRef<HTMLDivElement>(null);
   const [dontShowAgain, setDontShowAgain] = useState(false);
@@ -161,7 +174,7 @@ export function ProxyCloseDialog({
   return (
     <NotesShown.Provider value={notesShown}>
     <ModalShell title={titleOf(prompt, host)} onCancel={onCancel} testId="proxy-close" mode={prompt.mode}>
-      <p className="mb-3 font-ui text-body text-ink-mute">{stakeOf(prompt, host)}</p>
+      <p className="mb-3 font-ui text-body text-ink-mute">{stakeOf(prompt, host, quitStops)}</p>
       {stopState === "running" && (
         <div className="mb-2" data-testid="proxy-close-running">
           <Notice tone="pending">{CLOSE_COPY.stopping(os)}</Notice>

@@ -3,8 +3,9 @@ use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, Moc
 use tauri::webview::InvokeRequest;
 use tauri::{App, Manager, WebviewWindow, WebviewWindowBuilder};
 use trawler_ui_lib::data_window::{
-    self, frame, label_for, unframe, Caption, Payload, LABEL_PREFIX, MAIN_WINDOW,
+    self, frame, label_for, unframe, Caption, Payload, LABEL_PREFIX,
 };
+use trawler_ui_lib::settings::MAIN_WINDOW;
 use trawler_ui_lib::window_geometry::{self, Change, Records, DATA_WINDOWS_RECORD};
 
 fn app() -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
@@ -15,7 +16,7 @@ fn app() -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
         ])
         .build(mock_context(noop_assets()))
         .expect("a mock app");
-    let main = WebviewWindowBuilder::new(&app, MAIN_WINDOW, Default::default())
+    let main = WebviewWindowBuilder::new(&app, MAIN_WINDOW, tauri::WebviewUrl::default())
         .build()
         .expect("the main window");
     (app, main)
@@ -34,7 +35,7 @@ fn invoke(
             error: CallbackFn(1),
             url: "tauri://localhost".parse().expect("a url"),
             body,
-            headers: Default::default(),
+            headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),
         },
     )

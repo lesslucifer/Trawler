@@ -546,6 +546,10 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             crate::layout::layout_write,
             confirm_reach,
             confirm_replace_proxy,
+            crate::core::core_status,
+            crate::core::core_log,
+            crate::core::restart_core,
+            crate::settings::open_settings,
             crate::data_window::open_data_window,
             crate::data_window::take_data_payload
         ],

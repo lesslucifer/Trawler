@@ -13,18 +13,21 @@ use tauri::menu::{
 };
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
-use crate::data_window::MAIN_WINDOW;
+use crate::settings::{self, MAIN_WINDOW};
 
 pub const QUIT_ID: &str = "trawler-quit";
+pub const SETTINGS_ID: &str = "trawler-settings";
 pub const RESET_LAYOUT_ID: &str = "trawler-reset-layout";
 pub const RESET_LAYOUT_EVENT: &str = "layout-reset";
 const RESET_LAYOUT_LABEL: &str = "Reset Layout";
 const VIEW_SUBMENU: &str = "View";
 const QUIT_ACCELERATOR: &str = "CmdOrCtrl+Q";
+const SETTINGS_ACCELERATOR: &str = "CmdOrCtrl+,";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MenuAction {
     CloseMainWindow,
+    OpenSettings,
     ResetLayout,
     Ignore,
 }
@@ -32,14 +35,17 @@ pub enum MenuAction {
 pub fn action_for(id: &str) -> MenuAction {
     match id {
         QUIT_ID => MenuAction::CloseMainWindow,
+        SETTINGS_ID => MenuAction::OpenSettings,
         RESET_LAYOUT_ID => MenuAction::ResetLayout,
         _ => MenuAction::Ignore,
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     match action_for(id) {
         MenuAction::CloseMainWindow => close_main_window(app),
+        MenuAction::OpenSettings => drop(settings::open_in_background(app)),
         MenuAction::ResetLayout => {
             if let Err(err) = app.emit(RESET_LAYOUT_EVENT, ()) {
                 eprintln!("announcing Reset Layout failed: {err}");
@@ -49,6 +55,7 @@ pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 fn close_main_window<R: Runtime>(app: &AppHandle<R>) {
     match app.get_webview_window(MAIN_WINDOW) {
         Some(window) => {
@@ -67,9 +74,15 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
             menu.remove_at(0)?;
         }
         menu.insert(&app_submenu(app)?, 0)?;
+    } else if let Some(MenuItemKind::Submenu(first)) = menu.items()?.first() {
+        first.prepend(&settings_item(app)?)?;
     }
     add_reset_layout(app, &menu)?;
     Ok(menu)
+}
+
+fn settings_item<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<MenuItem<R>> {
+    MenuItem::with_id(app, SETTINGS_ID, "Settings…", true, Some(SETTINGS_ACCELERATOR))
 }
 
 fn add_reset_layout<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<()> {
@@ -121,6 +134,8 @@ fn app_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
         &[
             &PredefinedMenuItem::about(app, None, Some(about))?,
             &PredefinedMenuItem::separator(app)?,
+            &settings_item(app)?,
+            &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::services(app, None)?,
             &PredefinedMenuItem::separator(app)?,
             &PredefinedMenuItem::hide(app, None)?,
@@ -146,6 +161,11 @@ mod tests {
         assert_eq!(action_for(QUIT_ID), MenuAction::CloseMainWindow);
         assert_eq!(action_for("about"), MenuAction::Ignore);
         assert_eq!(action_for(""), MenuAction::Ignore);
+    }
+
+    #[test]
+    fn settings_opens_settings() {
+        assert_eq!(action_for(SETTINGS_ID), MenuAction::OpenSettings);
     }
 
     #[test]

@@ -8,6 +8,7 @@
 pub mod api;
 pub mod ca;
 pub mod capture;
+pub mod cli;
 pub mod config;
 pub mod event;
 pub mod flow;
@@ -81,7 +82,7 @@ impl RunningServer {
 }
 
 /// Boot the capture engine and control API without blocking, returning the
-/// resolved bound addresses and a shutdown handle. `run()` is this plus a wait
+/// resolved bound addresses and a shutdown handle. [`cli::main`] is this plus a wait
 /// on the interrupt signal — this split lets tests drive the real servers on
 /// ephemeral ports and shut them down deterministically.
 pub async fn serve(config: Config) -> Result<RunningServer, Box<dyn std::error::Error>> {
@@ -168,9 +169,8 @@ pub(crate) fn upstream_connector(extra_root_pems: &[String]) -> HttpsConnector<H
     HttpsConnectorBuilder::new().with_tls_config(tls).https_or_http().enable_all_versions().build()
 }
 
-/// Boot the engine and run until interrupted.
-pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
-    let server = serve(config).await?;
+/// Log where a booted engine listens and whether other devices can reach it.
+pub async fn announce(server: &RunningServer) {
     info!("proxy listening on http://{}", server.proxy_addr);
     info!("control API listening on http://{}", server.api_addr);
     info!("CA download at http://{}/ca.crt", server.api_addr);
@@ -183,15 +183,6 @@ pub async fn run(config: Config) -> Result<(), Box<dyn std::error::Error>> {
     } else {
         info!("loopback only — other devices cannot reach this Trawler");
     }
-
-    shutdown_signal().await;
-    info!("shutting down");
-    server.shutdown().await;
-    Ok(())
-}
-
-async fn shutdown_signal() {
-    let _ = tokio::signal::ctrl_c().await;
 }
 
 #[cfg(test)]

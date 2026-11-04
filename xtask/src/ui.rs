@@ -15,7 +15,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         }
         ["dev"] => {
             pnpm(&dir, &["install"], &[])?;
-            pnpm(&dir, &["tauri", "dev"], &[])?;
+            pnpm(&dir, DEV_ARGS, &[])?;
             Ok((0, String::new()))
         }
         ["bench"] => {
@@ -30,6 +30,10 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         _ => Err(super::USAGE.to_string()),
     }
 }
+
+// The app embeds ui/dist by default (`custom-protocol`); dev drops that
+// feature so the window loads the Vite dev server and keeps HMR.
+const DEV_ARGS: &[&str] = &["tauri", "dev", "--", "--no-default-features"];
 
 // Design files render the real ui/src/components/ collection. On a file:// origin
 // a page may not read local files and module scripts never execute, so the
@@ -71,19 +75,46 @@ fn e2e(dir: &Path) -> Result<(i32, String), String> {
     ];
     pnpm(dir, &build_args, &[])?;
     let e2e_dir = dir.join("e2e");
-    let tally = e2e_dir.join(RUN_TALLY);
-    let _ = std::fs::remove_file(&tally);
     pnpm(&e2e_dir, &["install"], &[])?;
-    pnpm(&e2e_dir, &["test"], &[])?;
-    let verdict = judge_run_tally(std::fs::read_to_string(&tally).ok().as_deref());
-    let _ = std::fs::remove_file(&tally);
-    verdict.map(|summary| (0, summary))
+    let verdicts: Vec<Result<String, String>> =
+        SUITES.iter().map(|suite| run_suite(&e2e_dir, suite)).collect();
+    judge_suites(&verdicts).map(|summary| (0, summary))
 }
 
-// wdio has exited green having run nothing: a service that fails to initialise
-// before any spec starts is logged, not counted. So the launcher writes what it
-// counted, and a run is green only when every configured spec file passed.
-const RUN_TALLY: &str = ".run-tally.json";
+// Each suite is its own wdio run: the app's environment is fixed per launcher,
+// and the owned suite's app must start with no attach address at all.
+struct Suite {
+    name: &'static str,
+    script: &'static str,
+    tally: &'static str,
+}
+
+const SUITES: [Suite; 2] = [
+    Suite { name: "attached", script: "test", tally: ".run-tally.json" },
+    Suite { name: "owned", script: "test:one-app", tally: ".run-tally-one-app.json" },
+];
+
+fn run_suite(e2e_dir: &Path, suite: &Suite) -> Result<String, String> {
+    let tally = e2e_dir.join(suite.tally);
+    let _ = std::fs::remove_file(&tally);
+    let ran = pnpm(e2e_dir, &[suite.script], &[]);
+    let verdict = judge_run_tally(suite.tally, std::fs::read_to_string(&tally).ok().as_deref());
+    let _ = std::fs::remove_file(&tally);
+    ran.and(verdict)
+        .map(|passed| format!("{} suite: {passed}", suite.name))
+        .map_err(|problem| format!("{} suite: {problem}", suite.name))
+}
+
+fn judge_suites(verdicts: &[Result<String, String>]) -> Result<String, String> {
+    let problems: Vec<&str> =
+        verdicts.iter().filter_map(|v| v.as_ref().err()).map(String::as_str).collect();
+    if !problems.is_empty() {
+        return Err(problems.join("; "));
+    }
+    let passed: Vec<&str> =
+        verdicts.iter().filter_map(|v| v.as_ref().ok()).map(String::as_str).collect();
+    Ok(format!("ui e2e complete - {}", passed.join("; ")))
+}
 
 #[derive(serde::Deserialize)]
 struct RunTally {
@@ -92,11 +123,11 @@ struct RunTally {
     failed: u64,
 }
 
-fn judge_run_tally(raw: Option<&str>) -> Result<String, String> {
-    let raw = raw
-        .ok_or(format!("the e2e run left no ui/e2e/{RUN_TALLY}, so nothing says it ran a spec"))?;
-    let tally: RunTally = serde_yaml::from_str(raw)
-        .map_err(|e| format!("ui/e2e/{RUN_TALLY} is not a run tally: {e}"))?;
+fn judge_run_tally(file: &str, raw: Option<&str>) -> Result<String, String> {
+    let raw =
+        raw.ok_or(format!("the e2e run left no ui/e2e/{file}, so nothing says it ran a spec"))?;
+    let tally: RunTally =
+        serde_yaml::from_str(raw).map_err(|e| format!("ui/e2e/{file} is not a run tally: {e}"))?;
     if tally.specs == 0 {
         return Err("the e2e run is configured with no spec file".to_string());
     }
@@ -109,7 +140,7 @@ fn judge_run_tally(raw: Option<&str>) -> Result<String, String> {
             tally.passed, tally.specs
         ));
     }
-    Ok(format!("ui e2e complete - {} of {} spec files passed", tally.passed, tally.specs))
+    Ok(format!("{} of {} spec files passed", tally.passed, tally.specs))
 }
 
 fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(), String> {
@@ -129,7 +160,7 @@ fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{judge_run_tally, run};
+    use super::{judge_run_tally, judge_suites, run, DEV_ARGS, SUITES};
     use std::collections::BTreeSet;
     use std::path::Path;
 
@@ -141,39 +172,91 @@ mod tests {
     }
 
     #[test]
+    fn dev_hands_cargo_no_default_features_so_the_window_loads_the_dev_server() {
+        let runner_args = DEV_ARGS.iter().skip_while(|arg| **arg != "--").skip(1);
+        assert_eq!(runner_args.collect::<Vec<_>>(), [&"--no-default-features"]);
+    }
+
+    #[test]
     fn a_run_is_green_only_when_every_spec_file_passed() {
         assert_eq!(
-            judge_run_tally(Some(&tally(4, 4, 0))).unwrap(),
-            "ui e2e complete - 4 of 4 spec files passed"
+            judge_run_tally(".run-tally.json", Some(&tally(4, 4, 0))).unwrap(),
+            "4 of 4 spec files passed"
         );
     }
 
     #[test]
     fn a_run_that_left_no_tally_is_red() {
-        assert!(judge_run_tally(None).unwrap_err().contains("no ui/e2e/.run-tally.json"));
+        assert!(judge_run_tally(".run-tally.json", None)
+            .unwrap_err()
+            .contains("no ui/e2e/.run-tally.json"));
     }
 
     #[test]
     fn a_tally_that_does_not_parse_is_red() {
-        assert!(judge_run_tally(Some("{\"specs\":")).unwrap_err().contains("is not a run tally"));
+        assert!(judge_run_tally(".run-tally.json", Some("{\"specs\":"))
+            .unwrap_err()
+            .contains("is not a run tally"));
     }
 
     #[test]
     fn a_run_configured_with_no_spec_is_red() {
-        assert!(judge_run_tally(Some(&tally(0, 0, 0))).unwrap_err().contains("no spec file"));
+        assert!(judge_run_tally(".run-tally.json", Some(&tally(0, 0, 0)))
+            .unwrap_err()
+            .contains("no spec file"));
     }
 
     #[test]
     fn a_failed_spec_file_is_red() {
-        assert_eq!(judge_run_tally(Some(&tally(4, 3, 1))).unwrap_err(), "1 of 4 spec files failed");
+        assert_eq!(
+            judge_run_tally(".run-tally.json", Some(&tally(4, 3, 1))).unwrap_err(),
+            "1 of 4 spec files failed"
+        );
     }
 
     #[test]
     fn a_run_that_passed_fewer_spec_files_than_configured_is_red() {
         assert_eq!(
-            judge_run_tally(Some(&tally(4, 0, 0))).unwrap_err(),
+            judge_run_tally(".run-tally.json", Some(&tally(4, 0, 0))).unwrap_err(),
             "only 0 of 4 spec files passed, so the rest never ran"
         );
+    }
+
+    #[test]
+    fn a_tally_problem_names_the_suite_file() {
+        assert!(judge_run_tally(".run-tally-one-app.json", None)
+            .unwrap_err()
+            .contains("no ui/e2e/.run-tally-one-app.json"));
+    }
+
+    #[test]
+    fn two_suites_are_green_only_when_both_are() {
+        let green = Ok("attached suite: 4 of 4 spec files passed".to_string());
+        assert_eq!(
+            judge_suites(&[green.clone(), Ok("owned suite: 1 of 1 spec files passed".to_string())])
+                .unwrap(),
+            "ui e2e complete - attached suite: 4 of 4 spec files passed; owned suite: 1 of 1 spec files passed"
+        );
+        assert_eq!(
+            judge_suites(&[green, Err("owned suite: 1 of 1 spec files failed".to_string())])
+                .unwrap_err(),
+            "owned suite: 1 of 1 spec files failed"
+        );
+    }
+
+    #[test]
+    fn every_suite_has_its_script_and_its_config_writes_its_tally() {
+        let e2e = crate::repo_root().expect("repo root").join("ui/e2e");
+        let package = std::fs::read_to_string(e2e.join("package.json")).expect("package.json");
+        let scripts: serde_yaml::Value = serde_yaml::from_str(&package).expect("package json");
+        for suite in &SUITES {
+            let command = scripts["scripts"][suite.script].as_str().unwrap_or_default();
+            let config_file = command.strip_prefix("wdio run ").unwrap_or_else(|| {
+                panic!("the {} suite's script {:?} is not a wdio run", suite.name, suite.script)
+            });
+            let config = std::fs::read_to_string(e2e.join(config_file)).expect("suite config");
+            assert!(config.contains(suite.tally), "{config_file} does not write {}", suite.tally);
+        }
     }
 
     // In the embedded WebKit provider `*=` never matches and never errors, so a
@@ -539,6 +622,20 @@ mod tests {
                 enabled.contains(identifier),
                 "{} is not enabled in the e2e config",
                 path.display()
+            );
+        }
+    }
+
+    // Tauri builds config windows before the setup hook, and the shell may open
+    // its window only once it knows its core's address (E-ONEAPP.W2).
+    #[test]
+    fn every_config_leaves_the_window_to_the_setup_hook() {
+        let repo = crate::repo_root().expect("repo root");
+        for config in ["tauri.conf.json", "tauri.conf.e2e.json", "tauri.conf.walkthrough.json"] {
+            assert_eq!(
+                window_of(&repo, config)["create"].as_bool(),
+                Some(false),
+                "{config}: the window must declare \"create\": false"
             );
         }
     }

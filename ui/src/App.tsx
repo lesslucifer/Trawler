@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useReducer,
@@ -50,6 +51,8 @@ import { useAction } from "./useAction";
 import { Layout } from "./Layout";
 import { useLayout } from "./useLayout";
 import { NotAnswering } from "./NotAnswering";
+import { quitStopsCore } from "./coreService";
+import { CoreServiceContext, tauriBridge, useCoreService, type CoreBridge } from "./useCoreService";
 import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Composer } from "./Composer";
@@ -159,11 +162,29 @@ function useNowPast(edge: number | null): number {
 export default function App({
   api,
   initialState,
+  core = tauriBridge,
+}: {
+  api?: TrawlerApi;
+  initialState?: OnbState;
+  core?: CoreBridge;
+}) {
+  const service = useCoreService(core);
+  return (
+    <CoreServiceContext.Provider value={service}>
+      <Shell api={api} initialState={initialState} />
+    </CoreServiceContext.Provider>
+  );
+}
+
+function Shell({
+  api,
+  initialState,
 }: {
   api?: TrawlerApi;
   initialState?: OnbState;
 }) {
   const client = useMemo(() => api ?? createApi(), [api]);
+  const service = useContext(CoreServiceContext);
   const [state, dispatch] = useReducer(
     reduce,
     initialState,
@@ -825,6 +846,7 @@ export default function App({
       onQuit={close.quit}
       onCancel={close.cancel}
       notesShown={notesShown}
+      quitStops={quitStopsCore(service?.state ?? null)}
     />
   );
 
@@ -1141,6 +1163,7 @@ export default function App({
             onCleared={() => setClearedEmpty(true)}
             onNewRequest={() => compose(null)}
             onSetUpDevice={setUpAnother}
+            onOpenSettings={service?.openSettings ?? undefined}
           />
         </>
       }

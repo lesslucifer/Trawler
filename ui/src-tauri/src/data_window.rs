@@ -12,10 +12,10 @@ use tauri::{
     WindowEvent,
 };
 
+use crate::settings::MAIN_WINDOW;
 use crate::window_geometry::{self, MinSize};
 
 pub const LABEL_PREFIX: &str = "data-";
-pub const MAIN_WINDOW: &str = "main";
 const WIDTH: f64 = 1200.0;
 const HEIGHT: f64 = 800.0;
 const MIN_WIDTH: f64 = 600.0;
@@ -93,6 +93,7 @@ impl Parked {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 fn focus<R: Runtime>(app: &AppHandle<R>, label: &str) {
     if let Some(window) = app.get_webview_window(label) {
         if let Err(err) = window.set_focus() {
@@ -143,6 +144,7 @@ pub fn take_data_payload<R: Runtime>(webview: Webview<R>, parked: State<'_, Park
     Response::new(parked.take(webview.label()).as_ref().map(frame).unwrap_or_default())
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn on_destroyed<R: Runtime>(app: &AppHandle<R>, destroyed: &str) -> Vec<String> {
     if is_data_window(destroyed) {
         app.state::<Parked>().take(destroyed);

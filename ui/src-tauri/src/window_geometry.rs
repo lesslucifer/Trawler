@@ -222,6 +222,7 @@ pub fn record_change<R: Runtime>(window: &Window<R>, change: Change) {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn save(app: &AppHandle) {
     let Some(tracker) = app.try_state::<Tracker>() else { return };
     let records = tracker.records().clone();
@@ -232,6 +233,7 @@ pub fn save(app: &AppHandle) {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 fn apply<R: Runtime>(window: &Window<R>, geometry: Geometry) {
     let applied = window
         .set_size(PhysicalSize::new(geometry.width, geometry.height))

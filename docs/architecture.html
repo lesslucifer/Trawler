@@ -21,7 +21,7 @@
     </div>
 
     <h2 id="layout">Layout &amp; conventions</h2>
-    <p>The core is a <strong>library crate</strong> with a thin binary launcher; the native UI is a separate out-of-process project. Everything is organised by role, one concern per module.</p>
+    <p>One cargo workspace. The core is a <strong>library crate</strong> with a thin binary launcher; the native app is a workspace member that depends on that library and runs the core as a <strong>supervised child process</strong> (<a href="decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>). Everything is organised by role, one concern per module.</p>
     <div class="diagram" data-c="layout-diagram">
       <pre class="mermaid">
 flowchart TD
@@ -37,15 +37,16 @@ flowchart TD
     subgraph tooling["dev tooling"]
       xtask["xtask crate — build/dev/e2e drivers, the DoD gate, doc &amp; notes tooling"]
     end
-    subgraph ui["ui/ — native app, its own project outside the core workspace"]
-      shell["thin native shell (Tauri) — a window, no logic"]
+    subgraph ui["ui/ — native app, a workspace member (the default cargo run)"]
+      shell["native shell (Tauri) — windows, menus, the core's supervisor"]
       web["webview app — framework front end + a typed API client + pure view helpers"]
-      e2etop["e2e harness + specs — drives the real window"]
+      e2etop["e2e harness + specs — drive the real window, attached and owned"]
       shell --> web
     end
-    ui -. "loopback REST + SSE only" .-> api
+    shell -- "spawns itself as the core (--core) · stdin lifeline · ready line" --> bin
+    web -. "loopback REST + SSE only" .-> api
       </pre>
-      <div class="caption">Roles and folder structure, not a file list. The rule is one module per concept under the core, a role-named package for the control API, and the UI as a wholly separate project that reaches the core only across the network. New concepts get new modules; the shape holds.</div>
+      <div class="caption">Roles and folder structure, not a file list. The rule is one module per concept under the core, a role-named package for the control API, and the app as a separate process that starts the core and reaches it only across the network. New concepts get new modules; the shape holds.</div>
     </div>
     <table data-c="layout-table">
       <thead><tr><th>Area</th><th>Role</th><th>Convention</th></tr></thead>
@@ -56,7 +57,7 @@ flowchart TD
         <tr><td>Control-API package</td><td>The REST + SSE surface</td><td>Router + handlers kept apart from read-only view projections and from body decoding, so the wire shape, the transport, and the transforms each have one home.</td></tr>
         <tr><td>Tests</td><td>Contract + full-flow coverage</td><td>Integration and e2e tests live outside the library, one file per bounded contract or end-to-end flow (per the <a href="testing-strategy.html">testing standard</a>).</td></tr>
         <tr><td>Dev tooling (<code>xtask</code>)</td><td>Build/test/gate automation</td><td>A cargo-invoked task crate: front-end build/dev/e2e drivers, the DoD gate, and the doc/notes machinery.</td></tr>
-        <tr><td>Native UI (<code>ui/</code>)</td><td>A desktop client of the API</td><td>Its own project outside the core workspace, so a headless build/test of the proxy never pulls the GUI toolchain (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
+        <tr><td>Native app (<code>ui/</code>)</td><td>The desktop app: a client of the API and the supervisor of its core</td><td>A workspace member, so the root build and test compile it; the core library never depends on it, and a test keeps the GUI out of the core's dependency tree (<a href="decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>).</td></tr>
       </tbody>
     </table>
 
@@ -108,7 +109,7 @@ sequenceDiagram
 
     <h2 id="boundary">The client / core boundary</h2>
     <div class="callout" data-c="boundary-callout">
-      <p>Every interface is a <strong>client of the running control API</strong>, decoupled from the core across loopback. The web shell served by the API, the native desktop app, and <code>curl</code> are all the same kind of thing: they issue REST reads and subscribe to the SSE stream. The core neither compiles, links, nor knows about any of them. This is the single most important invariant — it keeps capture independent of presentation and lets interfaces evolve, or multiply, without touching the proxy (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</p>
+      <p>Every interface is a <strong>client of the running control API</strong>, decoupled from the core across loopback. The web shell served by the API, the native desktop app, and <code>curl</code> are all the same kind of thing: they issue REST reads and subscribe to the SSE stream. The core neither compiles, links, nor knows about any of them. The app also starts and stops the core, as a child process; that changes who launches it, never how a client talks to it. This is the single most important invariant — it keeps capture independent of presentation and lets interfaces evolve, or multiply, without touching the proxy (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</p>
     </div>
 
     <h2 id="decisions">Technical decisions</h2>
@@ -130,7 +131,7 @@ sequenceDiagram
         <tr><td>Control endpoints on the API port</td><td>Everything a client needs — including the CA certificate download — is served off the API port, not the forward-proxy port.</td></tr>
         <tr><td>Open CORS, bounded by the confirm rather than by the bind</td><td>The API carries an open CORS grant so an out-of-process webview client can reach it, widened to the methods its mutating routes need (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a> for the grant, <a href="decisions/dec-38-imported-flows-are-marked.html#cors">DEC-38</a> for the widening). It was once justified by "adding no exposure beyond the bind address"; <a href="decisions/dec-55-reach-is-an-authorization-decision.html">DEC-55</a> retires that sentence, because the bind is now the user's to widen. <strong>The grant does not widen with it</strong> — what bounds exposure is the confirm: reach is off by default, arms one named address (never the unspecified one), and is not persisted. Arming exposes the proxy <em>and</em> the whole control API, captured flows included, on that address; the confirm says so. Anything finer — a token, TLS, a per-origin policy — is deliberately not here, and is its own epic.</td></tr>
         <tr><td>The core sends through its own client, not the proxy</td><td>A sent request goes out through the sender rather than looping back through the proxy port, where it would land as captured with no link to its seed and no id for the caller. The sender shares the proxy's upstream TLS trust and body cap, answers only once a reply exists, and lands no flow for an exchange that never happened (<a href="decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html">DEC-58</a>).</td></tr>
-        <tr><td>UI out of process</td><td>The native app is a separate project and a network client only, so a headless core build stays GUI-free (<a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>).</td></tr>
+        <tr><td>The app supervises its core</td><td>The app re-executes itself as the core (<code>--core</code>) on the fixed ports, learns the bound addresses from its ready line, injects the API address into every window, and stops it on every quit; the stdin pipe is the lifeline, so no orphan outlives the app. <code>TRAWLER_API</code> attaches to a core started elsewhere instead (<a href="decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>, superseding <a href="decisions/dec-12-native-ui-stack.html">DEC-12</a>'s topology).</td></tr>
       </tbody>
     </table>
 
@@ -145,7 +146,7 @@ sequenceDiagram
         <tr><td>Serialization</td><td><code>serde</code> · <code>serde_json</code></td><td>Projects flows to JSON for the REST + SSE surface.</td></tr>
         <tr><td>Body / decode utilities</td><td><code>http-body-util</code> · <code>flate2</code> · <code>brotli</code> · <code>encoding_rs</code> · <code>quick-xml</code> · <code>base64</code></td><td>Draining bodies; the decode view reverses content-encoding, transcodes charsets to UTF-8, and pretty-prints JSON/XML.</td></tr>
         <tr><td>Logging</td><td><code>tracing</code> · <code>tracing-subscriber</code></td><td>Structured, level-filtered diagnostics.</td></tr>
-        <tr><td>Native shell</td><td><code>Tauri</code></td><td>Hosts the desktop app's window (a shell only, no business logic).</td></tr>
+        <tr><td>Native shell</td><td><code>Tauri</code></td><td>Hosts the desktop app's windows and supervises its core; no capture logic.</td></tr>
         <tr><td>Front-end framework + bundler</td><td><code>React</code> · <code>Vite</code> · <code>TypeScript</code></td><td>Builds the webview UI that renders the live flow list and the flow inspector (the detail region's first tenant: headers, timing, body viewers, copy/save) from the API.</td></tr>
         <tr><td>Styling</td><td><code>Tailwind CSS</code></td><td>The UI design system / theming.</td></tr>
         <tr><td>Test runners</td><td><code>cargo test</code> · <code>Vitest</code> · <code>WebdriverIO</code></td><td>Unit/integration/e2e for the core; unit/component for the UI; a WebDriver stack that drives the real native window end to end.</td></tr>
@@ -158,13 +159,14 @@ sequenceDiagram
     <table data-c="run-table">
       <thead><tr><th>Goal</th><th>How</th></tr></thead>
       <tbody>
-        <tr><td>Run the core</td><td><code>cargo run</code> — starts both the proxy and the control API on their loopback ports (raise verbosity via the log env var). Reach beyond loopback is off until something arms it.</td></tr>
+        <tr><td>Run the app</td><td><code>cargo run</code> — opens the native app, which starts its own core; the bundle is rebuilt when <code>ui/src</code> is newer.</td></tr>
+        <tr><td>Run the core headless</td><td><code>cargo run -p trawler</code> — the proxy and the control API on their loopback ports, no window (raise verbosity via the log env var). Reach beyond loopback is off until something arms it.</td></tr>
         <tr><td>Trust the CA</td><td>Fetch the CA certificate from the control API's cert endpoint and install it per the <a href="core-technical-design.html#network">platform table</a>.</td></tr>
         <tr><td>Quick check</td><td>Send a request through the proxy, then read it back from the flows endpoint of the control API.</td></tr>
-        <tr><td>Backend tests</td><td><code>cargo test</code> — unit + integration + e2e for the core (hermetic: ephemeral ports, local origins).</td></tr>
+        <tr><td>Tests</td><td><code>cargo test</code> — the core and the app (hermetic: ephemeral ports, local origins); the app's bundle needs Node + pnpm. <code>cargo test -p trawler</code> is the core alone.</td></tr>
         <tr><td>Lint</td><td><code>cargo clippy</code> — pedantic, warnings-as-errors, <code>unsafe</code> forbidden. Front end: <code>npm run lint</code> in <code>ui/</code>, which also runs the project-local <code>design/vocabulary</code> rule that judges every class against the closed token vocabulary (<a href="decisions/dec-17-closed-vocabulary.html">DEC-17</a>).</td></tr>
-        <tr><td>Front-end build / dev</td><td><code>cargo xtask ui build</code> bundles the webview; <code>cargo xtask ui dev</code> launches the native window against a running core.</td></tr>
-        <tr><td>UI e2e</td><td><code>cargo xtask ui e2e</code> — drives the real native window via WebDriver against an ephemeral core + local origin.</td></tr>
+        <tr><td>Front-end build / dev</td><td><code>cargo xtask ui build</code> bundles the webview; <code>cargo xtask ui dev</code> opens the app over the Vite dev server (HMR), still owning its core.</td></tr>
+        <tr><td>UI e2e</td><td><code>cargo xtask ui e2e</code> — drives the real native window via WebDriver in two suites: attached to a harness core + local origin, and owning its own core on ephemeral ports.</td></tr>
         <tr><td>Gate &amp; debug tooling</td><td>The <code>xtask</code> crate also runs the DoD gate and a live browser view of the evidence trail (see the <a href="workflow.html">workflow standard</a>).</td></tr>
       </tbody>
     </table>

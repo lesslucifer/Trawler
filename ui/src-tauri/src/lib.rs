@@ -1,3 +1,11 @@
+// A #[tauri::command] receives every argument by value, and a scenario command
+// keeps the signature of the real command it stands in for.
+#![allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
+
+#[cfg(test)]
+mod bundle;
+pub mod core;
+mod core_address;
 pub mod data_window;
 pub mod layout;
 mod menu;
@@ -5,30 +13,58 @@ mod menu;
 mod reach;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod route;
+pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
+pub mod supervisor;
 pub mod window_geometry;
-
-#[cfg(feature = "e2e")]
-mod e2e_core_address;
 
 #[cfg(feature = "scenario")]
 mod scenario;
 
+pub const CORE_FLAG: &str = "--core";
+pub const EPHEMERAL_PORTS: bool = cfg!(feature = "e2e");
+
+/// The app binary is also its own core: launched with `--core` first, the rest
+/// of its arguments go to the same entry as `cargo run -p trawler`.
+pub fn core_args(
+    mut args: impl Iterator<Item = std::ffi::OsString>,
+) -> Option<impl Iterator<Item = std::ffi::OsString>> {
+    match args.next() {
+        Some(first) if first == CORE_FLAG => Some(args),
+        _ => None,
+    }
+}
+
+use tauri::Manager;
+
 pub fn run() {
-    let builder = tauri::Builder::default()
+    let mode = core::mode(std::env::var(core::ATTACH_VAR).ok().as_deref());
+    let builder = tauri::Builder::default();
+    let builder = if core::hands_over(&mode, core::launch_ports(EPHEMERAL_PORTS)) {
+        builder.plugin(tauri_plugin_single_instance::init(|app, _, _| core::focus_main(app)))
+    } else {
+        builder
+    };
+    let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .setup(|app| {
+        .on_window_event(window_geometry::track)
+        .on_window_event(data_window::on_window_event)
+        .menu(menu::build)
+        .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()))
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed)
+                && settings::ends_the_app(window.label())
+            {
+                window.app_handle().exit(0);
+            }
+        })
+        .setup(move |app| {
+            core::setup(app, mode)?;
             window_geometry::install(app.handle());
             Ok(())
-        })
-        .on_window_event(|window, event| {
-            window_geometry::track(window, event);
-            data_window::on_window_event(window, event);
-        })
-        .menu(menu::build)
-        .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()));
+        });
     let builder = data_window::install(builder);
     #[cfg(not(feature = "scenario"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
@@ -55,22 +91,60 @@ pub fn run() {
         route::open_route,
         reach::confirm_reach,
         reach::confirm_replace_proxy,
+        core::core_status,
+        core::core_log,
+        core::restart_core,
+        settings::open_settings,
         data_window::open_data_window,
         data_window::take_data_payload
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);
     #[cfg(feature = "e2e")]
-    let builder = builder
-        .plugin(e2e_core_address::init())
-        .plugin(tauri_plugin_wdio::init())
-        .plugin(tauri_plugin_wdio_webdriver::init());
+    let builder =
+        builder.plugin(tauri_plugin_wdio::init()).plugin(tauri_plugin_wdio_webdriver::init());
 
     builder.build(tauri::generate_context!()).expect("error while running trawler-ui").run(
         |app, event| {
             if let tauri::RunEvent::Exit = event {
                 window_geometry::save(app);
             }
+            on_run_event(app, &event);
         },
     );
+}
+
+pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {
+    if let tauri::RunEvent::Exit = event {
+        if let Some(core) = app.try_state::<core::Core>() {
+            core.stop();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::core_args;
+    use std::ffi::OsString;
+
+    fn os(args: &[&str]) -> std::vec::IntoIter<OsString> {
+        args.iter().map(OsString::from).collect::<Vec<_>>().into_iter()
+    }
+
+    #[test]
+    fn core_first_hands_the_rest_to_the_core_entry() {
+        let rest: Vec<OsString> =
+            core_args(os(&["--core", "--api-port", "0", "--lifeline"])).unwrap().collect();
+        assert_eq!(rest, os(&["--api-port", "0", "--lifeline"]).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn no_arguments_open_the_window() {
+        assert!(core_args(os(&[])).is_none());
+    }
+
+    #[test]
+    fn core_anywhere_but_first_opens_the_window() {
+        assert!(core_args(os(&["--lifeline", "--core"])).is_none());
+    }
 }

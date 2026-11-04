@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6ae9a3099f34851f0dfae03a">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-69: the app supervises its core</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-69 — the app supervises its core</h1>
+      <p>Trawler is one program to its user: the app starts the capture core as a child process of its own binary,
+        and the repo is one Cargo workspace whose bare <code>cargo run</code> opens that app. The API boundary does not
+        move.</p>
+      <div class="meta">v3 · 2026-11-04 · Trawler · T2 decision · minted by <strong>E-ONEAPP.W1</strong>, rules 9–12 by <strong>E-ONEAPP.W2</strong>, rules 13–14 by <strong>E-ONEAPP.W3</strong>, from the owner's
+        rulings on Q1–Q14 (2026-11-03) · supersedes <a href="dec-12-native-ui-stack.html">DEC-12</a>'s topology and
+        GUI-free-root-build clauses only · amends <a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>'s
+        rule 6 (<strong>E-ONEAPP.W4</strong>, Q15) · UC-4 · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before (DEC-12)</th><th>What went wrong</th><th>Ruling</th></tr>
+      <tr><td>the core (<code>cargo run</code>) and the window (<code>cargo xtask ui dev</code>) launched separately</td>
+        <td>the window could not start, stop or find the core it depends on</td><td>Q1: a sidecar the app manages</td></tr>
+      <tr><td><code>ui/src-tauri</code> excluded from the workspace, so the root build stayed GUI-free</td><td><code>cargo run</code>
+        could not open the app, and the app could not be packaged as a whole</td><td>Q2, Q3: one workspace; the root
+        build compiles the GUI</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The app process runs the window and supervises a core it spawns as
+        <code>&lt;its own binary&gt; --core</code>. The core reports its bound addresses on one stdout line, logs on
+        stderr, and exits when its stdin closes. The webview stays an HTTP/SSE client of the core. <code>curl</code>
+        reaches the same API. The repo is one workspace, and the <code>trawler</code> package stays GUI-free.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>One core entry, <code>trawler::cli::main</code>, serves both <code>trawler</code> (headless) and
+        <code>trawler-ui --core</code></td><td>Q11: one binary to build, bundle and sign. A separate core binary is
+        missing after a plain <code>cargo run</code>, and an <code>externalBin</code> must be staged before its build</td></tr>
+      <tr><td>2</td><td>The first stdout line is <code>{"proxy":"&lt;addr&gt;","api":"&lt;addr&gt;"}</code>, written after both
+        servers bind. Logs go to stderr</td><td>fixed ports (production) and port 0 (e2e) take one path; the supervisor
+        never parses a log line</td></tr>
+      <tr><td>3</td><td><code>--lifeline</code>: stdin EOF stops the core. It is opt-in</td><td>if the app dies by any
+        route, SIGKILL included, the pipe closes and no orphan holds the ports. A headless core launched with stdin at
+        <code>/dev/null</code> must keep running</td></tr>
+      <tr><td>4</td><td>The workspace's <code>default-members</code> are the core and the app. The app's
+        <code>default-run</code> makes a bare <code>cargo run</code> the app. <code>cargo run -p trawler</code> is the
+        headless core</td><td>Q2: the core stays the root package, so <code>src/</code> and <code>tests/</code> do not
+        move</td></tr>
+      <tr><td>5</td><td>The <code>trawler</code> package never depends on a GUI crate; a test reads its
+        <code>cargo tree</code></td><td>Q3 lets the root build compile the GUI. Servers and CI still need a core
+        without it</td></tr>
+      <tr><td>6</td><td>The app embeds <code>ui/dist</code> by default (<code>custom-protocol</code>). Its build script
+        rebuilds the bundle when an input is newer and fails naming <code>pnpm install</code> without Node/pnpm.
+        <code>cargo xtask ui dev</code> drops the feature to keep HMR</td><td>Q13: no separate pnpm step before
+        <code>cargo run</code>. The root <code>cargo test</code> now needs Node + pnpm; <code>cargo test -p trawler</code>
+        does not</td></tr>
+      <tr><td>7</td><td>One <code>[workspace.lints]</code> covers core, xtask and app</td><td>the app's code meets the core's bar.
+        Two lints are allowed crate-wide in the app because a Tauri command takes its arguments by value</td></tr>
+      <tr><td>8</td><td><code>TRAWLER_API</code> attaches the app to an existing core and spawns none, in every
+        build. Fixed ports 7420/7421, a native dialog on conflict, no automatic restart</td><td>Q4, Q5, Q9, Q12.
+        Realized by E-ONEAPP.W2</td></tr>
+      <tr><td>9</td><td>The core is spawned in the setup hook, and no window exists until it is ready: every
+        tauri config declares its window <code>"create": false</code>, and setup builds it after registering the
+        bound address as an init script on every webview</td><td>config windows are built before setup runs. A
+        conflict must reach its dialog with no window open, and a page told its address after load would have to
+        navigate, which aborts the shell (WKWebView)</td></tr>
+      <tr><td>10</td><td>A taken port is named by probing the requested ports after the child exits unready, never
+        by reading its log. Single-instance registers only when the app owns its core</td><td>rule 2. An attached
+        app (the e2e) holds no port and must never yield to a Trawler already running on the machine</td></tr>
+      <tr><td>11</td><td>Every stop closes the child's stdin, waits 5 s, then kills it. Restart reuses the ports of
+        the last ready line. A generation counter keeps a replaced child's exit from overwriting the new state</td>
+        <td>one stop path for quit and restart. Ephemeral ports survive a restart</td></tr>
+      <tr><td>12</td><td>An owned core's CA lives in <code>&lt;app data&gt;/ca</code>. The first launch copies a whole
+        <code>./ca</code> (pem + key) there, never over an existing CA. The headless core keeps <code>./ca</code></td>
+        <td>Q6: a launch from Finder has no meaningful cwd. Devices already trust the old CA</td></tr>
+      <tr><td>13</td><td>The log ring holds numbered entries: a start mark (pid, time) at every spawn, then that core's
+        stderr lines. <code>core_log</code> and <code>core://log</code> carry the same numbers, and a reader merges the
+        two by them. The ring spans restarts</td>
+        <td>a page that subscribes, then reads, would otherwise show a line heard on both twice. A crash's last
+        lines stay readable after the restart that follows it</td></tr>
+      <tr><td>14</td><td>Settings is a second window (<code>settings</code>), opened or focused by ⌘,. The main window
+        is the app: once it is destroyed the app exits, whatever else is open</td>
+        <td>Q7: closing the last window quits. A Settings window left open must not keep the core alive with no
+        main window</td></tr>
+    </table>
+
+    <h2 id="kept">What DEC-12 keeps</h2>
+    <table data-c="kept">
+      <tr><th>DEC-12 clause</th><th>Now</th></tr>
+      <tr><td>stack: Tauri 2 + Vite + TS + React + Tailwind</td><td>kept</td></tr>
+      <tr><td>API-first: the app is a pure client of the control API, everything is reachable with <code>curl</code></td><td>kept</td></tr>
+      <tr><td>out of process: the window does not start or own the core</td><td><strong>superseded</strong>: the app owns a core child process</td></tr>
+      <tr><td>the core workspace excludes <code>ui/src-tauri</code>, so the root build is GUI-free</td><td><strong>superseded</strong>:
+        one workspace. Only the <code>trawler</code> package is GUI-free</td></tr>
+      <tr><td>Warp design system, CORS grant, configurable API base URL, web shell kept</td><td>kept</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>The core in the app's process</td><td>Q1: a core crash would take the window down</td></tr>
+      <tr><td>A separate <code>trawler-core</code> sidecar binary (<code>externalBin</code>)</td><td>Q11: missing after a plain
+        <code>cargo run</code>, and it needs a target-triple file staged before the build script</td></tr>
+      <tr><td>A launcher binary at the root</td><td>Q2: <code>default-run</code> in a default member does it with no extra
+        binary</td></tr>
+      <tr><td>Stdin EOF always stops the core</td><td>a background or CI launch with stdin at <code>/dev/null</code> would exit at once</td></tr>
+      <tr><td>The ready address in a log line</td><td>log text is for people. The supervisor reads one line in a fixed format</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
