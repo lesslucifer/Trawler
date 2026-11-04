@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU one-app/quit-truth -> epic/one-app"
+epic: E-ONEAPP
+wu: E-ONEAPP.W4
+branch: wu/one-app/quit-truth
+base: eca548c88d8b95dde491027ce25a49a4ea7a4da5
+head: 81cd28f963b65e17093bff280a62afd9a1261774
+diff_sha256: 826ccd59a7578caa9d3a9a90b13de543356bb7abd929285b109f8c51aec65855
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 1
+  stage_seconds:
+    gate0: 97
+    finders: 21
+    verifiers: 26
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 3, verified: 0, waived: 1 }
+waivers:
+  - finding: "on_run_event is pub on the library crate only so the integration test can call it"
+    reason: "the crate already exposes core, settings and supervisor as pub for its integration tests (restart_command.rs, supervisor.rs); the shell's exit path is driven the same way, and the crate has no consumers beyond its own binary and tests"
+nits:
+  - finding: "on_run_event is pub on the library crate only so the integration test can call it"
+    waived: "the crate already exposes core, settings and supervisor as pub for its integration tests; the exit path follows the same pattern, and the crate has no external consumers"
+verdict: PASS
+date: 2026-11-04
