@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeac6d69f34851f0dfae447" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-ONEAPP.W5 plan: one launch, proven end to end</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-ONEAPP.W5 — one launch, proven end to end</h1>
+      <p>The app binary alone, no harness core, is driven through capture, the Capture service page, a killed
+        core, a restart and a quit. The T1/T0 docs then say what the app now is.</p>
+      <div class="meta">v1 · 2026-11-04 · Trawler · T3 WU plan · <span class="badge id">E-ONEAPP.W5</span> · branch
+        <code>wu/one-app/e2e</code> · <a href="2026-11-03-one-app-plan.html">epic plan</a> · depends on
+        <a href="2026-11-04-one-app-w3-service-page-plan.html">W3</a>,
+        <a href="2026-11-04-one-app-w4-quit-truth-plan.html">W4</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      <code>cargo xtask ui e2e</code> runs two suites and is green only when both are: today's attached suite, which
+      also asserts the Capture service page reads "attached", and a new owned suite that launches the e2e app binary
+      with no <code>TRAWLER_API</code>, so the app spawns its own core on ephemeral ports, and drives journeys J1–J3
+      of the epic's e2e plan through the real windows.
+    </p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to" data-c="maps-to">
+      E-ONEAPP · DoD-E (the epic's e2e layer) · UC-4 (one launch), UC-SVC, UC-ONBOARD (quit) · expected #1, #2, #8,
+      #10 driven through the window · epic e2e plan J1–J4 · the epic's distillation plan rows T1
+      <code>architecture.html</code> and T0 <code>CLAUDE.md</code> (Q10). The T2 rows (DEC-69, DEC-12, DEC-64,
+      UC-4, UC-SVC, UC-ONBOARD) landed with W1–W4.
+    </p>
+
+    <h2 id="shape">Two suites, one command</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  x["cargo xtask ui e2e"] --> b["build: VITE_E2E bundle ·
+tauri build --features e2e"]
+  b --> a["suite 1 · wdio.conf.ts (attached)
+harness core → TRAWLER_API
+onboarding · capture · replay ·
+service-attached · layout ×3 · flows"]
+  b --> o["suite 2 · one-app.conf.ts (owned)
+no TRAWLER_API · temp HOME
+one-app.spec.ts: J1 → J2 → J3"]
+  a --> t1[".run-tally.json"]
+  o --> t2[".run-tally-one-app.json"]
+  t1 --> v{"green only if every
+spec file of both passed"}
+  t2 --> v
+      </pre>
+      <div class="caption">Both suites share one e2e build. The owned suite is a separate wdio run because the
+        app's environment is fixed per launcher, and an owned launch must not carry <code>TRAWLER_API</code>.</div>
+    </div>
+
+    <h2 id="change">The change</h2>
+    <table data-c="change">
+      <tr><th>Seam</th><th>After</th></tr>
+      <tr><td><code>ui/src-tauri/src/core.rs</code></td><td><code>launch_ports(ephemeral)</code>: the fixed
+        7420 / 7421, or 0 / 0 in the <code>e2e</code> build. <code>hands_over(mode, ports)</code>: a second launch
+        yields to the first only for an owned core on fixed ports. The single-instance socket is a fixed
+        <code>/tmp</code> path, so an e2e app would otherwise hand over to a Trawler the developer has open</td></tr>
+      <tr><td><code>ui/src-tauri/src/lib.rs</code></td><td>registers single-instance from
+        <code>hands_over</code></td></tr>
+      <tr><td><code>ui/src-tauri/tauri.conf.e2e.json</code></td><td>the wdio capability also covers the
+        <code>settings</code> window</td></tr>
+      <tr><td><code>ui/e2e/one-app.conf.ts</code> (new)</td><td>the owned launcher: no harness, no
+        <code>TRAWLER_API</code>, <code>HOME</code> and the Android SDK variables pointed at a temp dir, so the CA,
+        markers and layout land there and the host's Trawler data is untouched. Writes
+        <code>.run-tally-one-app.json</code></td></tr>
+      <tr><td><code>ui/e2e/specs/one-app.spec.ts</code> (new)</td><td>J1 → J2 → J3 in one app process; it
+        runs its own plain-HTTP origin in the worker</td></tr>
+      <tr><td><code>ui/e2e/specs/service-attached.spec.ts</code> (new, attached suite)</td><td>J4's new half: the
+        service page reads "attached" with the harness address and no log</td></tr>
+      <tr><td><code>ui/e2e/specs/quit.ts</code> (new)</td><td><code>quitTheApp</code> moves out of
+        <code>layout.ts</code>, which reads the attached ports file at import, so the owned spec can share it</td></tr>
+      <tr><td><code>xtask/src/ui.rs</code></td><td><code>e2e</code> runs both suites and judges both
+        tallies; a red first suite still runs the second, and the verdict names each</td></tr>
+      <tr><td><code>docs/architecture.html</code> (T1) · <code>CLAUDE.md</code> (T0)</td><td>topology, the "UI out
+        of process" row, the layout and the Run rows; the Stack / Layout / Commands lines. Committed through
+        <code>mr commit</code> with a Reviewed-By trailer — staged for the owner, never run by the agent</td></tr>
+    </table>
+
+    <h2 id="journeys">The owned spec, step by step</h2>
+    <table data-c="journeys">
+      <tr><th>Journey</th><th>Drives</th><th>Asserts</th></tr>
+      <tr><td>J1 · one launch captures</td><td>read <code>core_status</code> in the main window; send
+        <code>GET http://127.0.0.1:&lt;origin&gt;/one-app</code> through the reported proxy; press onboarding's
+        way back to the list (DEC-61 — a plain-HTTP row proves no device setup, so it never reveals the list by
+        itself)</td><td>the state is running on non-fixed ports; the injected <code>__TRAWLER_API__</code> is the
+        reported API; the row appears; <code>GET /flows</code> on the reported API returns it; the core's parent is
+        the app</td></tr>
+      <tr><td>J2 · the service page tells the truth</td><td><code>open_settings</code>, switch to the
+        <code>settings</code> window; <code>SIGKILL</code> the core's pid from the worker; press restart</td><td>running
+        with the reported pid, proxy and API; the log's start mark names the pid. After the kill: "stopped" with the
+        signal, and the main window still answers. After restart: running with a new pid, the same API address, and
+        <code>GET /flows</code> answers there</td></tr>
+      <tr><td>J3 · quit releases</td><td>destroy the main window (the window's quit path)</td><td>the app's WebDriver
+        stops answering; both reported ports bind again; neither the app's pid nor the core's remains</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>Check</th><th>Observable</th></tr>
+      <tr><td><code>cargo xtask ui e2e</code></td><td>"ui e2e complete" naming both suites, every spec file of
+        each passed</td></tr>
+      <tr><td>break the supervisor's quit (no <code>core.stop()</code> on exit)</td><td>the owned suite goes red
+        at J3, naming the core pid still alive</td></tr>
+      <tr><td>a Trawler already open on this machine while the e2e runs</td><td>both suites still run; the open
+        app is untouched</td></tr>
+      <tr><td><code>docs/architecture.html</code> · <code>CLAUDE.md</code></td><td>say <code>cargo run</code> opens
+        the app, <code>cargo run -p trawler</code> is the headless core, and the app supervises its core</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
+      <tr><td>e2e</td><td><code>ui/e2e/specs/one-app.spec.ts</code> (owned suite)</td><td>J1, J2, J3 as above</td></tr>
+      <tr><td>e2e</td><td><code>ui/e2e/specs/service-attached.spec.ts</code> + the existing attached specs</td><td>J4:
+        the attached suite is green as today, and the service page reads "attached" with the harness's API address
+        and offers no log</td></tr>
+      <tr><td>integration</td><td>waived: "the WU's contract is the e2e above; the shell seams it changes (port
+        choice, single-instance) are pure functions covered by unit tests, and the supervisor's own integration tests
+        from W2 already run it on ephemeral ports"</td><td>—</td></tr>
+      <tr><td>unit (Rust)</td><td><code>ui/src-tauri/src/core.rs</code> tests</td><td><code>launch_ports</code>
+        is 7420 / 7421 when not ephemeral and 0 / 0 when ephemeral; <code>hands_over</code> is true only for an
+        owned core on fixed ports</td></tr>
+      <tr><td>unit (Rust)</td><td><code>xtask/src/ui.rs</code> tests</td><td>each suite's npm script exists in
+        <code>ui/e2e/package.json</code> and its config writes that suite's tally; the verdict over two tallies is
+        green only when both are, and a red one is named</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
