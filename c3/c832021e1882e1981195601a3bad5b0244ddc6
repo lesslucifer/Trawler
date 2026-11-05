@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU E-PKG2.W4 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: wu/packaging-v2/release-workflow
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+head: c3c832021e1882e1981195601a3bad5b0244ddc6
+diff_sha256: c3a48cb716462b0a39b009253572f8f945e4aa343fb4d84319c23662a6d686df
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 23
+    finders: 60
+    verifiers: 0
+    total: 90
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
