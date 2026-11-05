@@ -36,7 +36,7 @@
         <em>date</em> <code>2026-01-14, Wednesday</code>, counted in days from today in the user's zone, no local or UTC
         line; a date or date-time counts only standing alone (<code>2026-01-14-report</code> is not one)</td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>a date off the calendar says why</td><td><em>not base64, URL-encoded, a JWT or a time: 2026-02-30 is not a
-        day of the calendar</em>, an hour past 23, an unknown month, a digit count that names no unit — no ⇄, nothing
+        day of the calendar</em>, an hour past 23, a zone offset past ±23:59, an unknown month, a digit count that names no unit — no ⇄, nothing
         changes</td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>↗ opens the local time</td><td>as <code>text/plain</code>, titled <em>&lt;title&gt; · decoded time</em></td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>JWT, base64 and URL read as in W6</td><td>W6's decoder and screen tests pass unchanged but for the reason's
@@ -59,7 +59,8 @@
       <tr><th>Kind</th><th>Pointer</th></tr>
       <tr><td>commits</td><td><code>ba6ec94a</code> plan (and the epic plan's W8) · <code>75ccfe28</code> the time
         decoder, its place among the decoders and in <code>decodeAround</code>, the peek's time body, the JSON
-        quoting · <code>47b78ddb</code> the try-out's zone-less and date-only readings</td></tr>
+        quoting · <code>47b78ddb</code> the try-out's zone-less and date-only readings · <code>9379737c</code>,
+        <code>e75552c8</code> review round 1's fixes</td></tr>
       <tr><td>unit</td><td><code>timeDecoder</code> (12, at Asia/Ho_Chi_Minh and a fixed now: each unit by digit count
         with its fraction; 11 and 14 digits and a fraction past seconds refused; ISO with Z, ±HH:MM, ±HHMM, a space, no
         seconds, lower case, nine fraction digits, a comma; HTTP and cookie dates; zone-less, Feb 30, month 13, hour 24,
@@ -76,6 +77,14 @@
       <tr><td>suites</td><td>vitest 61 286 in 93 files green on <code>75ccfe28</code>; after the try-out fix the three
         suites that reach the decoders (125) green; eslint and <code>tsc</code> clean; the pre-commit fmt and
         clippy green</td></tr>
+      <tr><td>review</td><td>Round 1 FAIL on <code>2d2a350e</code>: a verified blocker — a zone offset was never
+        range-checked, so <code>+99:99</code> read as a confident wrong instant — and a verified important — a date off the
+        calendar (<code>2024-02-30</code>) fell through to base64, its dashes being base64url, and lost its reason. Fixed
+        with regression tests first in <code>9379737c</code>: an offset past ±23:59 is refused, and a value shaped like a
+        time is answered by time alone. Its nit fixed alongside (relative rounds before it picks a unit: 23.6 hours reads
+        <em>tomorrow</em>); two waived (a line rescanned per decode gesture; year 0000). Refuted: the screen's JSON-string
+        check duplicating <code>jsonTools</code> (it exports no such check). Round 2 runs on the tip that carries this
+        report</td></tr>
       <tr><td>e2e</td><td>waived: W7's J3 decodes the decoded payload's <code>exp</code> through the real windows</td></tr>
     </table>
 
