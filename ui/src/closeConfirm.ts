@@ -111,6 +111,7 @@ export function useProxyCloseConfirm(
   const [asking, setAsking] = useState(false);
   const ending = useRef<RequestKind>("close");
   const quitRequests = useRef(0);
+  const quitPrompting = useRef(false);
   const question = useRef<() => Promise<QuitPrompt | null>>(async () => null);
 
   // A window that refuses to close is not something the user can act on from a
@@ -157,9 +158,12 @@ export function useProxyCloseConfirm(
       setAsking(false);
       quitRequests.current += 1;
       ending.current = "quit";
+      quitPrompting.current = true;
       const asked = await firstQuestion();
-      if (asked === null) await quitApp();
-      else setPrompt(asked);
+      if (asked === null) {
+        await quitApp();
+        quitPrompting.current = false;
+      } else setPrompt(asked);
     };
 
     // Not bounded: the shell has already cleared the flag when it answers, so a
@@ -171,6 +175,13 @@ export function useProxyCloseConfirm(
     deps
       .getWindow()
       .onCloseRequested(async (e) => {
+        // A quit request owns the window from the moment it arrives: a ✕ that
+        // started before it, or lands while its prompt is open, only leaves
+        // the window as it is.
+        if (quitPrompting.current) {
+          e.preventDefault();
+          return;
+        }
         const requestsSeen = quitRequests.current;
         const [keep, tray] = await Promise.all([
           bounded(deps.invoke<KeepCapturing>("keep_capturing_read"), "off"),
@@ -189,6 +200,10 @@ export function useProxyCloseConfirm(
           return;
         }
         const asked = await firstQuestion();
+        if (quitRequests.current !== requestsSeen) {
+          e.preventDefault();
+          return;
+        }
         if (asked === null) return;
         e.preventDefault();
         setPrompt(asked);
@@ -230,7 +245,10 @@ export function useProxyCloseConfirm(
         dontShowAgain && key !== null ? dismissNotice(key, deps.invoke).catch(() => {}) : Promise.resolve();
       return remembered.then(end);
     },
-    cancel: () => setPrompt(null),
+    cancel: () => {
+      quitPrompting.current = false;
+      setPrompt(null);
+    },
     // The answer is the switch. A write that fails leaves the window open, as a
     // cancel does: closing into a state nothing recorded would ask again blind.
     keepCapturing: async () => {

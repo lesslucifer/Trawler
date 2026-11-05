@@ -291,7 +291,7 @@ describe("every read a close waits on is bounded", () => {
 
 function shellDeps(
   status: "ours" | "foreign" | "none" | "unknown",
-  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean; holdReads?: boolean } = {},
+  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean; holdReads?: boolean; holdStatus?: boolean } = {},
 ) {
   const f = fakeDeps(status);
   let keep: KeepCapturing = shell.keep ?? "off";
@@ -299,6 +299,9 @@ function shellDeps(
   let announce = () => {};
   let listening: () => void = () => {};
   let releasing: () => void = () => {};
+  let releaseStatus: () => void = () => {};
+  const statusReleased = new Promise<void>((resolve) => (releaseStatus = resolve));
+  let statusHeld = false;
   const readsReleased = new Promise<void>((resolve) => (releasing = resolve));
   const listenStands = new Promise<void>((resolve) => (listening = resolve));
   const invoke = vi.fn(async (cmd: string, args?: Record<string, unknown>) => {
@@ -306,6 +309,11 @@ function shellDeps(
       if (shell.unreadable) throw new Error("no shell");
       if (shell.holdReads) await readsReleased;
       return cmd === "tray_available" ? (shell.tray ?? true) : keep;
+    }
+    if (cmd === "proxy_status" && shell.holdStatus && !statusHeld) {
+      statusHeld = true;
+      await statusReleased;
+      return { status: "none", address: null };
     }
     if (cmd === "take_quit_request") {
       const was = pending;
@@ -337,6 +345,7 @@ function shellDeps(
     proxyReads,
     ran,
     releaseReads: () => releasing(),
+    releaseStatus: () => releaseStatus(),
     registerListener: () => act(async () => listening()),
     announce: () => act(async () => announce()),
     request: async () => {
@@ -533,6 +542,47 @@ describe("a quit request", () => {
     await act(async () => result.current.quit(false));
     expect(f.ran("quit_app")).toBe(true);
     expect(f.destroy).not.toHaveBeenCalled();
+  });
+
+  test("a quit request that arrives while a ✕ is still asking about the proxy is not closed under", async () => {
+    const f = shellDeps("ours", { keep: "off", holdStatus: true });
+    const { result } = shellConfirm(f);
+    const preventDefault = vi.fn();
+    const closing = Promise.resolve(f.fireClose()({ preventDefault }));
+    await waitFor(() => expect(f.proxyReads()).toBe(1));
+    await f.request();
+    await waitFor(() => expect(result.current.prompt).not.toBeNull());
+    f.releaseStatus();
+    await act(async () => {
+      await closing;
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    await act(async () => result.current.quit(false));
+    expect(f.ran("quit_app")).toBe(true);
+    expect(f.destroy).not.toHaveBeenCalled();
+  });
+
+  test("a ✕ while a quit prompt is open changes nothing and the quit still ends in quit_app", async () => {
+    const f = shellDeps("ours", { keep: "unanswered" });
+    const { result } = shellConfirm(f);
+    await f.request();
+    await waitFor(() => expect(result.current.prompt).not.toBeNull());
+    const preventDefault = await closeAndWait(f);
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(result.current.asking).toBe(false);
+    await act(async () => result.current.quit(false));
+    expect(f.ran("quit_app")).toBe(true);
+    expect(f.destroy).not.toHaveBeenCalled();
+  });
+
+  test("a quit prompt that is cancelled hands the window back to ✕", async () => {
+    const f = shellDeps("ours", { keep: "on" });
+    const { result } = shellConfirm(f);
+    await f.request();
+    await waitFor(() => expect(result.current.prompt).not.toBeNull());
+    act(() => result.current.cancel());
+    const preventDefault = await closeAndWait(f);
+    expect(preventDefault).not.toHaveBeenCalled();
   });
 
   test("a quit request while the once-question is open drops it and checks", async () => {
