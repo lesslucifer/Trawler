@@ -153,7 +153,7 @@
       <li><strong>Rule-bearing docs keep their names.</strong> <code>CLAUDE.md</code> is still T0 and
         still needs a <code>Reviewed-By</code> trailer; <code>AGENTS.md</code> is a second name for the
         same bytes, so a commit that edits the rules is caught exactly as before.</li>
-      <li><strong>The drift alarm is <code>xtask/tests/harness_parity.rs</code>.</strong> Copy, one-sided
+      <li><strong>The drift alarm is <code>xtask/tests/suite/harness_parity.rs</code>.</strong> Copy, one-sided
         skill, divergent hook definitions and a hard-coded path each red it by construction.</li>
     </ul>
 
@@ -163,7 +163,7 @@
       <tbody>
         <tr><td>The doors</td><td><code>AGENTS.md</code> · <code>.agents/skills</code> · <code>.codex/hooks.json</code> · <code>.codex/hooks</code></td></tr>
         <tr><td>The shared definitions</td><td><code>.claude/settings.json</code> · <code>.claude/hooks/verify-doc-*.sh</code></td></tr>
-        <tr><td>The drift alarm</td><td><code>xtask/tests/harness_parity.rs</code> · <code>xtask/tests/doc_hooks.rs</code></td></tr>
+        <tr><td>The drift alarm</td><td><code>xtask/tests/suite/harness_parity.rs</code> · <code>xtask/tests/suite/doc_hooks.rs</code></td></tr>
         <tr><td>The process text it amends</td><td><a href="../work-planning.html">work-planning.html</a> · <a href="../workflow.html">workflow.html</a> · <a href="../documentation-system.html">documentation-system.html</a> — the T1 wording edits land with the epic's e2e (E-CODEX.W2)</td></tr>
       </tbody>
     </table>

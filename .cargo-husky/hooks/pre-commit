@@ -33,7 +33,9 @@ if [ -f "$(git rev-parse --git-path MERGE_HEAD)" ]; then
   case "$branch" in
   main)
     echo "[pre-commit] merge completion - cargo xtask verify-dod hook epic"
-    exec cargo xtask verify-dod hook epic
+    cargo xtask verify-dod hook epic
+    echo "[pre-commit] merge completion - cargo xtask gate0 merge - the merged tree"
+    exec cargo xtask gate0 merge
     ;;
   epic/*)
     echo "[pre-commit] merge completion - cargo xtask verify-dod hook wu"

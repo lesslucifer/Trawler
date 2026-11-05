@@ -1,0 +1,207 @@
+---
+source: tests/suite/api.rs
+expression: doc
+---
+{
+  "log": {
+    "creator": {
+      "name": "Trawler",
+      "version": "<version>"
+    },
+    "entries": [
+      {
+        "cache": {},
+        "request": {
+          "bodySize": 0,
+          "cookies": [],
+          "headers": [],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "method": "GET",
+          "queryString": [],
+          "url": "http://big.example.com/blob"
+        },
+        "response": {
+          "bodySize": 9000000,
+          "content": {
+            "comment": "trawler: body not captured (too_large)",
+            "mimeType": "application/octet-stream",
+            "size": 9000000
+          },
+          "cookies": [],
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/octet-stream"
+            }
+          ],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "redirectURL": "",
+          "status": 200,
+          "statusText": "OK"
+        },
+        "startedDateTime": "<started>",
+        "time": 1,
+        "timings": {
+          "receive": 0,
+          "send": 0,
+          "wait": 1
+        }
+      },
+      {
+        "cache": {},
+        "request": {
+          "bodySize": 0,
+          "cookies": [],
+          "headers": [],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "method": "GET",
+          "queryString": [],
+          "url": "http://events.example.com/stream"
+        },
+        "response": {
+          "bodySize": -1,
+          "content": {
+            "comment": "trawler: body not captured (streaming)",
+            "mimeType": "text/event-stream",
+            "size": -1
+          },
+          "cookies": [],
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "text/event-stream"
+            }
+          ],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "redirectURL": "",
+          "status": 200,
+          "statusText": "OK"
+        },
+        "startedDateTime": "<started>",
+        "time": 1,
+        "timings": {
+          "receive": 0,
+          "send": 0,
+          "wait": 1
+        }
+      },
+      {
+        "cache": {},
+        "request": {
+          "bodySize": 4,
+          "cookies": [],
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "image/png"
+            }
+          ],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "method": "POST",
+          "postData": {
+            "encoding": "base64",
+            "mimeType": "image/png",
+            "text": "iVBORw=="
+          },
+          "queryString": [],
+          "url": "http://cdn.other.com/upload"
+        },
+        "response": {
+          "bodySize": 0,
+          "content": {
+            "mimeType": "application/octet-stream",
+            "size": 0
+          },
+          "cookies": [],
+          "headers": [
+            {
+              "name": "Location",
+              "value": "http://cdn.other.com/upload/1"
+            }
+          ],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "redirectURL": "http://cdn.other.com/upload/1",
+          "status": 201,
+          "statusText": "Created"
+        },
+        "startedDateTime": "<started>",
+        "time": 1,
+        "timings": {
+          "receive": 0,
+          "send": 0,
+          "wait": 1
+        }
+      },
+      {
+        "cache": {},
+        "request": {
+          "bodySize": 0,
+          "cookies": [],
+          "headers": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "method": "GET",
+          "queryString": [
+            {
+              "name": "page",
+              "value": "2"
+            },
+            {
+              "name": "sort",
+              "value": "name"
+            }
+          ],
+          "url": "http://api.example.com/users?page=2&sort=name"
+        },
+        "response": {
+          "bodySize": 12,
+          "content": {
+            "mimeType": "application/json",
+            "size": 12,
+            "text": "{\"users\":[]}"
+          },
+          "cookies": [
+            {
+              "name": "sid",
+              "value": "xyz"
+            }
+          ],
+          "headers": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Set-Cookie",
+              "value": "sid=xyz; Path=/"
+            }
+          ],
+          "headersSize": -1,
+          "httpVersion": "HTTP/1.1",
+          "redirectURL": "",
+          "status": 200,
+          "statusText": "OK"
+        },
+        "startedDateTime": "<started>",
+        "time": 1,
+        "timings": {
+          "receive": 0,
+          "send": 0,
+          "wait": 1
+        }
+      }
+    ],
+    "version": "1.2"
+  }
+}

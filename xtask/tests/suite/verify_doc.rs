@@ -1,0 +1,471 @@
+use std::path::PathBuf;
+use std::process::{Command, Output};
+
+use tempfile::TempDir;
+
+fn doc(artifact: &str, status: &str, body: &str) -> String {
+    let status_attr =
+        if status.is_empty() { String::new() } else { format!(" data-status=\"{status}\"") };
+    format!(
+        "<!DOCTYPE html><html lang=\"en\" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+         <main data-artifact=\"{artifact}\"{status_attr}>{body}</main>\
+         <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+         </body></html>"
+    )
+}
+
+fn epic_plan_items() -> &'static str {
+    "<p data-item=\"intent\">why</p><p data-item=\"use-cases\">UC-1</p>\
+     <ul data-item=\"expected\"><li>observable</li></ul><ul data-item=\"non-goals\"><li>out</li></ul>\
+     <p data-item=\"e2e-plan\">flow</p><p data-item=\"distillation-plan\">T2 targets</p>\
+     <p data-item=\"open-questions\">none</p>"
+}
+
+fn wu_block(id: &str) -> String {
+    format!(
+        "<div data-wu=\"{id}\"><p data-item=\"wu-summary\">builds</p>\
+         <p data-item=\"wu-maps-to\">UC-1</p><p data-item=\"wu-expected\">outcome</p>\
+         <p data-item=\"wu-deps\">none</p></div>"
+    )
+}
+
+fn epic_plan_body() -> String {
+    format!("{}<div data-item=\"wu-summaries\">{}</div>", epic_plan_items(), wu_block("E-X.W1"))
+}
+
+fn wu_plan_body() -> &'static str {
+    "<p data-item=\"requirement\">one sentence</p><p data-item=\"maps-to\">E-X / UC-1</p>\
+     <p data-item=\"expected\">observable</p><table data-item=\"test-plan\"><tr><td>asserts</td></tr></table>"
+}
+
+fn wu_result_body() -> &'static str {
+    "<p data-item=\"outcome\">delivered</p><p data-item=\"deviations\">none</p>\
+     <p data-item=\"evidence\">tests, tips</p><p data-item=\"distillation\">DEC-9</p>\
+     <p data-item=\"follow-ups\">none</p>"
+}
+
+fn epic_result_body() -> &'static str {
+    "<p data-item=\"outcome\">landed</p><p data-item=\"wu-rollup\">W1 done</p>\
+     <p data-item=\"deviations\">none</p><p data-item=\"evidence\">e2e green</p>\
+     <p data-item=\"distillation\">T2 current</p><p data-item=\"follow-ups\">none</p>"
+}
+
+fn run_verify(dir: &TempDir, files: &[(&str, &str)]) -> Output {
+    let mut paths: Vec<PathBuf> = Vec::new();
+    for (name, content) in files {
+        let path = dir.path().join(name);
+        std::fs::write(&path, content).unwrap();
+        paths.push(path);
+    }
+    Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("verify-doc")
+        .args(&paths)
+        .current_dir(dir.path())
+        .output()
+        .unwrap()
+}
+
+fn stdout(out: &Output) -> String {
+    String::from_utf8_lossy(&out.stdout).to_string()
+}
+
+#[test]
+fn conforming_docs_of_all_four_types_exit_zero() {
+    let dir = TempDir::new().unwrap();
+    let out = run_verify(
+        &dir,
+        &[
+            ("epic-plan.html", &doc("epic-plan", "ready", &epic_plan_body())),
+            ("wu-plan.html", &doc("wu-plan", "", wu_plan_body())),
+            ("wu-result.html", &doc("wu-result", "", wu_result_body())),
+            ("epic-result.html", &doc("epic-result", "", epic_result_body())),
+        ],
+    );
+    assert!(out.status.success(), "expected green: {}", stdout(&out));
+}
+
+#[test]
+fn epic_plan_missing_two_items_names_exactly_those() {
+    let dir = TempDir::new().unwrap();
+    let body = epic_plan_body()
+        .replace("<p data-item=\"use-cases\">UC-1</p>", "")
+        .replace("<p data-item=\"e2e-plan\">flow</p>", "");
+    let out = run_verify(&dir, &[("plan.html", &doc("epic-plan", "", &body))]);
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(text.contains("item·use-cases") && text.contains("item·e2e-plan"), "{text}");
+    assert_eq!(text.matches("FAIL").count(), 2, "exactly the two missing items: {text}");
+}
+
+#[test]
+fn misspelled_tag_pairs_unknown_with_missing_item() {
+    let dir = TempDir::new().unwrap();
+    let body = wu_result_body().replace("data-item=\"evidence\"", "data-item=\"evidnce\"");
+    let out = run_verify(&dir, &[("result.html", &doc("wu-result", "", &body))]);
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(
+        text.contains("unknown tag \"evidnce\"") && text.contains("missing item \"evidence\""),
+        "{text}"
+    );
+}
+
+#[test]
+fn wu_block_lacking_a_sub_tag_is_red() {
+    let dir = TempDir::new().unwrap();
+    let body = epic_plan_body().replace("<p data-item=\"wu-deps\">none</p>", "");
+    let out = run_verify(&dir, &[("plan.html", &doc("epic-plan", "", &body))]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(stdout(&out).contains("wu·E-X.W1·wu-deps"), "{}", stdout(&out));
+}
+
+#[test]
+fn combined_docs_for_a_collapsed_epic_check_both_checklists() {
+    let dir = TempDir::new().unwrap();
+    let combined_plan = format!("{}{}", epic_plan_body(), wu_plan_body());
+    let combined_result =
+        format!("{}<p data-item=\"wu-rollup\">the one WU delivered</p>", wu_result_body());
+    let out = run_verify(
+        &dir,
+        &[
+            ("plan.html", &doc("epic-plan wu-plan", "", &combined_plan)),
+            ("result.html", &doc("epic-result wu-result", "", &combined_result)),
+        ],
+    );
+    assert!(out.status.success(), "{}", stdout(&out));
+
+    let missing = combined_plan.replace("<p data-item=\"requirement\">one sentence</p>", "");
+    let out = run_verify(&dir, &[("plan2.html", &doc("epic-plan wu-plan", "", &missing))]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(stdout(&out).contains("item·requirement"), "{}", stdout(&out));
+}
+
+#[test]
+fn draft_and_ungoverned_docs_exit_zero() {
+    let dir = TempDir::new().unwrap();
+    let out = run_verify(
+        &dir,
+        &[
+            ("draft.html", &doc("epic-plan", "draft", "<p>half-written</p>")),
+            ("plain.html", "<html><body><p>pre-standard doc</p></body></html>"),
+        ],
+    );
+    assert!(out.status.success(), "{}", stdout(&out));
+}
+
+// The design-run contract, end to end through the real binary: a run written to
+// the shape DEC-53 leaves is green and prints the machine-checked tally, and a
+// run still carrying one of the cut stations is refused by name.
+#[test]
+fn a_design_run_is_judged_against_the_rulebook_on_disk() {
+    let dir = TempDir::new().unwrap();
+    let rulebook = dir.path().join("docs/design-rules");
+    std::fs::create_dir_all(&rulebook).unwrap();
+    stub_vocabulary(&dir);
+    std::fs::write(
+        rulebook.join("design-rules-index.html"),
+        "<table data-c=\"hard-rules-table\"><tbody>\
+         <tr><td><code>colour-tokens-only</code></td></tr>\
+         <tr><td><code>spacing-scale</code></td></tr>\
+         <tr><td><code>not-a-predicate</code></td></tr></tbody></table>",
+    )
+    .unwrap();
+
+    let run = |extra: &str| {
+        format!(
+            "<html data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+             <script src=\"https://cdn.tailwindcss.com\"></script>\
+             <script src=\"../../doc-assets/components/specimens.bundle.js\"></script>\
+             <style>.m{{color:var(--ink);}}</style>\
+             {}\
+             <script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+             </body></html>",
+            doc_main(&format!(
+                "<div data-item=\"mockup\" data-wire=\"none\">\
+                 <div id=\"m-zone\" data-zone=\"verdicts\"></div>\
+                 <script type=\"text/babel\">mount('m-zone', <Section title=\"headers\">rows</Section>)</script>\
+                 <p>overflow: verdicts scrolls to its own cap</p>\
+                 <button data-state-toggle=\"m\">flip</button></div>\
+                 <table data-item=\"capabilities\"><tr><td>CA install</td><td>used</td>\
+                 <td>B1 button</td></tr></table>\
+                 <table data-item=\"keyboard\"><tr><td>open a verdict</td><td>the row</td>\
+                 <td><code>Enter</code></td></tr></table>\
+                 <p data-item=\"proposals\">band</p>\
+                 <p data-item=\"blocked-on\">tokens</p>\
+                 <table data-item=\"review\"><tr><td>copy icon only</td><td>mockup</td>\
+                 <td><code>CopyButton</code> @avoid</td></tr></table>{extra}"
+            ))
+        )
+    };
+
+    let out = run_verify(&dir, &[("run.html", &run(""))]);
+    let text = stdout(&out);
+    assert!(out.status.success(), "expected green: {text}");
+    assert!(text.contains("hard rules: 2/3 machine-checked (design)"), "{text}");
+    assert!(text.contains("1 unchecked: not-a-predicate"), "the gap names the slug: {text}");
+    assert!(text.contains("design-allow: 0 live suppression"), "{text}");
+    assert!(!text.contains("receipt"), "no receipt survives the cut (DEC-53): {text}");
+
+    // The old shape, still being written: refused by name rather than tolerated.
+    let out = run_verify(
+        &dir,
+        &[(
+            "old.html",
+            &run("<p data-item=\"frame\">drivers</p><pre data-item=\"receipt\">rulebook: x</pre>"),
+        )],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(text.contains("frame") && text.contains("receipt"), "{text}");
+    assert!(text.contains("item·unknown-tag"), "{text}");
+
+    // A kept item silently dropped is the other half of the same guard.
+    let out =
+        run_verify(&dir, &[("half.html", &run("").replace("data-item=\"keyboard\"", "data-x"))]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(stdout(&out).contains("item·keyboard"), "{}", stdout(&out));
+}
+
+// The five vocabulary rules read ui/tailwind.config.js through a node emitter.
+// A temp repo has no ui/, so it gets the emitter's shape rather than its
+// content - what these tests assert is the doc contract, not the palette.
+fn stub_vocabulary(dir: &TempDir) {
+    let scripts = dir.path().join("scripts");
+    std::fs::create_dir_all(&scripts).unwrap();
+    std::fs::write(
+        scripts.join("design-vocabulary.mjs"),
+        "process.stdout.write(JSON.stringify({legal:[\"text-ink\"],         rules:{\"colour-tokens-only\":[\"text-\"]},values:{},modifiers:{},chromatic:[\"ok\"],chroma_floor:40}));",
+    )
+    .unwrap();
+}
+
+// A vocabulary that cannot be read is the same shape of hole as an unreadable
+// rulebook: five rules that report nothing look exactly like five rules with
+// nothing to say.
+#[test]
+fn a_design_run_without_the_vocabulary_emitter_is_red() {
+    let dir = TempDir::new().unwrap();
+    let out = run_verify(&dir, &[("run.html", &doc_main("<p data-item=\"frame\">d</p>"))]);
+    assert_eq!(out.status.code(), Some(1));
+    assert!(stdout(&out).contains("vocabulary·unreadable"), "{}", stdout(&out));
+}
+
+fn doc_main(body: &str) -> String {
+    format!("<main data-artifact=\"design-run\">{body}</main>")
+}
+
+#[test]
+fn multi_path_output_reports_only_red_docs() {
+    let dir = TempDir::new().unwrap();
+    let out = run_verify(
+        &dir,
+        &[
+            ("green.html", &doc("wu-result", "", wu_result_body())),
+            ("red.html", &doc("wu-result", "", "<p data-item=\"outcome\">only this</p>")),
+        ],
+    );
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(text.contains("red.html") && !text.contains("green.html"), "{text}");
+}
+
+fn ungoverned(body: &str) -> String {
+    format!(
+        "<!DOCTYPE html><html lang=\"en\" data-htmldoc-id=\"665f2c1a9b04e2a91d72c6b0\"><body>\
+         {body}<script type=\"module\" src=\"https://htmldoc.wfomobile.com/htmldoc.js\"></script>\
+         </body></html>"
+    )
+}
+
+// A doc with no data-artifact reaches no checklist predicate, so this is the one
+// case the whole scope decision turns on.
+#[test]
+fn an_ungoverned_doc_with_a_dead_link_is_red() {
+    let dir = TempDir::new().unwrap();
+    let out = run_verify(&dir, &[("dec-13.html", &ungoverned("<a href=\"setup.ts\">setup</a>"))]);
+    assert_eq!(out.status.code(), Some(1), "{}", stdout(&out));
+    let text = stdout(&out);
+    assert!(text.contains("setup.ts"), "names the dead href: {text}");
+    assert!(text.contains("link"), "{text}");
+}
+
+#[test]
+fn the_same_ungoverned_doc_is_green_once_the_link_resolves() {
+    let dir = TempDir::new().unwrap();
+    std::fs::write(dir.path().join("setup.rs"), "fn main() {}").unwrap();
+    let out = run_verify(&dir, &[("dec-13.html", &ungoverned("<a href=\"setup.rs\">setup</a>"))]);
+    assert!(out.status.success(), "{}", stdout(&out));
+    assert!(stdout(&out).contains("ungoverned"), "still ungoverned: {}", stdout(&out));
+}
+
+#[test]
+fn a_governed_doc_reports_the_dead_link_beside_its_checklist_failures() {
+    let dir = TempDir::new().unwrap();
+    let body = wu_plan_body().replace("<p data-item=\"expected\">observable</p>", "")
+        + "<a href=\"gone.html\">gone</a>";
+    let out = run_verify(&dir, &[("plan.html", &doc("wu-plan", "", &body))]);
+    assert_eq!(out.status.code(), Some(1));
+    let text = stdout(&out);
+    assert!(text.contains("item·expected"), "the checklist still runs: {text}");
+    assert!(text.contains("gone.html"), "and the link too: {text}");
+}
+
+#[test]
+fn a_draft_with_a_dead_link_stays_silent() {
+    let dir = TempDir::new().unwrap();
+    let body = format!("{}<a href=\"gone.html\">gone</a>", wu_plan_body());
+    let out = run_verify(&dir, &[("draft.html", &doc("wu-plan", "draft", &body))]);
+    assert!(out.status.success(), "{}", stdout(&out));
+}
+
+#[test]
+fn archive_links_and_archived_docs_are_not_link_checked() {
+    let dir = TempDir::new().unwrap();
+    std::fs::create_dir(dir.path().join(".archive")).unwrap();
+    let out = run_verify(
+        &dir,
+        &[
+            ("live.html", &ungoverned("<a href=\".archive/retired.html\">retired</a>")),
+            (".archive/old.html", &ungoverned("<a href=\"gone.html\">gone</a>")),
+        ],
+    );
+    assert!(out.status.success(), "{}", stdout(&out));
+}
+
+#[test]
+fn external_and_fragment_hrefs_are_not_link_checked() {
+    let dir = TempDir::new().unwrap();
+    let body = "<a href=\"https://example.com/x\">x</a><a href=\"#here\">h</a>\
+                <a href=\"mailto:a@example.com\">m</a>";
+    let out = run_verify(&dir, &[("doc.html", &ungoverned(body))]);
+    assert!(out.status.success(), "{}", stdout(&out));
+}
+
+#[test]
+fn this_repo_s_own_docs_resolve_every_link_they_ship() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    let listed = Command::new("git")
+        .args(["ls-files", "docs/*.html", "docs/**/*.html"])
+        .current_dir(&root)
+        .output()
+        .unwrap();
+    let docs: Vec<String> =
+        String::from_utf8_lossy(&listed.stdout).lines().map(str::to_string).collect();
+    assert!(docs.len() > 30, "expected the corpus, found {}", docs.len());
+    let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("verify-doc")
+        .args(&docs)
+        .current_dir(&root)
+        .output()
+        .unwrap();
+    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stdout));
+}
+
+// ─── the specs against their own gate ───────────────────────────────────────
+//
+// DEC-26 replaced the pre-bundle trio with one classic tag and moved the checks
+// with it; the two T1 specs that tell an author what to load did not move, and
+// nothing said so - a design file is refused by check-render.mjs and a run by
+// `assets·specimen`, each for a path its own spec dictated. The specs and the
+// gate are two statements of one shape, so they are asserted against each other
+// here rather than re-read by the next agent who copies a template.
+
+/// Every `src` a spec PRESCRIBES - written escaped inside a template block, which
+/// is what separates it from the spec's own `<head>`.
+fn prescribed_script_srcs(html: &str) -> Vec<String> {
+    html.split("&lt;script")
+        .skip(1)
+        .filter_map(|tail| {
+            let tag = tail.split("&gt;").next()?;
+            let at = tag.find("src=\"")? + "src=\"".len();
+            Some(tag[at..].split('"').next()?.to_string())
+        })
+        .collect()
+}
+
+/// Where a relative `src` written in `base`'s folder actually lands, repo-rooted.
+fn resolved_from(base: &str, relative: &str) -> String {
+    let mut parts: Vec<&str> = base.split('/').filter(|s| !s.is_empty()).collect();
+    for segment in relative.split('/') {
+        match segment {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            other => parts.push(other),
+        }
+    }
+    parts.join("/")
+}
+
+#[test]
+fn resolved_from_walks_the_relative_path_it_is_given() {
+    assert_eq!(
+        resolved_from("docs/work", "../../doc-assets/components/specimens.bundle.js"),
+        "doc-assets/components/specimens.bundle.js"
+    );
+    assert_eq!(
+        resolved_from("docs/work/components", "../../../doc-assets/components/x.js"),
+        "doc-assets/components/x.js"
+    );
+    assert_eq!(resolved_from("docs/work", "./a/b.js"), "docs/work/a/b.js");
+}
+
+#[test]
+fn the_design_specs_prescribe_assets_that_exist_where_their_artifact_sits() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    // Each spec is read from the folder ITS artifact lives in - a run is
+    // docs/work/<run>.html, a component design docs/work/components/<name>.html -
+    // so the two correct depths differ and both must land on the same directory.
+    for (spec, artifact_dir) in [
+        ("docs/design-flow.html", "docs/work"),
+        ("docs/component-design.html", "docs/work/components"),
+    ] {
+        let html = std::fs::read_to_string(root.join(spec)).unwrap();
+        let assets: Vec<String> = prescribed_script_srcs(&html)
+            .into_iter()
+            .filter(|src| src.contains("doc-assets/"))
+            .collect();
+        assert!(
+            assets.iter().any(|src| src.ends_with("specimens.bundle.js")),
+            "{spec} prescribes no specimens.bundle.js - an artifact built from it loads no \
+             collection to mount from, and check-render.mjs refuses it"
+        );
+        for src in assets {
+            let landed = resolved_from(artifact_dir, &src);
+            assert_eq!(
+                landed.rsplit_once('/').unwrap().0,
+                "doc-assets/components",
+                "{spec} prescribes {src}, which from {artifact_dir}/ resolves to {landed}"
+            );
+            assert!(
+                root.join("doc-assets/components").is_dir(),
+                "doc-assets/components/ is missing from the tree"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_run_spec_spells_the_bundle_src_the_gate_matches_literally() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    let flow = std::fs::read_to_string(root.join("docs/design-flow.html")).unwrap();
+    assert!(
+        flow.contains(&format!("src=\"{}\"", xtask::doc::BUNDLE)),
+        "design-flow.html's mockup template must spell {} verbatim - check_assets matches the \
+         src string, so a run pasted from a template that differs by one level fails \
+         assets·specimen for a bundle it does load",
+        xtask::doc::BUNDLE
+    );
+}
+
+#[test]
+fn the_component_spec_prescribes_the_babel_tag_its_mount_needs() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().to_path_buf();
+    let spec = std::fs::read_to_string(root.join("docs/component-design.html")).unwrap();
+    assert!(
+        prescribed_script_srcs(&spec).iter().any(|src| src.contains("babel")),
+        "the skeleton mounts from window.Trawler in a text/babel block, which needs Babel in \
+         the head - without it the mount never runs and every spec-* host renders empty"
+    );
+}

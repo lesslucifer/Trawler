@@ -918,6 +918,29 @@
             code. Rejected: the shared target, symlinking third-party parts, sccache, a dev-profile change</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-74-the-merge-proves-the-tree-it-creates.html"><code>dec-74-the-merge-proves-the-tree-it-creates.html</code></a></td>
+          <td><span class="badge id">DEC-74</span></td>
+          <td><strong>The merge into <code>main</code> proves the tree it creates; the push reads that proof.</strong> <code>pre-merge-commit</code>, and the
+            conflicted-merge path in <code>pre-commit</code>, run <code>cargo xtask gate0 merge</code> on the merged working tree
+            once <code>verify-dod hook epic</code> is green; red refuses the merge with the abort/back-merge line. Merges into
+            <code>epic/*</code> stay notes-only. Every check Gate 0 and lint spawn runs without the hook's <code>GIT_*</code>
+            (widens DEC-2's scrub). <code>pre-push</code> runs <code>cargo xtask gate0 push</code>: a pushed tree that is the clean
+            <code>HEAD</code>'s reads the marker, any other is proven in a scratch worktree. No proof is shared between checkouts
+            (DEC-73). Rejected: Gate 0 at WU seams, trusting the epic tip's proof, scrubbing in the hook scripts, refusing a non-HEAD push</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html"><code>dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html</code></a></td>
+          <td><span class="badge id">DEC-75</span></td>
+          <td><strong>A gate refuses a machine that cannot run the suite.</strong> On a marker miss Gate 0 checks
+            <code>cargo nextest --version</code>, then times a freshly linked probe's first launch (≤ 2 s, never awaited past it);
+            either failure exits 2 with its fix line (install command · Developer Tools) and runs no check, and <code>gate0
+            merge</code>/<code>push</code> append no tree refusal. <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> skips the probe. A fast
+            verdict is cached per boot in the user cache dir; a slow one never. The serial <code>cargo test</code> fallback is gone.
+            Rejected: keeping the fallback, probing every run, a per-checkout cache</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

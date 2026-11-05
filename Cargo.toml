@@ -30,6 +30,7 @@ repository = "https://github.com/lesslucifer/Trawler"
 [lib]
 name = "trawler"
 path = "src/lib.rs"
+doctest = false
 
 [[bin]]
 name = "trawler"

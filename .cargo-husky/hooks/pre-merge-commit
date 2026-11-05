@@ -1,6 +1,7 @@
 #!/bin/sh
 # Merge gate: verifies DoD evidence on MERGE_HEAD before the merge commit is created.
-# Merging into epic/* runs the WU gate; into main, the epic gate; other targets are ungated.
+# Merging into epic/* runs the WU gate; into main, the epic gate and then Gate 0 on
+# the merged tree (DEC-74); other targets are ungated.
 set -e
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
@@ -12,4 +13,8 @@ epic/*) gate=wu ;;
 esac
 
 echo "[pre-merge-commit] cargo xtask verify-dod hook $gate"
-exec cargo xtask verify-dod hook "$gate"
+cargo xtask verify-dod hook "$gate"
+[ "$gate" = epic ] || exit 0
+
+echo "[pre-merge-commit] cargo xtask gate0 merge - the merged tree"
+exec cargo xtask gate0 merge
