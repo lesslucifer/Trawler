@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 0cb43a53fdb4b11572fb88f4121212eab525793e
+base: 8de7a4b2317d1d338e19c43ecdcb8d61a326bdea
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w4-login-item-result.html
+report_sha256: a78a75b618997faa9b905ac29ac076a423e050de60a8a28deacd86dec0929840
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAa/g7bOnSeSZSyMamGpmolaGuWerTPaY8GjXnX1oV/M5GVTx55ZkyoUu
+  JAChQJo7vpORMtxuTU/ZSgfdY6HSQF
+  -----END SSH SIGNATURE-----
