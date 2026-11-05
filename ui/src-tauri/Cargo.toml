@@ -30,7 +30,7 @@ scenario = ["e2e"]
 
 [dependencies]
 trawler = { path = "../.." }
-tauri = { version = "2.1", features = [] }
+tauri = { version = "2.1", features = ["tray-icon", "image-png"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 serde = { version = "1", features = ["derive"] }

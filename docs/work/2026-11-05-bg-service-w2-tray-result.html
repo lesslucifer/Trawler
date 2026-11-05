@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4c9c9f34851f0dfae894" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W2 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W2 — result</h1>
+      <p>Every launch builds a menu-bar icon that follows the capture service. Whether it built is what lets W1's
+        windowless mode exist.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU result · branch <code>wu/bg-service/tray</code> ·
+        plan: <a href="2026-11-05-bg-service-w2-tray-plan.html">W2 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Plan's expected</th><th>Status</th><th>What shipped</th></tr>
+      <tr><td>1 · a template glyph and its menu on macOS</td><td><span class="badge approval">delivered, look owed</span></td>
+        <td><code>tray.rs</code>: built in <code>core::setup</code> before <code>open_at_launch</code>. A real <code>trawler-ui</code>
+        launch built it (no “no menu-bar icon” line) and its core answered <code>/flows</code> 200. A screenshot of the menu
+        bar was refused in this session, so the look is unchecked</td></tr>
+      <tr><td>2 · killed core → stopped, Restart → running on its ports</td><td><span class="badge auto">delivered</span></td>
+        <td>observer → <code>tray::on_state</code>; Restart → <code>core::restart_in_background</code>, owned-only like
+        <code>restart_core</code></td></tr>
+      <tr><td>3 · Open rebuilds or focuses main</td><td><span class="badge auto">delivered</span></td>
+        <td>→ <code>lifecycle::reopen_main_in_background</code> (W1's tested path)</td></tr>
+      <tr><td>4 · a trayless host stays as W1 left it</td><td><span class="badge auto">delivered</span></td>
+        <td><code>install</code> returns false, <code>mark_tray(false)</code>, and a half-built icon is removed</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>a managed <code>TrayMenu</code> tested in place</td><td>the shown state is a pure <code>TrayView</code>, recorded
+        per update. The native items are a thin layer that copies it into the menu</td><td>muda panics building a menu off the
+        main thread, and every test runs off it. So the tests read the view, and the native layer is checked on hardware</td></tr>
+      <tr><td>the observer drives the tray directly</td><td>each report queues one update on the main thread, which re-reads
+        <code>Core::state</code></td><td>review: an exit and a restart's start publish from two threads, and a late report
+        could stick on a dead core with Restart disabled</td></tr>
+      <tr><td>—</td><td><code>set_icon_as_template(true)</code> after every <code>set_icon</code></td><td>review, checked in
+        tray-icon 0.24.1: <code>set_icon</code> hard-codes the template flag off</td></tr>
+      <tr><td>—</td><td>the trayless test runs on macOS only</td><td>it relies on the native tray refusing off the main
+        thread, which is macOS's behaviour</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>unit</td><td><code>tray::tests</code> (4): the view per state, the action table both ways, both glyphs decode at 36×36 and differ</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/suite/tray.rs</code> (2): a killed core turns the view stopped with
+        Restart offered; Restart brings it back on the same ports; a late exit report never outranks the core; a host that
+        refuses the tray is never left windowless</td></tr>
+      <tr><td>suite</td><td><code>cargo xtask gate0</code> green on the tip (1241 tests)</td></tr>
+      <tr><td>review</td><td>an independent pass found one blocker (the template flag) and two important races, all fixed above</td></tr>
+      <tr><td>commits</td><td>plan <code>d8cc46c6</code> · tray <code>20fcbb49</code> · lockfile <code>a5e2b7f9</code> · fixes <code>a0167e71</code> · this report</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <tr><th>Tier</th><th>Doc</th><th>Absorbed</th></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a> rule 8 + its
+        <a href="../decisions/decisions-index.html">index</a> row</td><td>the icon: when it is built, availability = built,
+        its states, glyphs and items, Restart greyed while running</td></tr>
+      <tr><td>T2 · T1</td><td>use cases, architecture</td><td>nothing yet: W7 owns them</td></tr>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <tr><th>Owner</th><th>Item</th></tr>
+      <tr><td>owed (hardware)</td><td>look at the glyph in light and dark menu bars and with its menu open; kill the core and
+        see the ring alone; Windows and Linux trays</td></tr>
+      <tr><td>W3</td><td>Quit Trawler shares ⌘Q's path, which closes the main window. With the switch on it would hide, not
+        quit, and with no window open it exits without DEC-64's check</td></tr>
+      <tr><td>W6</td><td>the General page reads <code>Lifecycle::tray_available</code> for the switch's disabled reason</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

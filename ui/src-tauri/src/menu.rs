@@ -44,7 +44,7 @@ pub fn action_for(id: &str) -> MenuAction {
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     match action_for(id) {
-        MenuAction::CloseMainWindow => close_main_window(app),
+        MenuAction::CloseMainWindow => quit(app),
         MenuAction::OpenSettings => drop(settings::open_in_background(app)),
         MenuAction::ResetLayout => {
             if let Err(err) = app.emit(RESET_LAYOUT_EVENT, ()) {
@@ -56,7 +56,7 @@ pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
 }
 
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
-fn close_main_window<R: Runtime>(app: &AppHandle<R>) {
+pub fn quit<R: Runtime>(app: &AppHandle<R>) {
     match app.get_webview_window(MAIN_WINDOW) {
         Some(window) => {
             if let Err(err) = window.close() {
