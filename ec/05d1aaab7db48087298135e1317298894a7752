@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W8
+branch: HEAD
+tests:
+  unit: { count: 58, covers: "the find grammar (each key, quotes, near and far misses, dash fault, invalid regex, odd hex, labels read back, suggestions per kind and the document's keys, refusal per kind); key and value marks over JSON with escaped quotes and over raw form text; re and case; an empty-matching regex; overlapping chips merged once; the cap across chips; bytes and text over hex with the plain guess; pair marks by chip with duplicate keys" }
+  integration: { count: 160, covers: "ChipBox over an injected grammar (chip, fault, suggestions, Backspace and remove, onDraft, onEnter, onEscape, refused face, initialDraft, handle); QueryBar unchanged and green on it; the find bar over json, form, text and hex: Space and Backspace, suggestions and placeholder per kind, the document's keys, faults without a chip, the union count with document-order stepping and a live draft, a kind switch refusing and restoring a chip, Esc in two steps; ChipBox mounts in the collection" }
+  e2e: { waived: "the journeys over a real window are W9's, per the plan" }
