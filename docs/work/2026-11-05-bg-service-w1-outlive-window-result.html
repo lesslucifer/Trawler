@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec39469f34851f0dfae852" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W1 — result</h1>
+      <p>The app can outlive its main window: the preference, the decision, the rebuild and the launch flag are in the
+        shell. They stay unreachable until W2 creates a tray.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU result · branch
+        <code>wu/bg-service/outlive-window</code> · plan:
+        <a href="2026-11-05-bg-service-w1-outlive-window-plan.html">W1 plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Plan's expected</th><th>Status</th><th>What shipped</th></tr>
+      <tr><td>1 · <code>cargo run</code> quits on ✕ as today</td><td><span class="badge auto">delivered</span></td>
+        <td>tray availability starts false and nothing sets it yet, so <code>ends_the_app</code> is true for main in every real launch</td></tr>
+      <tr><td>2 · on + tray: app and core survive; reopen builds main</td><td><span class="badge auto">delivered</span></td>
+        <td><code>lifecycle.rs</code>: <code>on_window_destroyed</code>, <code>holds_last_window_exit</code>,
+        <code>build_main</code> / <code>reopen_main</code> (single-instance and macOS <code>RunEvent::Reopen</code>, off the event loop)</td></tr>
+      <tr><td>3 · preference round trip, corrupt = off, none = unanswered</td><td><span class="badge auto">delivered</span></td>
+        <td><code>keep_capturing.rs</code> + <code>keep_capturing_read</code> / <code>keep_capturing_write</code>; the
+        integration test registers them, the shipped handlers do not yet</td></tr>
+      <tr><td>4 · windowless app killed → core exits</td><td><span class="badge auto">delivered</span></td>
+        <td>re-executed role test, <code>kill -9</code> → lifeline</td></tr>
+      <tr><td>5 · DEC-77; DEC-69 rule 14 points to it</td><td><span class="badge auto">delivered</span></td><td>plus the index row</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>launch flag gated on “may be windowless”</td><td><code>--background</code> and the last-window exit hold read
+        the tray alone (plan v2)</td><td>epic expected #8 says no window “keep capturing either way”. A
+        <code>--background</code> app whose Settings window closes would otherwise quit</td></tr>
+      <tr><td><code>settings.rs</code> <code>ends_the_app</code> becomes the decision</td><td>moved to <code>lifecycle.rs</code></td>
+        <td>it now reads the preference and the tray, which are lifecycle state, not Settings</td></tr>
+      <tr><td>reopen asserted to carry the core-address init script</td><td>asserted: one builder (<code>build_main</code>)
+        from the config's <code>main</code>, and a config without it builds nothing</td><td>MockRuntime exposes neither a
+        webview's init scripts nor its title. The script is a plugin script Tauri adds to every webview</td></tr>
+      <tr><td>—</td><td>the epic back-merged <code>main</code> before the WU branched</td><td>E-INSPWIN landed DEC-76 and edited
+        <code>lib.rs</code>/<code>window_geometry.rs</code>. Hence DEC-77. Q13 was already met by its
+        <code>data_window::closes_with</code></td></tr>
+      <tr><td>the commands registered in the shell</td><td>defined and IPC-tested, left out of <code>lib.rs</code>'s and
+        <code>scenario.rs</code>'s handlers</td><td>xtask's registry test holds the handlers to exactly what <code>ui/src</code>
+        invokes, and nothing invokes them before W6</td></tr>
+      <tr><td>—</td><td><code>alive</code>/<code>bindable</code>/<code>eventually</code>/<code>flows_status</code> moved into the
+        suite's <code>common.rs</code></td><td>a third copy was about to be written</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>unit</td><td><code>lifecycle::tests</code> (6: decision table, launch, Dock, state) · <code>keep_capturing::tests</code> (4) ·
+        <code>lib::tests</code> (+2: the flag)</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/suite/outlive_window.rs</code> (7): exits unless on+tray · survives
+        with a live core answering <code>/flows</code> · reopen builds once · config-declared only · trayless
+        <code>--background</code> opens main · IPC round trip · windowless lifeline</td></tr>
+      <tr><td>suite</td><td><code>cargo xtask gate0</code> green on the tip (fmt, clippy, the whole nextest suite)</td></tr>
+      <tr><td>review</td><td>an independent correctness pass found no blocker. Fixed on the tip: a rebuilt main
+        window takes focus with the Dock already Regular; concurrent reopens build one window; a failed build hides the
+        Dock again; the lifeline role is killed on drop. ⌘Q hiding instead of quitting is W3's (below)</td></tr>
+      <tr><td>commits</td><td>plan <code>b09e573c</code> · code + T2 <code>9a5321ca</code> · this report and plan v2 on the tip</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <tr><th>Tier</th><th>Doc</th><th>Absorbed</th></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a> + <a href="../decisions/decisions-index.html">index</a></td>
+        <td>rules 1–7: never windowless without a tray, the preference's file and readings, destroy-and-rebuild, the last-window hold, Dock policy, <code>--background</code>, data windows</td></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a></td><td>rule 14 amended</td></tr>
+      <tr><td>T2 · T1</td><td>use cases, architecture</td><td>nothing yet: W7 owns UC-BG / UC-4 and the T1 lifecycle rows, per the epic's distillation plan</td></tr>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <tr><th>Owner</th><th>Item</th></tr>
+      <tr><td>W6</td><td>register <code>keep_capturing_read</code> / <code>_write</code> in both handlers with the first <code>invoke</code></td></tr>
+      <tr><td>W2</td><td><code>Lifecycle::mark_tray(true)</code> once the tray builds, before <code>open_at_launch</code> runs</td></tr>
+      <tr><td>W3</td><td>⌘Q still closes the main window, so with the switch on it would hide, not quit (expected #6).
+        <code>menu::close_main_window</code> exits with no DEC-64 check when no main window is open</td></tr>
+      <tr><td>W7 / owed</td><td>the Dock icon hiding and showing, and the Dock-click reopen, on real macOS hardware</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

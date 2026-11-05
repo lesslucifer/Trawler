@@ -7,7 +7,9 @@ mod bundle;
 pub mod core;
 mod core_address;
 pub mod data_window;
+pub mod keep_capturing;
 pub mod layout;
+pub mod lifecycle;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
@@ -24,6 +26,7 @@ pub mod window_geometry;
 mod scenario;
 
 pub const CORE_FLAG: &str = "--core";
+pub const BACKGROUND_FLAG: &str = "--background";
 pub const EPHEMERAL_PORTS: bool = cfg!(feature = "e2e");
 
 /// The app binary is also its own core: launched with `--core` first, the rest
@@ -37,13 +40,21 @@ pub fn core_args(
     }
 }
 
+/// A launch with no window (the login item's): the menu-bar icon only.
+pub fn background_launch(mut args: impl Iterator<Item = std::ffi::OsString>) -> bool {
+    args.any(|arg| arg == BACKGROUND_FLAG)
+}
+
 use tauri::Manager;
 
 pub fn run() {
+    let background = background_launch(std::env::args_os().skip(1));
     let mode = core::mode(std::env::var(core::ATTACH_VAR).ok().as_deref());
     let builder = tauri::Builder::default();
     let builder = if core::hands_over(&mode, core::launch_ports(EPHEMERAL_PORTS)) {
-        builder.plugin(tauri_plugin_single_instance::init(|app, _, _| core::focus_main(app)))
+        builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            drop(lifecycle::reopen_main_in_background(app));
+        }))
     } else {
         builder
     };
@@ -56,13 +67,14 @@ pub fn run() {
         .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()))
         .on_window_event(|window, event| {
             if matches!(event, tauri::WindowEvent::Destroyed)
-                && settings::ends_the_app(window.label())
+                && lifecycle::on_window_destroyed(window.app_handle(), window.label())
             {
                 window.app_handle().exit(0);
             }
         })
         .setup(move |app| {
-            core::setup(app, mode)?;
+            lifecycle::install(app.handle(), setup::config_dir(app.handle()).ok());
+            core::setup(app, mode, background)?;
             window_geometry::install(app.handle());
             Ok(())
         });
@@ -118,16 +130,29 @@ pub fn run() {
 }
 
 pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {
-    if let tauri::RunEvent::Exit = event {
-        if let Some(core) = app.try_state::<core::Core>() {
-            core.stop();
+    match event {
+        tauri::RunEvent::ExitRequested { code: None, api, .. }
+            if lifecycle::holds_last_window_exit(app) =>
+        {
+            api.prevent_exit();
         }
+        tauri::RunEvent::WindowEvent { event: tauri::WindowEvent::Destroyed, .. } => {
+            lifecycle::on_window_gone(app);
+        }
+        #[cfg(target_os = "macos")]
+        tauri::RunEvent::Reopen { .. } => drop(lifecycle::reopen_main_in_background(app)),
+        tauri::RunEvent::Exit => {
+            if let Some(core) = app.try_state::<core::Core>() {
+                core.stop();
+            }
+        }
+        _ => {}
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::core_args;
+    use super::{background_launch, core_args};
     use std::ffi::OsString;
 
     fn os(args: &[&str]) -> std::vec::IntoIter<OsString> {
@@ -149,5 +174,18 @@ mod tests {
     #[test]
     fn core_anywhere_but_first_opens_the_window() {
         assert!(core_args(os(&["--lifeline", "--core"])).is_none());
+    }
+
+    #[test]
+    fn the_background_flag_is_read_wherever_it_stands() {
+        assert!(background_launch(os(&["--background"])));
+        assert!(background_launch(os(&["-psn_0_1", "--background"])));
+        assert!(!background_launch(os(&[])));
+        assert!(!background_launch(os(&["--backgrounds"])));
+    }
+
+    #[test]
+    fn the_core_flag_first_wins_over_the_background_flag() {
+        assert!(core_args(os(&["--core", "--background"])).is_some());
     }
 }

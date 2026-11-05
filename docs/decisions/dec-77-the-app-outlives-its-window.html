@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec39049f34851f0dfae848">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-77: the app outlives its window</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-77 — the app outlives its window</h1>
+      <p>The background service is the app process with no window: it keeps supervising its core after the main
+        window closes, but only while a menu-bar icon can bring the window back.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W1</strong> from the owner's
+        rulings on the epic plan's Q1–Q3, Q6, Q11–Q13 · UC-BG, UC-4 · amends
+        <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a> rule 14 · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before (DEC-69 rule 14)</th><th>The limit</th></tr>
+      <tr><td>the main window is the app: its destruction exits, and the exit stops the core</td><td>capture needs an open
+        window, and Trawler cannot be running before the user opens it</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The main window's destruction exits the app <em>unless</em> the shell preference
+        <code>keep_capturing</code> is on <em>and</em> a menu-bar icon exists. Then the process, its supervisor and its
+        core keep running with no window, and the main window is rebuilt when the user reaches for it.</p>
+    </div>
+
+    <h2 id="lifecycle">The decision</h2>
+    <div class="diagram" data-c="decision-diagram">
+      <pre class="mermaid">
+flowchart LR
+  D["main destroyed"] --> Q{"keep_capturing on<br/>AND tray?"}
+  Q -- no --> X["exit — DEC-69 as before"]
+  Q -- yes --> W["windowless: core runs, Dock hidden"]
+  W -- "second launch · Dock click" --> M["main rebuilt from tauri.conf.json"]
+      </pre>
+      <div class="caption">Nothing about the core changes: one supervisor, the stdin lifeline, one CA dir, single
+        instance.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>Never windowless without a menu-bar icon. The shell records whether a tray could be created; with
+        none, the main window's destruction exits whatever the preference says</td><td>a windowless app nobody can reach
+        is a stuck process holding the ports</td></tr>
+      <tr><td>2</td><td><code>keep_capturing</code> is a shell preference, <code>keep-capturing.json</code> in the app's
+        config dir: absent = <em>unanswered</em>, <code>{"keepCapturing": bool}</code> = on / off, anything else = off. It
+        is read on every decision, never cached. Unanswered behaves as off until the first close asks (Q3)</td><td>a
+        shell concern (DEC-12), so the core never sees it; a corrupt file must not strand the app windowless</td></tr>
+      <tr><td>3</td><td>Windowless, the main window is destroyed, not hidden; a second launch (single-instance) or a Dock
+        click rebuilds it through launch's own builder — the config's window, its saved geometry, the core-address
+        script every webview gets</td><td>Q2: no webview renders a live list for hours unseen; the list reloads from the
+        core</td></tr>
+      <tr><td>4</td><td>While a tray exists, Tauri's own exit on the last window closing is held: only rule 1's exit or a
+        quit ends the app</td><td>a <code>--background</code> app whose Settings window closes must not quit</td></tr>
+      <tr><td>5</td><td>macOS: Accessory activation policy (no Dock icon) while no Trawler window is open, Regular from
+        the first one built</td><td>Q11: the menu-bar convention</td></tr>
+      <tr><td>6</td><td><code>--background</code> skips the launch window, only while a tray exists; else the window opens.
+        A second launch always opens or focuses it</td><td>Q6: the login item launches with no window (expected #8, #9)</td></tr>
+      <tr><td>7</td><td>Data windows close with the main window in either case</td><td>Q13, DEC-76 rule 6</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="rejected">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>a core run as its own login/system service, the app attaching to it</td><td>Q1: breaks the lifeline and the
+        owned/attached split DEC-69 rests on; every launch would attach, and Restart and the log would orphan</td></tr>
+      <tr><td>hide the main window instead of destroying it</td><td>Q2: a hidden webview keeps rendering the live list</td></tr>
+      <tr><td>windowless whenever the preference is on</td><td>rule 1: a host with no tray could never reopen the window</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

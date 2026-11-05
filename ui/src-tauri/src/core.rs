@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use tauri::{AppHandle, Emitter, Manager, Runtime, State, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 use crate::supervisor::{CoreEvent, CoreState, Launch, Logged, Observer, StartError, Supervisor};
@@ -128,6 +128,7 @@ pub fn observer<R: Runtime>(app: &AppHandle<R>) -> Observer {
 pub fn setup<R: Runtime>(
     app: &mut tauri::App<R>,
     mode: Mode,
+    background: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let handle = app.handle().clone();
     let core = match mode {
@@ -144,9 +145,7 @@ pub fn setup<R: Runtime>(
         handle.plugin(crate::core_address::init(&api))?;
     }
     app.manage(core);
-    let window =
-        app.config().app.windows.first().ok_or("tauri.conf.json declares no window")?.clone();
-    WebviewWindowBuilder::from_config(&handle, &window)?.build()?;
+    crate::lifecycle::open_at_launch(&handle, background)?;
     Ok(())
 }
 
@@ -186,14 +185,6 @@ fn refuse<R: Runtime>(app: &AppHandle<R>, err: &StartError) {
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 fn report(line: &str) {
     eprintln!("{line}");
-}
-
-pub fn focus_main<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(window) = app.get_webview_window(crate::settings::MAIN_WINDOW) {
-        let _ = window.unminimize();
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
 }
 
 #[tauri::command]

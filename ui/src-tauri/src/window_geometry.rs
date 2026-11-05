@@ -290,7 +290,7 @@ fn work_areas<R: Runtime>(window: &Window<R>) -> Vec<WorkArea> {
         .collect()
 }
 
-fn min_size_of<R: Runtime>(window: &Window<R>) -> MinSize {
+pub fn min_size_of<R: Runtime>(window: &Window<R>) -> MinSize {
     window
         .app_handle()
         .config()
