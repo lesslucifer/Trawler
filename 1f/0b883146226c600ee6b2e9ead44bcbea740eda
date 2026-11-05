@@ -1,0 +1,60 @@
+schema: doc/v1
+epic: E-GATEPAR2
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the E-GATEPAR2 row closed with what shipped and the measured push cost"
+  - path: "docs/decisions/dec-37-har-as-the-interchange-format.html"
+    tier: T2
+    action: updated
+    distills: "test citations re-pointed to the tests/suite layout (E-GATEPAR2.W4); no rule changed"
+  - path: "docs/decisions/dec-50-the-fleet-carries-only-the-dimensions-that-pay.html"
+    tier: T2
+    action: updated
+    distills: "test citations re-pointed to the tests/suite layout (E-GATEPAR2.W4); no rule changed"
+  - path: "docs/decisions/dec-52-one-source-two-harnesses.html"
+    tier: T2
+    action: updated
+    distills: "test citations re-pointed to the tests/suite layout (E-GATEPAR2.W4); no rule changed"
+  - path: "docs/decisions/dec-72-git-runs-the-tracked-hooks.html"
+    tier: T2
+    action: updated
+    distills: "test citations re-pointed to the tests/suite layout (E-GATEPAR2.W4); no rule changed"
+  - path: "docs/decisions/dec-73-each-worktree-builds-into-its-own-target.html"
+    tier: T2
+    action: updated
+    distills: "test citations re-pointed to the tests/suite layout (E-GATEPAR2.W4); no rule changed"
+  - path: "docs/decisions/dec-74-the-merge-proves-the-tree-it-creates.html"
+    tier: T2
+    action: added
+    distills: "the merge into main runs Gate 0 on the merged tree after the epic gate; the push proves every pushed tree, reading the marker for a clean HEAD; checks never inherit the hook's GIT_*"
+  - path: "docs/decisions/dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html"
+    tier: T2
+    action: added
+    distills: "nextest required; a first launch over 2 s refused with the Developer Tools line and an override; exit 2, a fast verdict cached per boot"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-74 and DEC-75 rows"
+  - path: "docs/decisions/workflow-gates.html"
+    tier: T2
+    action: updated
+    distills: "DEC-2's GIT_* scrub widened to every check Gate 0 and lint spawn (DEC-74)"
+  - path: "docs/testing-strategy.html"
+    tier: T1
+    action: updated
+    distills: "tests/suite layout (one binary per crate), the no-doc-test rule and its guard, nextest a required runner"
+  - path: "docs/use-cases/capture.html"
+    tier: T2
+    action: updated
+    distills: "test citations re-pointed to the tests/suite layout (E-GATEPAR2.W4); no rule changed"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "test citations re-pointed to the tests/suite layout (E-GATEPAR2.W4); no rule changed"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "Hooks rows (pre-commit, pre-push, pre-merge-commit), the machine-prerequisite row, DoD-C suite and DoD-E merge rows, gate0 merge/push commands"
