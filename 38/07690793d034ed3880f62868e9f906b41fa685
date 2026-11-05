@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-85-the-rust-toolchain-is-pinned-and-windows-has-its-own-rules.html"
+    tier: T2
+    action: updated
+    distills: "the bump line now covers release.yml"
+  - path: "docs/decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html"
+    tier: T2
+    action: added
+    distills: "the tag-to-draft flow: version check, key presence, five targets with host check, keyless build and bundle, smoke, then a sign step running only the lockfile's tauri CLI directly (never pnpm, whose verify-deps-before-run=install default could install beside the key) with tauri signer sign --app-version, upload; manifest, draft never prerelease; numeric rc versions; SHA pins, no caches, concurrency, collision-safe flatten, draft re-run; known limits incl. rc rpm to final, never-run Windows pnpm.cmd quoting, keyless steps able to tamper with the signer CLI, no codesign re-check after extraction, arm64-only universal smoke"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-86 row"
+  - path: "docs/work/2026-11-05-packaging-v2-plan.html"
+    tier: T3
+    action: updated
+    distills: "expected #4 now tags v0.1.0-1, a numeric rc an MSI accepts"
+  - path: "docs/work/2026-11-05-packaging-v2-w4-release-workflow-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU plan, with C6, C7 and C8 for review rounds 2 to 4"
+  - path: "docs/work/2026-11-05-packaging-v2-w4-release-workflow-result.html"
+    tier: T3
+    action: added
+    distills: "the WU result, with review rounds 2 to 4's findings, fixes, the round-4 cr finding and the macOS sign proofs"
