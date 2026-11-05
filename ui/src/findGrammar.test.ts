@@ -90,6 +90,12 @@ describe("refusedReason", () => {
     expect(refusedReason(chip("plain", "x"), "hex")).toBeNull();
   });
 
+  it("an image has no keys, so every keyed chip is refused there", () => {
+    expect(keysFor("image")).toEqual([]);
+    expect(refusedReason(chip("re", "x"), "image")).toBe("re: needs text; this is image");
+    expect(refusedReason(chip("plain", "x"), "image")).toBeNull();
+  });
+
   it("every kind's keys are runnable on that kind", () => {
     for (const kind of ["json", "form", "xml", "html", "javascript", "css", "text", "hex"] as const) {
       for (const key of keysFor(kind)) expect(refusedReason(chip(key, "x"), kind)).toBeNull();

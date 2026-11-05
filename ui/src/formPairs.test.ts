@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPairAfter, editPair, findInPairs, markPairs, pairsAsJson, parsePairs, removePair, repeats, sortByKey } from "./formPairs";
+import { addPairAfter, editPair, markPairs, pairsAsJson, parsePairs, removePair, repeats, sortByKey } from "./formPairs";
 
 const FORM = "grant_type=urn%3Aietf&scope=accounts&scope=sessions%20devices&state=&note=50%ZZ+off&flag";
 
@@ -108,6 +108,9 @@ describe("the pairs as JSON", () => {
     expect(pairsAsJson([])).toBe("{}");
   });
 });
+
+const findInPairs = (pairs: ReturnType<typeof parsePairs>, query: string, limit?: number) =>
+  markPairs(pairs, query ? [{ key: "plain", value: query }] : [], limit);
 
 describe("find in pairs", () => {
   const pairs = parsePairs("scope=accounts&Scope=x&note=none&s=scope%20scope");

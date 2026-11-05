@@ -38,6 +38,7 @@ export const NOTHING_TO_EXCLUDE = "find marks what it finds; there is nothing to
 export function keysFor(kind: DataKind): Keyed[] {
   if (kind === "json" || kind === "form") return ["key", "value", "re", "case"];
   if (kind === "hex") return ["bytes", "text"];
+  if (kind === "image") return [];
   return ["re", "case"];
 }
 
@@ -114,18 +115,16 @@ export function suggestFind(draft: string, kind: DataKind, names: readonly strin
   return keys.filter((key) => key.startsWith(typed)).map((key) => ({ kind: "key", text: `${key}:`, hint: HINTS[key] }));
 }
 
+const NEEDS: Record<Keyed, string> = {
+  key: "JSON or form",
+  value: "JSON or form",
+  re: "text",
+  case: "text",
+  bytes: "hex",
+  text: "hex",
+};
+
 export function refusedReason(chip: FindChip, kind: DataKind): string | null {
-  switch (chip.key) {
-    case "key":
-    case "value":
-      return kind === "json" || kind === "form" ? null : `${chip.key}: needs JSON or form; this is ${kind}`;
-    case "re":
-    case "case":
-      return kind === "hex" || kind === "image" ? `${chip.key}: needs text; this is ${kind}` : null;
-    case "bytes":
-    case "text":
-      return kind === "hex" ? null : `${chip.key}: needs hex; this is ${kind}`;
-    default:
-      return null;
-  }
+  if (chip.key === "plain" || keysFor(kind).includes(chip.key)) return null;
+  return `${chip.key}: needs ${NEEDS[chip.key]}; this is ${kind}`;
 }

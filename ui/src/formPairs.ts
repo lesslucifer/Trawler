@@ -153,7 +153,3 @@ export function markPairs(pairs: FormPair[], chips: readonly FindChip[], limit =
   }
   return { byPair, total, capped: false };
 }
-
-export function findInPairs(pairs: FormPair[], query: string, limit = MATCH_LIMIT): PairsFound {
-  return markPairs(pairs, query ? [{ key: "plain", value: query }] : [], limit);
-}

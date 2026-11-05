@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
-import { addPairAfter, editPair, findInPairs, parsePairs, removePair } from "../formPairs";
+import { addPairAfter, editPair, markPairs, parsePairs, removePair } from "../formPairs";
 import { FormTable } from "./FormTable";
 
 const ROW = 20;
@@ -36,6 +36,8 @@ function Owned({ initial }: { initial: string }) {
     </>
   );
 }
+
+const plainPairs = (pairs: ReturnType<typeof parsePairs>, query: string) => markPairs(pairs, [{ key: "plain", value: query }]);
 
 describe("reading", () => {
   it("every pair whole, in wire order, decoded, repeats and bad escapes said in words", () => {
@@ -148,7 +150,7 @@ describe("adding and removing", () => {
 
 describe("the caller's marks, menu and inset", () => {
   it("find marks keys and values, the current one apart", () => {
-    table({ matches: findInPairs(parsePairs(FORM), "SCOPE").byPair, current: 1 });
+    table({ matches: plainPairs(parsePairs(FORM), "SCOPE").byPair, current: 1 });
     const marks = document.querySelectorAll("mark");
     expect(marks).toHaveLength(2);
     expect(marks[1]).toHaveClass("bg-wash-active");
@@ -174,7 +176,7 @@ describe("the caller's marks, menu and inset", () => {
 describe("revealing the current match", () => {
   const long = Array.from({ length: 2000 }, (_, i) => `k${i}=v`).join("&");
   const pairs = parsePairs(long);
-  const found = findInPairs(pairs, "k1999").byPair;
+  const found = plainPairs(pairs, "k1999").byPair;
 
   it("scrolls to its row only when the caller bumps reveal", () => {
     const scrollTo = vi.fn();
@@ -184,7 +186,7 @@ describe("revealing the current match", () => {
     const props = { pairs, onEdit: noop, onAdd: noop, onRemove: noop, matches: found, current: 0 };
     const { rerender } = render(<FormTable {...props} />);
     expect(scrolledDown()).toBe(false);
-    rerender(<FormTable {...props} matches={findInPairs(parsePairs(`x=1&${long}`), "k1999").byPair} />);
+    rerender(<FormTable {...props} matches={plainPairs(parsePairs(`x=1&${long}`), "k1999").byPair} />);
     expect(scrolledDown()).toBe(false);
     rerender(<FormTable {...props} reveal={1} />);
     expect(scrolledDown()).toBe(true);

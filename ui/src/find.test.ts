@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findBytes, findMatches, formStructure, jsonStructure, markBytes, markText, mergeRanges, readHexQuery, structureNames } from "./find";
+import { findBytes, formStructure, jsonStructure, markBytes, markText, mergeRanges, readHexQuery, structureNames } from "./find";
 import type { FindChip } from "./findGrammar";
 import { parseJson, surfaceText } from "./jsonTools";
+
+const findMatches = (text: string, query: string, limit?: number) => markText(text, query ? [{ key: "plain", value: query }] : [], null, limit);
 
 describe("find", () => {
   it("matches case-insensitively, every occurrence, none for an empty query", () => {
@@ -124,6 +126,15 @@ describe("marking text with chips", () => {
     expect(spans(text, jsonMarks(text, [chip("key", 'say "hi"')]))).toEqual([String.raw`say \"hi\"`]);
     expect(spans(text, jsonMarks(text, [chip("value", '"hi"')]))).toEqual([String.raw`\"hi\"`]);
     expect(jsonMarks(text, [chip("key", "hi")]).ranges).toHaveLength(2);
+  });
+
+  it("a key or value spelled with escapes is found by its plain spelling, and the other way", () => {
+    const text = String.raw`{"caf\u00e9": "a\/b", "é": "\u00C9"}`;
+    expect(jsonMarks(text, [chip("key", "café")]).ranges).toHaveLength(1);
+    expect(jsonMarks(text, [chip("key", "é")]).ranges).toHaveLength(2);
+    expect(jsonMarks(text, [chip("value", "a/b")]).ranges).toHaveLength(1);
+    expect(jsonMarks(text, [chip("value", "É")]).ranges).toHaveLength(1);
+    expect(jsonMarks(text, [chip("case", "é")]).ranges.length).toBeGreaterThan(0);
   });
 
   it("key: and value: over text that is not a structure mark nothing", () => {

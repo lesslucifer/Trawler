@@ -18,17 +18,6 @@ export interface HexQuery {
 
 const SPECIAL = /[.*+?^${}()|[\]\\]/g;
 
-export function findMatches(text: string, query: string, limit = MATCH_LIMIT): Found {
-  if (!query) return { ranges: [], capped: false };
-  const pattern = new RegExp(query.replace(SPECIAL, "\\$&"), "gi");
-  const ranges: TextRange[] = [];
-  for (let found = pattern.exec(text); found; found = pattern.exec(text)) {
-    if (ranges.length === limit) return { ranges, capped: true };
-    ranges.push({ from: found.index, to: found.index + found[0].length });
-  }
-  return { ranges, capped: false };
-}
-
 export function readHexQuery(query: string): HexQuery {
   if (HEX_PAIRS.test(query)) {
     const digits = query.replace(/\s+/g, "");
@@ -85,17 +74,34 @@ function scanFor(source: string, flags: string): Scan {
   };
 }
 
+const hex4 = (unit: number) => unit.toString(16).padStart(4, "0");
+
+function jsonSpellings(value: string): string {
+  return Array.from(value, (char) => {
+    const spellings = new Set([literal(JSON.stringify(char).slice(1, -1)), literal(char)]);
+    for (let i = 0; i < char.length; i += 1) {
+      const unit = char.charCodeAt(i);
+      if (unit >= 0x7f || unit < 0x20) {
+        spellings.add(`\\\\u${hex4(unit).toLowerCase()}`);
+        spellings.add(`\\\\u${hex4(unit).toUpperCase()}`);
+      }
+    }
+    if (char === "/") spellings.add("\\\\/");
+    return spellings.size === 1 ? [...spellings][0] : `(?:${[...spellings].join("|")})`;
+  }).join("");
+}
+
 export function scanOf(chip: FindChip, jsonEscaped = false): Scan | null {
-  const needle = jsonEscaped ? JSON.stringify(chip.value).slice(1, -1) : chip.value;
+  const needle = jsonEscaped ? jsonSpellings(chip.value) : literal(chip.value);
   switch (chip.key) {
     case "re":
       return scanFor(chip.value, "gi");
     case "case":
-      return scanFor(literal(needle), "g");
+      return scanFor(needle, "g");
     case "plain":
     case "key":
     case "value":
-      return scanFor(literal(needle), "gi");
+      return scanFor(needle, "gi");
     default:
       return null;
   }
