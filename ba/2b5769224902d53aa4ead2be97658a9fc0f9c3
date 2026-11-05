@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-CI
+wu: E-CI.W1
+base: 30f3eabedc1e65057a237fa2cb640eaddfb22471
+tip: ba2b5769224902d53aa4ead2be97658a9fc0f9c3
+diff_sha256: 7e8466e4547cea826f801fe4d0a6f3e545fad2799355327bb564c2b2b794bbd5
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-05
