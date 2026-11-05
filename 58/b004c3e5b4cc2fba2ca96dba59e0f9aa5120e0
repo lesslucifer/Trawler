@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 58b004c3e5b4cc2fba2ca96dba59e0f9aa5120e0
+base: b62541e9ec5bc75f317339fcdfbb4dd5ac4d33df
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-packaging-v2-w3-platform-fixes-result.html
+report_sha256: b362c51d37ca73aead38841c7d3a1cf72bb0fba810c4c6f8bc9555f76311d92f
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBOpbaZXbjl3Ko8w2ev/LNvySPesWNrhDdVYXgn2tpRWsczjp+18cVdqa
+  xooH4EAtPjkRjR7Abxhl4X3Um7hykB
+  -----END SSH SIGNATURE-----
