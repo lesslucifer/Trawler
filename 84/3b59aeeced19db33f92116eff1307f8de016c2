@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-BGSVC
+wu: E-BGSVC.W9
+branch: HEAD
+tests:
+  unit: { count: 55, covers: "a failed keep-capturing save keeps the once-question open, exposes the reason, and cancel clears it; the dialog names the refusal and says nothing otherwise; attempt_twice retries once and only once" }
+  integration: { count: 14, covers: "a quit request with no buildable window does not exit and leaves no flag (the old code panics in the mock's exit); a pending request at a destroyed main window rebuilds a window that finds it once; nothing pending rebuilds nothing" }
+  e2e: { waived: "quit_app ending the app cannot run under Tauri's mock runtime and the race needs the real app: W7's background.spec.ts drives both" }
