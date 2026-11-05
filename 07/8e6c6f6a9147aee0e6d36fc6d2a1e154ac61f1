@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 078e6c6f6a9147aee0e6d36fc6d2a1e154ac61f1
+base: 4d1c1942707e767f0bf6af6c5183e7163c478a91
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-05-query-bar-epic-result.html
+report_sha256: 485feeceefadb2c5657f522601bc320d61013f6b2946b02a9aff87a470d50ee3
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEC/uHut/Axzrsr4etusAQR6yQudbmqLjH36Z5RTgZECwdzqbtZkIrCC3M
+  ILteL1W0K9UP2u8Wsa02u7c5cnNGkB
+  -----END SSH SIGNATURE-----
