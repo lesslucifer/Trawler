@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-inspect-window-v2-w2-inspector-design-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's requirement: one closed run on the inspector's one-line values, the seven decisions it must make, the test plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w2-inspector-design-result.html"
+    tier: T3
+    action: added
+    distills: "W2 delivered: the run closed in round 1 with D1-D7 held; evidence and follow-ups for W4, W5, W9"
+  - path: "docs/work/2026-11-05-inspector-one-line-design-run.html"
+    tier: T3
+    action: added
+    distills: "the closed design run: one-line URI and header values, open all on the Headers heading, the URI's open, the body's served-as statement, deltas for CopyText, KeyValueRow and Section, the keyboard rows"
+t2_waived: "a design reaches UC-5 and the rulebook once it is built: W4 writes the component TSDoc from the run's deltas, W9 distills UC-5 and the keyboard row"
