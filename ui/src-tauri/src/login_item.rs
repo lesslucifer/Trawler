@@ -51,11 +51,12 @@ impl Format {
     }
 }
 
+// A control character would end the desktop entry's Exec line, or the plist's XML.
 fn utf8(exe: &Path) -> std::io::Result<&str> {
-    exe.to_str().ok_or_else(|| {
+    exe.to_str().filter(|exe| !exe.chars().any(char::is_control)).ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
-            format!("{} is not a UTF-8 path a login entry can name", exe.display()),
+            format!("{} is not a path a login entry can name", exe.display()),
         )
     })
 }
@@ -181,16 +182,23 @@ pub fn run_value_program(query_output: &str) -> Option<String> {
 
 #[cfg(windows)]
 mod registry {
+    use std::os::windows::process::CommandExt;
     use std::path::Path;
-    use std::process::Command;
+    use std::process::{Command, Output};
 
     use super::{run_value, run_value_program, utf8, LoginItem};
 
     const RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
     const VALUE: &str = "Trawler";
+    // The app has no console (windows_subsystem), so reg.exe would flash one.
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+    fn reg(args: &[&str]) -> std::io::Result<Output> {
+        Command::new("reg").args(args).creation_flags(CREATE_NO_WINDOW).output()
+    }
 
     pub fn read() -> LoginItem {
-        match Command::new("reg").args(["query", RUN_KEY, "/v", VALUE]).output() {
+        match reg(&["query", RUN_KEY, "/v", VALUE]) {
             Ok(out) if out.status.success() => LoginItem::from_entry(
                 run_value_program(&String::from_utf8_lossy(&out.stdout)).map(Into::into),
             ),
@@ -205,8 +213,16 @@ mod registry {
         } else {
             &["delete", RUN_KEY, "/v", VALUE, "/f"]
         };
-        Command::new("reg").args(args).output()?;
-        Ok(read())
+        let out = reg(args)?;
+        let reading = read();
+        if out.status.success() || reading.on == on {
+            return Ok(reading);
+        }
+        Err(std::io::Error::other(format!(
+            "reg {} failed: {}",
+            args[0],
+            String::from_utf8_lossy(&out.stderr).trim()
+        )))
     }
 }
 
@@ -307,6 +323,15 @@ mod tests {
         let plist = launch_agent(odd);
         assert!(plist.contains("<string>/Users/a&amp;b/&lt;odd&gt; dir/trawler-ui</string>"));
         assert_eq!(launch_agent_program(&plist).as_deref(), Some(odd));
+    }
+
+    #[test]
+    fn a_path_a_login_entry_cannot_name_is_refused_before_anything_is_written() {
+        let root = tempfile::tempdir().unwrap();
+        let split = Path::new("/opt/trawler\nName=Other/trawler-ui");
+        let refused = write(Format::Autostart, root.path(), true, split).unwrap_err();
+        assert_eq!(refused.kind(), std::io::ErrorKind::InvalidInput);
+        assert_eq!(read(Format::Autostart, root.path()), LoginItem::OFF);
     }
 
     #[test]
