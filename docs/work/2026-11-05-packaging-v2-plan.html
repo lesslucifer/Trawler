@@ -18,9 +18,7 @@
       <strong>Carried over from E-PKG.</strong> E-PKG landed the artifact as E-PKG.W1
       (<a href="../decisions/dec-81-one-version-a-release-only-bundle-one-package-command.html">DEC-81</a>): one version,
       a release-only bundle, and <code>cargo xtask package</code>, ad-hoc signed and verified on macOS. This epic carries
-      the rest of that plan unchanged, every owner ruling (Q1 to Q19) included. Renumbered from E-PKG: its W3 (updater)
-      is <strong>W1</strong>, W2 (platform bring-up) stays <strong>W2</strong>, W4 (release workflow) is
-      <strong>W3</strong>, W5 (bg-service sync) is <strong>W4</strong>, and W6 (close) is <strong>W5</strong>. W1's plan
+      the rest of that plan unchanged, every owner ruling (Q1 to Q19) included. Map from E-PKG: its W3 (updater) is <strong>W1</strong>, platform bring-up is split (Q23) into <strong>W2</strong> (the CI jobs) and <strong>W3</strong> (the fixes), its W4 (release workflow) is <strong>W4</strong>, W5 (bg-service sync) is <strong>W5</strong>, and W6 (close) is <strong>W6</strong>. Merged results written before the split (the W1 result) use the numbering of their day: their W3 is now W4, W4 is W5, W5 is W6. W1's plan
       was written on E-PKG and is carried here with its three questions (Q20 to Q22). Expected #1 and #2 landed with
       E-PKG.
     </div>
@@ -43,7 +41,7 @@ flowchart LR
   T(["owner pushes tag v‹version›"]) --> CK{"tag = workspace version?"}
   CK -- no --> X["run fails · nothing built"]
   CK -- yes --> M
-  subgraph M["release.yml matrix — W3"]
+  subgraph M["release.yml matrix — W4"]
     direction TB
     MAC["macOS universal<br/>dmg · app.tar.gz"]
     WIN["Windows x64 · arm64<br/>msi · setup.exe"]
@@ -118,15 +116,16 @@ flowchart LR
       <pre class="mermaid">
 flowchart LR
   PKG(["E-PKG.W1 on main · package"]) --> W1["W1 · updater"]
-  PKG --> W3["W3 · release workflow"]
-  W1 --> W3
-  CI(["E-CI on main"]) -.-> W2["W2 · platform bring-up"]
-  W2 --> W3
-  BG(["E-BGSVC on main"]) -.-> W4
-  W3 --> W4["W4 · bg-service sync"]
-  W4 --> W5["W5 · e2e + first release + distill"]
+  PKG --> W4["W4 · release workflow"]
+  W1 --> W4
+  CI(["E-CI on main"]) -.-> W2["W2 · platform jobs"]
+  W2 --> W3["W3 · platform fixes"]
+  W3 --> W4
+  BG(["E-BGSVC on main"]) -.-> W5
+  W4 --> W5["W5 · bg-service sync"]
+  W5 --> W6["W6 · e2e + first release + distill"]
       </pre>
-      <div class="caption">W1 starts at once. W2 is parked until E-CI puts <code>ci.yml</code> on <code>main</code> (Q19). W4 waits for E-BGSVC to land on <code>main</code>, which is then merged into <code>epic/packaging-v2</code>. The epic does not merge into <code>main</code> before that.</div>
+      <div class="caption">W1 starts at once. E-CI has put <code>ci.yml</code> on <code>main</code> (Q19), so W2 is unparked. W2 only writes the Ubuntu and Windows jobs. W3 starts from the first real three-OS run, which needs the owner's push and dispatch (Q23). W5 waits for E-BGSVC to land on <code>main</code>, which is then merged into <code>epic/packaging-v2</code>. The epic does not merge into <code>main</code> before that.</div>
     </div>
     <div data-item="wu-summaries">
       <div data-wu="E-PKG2.W1">
@@ -147,24 +146,37 @@ flowchart LR
         <p data-item="wu-deps">E-PKG.W1 (the package command that emits the updater archives).</p>
       </div>
       <div data-wu="E-PKG2.W2">
-        <h3 id="w2">W2 · platform bring-up — the app builds, passes its tests and captures on Windows and Linux</h3>
+        <h3 id="w2">W2 · platform jobs — CI runs clippy and the tests on Ubuntu and Windows as well as macOS</h3>
         <p data-item="wu-summary">
-          Adds Ubuntu and Windows jobs to <code>.github/workflows/ci.yml</code>: clippy and <code>cargo test -p trawler -p trawler-ui</code> on
-          <code>ubuntu-22.04</code> (with Strata's WebKitGTK deps, under xvfb) and <code>windows-latest</code>, next to E-CI's macOS job. The workflow runs on push to
-          <code>main</code>, and on this branch by <code>gh workflow run --ref</code> (Q17, Q19). <code>xtask</code> stays macOS-only gate tooling. It fixes whatever is
-          red: paths, the stdin lifeline, process kill and port release, and line endings. Once the jobs are green, a dispatched package build's artifacts are
-          installed in the VMs, driven with <code>vmrun</code>, to run the app and walk <em>This machine</em> setup once per OS: certutil or the CA bundles, and the system proxy.
+          Adds an Ubuntu job (<code>ubuntu-22.04</code>, Tauri's WebKitGTK build deps, tests under xvfb) and a Windows job (<code>windows-latest</code>) to <code>.github/workflows/ci.yml</code>,
+          each running the macOS job's clippy and <code>cargo test -p trawler -p trawler-ui</code>, and extends the xtask <code>ci_workflow</code> test to pin them. It first fixes the
+          cause of the red macOS run on <code>main</code> (the 8 <code>assert!(…is_empty())</code> sites that clippy 1.99's <code>assert_is_empty</code> refuses). It does not fix what is red on
+          Windows or Linux: that needs a real run, which needs the owner's push and dispatch, and is W3.
         </p>
-        <p data-item="wu-maps-to">E-PKG2 · UC-4 and UC-ONBOARD on Windows and Linux · expected #3, #5 (setup) · Q1, Q16, Q17, Q19.</p>
+        <p data-item="wu-maps-to">E-PKG2 · UC-4 and UC-ONBOARD on Windows and Linux (the jobs only) · Q1, Q16, Q17, Q19, Q23. Plan: <a href="2026-11-05-packaging-v2-w2-ci-platforms-plan.html">W2 plan</a>.</p>
+        <p data-item="wu-expected">
+          The <code>ci_workflow</code> test pins all three jobs (triggers, permissions, timeout, setup order, commands, no quietly failing step). The first real three-OS run is
+          waived here and is W3's input.
+        </p>
+        <p data-item="wu-deps">E-CI on <code>main</code> (Q19). Runs alongside W1.</p>
+      </div>
+      <div data-wu="E-PKG2.W3">
+        <h3 id="w3">W3 · platform fixes — a dispatched three-OS run is green</h3>
+        <p data-item="wu-summary">
+          Its input is the red output of the first real run of W2's jobs, dispatched by the owner on W2's branch. It fixes whatever is red: paths, the stdin lifeline, process kill and port release, and line endings,
+          each with its own unit test. Once the run is green, a dispatched package build's artifacts are installed in the VMs, driven with <code>vmrun</code>, to run the app and walk <em>This machine</em> setup once per OS:
+          certutil or the CA bundles, and the system proxy. <code>xtask</code> stays macOS-only gate tooling. Its plan is written from the first run's logs, so it is not planned until the run exists.
+        </p>
+        <p data-item="wu-maps-to">E-PKG2 · UC-4 and UC-ONBOARD on Windows and Linux · expected #3, #5 (setup) · Q1, Q16, Q17, Q19, Q23.</p>
         <p data-item="wu-expected">
           A dispatched CI run on the WU tip is green on three OSes. Every fix carries its unit test, and the supervisor's existing integration tests (spawn, lifeline,
           port release) now pass on Windows and Linux. <em>This machine</em> setup elevates and changes the machine, so it is a VM hand check on CI-built output,
           recorded in the WU result and waived as a test because a test cannot be hermetic there.
         </p>
-        <p data-item="wu-deps">E-CI on <code>main</code> (Q19). Runs alongside W1.</p>
+        <p data-item="wu-deps">E-PKG2.W2 merged, pushed and dispatched by the owner (Q23).</p>
       </div>
-      <div data-wu="E-PKG2.W3">
-        <h3 id="w3">W3 · release workflow — a tag builds every installer and a draft release</h3>
+      <div data-wu="E-PKG2.W4">
+        <h3 id="w4">W4 · release workflow — a tag builds every installer and a draft release</h3>
         <p data-item="wu-summary">
           Adds <code>.github/workflows/release.yml</code>, modelled on Strata's. It triggers on a <code>v*</code> tag and runs a matrix over macOS universal,
           Windows x64 and arm64, and Linux x64 and arm64 (Q16). It fails when the tag differs from the workspace version (Q18), and signs ad-hoc on macOS through
@@ -178,10 +190,10 @@ flowchart LR
           upload, the release is a draft, and the notes template carries each OS's first-open steps. The workflow also passes <code>actionlint</code>. The run
           itself needs GitHub, so it is proven by the first <code>-rc</code> tag and recorded in the WU result.
         </p>
-        <p data-item="wu-deps">E-PKG.W1 (package), W2 (each OS builds and passes), W1 (updater artifacts and the key).</p>
+        <p data-item="wu-deps">E-PKG.W1 (package), W3 (each OS builds and passes), W1 (updater artifacts and the key).</p>
       </div>
-      <div data-wu="E-PKG2.W4">
-        <h3 id="w4">W4 · bg-service sync — package and update what E-BGSVC added</h3>
+      <div data-wu="E-PKG2.W5">
+        <h3 id="w5">W5 · bg-service sync — package and update what E-BGSVC added</h3>
         <p data-item="wu-summary">
           Once E-BGSVC is on <code>main</code>, this WU merges <code>main</code> into <code>epic/packaging-v2</code>. It then makes each piece E-BGSVC added work from the
           installed app on each OS and survive an update: a core running with no window, launch at login (whatever mechanism E-BGSVC chose, pointed at the installed path)
@@ -193,17 +205,17 @@ flowchart LR
           Integration: the W1 update test is re-run with the background mode on. The windowless core is stopped before the swap and is running from the new app after it,
           and the login entry is unchanged. The e2e smoke gains a background-mode case. The exact list is fixed in this WU's plan, from E-BGSVC's result.
         </p>
-        <p data-item="wu-deps">E-BGSVC merged into <code>main</code> · E-PKG2.W3.</p>
+        <p data-item="wu-deps">E-BGSVC merged into <code>main</code> · E-PKG2.W4.</p>
       </div>
-      <div data-wu="E-PKG2.W5">
-        <h3 id="w5">W5 · close — the epic's e2e, the first release, the distillation</h3>
+      <div data-wu="E-PKG2.W6">
+        <h3 id="w6">W6 · close — the epic's e2e, the first release, the distillation</h3>
         <p data-item="wu-summary">
           The e2e below, then two rc tags pushed by the owner: the first rc is installed in the Mac and the VMs, then the second is published and taken by update
           on each. The results are recorded in the epic result. The distillation follows, and the roadmap and backlog rows close.
         </p>
         <p data-item="wu-maps-to">E-PKG2 · all · DoD-E · distillation plan.</p>
         <p data-item="wu-expected">e2e green locally and in each matrix job. The epic result carries the rc runs, the install and update outcome per OS, and the new DECs, UCs and T0/T1 rows.</p>
-        <p data-item="wu-deps">E-PKG2.W1–W4.</p>
+        <p data-item="wu-deps">E-PKG2.W1–W5.</p>
       </div>
     </div>
 
@@ -225,7 +237,7 @@ flowchart LR
           <tr><td>J4 · quit releases</td><td>Quit the installed app</td><td>Both reported ports can be bound again, and no Trawler process remains.</td></tr>
         </tbody>
       </table>
-      <p class="callout warn"><strong>Waived at test level:</strong> the Gatekeeper and SmartScreen prompts on a downloaded file, the real GitHub run and channel URL, and <em>This machine</em> setup on Windows and Linux. All three need the public network, the OS's own UI or elevation. They are hand checks on this Mac and in the two VMs at W2 and W5, recorded in the results.</p>
+      <p class="callout warn"><strong>Waived at test level:</strong> the Gatekeeper and SmartScreen prompts on a downloaded file, the real GitHub run and channel URL, and <em>This machine</em> setup on Windows and Linux. All three need the public network, the OS's own UI or elevation. They are hand checks on this Mac and in the two VMs at W3 and W6, recorded in the results.</p>
     </div>
 
     <h2 id="distillation">Distillation plan</h2>
@@ -252,7 +264,7 @@ flowchart LR
           <tr><td>Q1</td><td>Which platforms does this epic ship?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>macOS, Windows and Linux</strong>, built and released by GitHub Actions. The Windows 11 and Ubuntu 26.04 VMs in VMware Fusion are the hand checks. The formats are Strata's: dmg · msi + NSIS · deb + rpm + AppImage.</td></tr>
           <tr><td>Q2</td><td>Apple Silicon only, or universal?</td><td>accepted · <strong>universal</strong>, one dmg, where Strata builds two per-arch dmgs</td></tr>
           <tr><td>Q3</td><td>Which signing identity?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>None paid</strong>: there is no Apple Developer Program ID. macOS is ad-hoc signed as in Strata, with no notarization and no hardened-runtime requirement. Windows is unsigned. The release notes carry each OS's first-open steps. An ad-hoc identity changes with every build, so a per-app grant (macOS Local Network, the firewall prompt) may be asked again after an update. An update the app downloads itself carries no quarantine flag, which W1 confirms.</td></tr>
-          <tr><td>Q4</td><td>Where do releases live, given that <code>lesslucifer/Trawler</code> is private?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>The owner makes the repo public</strong>, and releases live on its GitHub Releases. This is a prerequisite of W3's first rc tag, because the updater endpoint returns 404 while the repo is private.</td></tr>
+          <tr><td>Q4</td><td>Where do releases live, given that <code>lesslucifer/Trawler</code> is private?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>The owner makes the repo public</strong>, and releases live on its GitHub Releases. This is a prerequisite of W4's first rc tag, because the updater endpoint returns 404 while the repo is private.</td></tr>
           <tr><td>Q5</td><td>Who runs the publish?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>GitHub Actions on git tags, as in Strata.</strong> A <code>v*</code> tag builds a draft release, and publishing the draft is the release. No <code>cargo xtask release</code> exists.</td></tr>
           <tr><td>Q6</td><td>What does the update look like?</td><td>accepted · check at launch (≤ once a day) plus a menu item, native dialogs, the DEC-64 check on the restart, and no design run</td></tr>
           <tr><td>Q7</td><td>Who holds the updater's private key?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Not a custody concern</strong>: the project is open and releases come from GitHub. The updater still refuses to run without a key, so one is generated once (<code>tauri signer generate</code>). The private key and its password become repository secrets and are never committed, and the public key goes in <code>tauri.conf.json</code>.</td></tr>
@@ -261,8 +273,8 @@ flowchart LR
           <tr><td>Q10</td><td>dmg, pkg or both?</td><td>accepted · <strong>dmg</strong> on macOS. The other OSes follow Q1.</td></tr>
           <tr><td>Q11</td><td>Mac App Store?</td><td>accepted · <strong>no</strong></td></tr>
           <tr><td>Q12</td><td>Ship the headless core as its own download?</td><td>accepted · <strong>no</strong></td></tr>
-          <tr><td>Q13</td><td>May W5 edit CLAUDE.md's Commands line?</td><td>accepted · <strong>yes, via <code>mr commit</code></strong></td></tr>
-          <tr><td>Q14</td><td>Who reconciles the update restart with E-BGSVC?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>This epic lands after E-BGSVC and includes it</strong>, through W4 once E-BGSVC is on <code>main</code>.</td></tr>
+          <tr><td>Q13</td><td>May W6 edit CLAUDE.md's Commands line?</td><td>accepted · <strong>yes, via <code>mr commit</code></strong></td></tr>
+          <tr><td>Q14</td><td>Who reconciles the update restart with E-BGSVC?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>This epic lands after E-BGSVC and includes it</strong>, through W5 once E-BGSVC is on <code>main</code>.</td></tr>
           <tr><td>Q15</td><td>How does the e2e build its package?</td><td>accepted · a <code>package-test</code> profile (release without LTO, host arch). The release jobs smoke the real artifact.</td></tr>
           <tr><td>Q16</td><td>Both VMs are <strong>ARM</strong> (Fusion on Apple Silicon): <code>arm-windows11-64</code> and <code>arm-ubuntu-64</code>. The Ubuntu VM cannot run an x64 deb or AppImage, and Windows ARM runs x64 only under emulation. Add ARM targets?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Yes</strong>: <code>aarch64-unknown-linux-gnu</code> (<code>ubuntu-22.04-arm</code>) and <code>aarch64-pc-windows-msvc</code> (<code>windows-11-arm</code>), built in GitHub Actions like every other target. The VMs only verify build output: they install and run artifacts CI built, and never build or debug.</td></tr>
           <tr><td>Q17</td><td>Should the CI workflow run tests on three OSes on every push to <code>main</code> and <code>epic/*</code>?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong><code>main</code> only</strong>, as a signal and not a gate (DEC-74). Q19 covers how W2 sees Windows and Linux before <code>main</code>.</td></tr>
@@ -272,7 +284,7 @@ flowchart LR
             install those packages. <code>tauri-plugin-updater</code> 2.14 now can: it runs <code>dpkg -i</code> or
             <code>rpm -U</code> through <code>pkexec</code>, which shows the desktop's own password prompt. Should deb and
             rpm update in place?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(a) yes, in place</strong>.
-            Every bundle type then has one flow, one signature check and one relaunch. W3 publishes deb and rpm updater
+            Every bundle type then has one flow, one signature check and one relaunch. W4 publishes deb and rpm updater
             signatures, and UC-UPDATE's deb/rpm sentence, the platform matrix's Linux cell and its install-kind
             detection change to match</td></tr>
           <tr><td>Q21</td><td>A user says Install, then cancels DEC-64's quit dialog. What happens to the update?</td>
@@ -285,8 +297,10 @@ flowchart LR
             again</strong>, because the public key is compiled into each one.</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(b) the owner generates the
             key</strong>, keeps both halves, sets <code>TAURI_SIGNING_PRIVATE_KEY</code> (and the password secret, if one
             was set) and sends back only the public key. No agent ever sees the private key, so updater artifacts are built
-            only where the key is in the environment: the release workflow (W3). E-CI stays parked, and W2 and W3 wait for
+            only where the key is in the environment: the release workflow (W4). E-CI stays parked, and W2 and W4 wait for
             it</td></tr>
+          <tr><td>Q23</td><td>W2 was one unit: the Ubuntu and Windows jobs, and every fix they needed. Only GitHub can run those jobs, and a push and a dispatch are the owner's. A unit whose proof is a run that has not happened cannot be signed. How should it be cut?</td>
+            <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(b) split</strong>. W2 lands what is provable here: the jobs, and the test that pins them, with the real three-OS run waived. W3 (platform fixes) takes the first real run's red output as its input and is done when a dispatched three-OS run is green. The release workflow (W4) depends on W3, not W2. The same first real run, on <code>main</code>, was already red on macOS (clippy 1.99), and W2 fixes that first</td></tr>
         </tbody>
       </table>
     </div>

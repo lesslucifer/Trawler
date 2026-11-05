@@ -556,7 +556,7 @@ mod tests {
         let seeded = seed(&dir.path().join("absent"), &dest, &own()).unwrap();
         assert!(matches!(seeded, Seeded::Empty(_)), "{seeded:?}");
         assert!(dest.is_dir());
-        assert!(names(&dest).is_empty());
+        assert_eq!(names(&dest), Vec::<String>::new());
     }
 
     #[test]

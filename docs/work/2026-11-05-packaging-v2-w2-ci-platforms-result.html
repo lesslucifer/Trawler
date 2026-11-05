@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec7b739f34851f0dfaea65" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PKG2.W2 result: platform jobs</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PKG2.W2 result — CI has three jobs, and the workspace is clippy-clean on 1.99</h1>
+      <p>Delivered, with a larger lint fix than planned. No real run of the new jobs exists yet: that is W3's input and needs the owner's push and dispatch.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-PKG2.W2</span> · branch
+      <code>wu/packaging-v2/ci-platforms</code> · <a href="2026-11-05-packaging-v2-w2-ci-platforms-plan.html">WU plan</a> ·
+      <a href="2026-11-05-packaging-v2-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned expected result</th><th>Verdict</th><th>Observed</th></tr>
+      <tr><td>clippy clean here (1.97) and under the runner's 1.99</td><td><span class="badge auto">delivered</span></td><td>clean on both: 1.97.1 (the gate) and 1.99.0, installed beside it and run with <code>--keep-going</code> over the whole workspace. The 1.99 run found 30 sites, not the 8 the CI log showed</td></tr>
+      <tr><td><code>ci_workflow</code> pins all three jobs</td><td><span class="badge auto">delivered</span></td><td>8 tests green. Removing <code>xvfb-run</code> from the Ubuntu test step turned one red, naming Ubuntu</td></tr>
+      <tr><td>a real three-OS run</td><td><span class="badge approval">waived · W3's input</span></td><td>needs the owner's push and a dispatch on GitHub. Commands are in the hand-off</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>From the plan</th><th>Why</th></tr>
+      <tr><td>30 lint sites, not 8: <code>xtask</code> (8), <code>trawler-ui</code> (14), <code>trawler</code> (8)</td><td>cargo stops at the first crate that fails to compile, so the CI log named only <code>xtask</code>. Running 1.99 locally with <code>--keep-going</code> found the rest</td></tr>
+      <tr><td>Q1 (pin the toolchain) is open</td><td>not decided here. The code is clean on both versions, so either answer is green</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td>the edited tests, run: <code>cargo test -p xtask</code> (380 and 210 passed) and <code>cargo test -p trawler -p trawler-ui</code> (all green)</td></tr>
+      <tr><td>integration</td><td><code>xtask/tests/suite/ci_workflow.rs</code>: 8 tests over every job</td></tr>
+      <tr><td>e2e</td><td>waived: the real run, as planned</td></tr>
+      <tr><td>commits</td><td>plan · the xtask lint fix · the jobs and their test · the lint fix in the other crates</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">No T2 entry changes in this WU. DEC-83 absorbs the three-OS jobs and the toolchain ruling at W3 or the epic close.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>Item</th><th>Owner</th></tr>
+      <tr><td>Push this branch and dispatch ci.yml on it, then read the Ubuntu and Windows logs</td><td>the owner, then W3</td></tr>
+      <tr><td>Q1: pin the Rust toolchain, or keep floating <code>stable</code></td><td>the owner</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

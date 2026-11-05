@@ -238,7 +238,7 @@ async fn an_empty_replay_resends_the_seed_and_an_edit_carries_its_own_host_and_l
     assert_eq!(echo["body"], r#"{"name":"a"}"#);
     assert_eq!(echoed_header(&echo, "authorization"), vec!["Bearer OLD"]);
     assert_eq!(echoed_header(&echo, "content-type"), vec!["application/json"]);
-    assert!(echoed_header(&echo, "proxy-connection").is_empty());
+    assert_eq!(echoed_header(&echo, "proxy-connection").len(), 0);
 
     let moved = format!("http://localhost:{}/echo", h.port);
     let edited = h
