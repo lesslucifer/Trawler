@@ -1,0 +1,50 @@
+schema: cr/v5
+scope: "WU bytes-first-dispatch -> epic/inspect-window-v2"
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W5
+branch: wu/inspect-window-v2/bytes-first-dispatch
+base: b50482c836a729bac0606755045d85eae81e0b30
+head: 5da65f6e6cd8257a225ab3787cc32c864c6e4676
+diff_sha256: 185a7fd9c8c2ba133b3abaf1062c7c3b91fab05236fd6f1a090996e2576e8bd7
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-sonnet-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 9
+  stage_seconds:
+    gate0: 16
+    finders: 72
+    verifiers: 16
+    total: 130
+  by_finder:
+    correctness: { found: 4, verified: 1 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 4, verified: 0 }
+findings: { found: 10, verified: 1, waived: 9 }
+waivers: []
+nits:
+  - finding: "contentKind.ts:107 decidedBy says 'from <label>' for text read from bytes under an unrecognised generic label"
+    waived: "deliberate: a generic label over text agrees with the bytes (W5 plan, overruled rule); the old wording is retired by E1"
+  - finding: "contentKind.ts:73 a text/* body that is not UTF-8 (declared charset discarded) is hex, not lossy text"
+    waived: "DEC-79 and epic ruling Q5: a binary body is hex whatever its label; the pick still reaches text in the window; recorded in the W5 result deviations"
+  - finding: "contentKind.ts markupKind: well-formed XHTML under no label reads html, under application/xml reads xml"
+    waived: "W1's DEC-79 detection table and its tests decide this; unchanged by W5"
+  - finding: "DataWindowScreen.tsx:846 after a pick the bar names the detected kind, not the picked one"
+    waived: "W3 run E1 as amended by the owner in round 1: the picker shows the choice, the bar names what the bytes read"
+  - finding: "contentKind.ts decideKind and DataWindowScreen decodeBody each decode the body once, a duplicate O(body) decode per payload"
+    waived: "one-time per payload, memoized; no per-render cost; sharing the decode would couple the detector to the window's decoder"
+  - finding: "contentKind.ts decideKind parses the body that the renderer then parses again"
+    waived: "one-time per body load, memoized; the renderers own their parse"
+  - finding: "contentKind.ts and dataKind.ts import each other, one edge type-only"
+    waived: "the value edge runs one way only (contentKind to dataKind); the type edge is erased at build"
+  - finding: "ContentKind union and DATA_KINDS enumerate the nine kinds twice, unchecked for completeness"
+    waived: "kindLabel falls back to the id and the window test asserts all nine rows; a typed record is a follow-up when W6 and W7 add surfaces"
+  - finding: "servedAs and decidedBy build the 'served as' phrasing separately and sit in the detection module"
+    waived: "two screens, two sentences by the W2 and W3 runs; they share overruled, which is the rule that could drift"
+verdict: PASS
+date: 2026-11-05
