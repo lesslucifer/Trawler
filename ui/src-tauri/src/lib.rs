@@ -155,10 +155,20 @@ pub fn run() {
     );
 }
 
+/// An exit Tauri asks for once the last window is gone waits while a failed
+/// install is told, and while a windowless app with a tray keeps running.
+pub fn holds_exit_request(asked_by_app: bool, telling: bool, windowless_held: bool) -> bool {
+    update::holds_exit(asked_by_app, telling) || (!asked_by_app && windowless_held)
+}
+
 pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {
     match event {
-        tauri::RunEvent::ExitRequested { code: None, api, .. }
-            if lifecycle::holds_last_window_exit(app) =>
+        tauri::RunEvent::ExitRequested { code, api, .. }
+            if holds_exit_request(
+                code.is_some(),
+                update::telling(app),
+                lifecycle::holds_last_window_exit(app),
+            ) =>
         {
             api.prevent_exit();
         }
@@ -178,11 +188,19 @@ pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri:
 
 #[cfg(test)]
 mod tests {
-    use super::{background_launch, core_args, second_launch_opens_window};
+    use super::{background_launch, core_args, holds_exit_request, second_launch_opens_window};
     use std::ffi::OsString;
 
     fn os(args: &[&str]) -> std::vec::IntoIter<OsString> {
         args.iter().map(OsString::from).collect::<Vec<_>>().into_iter()
+    }
+
+    #[test]
+    fn the_last_window_s_exit_waits_for_a_told_failed_install_and_for_a_windowless_app() {
+        assert!(holds_exit_request(false, true, false), "a failed install is being told");
+        assert!(holds_exit_request(false, false, true), "a windowless app with a tray stays");
+        assert!(!holds_exit_request(false, false, false), "nothing holds it");
+        assert!(!holds_exit_request(true, true, true), "the app's own exit always goes through");
     }
 
     #[test]

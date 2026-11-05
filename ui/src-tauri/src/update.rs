@@ -253,7 +253,9 @@ pub fn telling<R: Runtime>(app: &AppHandle<R>) -> bool {
 /// core stops, the update installs and the app opens again as the new version.
 pub fn end<R: Runtime>(app: &AppHandle<R>) {
     let Some((update, bytes)) = app.state::<Pending>().take() else {
-        app.exit(0);
+        if !telling(app) {
+            app.exit(0);
+        }
         return;
     };
     if let Some(core) = app.try_state::<crate::core::Core>() {
@@ -399,6 +401,15 @@ mod tests {
             ending("0.1.0", Err("the app folder is read-only".into())),
             Ending::TellThenExit(not_installed("0.1.0", "the app folder is read-only"))
         );
+    }
+
+    // The mock runtime's exit panics, so an end that exits fails here.
+    #[test]
+    fn a_window_closed_under_the_failed_install_notice_leaves_the_notice_to_end_the_app() {
+        let app = tauri::test::mock_app();
+        app.manage(Pending::<Staged>::default());
+        app.manage(Telling(AtomicBool::new(true)));
+        end(app.handle());
     }
 
     #[test]
