@@ -70,11 +70,11 @@ function civil(year: number, month: number, day: number, hour: number, minute: n
 }
 
 function fromIso(match: RegExpExecArray): Instant | string {
-  const [, year, month, day, hour, minute, second, fraction, zulu, written, sign, offsetHours, offsetMinutes] = match;
+  const [, year, month, day, hour, minute, second, fraction, zulu, offsetWritten, sign, offsetHours, offsetMinutes] = match;
   const seconds = civil(+year, +month, +day, +(hour ?? 0), +(minute ?? 0), +(second ?? 0));
   if (typeof seconds === "string") return seconds;
   if (hour === undefined) return { seconds, fraction: "", readAs: "ISO 8601 date", dateOnly: true };
-  if (sign && (+offsetHours > 23 || +offsetMinutes > 59)) return `“${written}” is not a zone offset`;
+  if (sign && (+offsetHours > 23 || +offsetMinutes > 59)) return `“${offsetWritten}” is not a zone offset`;
   const offset = sign ? (sign === "-" ? -1 : 1) * (+offsetHours * 60 + +offsetMinutes) : 0;
   const readAs = zulu || sign ? "ISO 8601" : "ISO 8601, no zone: read as UTC";
   return { seconds: seconds - offset * 60, fraction: significant(fraction ?? ""), readAs };
