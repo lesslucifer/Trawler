@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W5
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-inspect-window-v2-w5-bytes-first-dispatch-plan.html"
+    tier: T3
+    action: added
+    distills: "W5's requirement: bytes-first kind in the pane and the window, the served-as statement, nine picker rows; the pieces and the test plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w5-bytes-first-dispatch-result.html"
+    tier: T3
+    action: added
+    distills: "W5 delivered: the vocabulary, the three statement functions, the pane and window wiring; deviations, evidence and follow-ups for W6, W7 and W9"
+t2_waived: "UC-5's dispatch and UC-9's detection and status-bar wording are distilled at W9 per the epic plan"
