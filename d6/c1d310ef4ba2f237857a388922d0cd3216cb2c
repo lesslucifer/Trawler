@@ -1,0 +1,42 @@
+schema: cr/v5
+scope: "WU E-PKG2.W4 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: wu/packaging-v2/release-workflow
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+head: d6c1d310ef4ba2f237857a388922d0cd3216cb2c
+diff_sha256: db2772ae28c800021c72d91cfa0b4286467da9550677d3a726ea345347549060
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  stage_seconds:
+    gate0: 0
+    finders: 80
+    verifiers: 20
+    total: 137
+  by_finder:
+    correctness: { found: 4, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 1 }
+findings: { found: 7, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "smoke reuses package::parse, so --build-only/--bundle-only parse and are ignored by smoke"
+    waived: "recorded for the fix round, which refuses them in smoke"
+  - finding: "the MSI version rule is not checked by the release workflow's version job"
+    waived: "DEC-86 known limit: the tag equals the gate-proven workspace version, where version_drift enforces the rule; a stray tag only fails its own run"
+  - finding: "smoke::core_args and parse_ready restate the supervisor's spawn contract"
+    waived: "xtask cannot depend on the Tauri crate; the smoke runs the real binary, so a drifted contract fails the smoke loudly"
+  - finding: "release_manifest's platform keys restate the matrix and Os::bundles"
+    waived: "release-manifest refuses a missing platform or kind, so a drift fails the release job loudly before any draft"
+  - finding: "the NSIS install dir is expected to hold one non-uninstall .exe"
+    waived: "Trawler ships no sidecar; a second .exe fails the smoke loudly by name"
+verdict: FAIL
+date: 2026-11-06
