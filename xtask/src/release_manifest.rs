@@ -261,9 +261,16 @@ mod tests {
                 .expect("the notes template");
         let text = notes(&template, "0.2.0-1");
         assert!(text.starts_with("# Trawler 0.2.0-1"), "{text}");
-        for needle in
-            ["## macOS", "Open Anyway", "## Windows", "Run anyway", "## Linux", "AppImage"]
-        {
+        for needle in [
+            "## macOS",
+            "Open Anyway",
+            "macOS 13",
+            "## Windows",
+            "Run anyway",
+            "## Linux",
+            "AppImage",
+            "AppIndicator",
+        ] {
             assert!(text.contains(needle), "the notes lack {needle}");
         }
         assert!(!text.contains("{version}"));
