@@ -495,3 +495,12 @@ fn a_fast_machine_pays_the_probe_once_and_the_suite_runs_through_nextest() {
     assert_eq!(calls.iter().filter(|c| *c == "nextest run --all").count(), 2, "{calls:?}");
     assert!(!calls.iter().any(|c| c.starts_with("test")), "no serial fallback: {calls:?}");
 }
+
+#[test]
+fn an_unwritable_cache_dir_costs_the_cache_never_the_fast_verdict() {
+    let env = Env::new(0);
+    fs::write(env.home.join(".cache"), "a file where the cache dir would go").unwrap();
+    let (code, said) = env.gate0(false);
+    assert_eq!(code, Some(0), "{said}");
+    assert!(env.calls().iter().any(|c| c == "nextest run --all"), "{:?}", env.calls());
+}

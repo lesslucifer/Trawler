@@ -71,13 +71,16 @@ fn tree_failure(repo: &Path, tip: &str, tree: Tree) -> Result<Option<Failure>, S
     if tree == Tree::Defer {
         return Ok(None);
     }
-    let (code, said) = gate0::gate0(repo)?;
-    Ok((code != 0).then(|| {
-        tree_blocker(
-            said,
-            "get fmt, clippy and the suite green before the review runs - a fix that lands after the verdict orphans it and buys the fleet again".to_string(),
-        )
-    }))
+    gate0::gate0(repo).map(gate0_blocker)
+}
+
+fn gate0_blocker((code, said): (i32, String)) -> Option<Failure> {
+    let fix = match code {
+        0 => return None,
+        gate0::MACHINE_REFUSED => "fix the machine as the refusal says, then run the preflight again - the tree was not measured",
+        _ => "get fmt, clippy and the suite green before the review runs - a fix that lands after the verdict orphans it and buys the fleet again",
+    };
+    Some(tree_blocker(said, fix.to_string()))
 }
 
 fn tree_blocker(what: String, fix: String) -> Failure {
@@ -127,8 +130,24 @@ fn refused(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{exempt, green, refused, Tree};
+    use super::{exempt, gate0_blocker, green, refused, Tree};
     use crate::gate::{Failure, Level, Report};
+    use crate::gate0::{MACHINE_REFUSED, NEXTEST_MISSING};
+
+    #[test]
+    fn a_machine_refusal_names_the_machine_fix_not_the_tree_fix() {
+        let blocker = gate0_blocker((MACHINE_REFUSED, NEXTEST_MISSING.to_string())).unwrap();
+        assert_eq!(blocker.what, NEXTEST_MISSING);
+        assert!(!blocker.fix.contains("fmt, clippy"), "{}", blocker.fix);
+        assert!(blocker.fix.contains("machine"), "{}", blocker.fix);
+    }
+
+    #[test]
+    fn a_red_tree_names_the_tree_fix_and_green_is_no_blocker() {
+        let blocker = gate0_blocker((1, "gate0 red".to_string())).unwrap();
+        assert!(blocker.fix.contains("fmt, clippy and the suite green"), "{}", blocker.fix);
+        assert!(gate0_blocker((0, "gate0 green".to_string())).is_none());
+    }
 
     fn report(level: Level, tip: &str, failures: Vec<Failure>) -> Report {
         Report {

@@ -119,7 +119,8 @@ fn probe() -> Result<Launch, String> {
 }
 
 /// How fast this machine first-launches a freshly linked binary: a fast verdict
-/// is cached for the boot, a slow one is measured again on every call.
+/// is cached for the boot when the cache dir is writable, a slow one is measured
+/// again on every call.
 pub fn machine() -> Result<Launch, String> {
     let file = cache_file();
     let boot = boot_key();
@@ -128,7 +129,7 @@ pub fn machine() -> Result<Launch, String> {
     }
     let launch = probe()?;
     if let (Launch::Fast, Some(file)) = (&launch, file) {
-        store_fast(&file, &boot)?;
+        let _ = store_fast(&file, &boot);
     }
     Ok(launch)
 }
