@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W5
+branch: HEAD
+tests:
+  unit: { count: 41, covers: "AgentService is handed out only from macOS 13 (13.0.0 requirement; this host gets one, a host below the requirement gets none); an absolute $APPIMAGE replaces the AppImage mount as the program started at login, absent or relative keeps the executable; the release notes carry the macOS 13 open-at-login line and GNOME's AppIndicator line; the last window's exit waits while a failed install is told and while a windowless app has a tray, and the app's own exit always goes through; update::end with nothing staged does not exit while the failed-install notice is told" }
+  integration: { count: 21, covers: "a windowless mock app (keep capturing on, a tray) given a real verified update from a local channel opens its main window, holds the quit request and the staged update, and installs nothing before the quit; with no window to open, the update is dropped; the real macOS package's updater archive carries the login agent plist; every CI OS's test step runs trawler-login-service" }
+  e2e: { waived: "an installed signed app, a registered login item and a real update channel are needed; the rc update with keep capturing and open at login on is W6's hand check (expected #7), and update::end's restart re-executes the test binary under the mock runtime" }
