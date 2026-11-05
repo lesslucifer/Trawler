@@ -186,7 +186,7 @@ pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
         TrayAction::Open => drop(crate::lifecycle::reopen_main_in_background(app)),
         TrayAction::Settings => drop(crate::settings::open_in_background(app)),
         TrayAction::Restart => drop(crate::core::restart_in_background(app)),
-        TrayAction::Quit => crate::menu::quit(app),
+        TrayAction::Quit => drop(crate::lifecycle::request_quit(app)),
         TrayAction::Ignore => {}
     }
 }
