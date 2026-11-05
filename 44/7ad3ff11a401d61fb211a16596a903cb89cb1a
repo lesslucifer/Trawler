@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU gate-parity2-close -> epic/gate-parity2"
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W5
+branch: wu/gate-parity2/close
+base: c3b8a6bb94dab59461f8878a359300505545ef5a
+head: 447ad3ff11a401d61fb211a16596a903cb89cb1a
+diff_sha256: e448d0fffe7021090e0e557bf134d85a0feebf553c9aac94e6113cf5964b625f
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 6
+  stage_seconds:
+    gate0: 15
+  by_finder:
+    correctness: { found: 4, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+findings: { found: 6, verified: 0, waived: 6 }
+waivers: []
+nits:
+  - finding: "the slow-launch scenario waits the production 2 s launch::THRESHOLD, a const the test cannot shorten"
+    waived: "the scenario exists to prove the production threshold refuses; a test-tunable threshold would prove a different gate (DEC-75); ~2 s of one test"
+  - finding: "the four gate runs sit in one sequential test, so nextest cannot overlap them"
+    waived: "the scenarios are causally chained - the push reads the marker the green merge wrote, the red merge needs epic/a landed - which is what the e2e proves"
+  - finding: "sleep 0 / sleep 5 probe programs are not derived from launch::THRESHOLD"
+    waived: "a shell exiting at once is milliseconds against a 2 s bound, and 5 s is 2.5x it; tying them to the const adds arithmetic, not safety"
+  - finding: "the slow probe's sleep outlives the test by up to 3 s after its TempDir is dropped"
+    waived: "the orphan writes nothing and cannot fail any test; it is launch::first_launch's documented never-await behaviour"
+  - finding: "hermetic() now also strips NEXTEST* and TRAWLER_* for e2e_gate_parity's callers"
+    waived: "strictly more hermetic, that test is green on it, and the W5 result's deviations row records the shared scrub"
+  - finding: "the 'no suite ran' checks are negative matches on nextest's 'Starting' banner"
+    waived: "each is paired with a positive gate0 line - the push-main case asserts 'gate0 skipped', which gate0 prints only on a marker hit, so it cannot pass vacuously"
+verdict: PASS
+date: 2026-11-05
