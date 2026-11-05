@@ -11,7 +11,7 @@
       <h1>E-BGSVC.W1 — the app outlives its main window</h1>
       <p>The shell half of windowless capture: a keep-capturing preference, an exit decision that reads it, a
         main window that can be rebuilt, and a launch that can skip it.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch
+      <div class="meta">v2 · 2026-11-05 (the launch flag and the last-window hold read the tray alone, per expected #8) · Trawler · T3 (docs/work/) · WU plan · branch
         <code>wu/bg-service/outlive-window</code> off <code>epic/bg-service</code> · epic plan:
         <a href="2026-11-05-bg-service-plan.html#wu-summaries">E-BGSVC</a></div>
     </div>
@@ -23,7 +23,7 @@
       available, destroying the main window leaves the app and its core running with no window (Dock icon hidden on
       macOS), and a second launch or a Dock click rebuilds the main window through the same builder launch uses;
       in every other state, destroying the main window quits exactly as today, and <code>--background</code>
-      skips the launch window only when the app may be windowless.</p>
+      skips the launch window only while a menu-bar icon exists, whatever the preference says (expected #8).</p>
 
     <h2 id="maps-to">Mapping</h2>
     <table data-item="maps-to">
@@ -63,11 +63,12 @@ flowchart TD
         (false until W2 creates a tray) · <code>ends_the_app</code> moves here from <code>settings.rs</code> and
         reads both · <code>build_main</code> · <code>reopen_main</code> · Dock policy</td></tr>
       <tr><td>launch flag</td><td><code>lib.rs</code></td><td><code>--background</code> anywhere in the arguments
-        (after <code>--core</code> is ruled out) · honoured only while the app may be windowless, else the window
+        (after <code>--core</code> is ruled out) · honoured only while a tray exists, else the window
         opens (expected #9)</td></tr>
       <tr><td>wiring</td><td><code>lib.rs</code> · <code>core.rs</code></td><td>single-instance → <code>reopen_main</code> ·
-        <code>RunEvent::Reopen</code> → <code>reopen_main</code> · <code>ExitRequested{code: None}</code> prevented
-        when staying · Settings opening sets Regular</td></tr>
+        <code>RunEvent::Reopen</code> → <code>reopen_main</code> · <code>ExitRequested{code: None}</code> (the last
+        window gone) held while a tray exists, so a <code>--background</code> app outlives its Settings window · Settings
+        opening sets Regular</td></tr>
     </table>
 
     <div class="callout warn" data-c="interim">Until W2 sets tray availability, <code>stays_windowless</code> is
@@ -92,8 +93,8 @@ flowchart TD
       <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
       <tr><td rowspan="5">unit</td><td><code>lifecycle</code> decision table</td><td><code>ends_the_app</code> over label ×
         {unanswered, on, off} × tray: only main, and only when not (on ∧ tray); <code>stays_windowless</code> same table</td></tr>
-      <tr><td><code>lifecycle</code> launch + Dock</td><td><code>opens_window_at_launch</code>(background, stays) — the flag
-        is honoured only when staying is allowed; Dock shown iff a window is open</td></tr>
+      <tr><td><code>lifecycle</code> launch + Dock</td><td><code>opens_window_at_launch</code>(background, tray) — the flag
+        is honoured only with a tray; Dock shown iff a window is open</td></tr>
       <tr><td><code>keep_capturing</code> store</td><td>round trip on/off and the file's bytes · absent dir / file =
         unanswered · corrupt bytes, wrong shapes, <code>null</code> = off · a write leaves no staged copy</td></tr>
       <tr><td><code>lib</code> flag parse</td><td><code>--background</code> alone and among others → true · absent → false ·
