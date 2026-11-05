@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4b7a9f34851f0dfae874" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W2 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W2 — the menu-bar icon</h1>
+      <p>A tray icon present whenever the app runs: it shows the capture service's state, reaches the window, restarts a
+        stopped core, and is what lets W1's windowless mode exist at all.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch <code>wu/bg-service/tray</code>
+        off <code>epic/bg-service</code> · epic plan: <a href="2026-11-05-bg-service-plan.html#wu-summaries">E-BGSVC</a> ·
+        builds on <a href="2026-11-05-bg-service-w1-outlive-window-plan.html">W1</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">Every launch builds a menu-bar icon before the launch window is decided. Its glyph and
+      first menu line follow the core's state through the supervisor's observer (Capturing · Capture service starting ·
+      Capture service stopped · Attached to &lt;api&gt;). Its menu offers Open Trawler, Settings…, Restart capture service
+      (enabled only while an owned core is stopped, through the supervisor's own restart) and Quit Trawler. Whether the
+      icon could be built is recorded as the host's tray availability, which W1's decisions read.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to">
+      <tr><th>Serves</th><th>How</th></tr>
+      <tr><td><span class="badge id">E-BGSVC</span> · <a href="2026-11-05-bg-service-plan.html#wu-summaries">W2 summary</a></td>
+        <td>the tray module, its state-driven menu and its availability flag. W3 reroutes its Quit; W6 reads availability for the switch</td></tr>
+      <tr><td><span class="badge id">UC-BG</span></td><td>“a menu-bar icon shows the service (running · stopped) and offers
+        Open Trawler, Settings…, Restart (when stopped) and Quit Trawler”</td></tr>
+      <tr><td>Expected #3 (menu Open) · #4 · #9</td><td>Open reaches W1's <code>reopen_main</code>; a killed core reads stopped
+        and Restart brings it back on its ports; a failed tray build keeps the host trayless</td></tr>
+      <tr><td>Q4 · Q10 · Q12</td><td>always present · no notification, the glyph carries the state · built on all three, proven on macOS</td></tr>
+    </table>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  S["supervisor observer<br/>CoreEvent::State"] --> E["emit core://state (as today)"]
+  S --> T["tray::on_state"]
+  T --> G["glyph: running · stopped"]
+  T --> M["status line · Restart enabled?"]
+  B["core::setup"] --> I["tray::install"] --> L["Lifecycle::mark_tray(built)"] --> O["lifecycle::open_at_launch"]
+  C["menu click"] --> A{"action_for(id)"}
+  A --> A1["Open → reopen_main_in_background"]
+  A --> A2["Settings… → settings::open_in_background"]
+  A --> A3["Restart → core::restart_in_background"]
+  A --> A4["Quit → menu's Quit path (W3 reroutes)"]
+      </pre>
+      <div class="caption">The menu is built once; its status item and Restart item are updated in place on every state.</div>
+    </div>
+
+    <table data-c="model">
+      <tr><th>Core state</th><th>Glyph</th><th>Status line</th><th>Restart</th></tr>
+      <tr><td><code>Starting</code></td><td>running</td><td>Capture service starting</td><td>disabled</td></tr>
+      <tr><td><code>Running</code></td><td>running</td><td>Capturing</td><td>disabled</td></tr>
+      <tr><td><code>Exited</code></td><td>stopped</td><td>Capture service stopped</td><td>enabled</td></tr>
+      <tr><td><code>Attached</code></td><td>running</td><td>Attached to &lt;api&gt;</td><td>disabled (not this app's core)</td></tr>
+    </table>
+
+    <table data-c="pieces">
+      <tr><th>Piece</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>tray</td><td><code>tray.rs</code> (new)</td><td>ids, <code>action_for</code>, <code>status_line</code>,
+        <code>glyph_for</code>, <code>offers_restart</code>; <code>TrayMenu</code> (menu + the two live items, managed);
+        <code>install</code> · <code>on_state</code> · <code>handle</code></td></tr>
+      <tr><td>glyphs</td><td><code>icons/tray-running.png</code> · <code>icons/tray-stopped.png</code></td><td>36×36 px
+        template images (alpha only): a ring with a centre disc · the ring alone. Tauri feature <code>tray-icon</code> +
+        <code>image-png</code></td></tr>
+      <tr><td>core</td><td><code>core.rs</code></td><td>the observer also calls <code>tray::on_state</code>;
+        <code>restart_in_background</code> shares <code>restart_core</code>'s owned-only rule; <code>Core::state</code> public;
+        setup installs the tray before <code>open_at_launch</code></td></tr>
+      <tr><td>menu</td><td><code>menu.rs</code></td><td>the Quit path (<code>close_main_window</code>) becomes reachable from the tray</td></tr>
+    </table>
+
+    <div class="callout warn" data-c="interim">From this WU the tray is real, so <code>stays_windowless</code> turns true
+      wherever <code>keep-capturing.json</code> says on. No UI writes that before W6. Quit from the tray (as ⌘Q) still closes
+      the main window, which hides instead of quitting in that state; W3 splits quit from close. Restart is greyed out
+      rather than removed while running: the menu keeps its shape and the item's place.</div>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>#</th><th>Observable after W2 alone</th></tr>
+      <tr><td>1</td><td><code>cargo run</code> on macOS: a template glyph in the menu bar; its menu reads “Capturing”, then
+        Open Trawler, Settings…, a disabled Restart capture service, Quit Trawler</td></tr>
+      <tr><td>2</td><td><code>kill</code> the core's pid: the glyph turns to the ring, the line reads “Capture service stopped”,
+        Restart enables; Restart → running again on 7420 / 7421</td></tr>
+      <tr><td>3</td><td>Open Trawler with the window closed (switch on by hand) rebuilds it; with it open, focuses it</td></tr>
+      <tr><td>4</td><td>a host where the tray cannot be built: the app behaves exactly as W1 left it (never windowless)</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
+      <tr><td rowspan="3">unit (<code>tray.rs</code>)</td><td>model per state</td><td>the table above: glyph, status line,
+        Restart offered, for all four states</td></tr>
+      <tr><td>action table</td><td>each item id → its action; app-menu and unknown ids → ignore (the two handlers each see every menu event)</td></tr>
+      <tr><td>glyphs</td><td>both PNGs decode, 36×36, and differ</td></tr>
+      <tr><td rowspan="3">integration<br/>(<code>tests/suite/tray.rs</code>, MockRuntime)</td><td>follows the observer</td>
+        <td>a <code>TrayMenu</code> managed beside a core supervised with <code>core::observer</code>: killing the core's pid turns
+        the status item to “Capture service stopped” and enables Restart</td></tr>
+      <tr><td>Restart round trip</td><td><code>tray::handle(RESTART_ID)</code> → the core runs again on the same ports, the status
+        reads “Capturing”, Restart disables</td></tr>
+      <tr><td>trayless host</td><td><code>tray::install</code> off the main thread (MockRuntime runs it inline there, where the
+        native tray refuses) returns false and leaves <code>tray_available</code> false — so destroying main still ends the app</td></tr>
+      <tr><td>e2e</td><td colspan="2">not this WU's layer. The native menu is outside any webview (epic waiver intent); the macOS
+        menu-bar check is owed on hardware</td></tr>
+    </table>
+
+    <h2 id="docs">Docs</h2>
+    <table data-c="docs">
+      <tr><th>Tier</th><th>Doc</th><th>Change</th></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a></td><td>a rule for the icon:
+        built at every launch before the window decision, its states and items, availability = built</td></tr>
+      <tr><td>T3</td><td>this plan + its result report</td><td>—</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
