@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use serde::Deserialize;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Os {
     MacOs,
@@ -185,107 +187,68 @@ fn verify_signature(app: &Path) -> Result<(), String> {
     }
 }
 
-fn without_comment(line: &str) -> &str {
-    let mut quoted = false;
-    for (at, c) in line.char_indices() {
-        match c {
-            '"' => quoted = !quoted,
-            '#' if !quoted => return &line[..at],
-            _ => {}
-        }
-    }
-    line
+/// The crate whose version Tauri stamps on every artifact.
+pub const SHIPPED: &str = "trawler-ui";
+
+#[derive(Debug, Deserialize)]
+struct Members {
+    packages: Vec<Member>,
 }
 
-/// The value of `key` inside `[section]` of a TOML file, quotes kept and
-/// comments dropped; an array runs to its closing bracket, across lines.
-fn toml_value(toml: &str, section: &str, key: &str) -> Option<String> {
-    let mut inside = false;
-    let mut lines = toml.lines().map(without_comment).map(str::trim);
-    while let Some(line) = lines.next() {
-        if line.starts_with('[') {
-            inside = line == section;
-            continue;
-        }
-        let Some((k, v)) = line.split_once('=').filter(|_| inside) else { continue };
-        if k.trim() != key {
-            continue;
-        }
-        let mut value = v.trim().to_string();
-        if value.starts_with('[') {
-            while !value.contains(']') {
-                value.push('\n');
-                value.push_str(lines.next()?);
-            }
-        }
-        return Some(value);
-    }
-    None
+#[derive(Debug, Deserialize)]
+pub struct Member {
+    pub name: String,
+    pub version: String,
 }
 
-fn unquoted(value: &str) -> Option<&str> {
-    value.strip_prefix('"')?.strip_suffix('"')
+fn workspace_members(repo: &Path) -> Result<Vec<Member>, String> {
+    Ok(crate::target::cargo_metadata::<Members>(repo)?.packages)
 }
 
-pub fn workspace_version(root_manifest: &str) -> Option<String> {
-    unquoted(&toml_value(root_manifest, "[workspace.package]", "version")?).map(str::to_string)
+/// The version the app ships, which every other version source must equal.
+pub fn shipped_version(members: &[Member]) -> Result<&str, String> {
+    members
+        .iter()
+        .find(|member| member.name == SHIPPED)
+        .map(|member| member.version.as_str())
+        .ok_or_else(|| format!("the workspace has no {SHIPPED} crate"))
 }
 
-fn workspace_members(root_manifest: &str) -> Result<Vec<String>, String> {
-    let mut members = vec![".".to_string()];
-    let Some(list) = toml_value(root_manifest, "[workspace]", "members") else {
-        return Ok(members);
-    };
-    for entry in list.trim_matches(['[', ']']).split(',').map(str::trim).filter(|e| !e.is_empty()) {
-        let member = unquoted(entry).ok_or_else(|| {
-            format!("Cargo.toml: [workspace] members holds {entry}, not a quoted path")
-        })?;
-        members.push(member.to_string());
-    }
-    Ok(members)
-}
-
-fn inherits_version(manifest: &str) -> bool {
-    toml_value(manifest, "[package]", "version.workspace").as_deref() == Some("true")
-        || toml_value(manifest, "[package]", "version")
-            .is_some_and(|value| value.replace(' ', "") == "{workspace=true}")
-}
-
-/// Every place the version could drift from `[workspace.package] version`,
-/// one line per file that disagrees.
-pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
-    let read = |path: &str| {
-        std::fs::read_to_string(repo.join(path)).map_err(|e| format!("read {path}: {e}"))
-    };
-    let root = read("Cargo.toml")?;
-    let Some(version) = workspace_version(&root) else {
-        return Ok(vec!["Cargo.toml: no [workspace.package] version".to_string()]);
-    };
-    let members = match workspace_members(&root) {
-        Ok(members) => members,
-        Err(unreadable) => return Ok(vec![unreadable]),
-    };
-    let mut drift = Vec::new();
-    for member in members {
-        let manifest = Path::new(&member).join("Cargo.toml");
-        let manifest = manifest.to_string_lossy();
-        if !inherits_version(&read(&manifest)?) {
-            drift.push(format!("{manifest}: [package] must say version.workspace = true"));
-        }
-    }
-    let json = |path: &str| -> Result<serde_json::Value, String> {
-        serde_json::from_str(&read(path)?).map_err(|e| format!("{path}: {e}"))
-    };
-    if json("ui/src-tauri/tauri.conf.json")?.get("version").is_some() {
+/// Every version source that disagrees with the shipped one, one line each.
+pub fn drift_of(
+    members: &[Member],
+    tauri_conf: &serde_json::Value,
+    ui_package: &serde_json::Value,
+) -> Result<Vec<String>, String> {
+    let shipped = shipped_version(members)?;
+    let mut drift: Vec<String> = members
+        .iter()
+        .filter(|member| member.version != shipped)
+        .map(|member| format!("{} is {}, the app ships {shipped}", member.name, member.version))
+        .collect();
+    if tauri_conf.get("version").is_some() {
         drift.push(
             "ui/src-tauri/tauri.conf.json: carries a version; Tauri takes the crate's".to_string(),
         );
     }
-    let ui_version = json("ui/package.json")?["version"].as_str().map(str::to_string);
-    if ui_version != Some(version.clone()) {
-        drift.push(format!("ui/package.json: version {ui_version:?}, the workspace is {version}"));
+    let ui_version = ui_package["version"].as_str();
+    if ui_version != Some(shipped) {
+        drift.push(format!("ui/package.json: version {ui_version:?}, the app ships {shipped}"));
     }
     Ok(drift)
+}
+
+pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
+    let json = |path: &str| -> Result<serde_json::Value, String> {
+        let text =
+            std::fs::read_to_string(repo.join(path)).map_err(|e| format!("read {path}: {e}"))?;
+        serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))
+    };
+    drift_of(
+        &workspace_members(repo)?,
+        &json("ui/src-tauri/tauri.conf.json")?,
+        &json("ui/package.json")?,
+    )
 }
 
 #[cfg(test)]
@@ -399,105 +362,56 @@ mod tests {
         assert!(artifacts(&missing).unwrap_err().contains("release/bundle"));
     }
 
-    const ROOT: &str = "[workspace]\nmembers = [\"xtask\", \"ui/src-tauri\"]\n\n\
-        [workspace.package]\nversion = \"1.2.3-rc.1\"\n\n[package]\nname = \"trawler\"\nversion.workspace = true\n";
+    fn member(name: &str, version: &str) -> Member {
+        Member { name: name.to_string(), version: version.to_string() }
+    }
 
-    #[test]
-    fn the_workspace_version_is_read_from_its_own_section() {
-        assert_eq!(workspace_version(ROOT).as_deref(), Some("1.2.3-rc.1"));
-        assert_eq!(workspace_version("[package]\nversion = \"9.9.9\"\n"), None);
+    fn one_version() -> Vec<Member> {
+        ["trawler", "trawler-ui", "xtask"].map(|name| member(name, "1.2.3-rc.1")).into()
+    }
+
+    fn json(text: &str) -> serde_json::Value {
+        serde_json::from_str(text).unwrap()
     }
 
     #[test]
-    fn the_members_are_the_root_and_the_listed_crates() {
-        assert_eq!(workspace_members(ROOT).unwrap(), [".", "xtask", "ui/src-tauri"]);
-    }
-
-    const MULTILINE_ROOT: &str = "[workspace]\nmembers = [\n    \"xtask\",\n    \"ui/src-tauri\",\n]\n\n\
-        [workspace.package]\nversion = \"1.2.3-rc.1\"\n\n[package]\nname = \"trawler\"\nversion.workspace = true\n";
-
-    #[test]
-    fn members_listed_over_several_lines_are_all_read() {
-        assert_eq!(workspace_members(MULTILINE_ROOT).unwrap(), [".", "xtask", "ui/src-tauri"]);
-    }
-
-    const COMMENTED_ROOT: &str = "[workspace] # the crates\nmembers = [\n    \"xtask\", # tooling\n    # \"retired\", ] gone\n    \"ui/src-tauri\",\n]\n\n\
-        [workspace.package]\nversion = \"1.2.3-rc.1\" # bumped by a release commit\n";
-
-    #[test]
-    fn comments_neither_drop_a_member_nor_end_the_list() {
-        assert_eq!(workspace_members(COMMENTED_ROOT).unwrap(), [".", "xtask", "ui/src-tauri"]);
-        assert_eq!(workspace_version(COMMENTED_ROOT).as_deref(), Some("1.2.3-rc.1"));
+    fn the_shipped_version_is_the_app_crate_s() {
+        let mut members = one_version();
+        members[1].version = "2.0.0".to_string();
+        assert_eq!(shipped_version(&members), Ok("2.0.0"));
+        assert!(shipped_version(&members[..1]).unwrap_err().contains("no trawler-ui crate"));
     }
 
     #[test]
-    fn a_member_entry_that_is_not_a_quoted_path_is_named_not_skipped() {
-        let root = "[workspace]\nmembers = [\"xtask\", crates/*]\n";
-        assert!(workspace_members(root).unwrap_err().contains("crates/*"));
+    fn one_version_everywhere_is_no_drift() {
+        let drift = drift_of(&one_version(), &json("{}"), &json(r#"{"version":"1.2.3-rc.1"}"#));
+        assert_eq!(drift.unwrap(), Vec::<String>::new());
     }
 
     #[test]
-    fn both_spellings_of_inheritance_inherit() {
-        assert!(inherits_version("[package]\nversion.workspace = true # one source\n"));
-        assert!(inherits_version("[package]\nversion = { workspace = true }\n"));
-        assert!(!inherits_version("[package]\nversion = \"0.1.0\"\n"));
-        assert!(!inherits_version("[dependencies]\nversion.workspace = true\n"));
-    }
-
-    #[test]
-    fn a_member_typing_its_version_is_drift_however_the_members_are_laid_out() {
-        let typed = "[package]\nname = \"m\"\nversion = \"1.2.3-rc.1\"\n";
-        let dir = tree(MULTILINE_ROOT, typed, "{}", r#"{"version":"1.2.3-rc.1"}"#);
-        let drift = version_drift(dir.path()).unwrap().join("\n");
-        assert!(drift.contains("xtask/Cargo.toml"), "{drift}");
-        assert!(drift.contains("ui/src-tauri/Cargo.toml"), "{drift}");
-    }
-
-    fn tree(root: &str, member: &str, tauri_conf: &str, package_json: &str) -> tempfile::TempDir {
-        let dir = tempfile::tempdir().unwrap();
-        let write = |path: &str, text: &str| {
-            let path = dir.path().join(path);
-            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            std::fs::write(path, text).unwrap();
-        };
-        write("Cargo.toml", root);
-        write("xtask/Cargo.toml", member);
-        write("ui/src-tauri/Cargo.toml", member);
-        write("ui/src-tauri/tauri.conf.json", tauri_conf);
-        write("ui/package.json", package_json);
-        dir
-    }
-
-    const INHERITS: &str = "[package]\nname = \"m\"\nversion.workspace = true\n";
-
-    #[test]
-    fn a_tree_with_one_version_has_no_drift() {
-        let dir = tree(ROOT, INHERITS, "{}", r#"{"version":"1.2.3-rc.1"}"#);
-        assert_eq!(version_drift(dir.path()).unwrap(), Vec::<String>::new());
-    }
-
-    #[test]
-    fn each_drift_names_its_file() {
-        let typed = "[package]\nname = \"m\"\nversion = \"1.2.3-rc.1\"\n";
-        let dir = tree(ROOT, typed, r#"{"version":"1.2.3-rc.1"}"#, r#"{"version":"1.2.3"}"#);
-        let drift = version_drift(dir.path()).unwrap().join("\n");
-        for file in [
-            "xtask/Cargo.toml",
-            "ui/src-tauri/Cargo.toml",
-            "ui/src-tauri/tauri.conf.json",
-            "ui/package.json",
-        ] {
-            assert!(drift.contains(file), "{file} missing from:\n{drift}");
-        }
-    }
-
-    #[test]
-    fn a_root_without_a_workspace_version_is_drift() {
-        let dir = tree("[workspace]\nmembers = []\n", INHERITS, "{}", r#"{"version":"1"}"#);
+    fn each_source_that_disagrees_is_named() {
+        let mut members = one_version();
+        members[2].version = "0.1.0".to_string();
+        let drift = drift_of(
+            &members,
+            &json(r#"{"version":"1.2.3-rc.1"}"#),
+            &json(r#"{"version":"1.2.3"}"#),
+        )
+        .unwrap();
         assert_eq!(
-            version_drift(dir.path()).unwrap(),
-            ["Cargo.toml: no [workspace.package] version"]
+            drift,
+            [
+                "xtask is 0.1.0, the app ships 1.2.3-rc.1",
+                "ui/src-tauri/tauri.conf.json: carries a version; Tauri takes the crate's",
+                "ui/package.json: version Some(\"1.2.3\"), the app ships 1.2.3-rc.1",
+            ]
         );
+    }
+
+    #[test]
+    fn a_package_json_without_a_version_is_drift() {
+        let drift = drift_of(&one_version(), &json("{}"), &json("{}")).unwrap();
+        assert_eq!(drift, ["ui/package.json: version None, the app ships 1.2.3-rc.1"]);
     }
 
     #[test]
