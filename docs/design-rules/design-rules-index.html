@@ -136,13 +136,13 @@ flowchart LR
       <tbody>
         <tr><td>activate the focused element</td><td>Enter / Space</td><td><code>CopyText</code> trigger</td></tr>
         <tr><td>partial take from a value</td><td>native selection + ⌘C — never intercepted</td><td><code>CopyText</code> selection guard</td></tr>
-        <tr><td><strong>dismiss the surface</strong> — unchanged</td><td>Esc</td><td><code>Select</code> popup · <code>QueryBar</code> suggestions · ProxyCloseDialog · flow detail panel</td></tr>
-        <tr><td><strong>move within a list</strong> without selecting</td><td>↑ / ↓ — no wrap</td><td><code>Select</code> options · <code>QueryBar</code> suggestions</td></tr>
+        <tr><td><strong>dismiss the surface</strong> — unchanged</td><td>Esc</td><td><code>Select</code> popup · <code>ChipBox</code> suggestions (the flow filter, the data window's find) · ProxyCloseDialog · flow detail panel</td></tr>
+        <tr><td><strong>move within a list</strong> without selecting</td><td>↑ / ↓ — no wrap</td><td><code>Select</code> options · <code>ChipBox</code> suggestions</td></tr>
         <tr><td><strong>narrow a list</strong></td><td>type-to-filter — always on</td><td><code>Select</code> filtering</td></tr>
         <tr><td><strong>take the moved-to item</strong></td><td>Enter</td><td><code>Select</code></td></tr>
-        <tr><td><strong>take a suggestion</strong></td><td>Enter or Tab — a key goes into the draft, a value becomes a filter (<a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>)</td><td><code>QueryBar</code></td></tr>
-        <tr><td><strong>end a filter as typed</strong></td><td>Space, outside quotes</td><td><code>QueryBar</code></td></tr>
-        <tr><td><strong>remove the last filter</strong></td><td>Backspace in an empty draft</td><td><code>QueryBar</code></td></tr>
+        <tr><td><strong>take a suggestion</strong></td><td>Enter or Tab — a key goes into the draft, a value becomes a chip (<a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>); in the find bar Enter steps unless the user moved to a row</td><td><code>ChipBox</code> — the flow filter and the data window's find bar</td></tr>
+        <tr><td><strong>end a filter as typed</strong></td><td>Space, outside quotes</td><td><code>ChipBox</code></td></tr>
+        <tr><td><strong>remove the last filter</strong></td><td>Backspace in an empty draft</td><td><code>ChipBox</code></td></tr>
         <tr><td><strong>focus the query bar</strong></td><td>⌘F — the screen binds it, the bar only takes focus</td><td>the flow list's header</td></tr>
         <tr><td><strong>open Settings</strong></td><td>⌘, — opens the Settings window, or brings it forward</td><td>the app menu's Settings… · the capture menu's settings…</td></tr>
         <tr><td><strong>close a secondary window</strong></td><td>⌘W — the app keeps running</td><td>the Settings window</td></tr>
@@ -155,7 +155,8 @@ flowchart LR
         <tr><td><strong>open in data window</strong></td><td>⌘⇧O while the body has focus</td><td><code>BodyViewer</code></td></tr>
         <tr><td><strong>copy a JSON node</strong></td><td>⌥⌘C its path · ⇧⌥⌘C its value</td><td>the data window's JSON surface</td></tr>
         <tr><td><strong>act on a row</strong></td><td>⌘C copies its value · ⌘⌫ removes it · ⌘↵ commits a multi-line edit</td><td><code>FormTable</code></td></tr>
-        <tr><td><strong>wrap long lines</strong> · <strong>re-indent</strong></td><td>⌥Z · ⌥⇧F (XML)</td><td>the data window's text surfaces</td></tr>
+        <tr><td><strong>wrap long lines</strong> · <strong>re-indent</strong></td><td>⌥Z · ⌥⇧F (XML, HTML, JavaScript, CSS)</td><td>the data window's text surfaces</td></tr>
+        <tr><td><strong>preview</strong> HTML ⇄ its source</td><td>⇧⌘V · ⌘F returns to the source and focuses find · inside the preview frame no key reaches the window (<a href="../decisions/dec-80-the-html-preview-holds-no-reach.html">DEC-80</a>)</td><td>the data window's html kind</td></tr>
       </tbody>
     </table>
 

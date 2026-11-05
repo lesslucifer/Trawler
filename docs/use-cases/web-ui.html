@@ -364,31 +364,34 @@
         (<a href="../decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>): every flow opens on the leg last chosen — <em>request</em> until one is — and a relaunch keeps
         it. A flow with no response yet, opened on <em>response</em>, says so there. A leg that sent no headers says <em>none — this leg sent no headers</em> and stays
         selectable; a flow still being fetched shows <em>loading this flow…</em> and nothing else.</li>
-        <li><strong>Every wire value is a copy target</strong>: headers render in wire order with duplicate
-        names preserved, and clicking a header value — or the URI — copies exactly that value, confirming
-        at the value for ~2 s; drag-selecting still selects.</li>
+        <li><strong>Every wire value is a copy target, on one line</strong>
+        (<a href="../decisions/dec-78-a-long-value-is-one-line-opened-whole.html">DEC-78</a>): headers render in wire order with
+        duplicate names preserved, and each value — like the URI — is one line cut at its end with an ellipsis, never wrapped and
+        never widening the column. Clicking a value copies the whole of it, confirming at the value for ~2 s; drag-selecting still
+        selects. The whole is one act away in a data window: the URI's <em>open</em>, and the Headers section's <em>open all</em>,
+        which hands the leg's headers as <code>Name: value</code> lines, every value whole and in wire order
+        (<a href="#uc-9">UC-9</a>).</li>
         <li><strong>The body is the main zone and the panel never scrolls as a whole</strong>
         (<a href="../decisions/dec-32-body-is-the-main-zone.html">DEC-32</a>): the headers take their natural
         height up to a share of the panel — a third by default, user-sized between 15&nbsp;% and 60&nbsp;% on the
         split under them (<a href="#uc-4">UC-4</a>) — and scroll inside it, the heading naming how many there are;
-        the body takes the rest and scrolls inside itself. A header value taller than three lines — a
-        cookie, a token, a policy — is clamped with <em>more</em> / <em>less</em> under its name: lines are
-        hidden, never characters, the value still copies whole, and one act shows all of it. How much a
-        clamped value shows before that act is the panel's width, and the width is a chosen number:
-        520&nbsp;px by default, with the app's default window at 1440 to pay for it, and every flow opens at the
-        width the user last set (<a href="#uc-4">UC-4</a>)
-        (<a href="../decisions/dec-36-the-pane-and-the-window.html">DEC-36</a>, <span class="badge id">E-RFINISH</span>) —
-        about 168 characters of a 900-character cookie instead of about 108.</li>
+        the body takes the rest and scrolls inside itself. A long header value — a cookie, a token, a policy — is one
+        line, so a few of them never bury the panel; how much of it shows before the cut is the panel's width, a chosen
+        number: 520&nbsp;px by default, and every flow opens at the width the user last set (<a href="#uc-4">UC-4</a>)
+        (<a href="../decisions/dec-36-the-pane-and-the-window.html">DEC-36</a>, <span class="badge id">E-RFINISH</span>).</li>
         <li><strong>Esc dismisses the panel</strong>, as does ✕, and focus returns to the list that opened
         it, so a keyboard user lands back on the row they came from.</li>
         <li><strong><em>replay</em> sits in the flow line beside copy-as-curl</strong>: both send this
         request again, one elsewhere and one here. It turns the pane into the composer with a draft seeded
         from this flow (<a href="#uc-8-composer">UC-8</a>), and the list stays beside it.</li>
-        <li><strong>Bodies render by content type</strong> over
-        <code>GET /flows/{id}/{leg}/body</code>: JSON and XML/HTML as their pretty-printed source
-        in a navigable, foldable surface, <code>image/*</code> as the image over a transparency
-        checkerboard, form-urlencoded as decoded key/value rows (each value individually
-        copyable), other text as text, anything else as a toned hex dump.</li>
+        <li><strong>Bodies render by what the bytes are</strong>
+        (<a href="../decisions/dec-79-the-bytes-decide-the-kind.html">DEC-79</a>) over
+        <code>GET /flows/{id}/{leg}/body</code>: the served content type is a hint, and a whole parse beats it. JSON and XML/HTML
+        render as their pretty-printed source in a navigable, foldable surface, <code>image/*</code> as the image over a
+        transparency checkerboard, form-urlencoded as decoded key/value rows (each value individually copyable), other text
+        as text, anything else as a toned hex dump. When the bytes overrule the label — JSON served as <code>text/plain</code>,
+        HTML as <code>application/octet-stream</code> — the pane says <em>JSON · served as text/plain</em>. Text that starts like a
+        document but does not parse stays text; JavaScript, CSS and form are never guessed from bytes.</li>
         <li><strong>Raw shows the source, not the compression frames</strong>: the
         <strong>raw / pretty</strong> toggle switches between the bytes the server sent
         (<code>?decode=source</code> — transport encoding reversed, nothing re-indented or
@@ -1441,7 +1444,7 @@ the client lacks the certificate"]
       (<a href="../decisions/dec-76-the-data-window.html">DEC-76</a>, <span class="badge id">E-INSPWIN</span>). The window
       renders the data whole, with no cap, and works on a <strong>working copy</strong>: the bytes handed in are the
       <strong>original</strong> and never change. It knows nothing of flows and calls no API, and nothing it does reaches
-      the opener, the capture or the core. <code>BodyViewer</code> is the first opener (<a href="#uc-5">UC-5</a>).</p>
+      the opener, the capture or the core. <code>BodyViewer</code> is the first opener, then the inspector's URI and its Headers section (<a href="#uc-5">UC-5</a>).</p>
     </div>
 
     <div class="diagram" data-c="uc-9-model">
@@ -1461,19 +1464,24 @@ flowchart LR
       <tbody>
         <tr><td>opens data</td><td>a native window titled by the opener's caption; its header draws the opener's heading
           when one is handed (a body's: the leg, then method, host, path, query and its parameter count), else the caption
-          whole. The kind is detected from the
-          type hint, else sniffed: JSON · form · XML · text · hex · image; <em>treat the data as</em> in the status bar
-          overrides it, which says <em>detected from …</em>. Data windows share one remembered size and place, the last
+          whole. The kind is read from the bytes with the type hint as a label
+          (<a href="../decisions/dec-79-the-bytes-decide-the-kind.html">DEC-79</a>): JSON · form · XML · HTML · JavaScript · CSS · text · hex · image;
+          the status bar says what decided it and <em>treat the data as</em> overrides it. Data windows share one remembered size and place, the last
           moved one's</td></tr>
-        <tr><td>edits</td><td>JSON, XML and text edit freely on a virtualised surface with a fold gutter; a form is a table
+        <tr><td>edits</td><td>JSON, XML, HTML, JavaScript, CSS and text edit freely on a virtualised surface with a fold gutter; a form is a table
           of every pair, values whole and wrapped, each key and value editable, pairs added and removed; hex and image
           are read-only. Every change is a step: ⌘Z / ⇧⌘Z, <em>modified · N edits</em> while it differs, <em>restore
           original</em> in ⋯</td></tr>
         <tr><td>reformats</td><td>JSON: indent 2 / 4 / tab or minified, sort keys, fold to depth 1 / 2 / 3 / all / none;
-          XML: re-indent (⌥⇧F); form: sort by key, show encoded; text kinds: wrap long lines (⌥Z). A working copy that no
+          XML and HTML: re-indent (⌥⇧F); JavaScript and CSS: reformat (⌥⇧F), a minified script one step from readable; form: sort by key, show encoded; text kinds: wrap long lines (⌥Z). A working copy that no
           longer parses says where, and only find and fold still work</td></tr>
-        <tr><td>finds</td><td>⌘F, <em>N of M</em>, Enter / ⌘G to step; marks never change the data. Hex reads a query
-          of hex pairs as bytes. A filter view is deferred (Q4)</td></tr>
+        <tr><td>previews</td><td>an HTML document has a <em>source ⇄ preview</em> switch (⇧⌘V): the working copy drawn read-only in a frame that
+          runs no script, loads nothing, goes nowhere and holds none of the app's powers
+          (<a href="../decisions/dec-80-the-html-preview-holds-no-reach.html">DEC-80</a>)</td></tr>
+        <tr><td>finds</td><td>⌘F opens a chip bar typed like the flow list's filter: Space or Tab makes a chip, suggestions offer the kind's keys
+          (<code>key:</code> and <code>value:</code> with the document's own keys, <code>re:</code>, <code>case:</code>, <code>bytes:</code>), a draft that does not parse says why,
+          Backspace removes the last chip. The draft and every chip mark live as a union counted <em>N of M</em>; Enter / ⌘G step; marks never change
+          the data, and a chip the kind cannot run is refused. A filter view is deferred (Q4)</td></tr>
         <tr><td>decodes</td><td>right-click or ⌘⇧D on a selection or a value: base64 (standard or URL-safe, padding
           optional), URL-encoding, a JWT (header and payload as JSON, the signature shown and never verified) or a time
           (a Unix timestamp by its digit count, or an ISO 8601 / HTTP date read in local time beside UTC). The peek
@@ -1498,7 +1506,10 @@ flowchart LR
       the cut's way out opens the whole body under the opener's title and a second open focuses it; find, sort keys and
       a typed edit, undo and restore original, each copy target read back; a 300 KiB form's last pair whole, its JWT
       decoded and its payload opened in a third window whose <code>exp</code> decodes to its instant; and no data window
-      makes a request, changes the captured body, or asks anything as it closes.</p>
+      makes a request, changes the captured body, or asks anything as it closes. <code>ui/e2e/specs/inspect-window-v2.spec.ts</code>
+      drives <span class="badge id">E-INSPWIN2</span> the same way: long values on one line and opened whole, the bytes deciding
+      the kind, a script reformatted and restored, an HTML preview that a local beacon never hears from, and find typed like
+      the filter.</p>
     </div>
 
   </main>

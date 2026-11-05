@@ -100,6 +100,7 @@ const SPECS = [
   "./specs/layout-relaunched.spec.ts",
   "./specs/layout-broken.spec.ts",
   "./specs/data-window.spec.ts",
+  "./specs/inspect-window-v2.spec.ts",
   "./specs/query-bar.spec.ts",
   "./specs/query-bar-relaunched.spec.ts",
   "./specs/flows.spec.ts",

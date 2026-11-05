@@ -11,9 +11,9 @@
       <h1>DEC-80 — the HTML preview holds no reach</h1>
       <p>The data window may draw captured HTML, but in a frame that runs no script, loads nothing, goes nowhere and
         holds none of the app's powers.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-INSPWIN2.W1</strong> from the owner's rulings on
+      <div class="meta">v2 (the guards as built: form-action, links, MathML, nested content, a fixed-point clean; E-INSPWIN2.W9) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-INSPWIN2.W1</strong> from the owner's rulings on
         the epic plan's Q9–Q10 · UC-9 · extends <a href="dec-76-the-data-window.html">DEC-76</a> · <strong>active</strong> · planned as
-        DEC-79 (DEC-next-c); DEC-80 because E-BGSVC.W1 minted DEC-77 first · built by E-INSPWIN2.W7</div>
+        DEC-79 (DEC-next-c); DEC-80 because E-BGSVC.W1 minted DEC-77 first · built by E-INSPWIN2.W7 and W9, proven end to end by W9's J4</div>
     </div>
   </header>
   <main>
@@ -31,7 +31,7 @@
     <div class="callout" data-c="decision">
       <p><strong>Decision.</strong> The html kind's <em>preview</em> renders the working copy through
         <code>srcdoc</code> in <code>&lt;iframe sandbox=""&gt;</code>, with a CSP <code>&lt;meta&gt;</code> placed before any
-        author content and meta refresh and <code>&lt;base&gt;</code> removed. It is read-only and follows the working copy.
+        author content, and every address that could take the frame anywhere neutralised before render. It is read-only and follows the working copy.
         Source ⇄ preview is a toggle inside the html kind (Q10).</p>
     </div>
 
@@ -41,15 +41,30 @@
       <tr><td>1</td><td>Script reaching Tauri IPC, the parent window or storage</td><td>an empty <code>sandbox</code>: no
         <code>allow-scripts</code>, no <code>allow-same-origin</code> — the frame is an opaque origin that runs nothing</td></tr>
       <tr><td>2</td><td>A request leaving the machine: tracking pixel, CSS <code>url()</code>, font, prefetch, media</td><td>CSP
-        <code>default-src 'none'; style-src 'unsafe-inline'; img-src data:</code>, first in the document; DEC-76's "no request"
+        <code>default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'</code>, first in the document; DEC-76's "no request"
         stays true</td></tr>
       <tr><td>3</td><td>Navigation, form posts, popups</td><td>the empty sandbox withholds <code>allow-forms</code>,
-        <code>allow-popups</code>, <code>allow-top-navigation</code></td></tr>
-      <tr><td>4</td><td>A meta refresh, or a <code>&lt;base&gt;</code> re-pointing relative links</td><td>removed before render,
-        under any case and attribute order</td></tr>
+        <code>allow-popups</code>, <code>allow-top-navigation</code>, but not a frame navigating itself, so every link is aimed away:
+        <code>a</code> and <code>area</code> (HTML and SVG) get <code>target="_blank"</code> and lose <code>ping</code> and <code>download</code>,
+        a <code>&lt;base target="_blank"&gt;</code> of the preview's own is the only base, and every MathML <code>href</code> is removed,
+        since WebKit treats a MathML element with <code>href</code> as a link (it matches <code>:any-link</code>) that no target retargets</td></tr>
+      <tr><td>4</td><td>A meta refresh, or a <code>&lt;base&gt;</code> re-pointing relative links</td><td>every <code>meta[http-equiv]</code> and every <code>base</code> removed before render,
+        under any case and attribute order; so are <code>template</code>, <code>link</code>, nested frames and plugins, whose content the walk cannot reach</td></tr>
+      <tr><td>4a</td><td>A serialise-and-reparse that turns cleaned text into live markup</td><td>the cleaned markup is cleaned again until a reparse changes
+        nothing; a page that never settles is shown as inert text, not markup</td></tr>
       <tr><td>5</td><td>A write-back through the preview</td><td>read-only; edits happen in the source view, the preview
         re-renders from the working copy</td></tr>
     </table>
+
+    <h2 id="proof">How it is held</h2>
+    <table data-c="proof">
+      <tr><th>Level</th><th>What</th></tr>
+      <tr><td>unit</td><td><code>htmlPreview.test.ts</code>: policy first, refresh and base under every spelling, links and MathML, nested content, the fixed point</td></tr>
+      <tr><td>e2e</td><td>J4 in <code>inspect-window-v2.spec.ts</code>: a page that reaches out by script, image, stylesheet and refresh reaches a local beacon unguarded and never in the preview; the real engine's <code>:any-link</code> over the preview's markup finds only retargeted anchors. The embedded WebDriver cannot click or run script inside an opaque frame, so the frame is measured from outside</td></tr>
+    </table>
+
+    <h2 id="cost">Accepted cost</h2>
+    <p data-c="cost">Once focus is inside the frame, ⌘F, ⇧⌘V and Esc do not reach the window (guard 1: the frame can pass no key out); the status-bar switch and ⋯ stay reachable.</p>
 
     <h2 id="alternatives">Rejected</h2>
     <table data-c="alternatives">

@@ -982,7 +982,7 @@
           <td><strong>The HTML preview holds no reach.</strong> The html kind's read-only preview renders the working copy via
             <code>srcdoc</code> in <code>&lt;iframe sandbox=""&gt;</code>, a CSP <code>&lt;meta&gt;</code> first
             (<code>default-src 'none'; style-src 'unsafe-inline'; img-src data:</code>), meta refresh and <code>&lt;base&gt;</code>
-            removed: no script, no request, no navigation, no IPC. A source ⇄ preview toggle. Extends DEC-76. Rejected: a sanitized
+            removed, links aimed away and MathML addresses dropped (form-action <code>'none'</code>): no script, no request, no navigation, no IPC; proven by a real-window journey with a beacon. A source ⇄ preview toggle. Extends DEC-76. Rejected: a sanitized
             render in the window's DOM, a load-remote switch, a rule on DEC-76, a second window</td>
           <td><span class="badge auto">active</span></td>
         </tr>
