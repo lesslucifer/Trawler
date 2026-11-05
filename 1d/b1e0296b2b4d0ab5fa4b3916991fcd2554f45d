@@ -1,0 +1,20 @@
+schema: doc/v1
+epic: E-PKG
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "the Package row (cargo xtask package, ad-hoc signed and verified on macOS, DEC-81) and the flavour rule on Run the app"
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the e2e-bundle row closed by E-PKG.W1; the packaging row begun by E-PKG and carried by E-PKG2; the review's code-path gap (ui/src-tauri outside cr/v5's hash) found by W1"
+  - path: "docs/decisions/dec-81-one-version-a-release-only-bundle-one-package-command.html"
+    tier: T2
+    action: added
+    distills: "one version, the bundle flavour, the package command, ad-hoc signing and the package-test profile"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-81 row"
