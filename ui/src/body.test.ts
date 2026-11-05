@@ -1,5 +1,7 @@
 import {
   bodyKind,
+  bodyPayload,
+  captionFilename,
   bodyNotice,
   bodyText,
   byteLength,
@@ -14,6 +16,7 @@ import {
   rawKind,
   saveFilename,
 } from "./body";
+import type { FlowView } from "./api";
 
 test("bodyKind dispatches on the mime type, ignoring parameters", () => {
   expect(bodyKind("application/json")).toBe("json");
@@ -407,3 +410,97 @@ describe("decodeBody", () => {
   it("reports an empty body whole — there is no byte to fail on", () => {
     expect(decodeBody(new Uint8Array())).toEqual({ text: "", whole: true });
   });});
+
+describe("bodyPayload — what the pane hands a data window", () => {
+  const view = {
+    id: "f1",
+    method: "POST",
+    uri: "https://auth.example.com/oauth/token",
+  } as FlowView;
+  const fetched = { bytes: new Uint8Array([1, 2]), contentType: "application/x-www-form-urlencoded" };
+
+  it("pretty: the leg, method and where in the title, the served type as the hint", () => {
+    expect(bodyPayload(view, "request", fetched, true)).toEqual({
+      key: "f1:request:pretty",
+      title: "request body · POST auth.example.com/oauth/token",
+      heading: { what: "request body", method: "POST", host: "auth.example.com", path: "/oauth/token", query: "" },
+      bytes: fetched.bytes,
+      typeHint: "application/x-www-form-urlencoded",
+    });
+  });
+
+  it("raw: a key of its own, said in the title, and no hint", () => {
+    const payload = bodyPayload(view, "request", fetched, false);
+    expect(payload.key).toBe("f1:request:raw");
+    expect(payload.title).toBe("request body · raw · POST auth.example.com/oauth/token");
+    expect("typeHint" in payload).toBe(false);
+  });
+
+  it("no served type, no hint", () => {
+    expect("typeHint" in bodyPayload(view, "response", { ...fetched, contentType: null }, true)).toBe(false);
+  });
+});
+
+describe("bodyPayload's heading — what the window's header draws", () => {
+  const fetched = { bytes: new Uint8Array(), contentType: null };
+
+  it("what, then the method, host, path and query of the flow", () => {
+    const view = { id: "f1", method: "POST", uri: "https://www.example.com/ajax/x?a=1&b=%3A&c" } as FlowView;
+    expect(bodyPayload(view, "request", fetched, true).heading).toEqual({
+      what: "request body",
+      method: "POST",
+      host: "www.example.com",
+      path: "/ajax/x",
+      query: "?a=1&b=%3A&c",
+    });
+    expect(bodyPayload(view, "response", fetched, false).heading?.what).toBe("response body · raw");
+  });
+
+  it("a target with no path or query keeps those empty", () => {
+    const view = { id: "f2", method: "CONNECT", uri: "example.com:443" } as FlowView;
+    expect(bodyPayload(view, "request", fetched, true).heading).toEqual({
+      what: "request body",
+      method: "CONNECT",
+      host: "example.com:443",
+      path: "",
+      query: "",
+    });
+  });
+});
+
+describe("captionFilename — a data window saves under its opener's caption", () => {
+  it("the caption made file-safe, the hint's extension, an optional suffix", () => {
+    expect(captionFilename("response body · GET api.example.com/v2/x", "application/json")).toBe(
+      "response-body-GET-api.example.com-v2-x.json",
+    );
+    expect(captionFilename("a b", undefined, "-original")).toBe("a-b-original.bin");
+  });
+
+  it("a caption with nothing usable is data; a long one is cut short", () => {
+    expect(captionFilename("· · ·", "text/plain")).toBe("data.txt");
+    expect(captionFilename("x".repeat(300), "text/plain")).toBe(`${"x".repeat(80)}.txt`);
+  });
+});
+
+describe("byteLength — one UTF-8 length rule, counted without encoding", () => {
+  it.each(["", "abc", "café", "日本", "a😀b", "\ud800", "\udc00x", "\ud800\u0800", "\ud800é", "\ud800a", "x\ud800"])(
+    "%j matches TextEncoder",
+    (text) => {
+      expect(byteLength(text)).toBe(new TextEncoder().encode(text).length);
+    },
+  );
+});
+
+describe("decodeBody keeps a byte-order mark when asked", () => {
+  it("dropped by default, kept with keepBom so the text re-encodes to the same bytes", () => {
+    const bom = new Uint8Array([0xef, 0xbb, 0xbf, 0x61]);
+    expect(decodeBody(bom).text).toBe("a");
+    const kept = decodeBody(bom, { keepBom: true });
+    expect(kept.whole).toBe(true);
+    expect(Array.from(new TextEncoder().encode(kept.text))).toEqual(Array.from(bom));
+  });
+
+  it("bytes that are not UTF-8 decode lossily and say so, either way", () => {
+    expect(decodeBody(new Uint8Array([0x61, 0xff]), { keepBom: true })).toEqual({ text: "a\ufffd", whole: false });
+  });
+});

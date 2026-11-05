@@ -1,8 +1,9 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { apiStub } from "./apiStub";
 import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { BodyViewer } from "./BodyViewer";
 import { FlowList } from "./FlowList";
+import * as body from "./body";
 import { TEXT_MAX } from "./body";
 import { TextRenderer } from "./components/TextRenderer";
 import { useFlows } from "./useFlows";
@@ -139,22 +140,23 @@ const OVER_CAP_BYTES = new TextEncoder().encode(OVER_CAP);
 const WHOLE_REPLACEMENTS = new TextEncoder().encode("\uFFFD".repeat(TEXT_MAX + 5000));
 
 describe("the body pane's size report", () => {
-  const real = TextEncoder.prototype.encode;
   let encoded: number[] = [];
+  let measured: MockInstance<typeof body.byteLength>;
 
   beforeEach(() => {
     encoded = [];
-    TextEncoder.prototype.encode = function (this: TextEncoder, input?: string) {
-      encoded.push(input?.length ?? 0);
-      return real.call(this, input);
-    };
+    const real = body.byteLength;
+    measured = vi.spyOn(body, "byteLength").mockImplementation((text: string) => {
+      encoded.push(text.length);
+      return real(text);
+    });
   });
 
   afterEach(() => {
-    TextEncoder.prototype.encode = real;
+    measured.mockRestore();
   });
 
-  it("never hands the untruncated body to the encoder when the size is known", () => {
+  it("never measures the untruncated body when the size is known", () => {
     const { container } = render(
       <TextRenderer text={OVER_CAP} size={2 * (TEXT_MAX + 5000)} />,
     );
@@ -190,7 +192,7 @@ describe("the body pane's size report", () => {
     const { container, findByTestId } = viewerOver(OVER_CAP_BYTES, "text/plain");
     await findByTestId("body-text");
 
-    expect(container.textContent).toContain("⚠ showing 256 KiB of 266 KiB — save to see all");
+    expect(container.textContent).toContain("⚠ showing 256 KiB of 266 KiBopen in data window");
     expect(encoded.length).toBeGreaterThan(0);
     expect(Math.max(...encoded)).toBeLessThanOrEqual(TEXT_MAX);
   });
@@ -205,7 +207,7 @@ describe("the body pane's size report", () => {
     const { container, findByTestId } = viewerOver(bytes, "text/plain");
     await findByTestId("body-text");
 
-    expect(container.textContent).toContain("⚠ showing 384 KiB of 399 KiB — save to see all");
+    expect(container.textContent).toContain("⚠ showing 384 KiB of 399 KiBopen in data window");
   });
 
   // A replacement character the body carries on purpose is valid UTF-8 and its

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { CutMarker } from "./CutMarker";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { CutMarker, OpenWhole } from "./CutMarker";
 
 describe("CutMarker", () => {
   it("states what is shown, of how much, and the way out", () => {
@@ -13,7 +13,7 @@ describe("CutMarker", () => {
 
   it("carries the warn tone — a truncation the user misses is a truncation that lies", () => {
     render(<CutMarker shown={4096} total={99_999} />);
-    expect(screen.getByText(/showing/).className).toContain("text-warn");
+    expect(screen.getByText(/showing/).parentElement!.className).toContain("text-warn");
   });
 
   // Found in the gallery: TREE_MAX vs TREE_MAX+11 both rounded to "128 KiB", so
@@ -38,5 +38,27 @@ describe("CutMarker", () => {
 
     expect(screen.getByText(/showing 135 KiB of 1.0 MiB/)).toBeInTheDocument();
     expect(screen.queryByText(/138240|1048576/)).not.toBeInTheDocument();
+  });
+
+  it("with an opener the way out is the data window, on a Button beside the line", () => {
+    const open = vi.fn();
+    render(
+      <OpenWhole.Provider value={{ open }}>
+        <CutMarker shown={131_072} total={2_097_152} />
+      </OpenWhole.Provider>,
+    );
+
+    expect(screen.getByText(/showing/).textContent).toBe("⚠ showing 128 KiB of 2.0 MiB");
+    const button = screen.getByRole("button", { name: "open in data window" });
+    expect(button.parentElement).toHaveClass("flex", "flex-wrap");
+    expect(button.className).not.toContain("text-warn");
+    fireEvent.click(button);
+    expect(open).toHaveBeenCalledOnce();
+  });
+
+  it("with no opener there is no Button, and save is the way out", () => {
+    render(<CutMarker shown={10} total={99} />);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByText(/save to see all/)).toBeInTheDocument();
   });
 });

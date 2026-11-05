@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act, within } from "@testing-library/react";
 import { useState, type ComponentProps } from "react";
 import { afterEach, expect, test, vi } from "vitest";
 import { BodyViewer } from "./BodyViewer";
+import { openDataWindow } from "./dataWindow";
 import { hexDump, HEX_MAX, TEXT_MAX, TREE_MAX } from "./body";
 import { CONFIRM_MS } from "./components/index";
 import type { BodyFetch, BodyView, FlowView, TrawlerApi } from "./api";
@@ -41,12 +42,17 @@ function apiWith(body: Partial<BodyFetch>): TrawlerApi {
 
 const text = (s: string) => new TextEncoder().encode(s);
 
+vi.mock("./dataWindow", () => ({ openDataWindow: vi.fn(async () => {}) }));
+
 function Viewer(props: Omit<ComponentProps<typeof BodyViewer>, "pretty" | "onPretty">) {
   const [pretty, setPretty] = useState(true);
   return <BodyViewer {...props} pretty={pretty} onPretty={setPretty} />;
 }
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.mocked(openDataWindow).mockClear();
+});
 
 test("the leg is a prop the pane never asks about", async () => {
   const api = apiWith({ bytes: text("req"), contentType: "text/plain" });
@@ -165,7 +171,7 @@ test("a text body over TEXT_MAX states its truncation instead of swallowing it",
   render(<Viewer api={api} flow={flow()} leg="response" />);
 
   await screen.findByTestId("body-text");
-  const marker = screen.getByText(/⚠ showing .* of .* — save to see all/);
+  const marker = screen.getByText(/⚠ showing .* of .*/);
   expect(marker).toBeInTheDocument();
   const [, shown, total] = /showing (\S+ \S+) of (\S+ \S+)/.exec(marker.textContent ?? "") ?? [];
   expect(shown).not.toBe(total);
@@ -177,7 +183,8 @@ test("a hex body over HEX_MAX states its truncation, not an easy-to-miss ellipsi
   render(<Viewer api={api} flow={flow()} leg="response" />);
 
   await screen.findByTestId("body-hex");
-  expect(screen.getByText(/⚠ showing .* of .* — save to see all/)).toBeInTheDocument();
+  expect(screen.getByText(/⚠ showing .* of .*/)).toBeInTheDocument();
+  expect(within(screen.getByTestId("body-pane")).getByRole("button", { name: "open in data window" })).toBeInTheDocument();
   expect(screen.queryByText(/more bytes/)).toBeNull();
 });
 
@@ -188,7 +195,8 @@ test("a JSON body over the tree cap falls back to text with the family's marker"
 
   expect(await screen.findByTestId("body-text")).toBeInTheDocument();
   expect(screen.queryByTestId("body-json")).toBeNull();
-  expect(screen.getByText(/⚠ showing .* of .* — save to see all/)).toBeInTheDocument();
+  expect(screen.getByText(/⚠ showing .* of .*/)).toBeInTheDocument();
+  expect(within(screen.getByTestId("body-pane")).getByRole("button", { name: "open in data window" })).toBeInTheDocument();
 });
 
 test("copy body yields valid JSON — the payload is the bytes, not a rendered form", async () => {
@@ -367,6 +375,54 @@ test("the fetch failure is the only absence in warn tone — it is the only faul
   const failure = await screen.findByText("failed to load body");
   expect(container.querySelector("[data-tone='warn']")).toContainElement(failure);
   expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+});
+
+test("↗ hands the data window what the pane holds, in the mode it shows", async () => {
+  const bytes = text('{"a":1}');
+  const api = apiWith({ bytes, contentType: "application/json" });
+  render(<Viewer api={api} flow={flow({ uri: "https://api.example.com/v2/x?y=1" })} leg="response" />);
+  await screen.findByTestId("body-json");
+
+  fireEvent.click(screen.getByRole("button", { name: "open in data window" }));
+
+  expect(openDataWindow).toHaveBeenCalledWith({
+    key: `${flow().id}:response:pretty`,
+    title: "response body · GET api.example.com/v2/x?y=1",
+    heading: { what: "response body", method: "GET", host: "api.example.com", path: "/v2/x", query: "?y=1" },
+    bytes,
+    typeHint: "application/json",
+  });
+});
+
+test("raw mode hands the raw bytes under a key of its own, with no hint", async () => {
+  const api = apiWith({ bytes: text('{"a":1}'), contentType: "application/json" });
+  render(<Viewer api={api} flow={flow()} leg="response" />);
+  await screen.findByTestId("body-json");
+  fireEvent.click(screen.getByRole("radio", { name: "raw" }));
+  await waitFor(() => expect(api.getBody).toHaveBeenLastCalledWith(flow().id, "response", false));
+  await screen.findByTestId("body-text");
+
+  fireEvent.click(screen.getByRole("button", { name: "open in data window" }));
+
+  const handed = vi.mocked(openDataWindow).mock.calls[0][0];
+  expect(handed.key).toBe(`${flow().id}:response:raw`);
+  expect(handed.title).toBe("response body · raw · GET example.com/");
+  expect(handed.typeHint).toBeUndefined();
+});
+
+test("the cut marker's way out and ⌘⇧O open the same data window", async () => {
+  const huge = `{"pad":"${"x".repeat(TREE_MAX)}"}`;
+  const api = apiWith({ bytes: text(huge), contentType: "application/json" });
+  render(<Viewer api={api} flow={flow()} leg="response" />);
+  await screen.findByTestId("body-text");
+
+  fireEvent.click(within(screen.getByTestId("body-pane")).getByRole("button", { name: "open in data window" }));
+  fireEvent.keyDown(screen.getByTestId("body-pane"), { key: "O", metaKey: true, shiftKey: true });
+
+  const calls = vi.mocked(openDataWindow).mock.calls;
+  expect(calls).toHaveLength(2);
+  expect(calls[0][0].bytes).toHaveLength(huge.length);
+  expect(calls[1][0]).toEqual(calls[0][0]);
 });
 
 // E-STICKY: the body mode is the user's, so the pane fetches in the mode it is
