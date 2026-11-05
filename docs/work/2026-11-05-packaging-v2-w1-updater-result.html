@@ -63,9 +63,9 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>What</th><th>Where</th></tr>
-      <tr><td>unit</td><td><code>ui/src-tauri/src/update.rs</code> (10: throttle, record, installed only, offer text,
+      <tr><td>unit</td><td><code>ui/src-tauri/src/update.rs</code> (12: throttle, record, installed only, offer text,
         launch silence, user answers, refused text, staged once, the shipped config's channel, key and signed
-        version) · <code>menu.rs</code> (the item) · <code>closeConfirm.test.tsx</code> (cancel tells the shell, a quit
+        version, a failed install told before the app ends, the exit held only while it is told) · <code>menu.rs</code> (the item) · <code>closeConfirm.test.tsx</code> (cancel tells the shell, a quit
         that goes ahead does not) · <code>xtask/src/package.rs</code> (updater artifacts exactly with the key; the
         <code>.tar.gz</code> and <code>.sig</code> listed)</td></tr>
       <tr><td>integration</td><td><code>ui/src-tauri/tests/suite/updater.rs</code>: 4 of 4 against a loopback channel
@@ -74,8 +74,14 @@
         14/14 and owned 1/1 (the real app boots with the plugin); <code>package_bundle</code> 2/2</td></tr>
       <tr><td>e2e</td><td>waived at this level: J2 and J3 of the epic's <code>e2e_packaging</code> (W5) install a real
         signed update</td></tr>
+      <tr><td>review round 1</td><td>FAIL on <code>1bed5d27</code>, one important verified: an install that failed after the
+        window was gone only wrote to stderr and exited, so the app seemed to vanish. Fixed in <code>c80e446e</code>,
+        regression test first. A native dialog now says why, the app holds its exit while it is open, and DEC-82 rule 4
+        carries the edge. Six other importants were refused by their verifiers (blocking on the quit path, the lifecycle's
+        placement, the launch record's timing, Windows argv quoting, single-instance on restart)</td></tr>
       <tr><td>commits</td><td><code>6676a156</code> plan · <code>cdd19a40</code> rulings · <code>9a91d36e</code> updater ·
-        <code>1e8b0efe</code> 2.12 and signed versions · <code>b924fc23</code> DEC-82</td></tr>
+        <code>1e8b0efe</code> 2.12 and signed versions · <code>b924fc23</code> DEC-82 · <code>c80e446e</code> round-1
+        fix</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
