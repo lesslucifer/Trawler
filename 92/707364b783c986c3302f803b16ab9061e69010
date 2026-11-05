@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W4
+branch: HEAD
+tests:
+  unit: { count: 35, covers: "uriPayload and headersPayload keys, wire order, duplicate names, bytes and the shared caption; CopyText's one-line form and whole chip; KeyValueRow on it with no clamp and an uncut name; Section's heading action slot" }
+  integration: { count: 110, covers: "FlowDetail over a 4 KiB cookie, a JWT and a 2 KiB URI: one-line values, no row opener, the URI's open and open all and Cmd-Shift-O hand the whole data, the leg follows, an empty leg offers none; open all's payload in the data window decodes the bearer JWT from a right-click" }
+  e2e: { count: 26, covers: "in the built app every long header value is one line high and cut, the headers zone scrolls nothing sideways, no more / less remains, open all is offered" }
