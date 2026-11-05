@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU wu/bg-service/e2e-distill -> epic/bg-service"
+epic: E-BGSVC
+wu: E-BGSVC.W7
+branch: wu/bg-service/e2e-distill
+base: a2098f848515f891ebcb10670585ea0c9e3b1678
+head: cf69462b23d5b287d50865b8135c6c15fd752137
+diff_sha256: f78a9e777dc72969838b9b5b65f9f1f8c74715c94107c641e7f09fc7b1356f82
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    important: 1
+    nit: 5
+  stage_seconds:
+    gate0: 40
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 1 }
+findings: { found: 6, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "handler_names splits on ',' before dropping a #[-prefixed entry, so a compound cfg with a comma would leave a garbage name"
+    waived: "no compound cfg in either list; it would surface as a loud comparison diff, never a missed command"
+  - finding: "the background specs depend on each other's leftover answer"
+    waived: "deliberate (one-app.conf.ts's comment): the stored answer crossing a real exit is what is proven; recorded as a follow-up in the result doc"
+  - finding: "background-off's login-item click would register a real login item if the e2e build were ever bundled"
+    waived: "the e2e build is unbundled by construction (cargo xtask ui e2e); the spec asserts the refusal, so a bundled build fails loudly at that assertion"
+  - finding: "KEEP_FILE hardcodes the macOS data-dir path"
+    waived: "the suite is macOS-only today (F5 follow-up); wdio.conf.ts and walkthrough.conf.ts carry the same path"
+  - finding: "askToCloseTheWindow reimplements the close snippet in data-window.spec.ts and quit.ts"
+    waived: "pre-existing copies are one-liners with different intents (close vs destroy); nothing in the diff drifts from them"
+verdict: FAIL
+date: 2026-11-06
