@@ -1,0 +1,57 @@
+schema: doc/v1
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W4
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "test paths cited by the roadmap rows now under tests/suite/"
+  - path: "docs/decisions/dec-37-har-as-the-interchange-format.html"
+    tier: T2
+    action: updated
+    distills: "the HAR shape test cited at tests/suite/api.rs"
+  - path: "docs/decisions/dec-50-the-fleet-carries-only-the-dimensions-that-pay.html"
+    tier: T2
+    action: updated
+    distills: "the export e2e cited at tests/suite/e2e_export.rs"
+  - path: "docs/decisions/dec-52-one-source-two-harnesses.html"
+    tier: T2
+    action: updated
+    distills: "the harness parity and doc-hook tests cited under xtask/tests/suite/"
+  - path: "docs/decisions/dec-72-git-runs-the-tracked-hooks.html"
+    tier: T2
+    action: updated
+    distills: "the hooks-install and gate-parity tests cited under xtask/tests/suite/"
+  - path: "docs/decisions/dec-73-each-worktree-builds-into-its-own-target.html"
+    tier: T2
+    action: updated
+    distills: "the target-isolation and gate-parity tests cited under xtask/tests/suite/"
+  - path: "docs/decisions/dec-74-the-merge-proves-the-tree-it-creates.html"
+    tier: T2
+    action: updated
+    distills: "the lint_spawn test cited under xtask/tests/suite/"
+  - path: "docs/decisions/dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html"
+    tier: T2
+    action: updated
+    distills: "the lint_spawn test cited under xtask/tests/suite/"
+  - path: "docs/decisions/workflow-gates.html"
+    tier: T2
+    action: updated
+    distills: "gate0_cache and lint_spawn tests cited under xtask/tests/suite/"
+  - path: "docs/use-cases/capture.html"
+    tier: T2
+    action: updated
+    distills: "the capture and h2 e2es cited under tests/suite/"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "the api, capture and replay tests cited under tests/suite/"
+  - path: "docs/work/2026-11-05-suite-cost-plan.html"
+    tier: T3
+    action: added
+    distills: "the W4 plan: requirement, before/after binary map, test plan"
+  - path: "docs/work/2026-11-05-suite-cost-result.html"
+    tier: T3
+    action: added
+    distills: "the W4 result: outcome, before/after cost, deviations (guard also fails doctest: true), evidence, T1 owed at W5"
