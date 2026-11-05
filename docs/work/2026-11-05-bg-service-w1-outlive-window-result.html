@@ -27,8 +27,8 @@
         <td><code>lifecycle.rs</code>: <code>on_window_destroyed</code>, <code>holds_last_window_exit</code>,
         <code>build_main</code> / <code>reopen_main</code> (single-instance and macOS <code>RunEvent::Reopen</code>, off the event loop)</td></tr>
       <tr><td>3 · preference round trip, corrupt = off, none = unanswered</td><td><span class="badge auto">delivered</span></td>
-        <td><code>keep_capturing.rs</code> + <code>keep_capturing_read</code> / <code>keep_capturing_write</code>, registered in the
-        real and scenario handlers</td></tr>
+        <td><code>keep_capturing.rs</code> + <code>keep_capturing_read</code> / <code>keep_capturing_write</code>; the
+        integration test registers them, the shipped handlers do not yet</td></tr>
       <tr><td>4 · windowless app killed → core exits</td><td><span class="badge auto">delivered</span></td>
         <td>re-executed role test, <code>kill -9</code> → lifeline</td></tr>
       <tr><td>5 · DEC-77; DEC-69 rule 14 points to it</td><td><span class="badge auto">delivered</span></td><td>plus the index row</td></tr>
@@ -48,6 +48,9 @@
       <tr><td>—</td><td>the epic back-merged <code>main</code> before the WU branched</td><td>E-INSPWIN landed DEC-76 and edited
         <code>lib.rs</code>/<code>window_geometry.rs</code>. Hence DEC-77. Q13 was already met by its
         <code>data_window::closes_with</code></td></tr>
+      <tr><td>the commands registered in the shell</td><td>defined and IPC-tested, left out of <code>lib.rs</code>'s and
+        <code>scenario.rs</code>'s handlers</td><td>xtask's registry test holds the handlers to exactly what <code>ui/src</code>
+        invokes, and nothing invokes them before W6</td></tr>
       <tr><td>—</td><td><code>alive</code>/<code>bindable</code>/<code>eventually</code>/<code>flows_status</code> moved into the
         suite's <code>common.rs</code></td><td>a third copy was about to be written</td></tr>
     </table>
@@ -60,7 +63,10 @@
       <tr><td>integration</td><td><code>ui/src-tauri/tests/suite/outlive_window.rs</code> (7): exits unless on+tray · survives
         with a live core answering <code>/flows</code> · reopen builds once · config-declared only · trayless
         <code>--background</code> opens main · IPC round trip · windowless lifeline</td></tr>
-      <tr><td>suite</td><td><code>cargo nextest run -p trawler-ui</code>: 277 passed</td></tr>
+      <tr><td>suite</td><td><code>cargo xtask gate0</code> green on the tip (fmt, clippy, the whole nextest suite)</td></tr>
+      <tr><td>review</td><td>an independent correctness pass found no blocker. Fixed on the tip: a rebuilt main
+        window takes focus with the Dock already Regular; concurrent reopens build one window; a failed build hides the
+        Dock again; the lifeline role is killed on drop. ⌘Q hiding instead of quitting is W3's (below)</td></tr>
       <tr><td>commits</td><td>plan <code>b09e573c</code> · code + T2 <code>9a5321ca</code> · this report and plan v2 on the tip</td></tr>
     </table>
 
@@ -76,6 +82,7 @@
     <h2 id="follow-ups">Follow-ups</h2>
     <table data-item="follow-ups">
       <tr><th>Owner</th><th>Item</th></tr>
+      <tr><td>W6</td><td>register <code>keep_capturing_read</code> / <code>_write</code> in both handlers with the first <code>invoke</code></td></tr>
       <tr><td>W2</td><td><code>Lifecycle::mark_tray(true)</code> once the tray builds, before <code>open_at_launch</code> runs</td></tr>
       <tr><td>W3</td><td>⌘Q still closes the main window, so with the switch on it would hide, not quit (expected #6).
         <code>menu::close_main_window</code> exits with no DEC-64 check when no main window is open</td></tr>

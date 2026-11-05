@@ -110,8 +110,6 @@ pub fn run() {
         core::core_log,
         core::restart_core,
         settings::open_settings,
-        keep_capturing::keep_capturing_read,
-        keep_capturing::keep_capturing_write,
         data_window::open_data_window,
         data_window::take_data_payload
     ]);

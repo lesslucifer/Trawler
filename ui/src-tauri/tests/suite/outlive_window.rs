@@ -21,6 +21,15 @@ const SHIPPED_CONFIG: &str = include_str!("../../tauri.conf.json");
 const ROLE_VAR: &str = "TRAWLER_WINDOWLESS_ROLE_DIR";
 const CORE_REPORT: &str = "windowless core: ";
 
+struct Role(std::process::Child);
+
+impl Drop for Role {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
 fn shipped_windows() -> Vec<WindowConfig> {
     let config: serde_json::Value = serde_json::from_str(SHIPPED_CONFIG).unwrap();
     serde_json::from_value(config["app"]["windows"].clone()).unwrap()
@@ -165,20 +174,22 @@ fn the_preference_commands_round_trip_through_the_file() {
 #[test]
 fn a_killed_windowless_app_leaves_no_core_behind() {
     let dir = tempfile::tempdir().unwrap();
-    let mut role = Command::new(std::env::current_exe().unwrap())
-        .args([
-            "outlive_window::windowless_role",
-            "--exact",
-            "--ignored",
-            "--nocapture",
-            "--test-threads=1",
-        ])
-        .env(ROLE_VAR, dir.path())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .unwrap();
-    let mut lines = BufReader::new(role.stdout.take().unwrap()).lines();
+    let mut role = Role(
+        Command::new(std::env::current_exe().unwrap())
+            .args([
+                "outlive_window::windowless_role",
+                "--exact",
+                "--ignored",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(ROLE_VAR, dir.path())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let mut lines = BufReader::new(role.0.stdout.take().unwrap()).lines();
     let report = lines
         .find_map(|line| {
             line.unwrap().split_once(CORE_REPORT).map(|(_, report)| report.to_string())
@@ -188,8 +199,7 @@ fn a_killed_windowless_app_leaves_no_core_behind() {
     let (pid, api): (u32, SocketAddr) = (pid.parse().unwrap(), api.parse().unwrap());
     assert!(alive(pid));
 
-    role.kill().unwrap();
-    role.wait().unwrap();
+    drop(role);
     eventually("the windowless app's core exits", || !alive(pid));
     assert!(bindable(api));
 }

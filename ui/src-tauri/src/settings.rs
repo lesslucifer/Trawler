@@ -38,6 +38,14 @@ pub async fn open_settings<R: Runtime>(app: AppHandle<R>) -> Result<(), String> 
 
 pub fn open<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     crate::lifecycle::set_dock(app, crate::lifecycle::Dock::Shown);
+    let opened = show_or_build(app);
+    if opened.is_err() {
+        crate::lifecycle::on_window_gone(app);
+    }
+    opened
+}
+
+fn show_or_build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
         window.unminimize()?;
         window.show()?;

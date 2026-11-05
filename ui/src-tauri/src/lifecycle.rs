@@ -3,6 +3,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Mutex, PoisonError};
 use std::thread::JoinHandle;
 
 use tauri::{AppHandle, Manager, Runtime, WebviewWindow, WebviewWindowBuilder};
@@ -14,11 +15,12 @@ use crate::window_geometry;
 pub struct Lifecycle {
     config_dir: Option<PathBuf>,
     tray: AtomicBool,
+    reopening: Mutex<()>,
 }
 
 impl Lifecycle {
     pub fn new(config_dir: Option<PathBuf>) -> Self {
-        Self { config_dir, tray: AtomicBool::new(false) }
+        Self { config_dir, tray: AtomicBool::new(false), reopening: Mutex::new(()) }
     }
 
     pub fn config_dir(&self) -> Option<&Path> {
@@ -113,14 +115,22 @@ pub fn build_main<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow
         .find(|window| window.label == MAIN_WINDOW)
         .ok_or(tauri::Error::WindowNotFound)?
         .clone();
-    let window = WebviewWindowBuilder::from_config(app, &config)?.build()?;
+    set_dock(app, Dock::Shown);
+    let built =
+        WebviewWindowBuilder::from_config(app, &config).and_then(WebviewWindowBuilder::build);
+    let window = built.inspect_err(|_| on_window_gone(app))?;
     let window_itself = window.as_ref().window();
     window_geometry::restore(&window_itself, window_geometry::min_size_of(&window_itself));
-    set_dock(app, Dock::Shown);
+    window.set_focus()?;
     Ok(window)
 }
 
+// A Dock click and a second launch can arrive together; one of them builds.
 pub fn reopen_main<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
+    let lifecycle = lifecycle(app);
+    let _reopening = lifecycle
+        .as_ref()
+        .map(|lifecycle| lifecycle.reopening.lock().unwrap_or_else(PoisonError::into_inner));
     if let Some(window) = app.get_webview_window(MAIN_WINDOW) {
         window.unminimize()?;
         window.show()?;
