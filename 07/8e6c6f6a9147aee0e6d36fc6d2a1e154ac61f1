@@ -1,0 +1,28 @@
+schema: doc/v1
+epic: E-QUERY
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "W4: absorbed filter items struck; rows for header and body search, duration and size, type: from types seen, and saved queries on the chips."
+  - path: "docs/decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html"
+    tier: T2
+    action: added
+    distills: "Before W1, then v2 at W3 and v3 at W4: a filter is a chip and applies only as a chip; the grammar is the app's and the core stays keyed parameters; reverses UC-4's chosen-rather-than-typed; the bar's forks (Enter, faults, unknown keys, a chip's box, changing a chip)."
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-71 routed."
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "W4: keyboard vocabulary (take a suggestion, end a filter as typed, remove the last filter, Cmd-F focuses the query bar); lexicon: filter, and draft kept off screen."
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "W1 and W4: the listing row names lists, not_ and is; UC-4's row names the query bar."
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "W1: the listing contract (repeated keys, not_, is, host:port) and UC-6 and UC-7 taking the same parameters. W4: UC-4's query bar, grammar and keys; chosen-rather-than-typed struck as reversed by DEC-71."
