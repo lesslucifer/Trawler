@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU ci-yml -> epic/ci"
+epic: E-CI
+wu: E-CI.W1
+branch: wu/ci/ci-yml
+base: 30f3eabedc1e65057a237fa2cb640eaddfb22471
+head: ba2b5769224902d53aa4ead2be97658a9fc0f9c3
+diff_sha256: e233e9bcef85ed35ce7009b389be6fda548daf59098958d06fadb4de83642042
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 22
+    finders: 45
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "the toolchain test does not pin components: clippy on dtolnay/rust-toolchain"
+    waived: "the clippy step itself fails on the runner without it, which is the signal; the requirement pins the commands, and E-PKG2.W2's dispatched runs exercise the job"
+verdict: PASS
+date: 2026-11-05
