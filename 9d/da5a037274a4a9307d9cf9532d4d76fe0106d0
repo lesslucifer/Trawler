@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-BGSVC
+wu: E-BGSVC.W8
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 9: the macOS login item is the SMAppService-registered bundled agent, unavailable without a bundle"
+  - path: "docs/decisions/dec-84-unsafe-is-confined-to-the-login-service-crate.html"
+    tier: T2
+    action: added
+    distills: "unsafe is confined to the login-service crate and its one allow module"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-84 row"
+  - path: "docs/work/2026-11-05-bg-service-w8-smappservice-plan.html"
+    tier: T3
+    action: added
+    distills: "WU plan v2"
+  - path: "docs/work/2026-11-05-bg-service-w8-smappservice-result.html"
+    tier: T3
+    action: added
+    distills: "WU result"
