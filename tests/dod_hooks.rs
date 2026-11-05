@@ -25,12 +25,19 @@ struct Env {
 
 impl Env {
     fn new(tmp: &Path, cargo_exit: i32) -> Self {
+        Self::answering(tmp, cargo_exit, cargo_exit)
+    }
+
+    fn answering(tmp: &Path, cargo_exit: i32, gate0_exit: i32) -> Self {
         let home = tmp.join("home");
         let bin = tmp.join("bin");
         fs::create_dir_all(&home).expect("mkdir home");
         fs::create_dir_all(&bin).expect("mkdir bin");
         let log = tmp.join("cargo-calls.log");
-        let shim = format!("#!/bin/sh\necho \"$@\" >> \"{}\"\nexit {cargo_exit}\n", log.display());
+        let shim = format!(
+            "#!/bin/sh\necho \"$@\" >> \"{}\"\ncase \"$*\" in *gate0*) exit {gate0_exit} ;; esac\nexit {cargo_exit}\n",
+            log.display()
+        );
         let cargo = bin.join("cargo");
         fs::write(&cargo, shim).expect("write cargo shim");
         fs::set_permissions(&cargo, fs::Permissions::from_mode(0o755)).expect("chmod shim");
@@ -69,6 +76,10 @@ impl Env {
 
     fn calls(&self) -> String {
         fs::read_to_string(&self.log).unwrap_or_default()
+    }
+
+    fn rev(&self, dir: &Path, rev: &str) -> String {
+        String::from_utf8_lossy(&self.git_run(dir, &["rev-parse", rev]).stdout).trim().to_string()
     }
 }
 
@@ -310,4 +321,97 @@ fn pre_push_syncs_notes_refs_and_range_checks_epic_pushes() {
     env.git_ok(&repo, &["merge", "-q", "--no-ff", "-m", "merge wu", "wu/x/one"]);
     env.git_ok(&repo, &["push", "-q", "origin", "epic/x"]);
     assert!(env.calls().contains("xtask verify-dod range"), "updated epic push must range-check");
+}
+
+fn merge_into_main(env: &Env, repo: &Path) -> bool {
+    env.git_ok(repo, &["checkout", "-q", "main"]);
+    env.git(repo, &["merge", "--no-ff", "-q", "-m", "merge epic", "wu/x/one"])
+}
+
+#[test]
+fn a_merge_into_main_proves_the_merged_tree_after_the_epic_gate() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-merge-commit");
+
+    assert!(merge_into_main(&env, &repo), "green notes and a green tree must land");
+
+    let calls = env.calls();
+    let notes = calls.find("xtask verify-dod hook epic").expect("the epic gate runs");
+    let tree = calls.find("xtask gate0 merge").expect("the merged tree is proven");
+    assert!(notes < tree, "the sub-second notes gate refuses before the suite starts: {calls}");
+    env.git_ok(&repo, &["rev-parse", "-q", "--verify", "HEAD^2"]);
+}
+
+#[test]
+fn a_red_merged_tree_refuses_the_merge_and_leaves_main_where_it_was() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::answering(tmp.path(), 0, 1);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-merge-commit");
+    let before = env.rev(&repo, "main");
+
+    assert!(!merge_into_main(&env, &repo), "a red Gate 0 must refuse the merge");
+    assert!(env.calls().contains("xtask gate0 merge"), "the refusal is Gate 0's: {}", env.calls());
+    assert_eq!(env.rev(&repo, "main"), before, "no merge commit may reach main");
+}
+
+#[test]
+fn a_red_epic_gate_refuses_before_the_tree_is_proven() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::answering(tmp.path(), 1, 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-merge-commit");
+
+    assert!(!merge_into_main(&env, &repo));
+    assert!(!env.calls().contains("gate0"), "the suite must not start: {}", env.calls());
+}
+
+#[test]
+fn a_merge_into_an_epic_runs_no_gate0() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-merge-commit");
+
+    env.git_ok(&repo, &["checkout", "-q", "epic/x"]);
+    env.git_ok(&repo, &["merge", "--no-ff", "-q", "-m", "merge wu", "wu/x/one"]);
+    assert!(!env.calls().contains("gate0"), "a WU seam stays notes-only: {}", env.calls());
+}
+
+fn complete_conflicted_merge_on_main(env: &Env, repo: &Path) -> bool {
+    env.git_ok(repo, &["checkout", "-q", "main"]);
+    let wu_tip = env.rev(repo, "wu/x/one");
+    fs::write(repo.join(".git/MERGE_HEAD"), format!("{wu_tip}\n")).expect("write MERGE_HEAD");
+    fs::write(repo.join("a.txt"), "resolved").expect("write file");
+    env.git_ok(repo, &["add", "-A"]);
+    env.git(repo, &["commit", "-q", "-m", "complete conflicted merge on main"])
+}
+
+#[test]
+fn a_conflicted_merge_completion_on_main_proves_the_resolved_tree() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::new(tmp.path(), 0);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+
+    assert!(complete_conflicted_merge_on_main(&env, &repo));
+    let calls = env.calls();
+    let notes = calls.find("verify-dod hook epic").expect("the epic gate runs");
+    let tree = calls.find("xtask gate0 merge").expect("the resolved tree is proven");
+    assert!(notes < tree, "{calls}");
+}
+
+#[test]
+fn a_red_resolved_tree_refuses_the_conflicted_completion() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::answering(tmp.path(), 0, 1);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-commit");
+    let before = env.rev(&repo, "main");
+
+    assert!(!complete_conflicted_merge_on_main(&env, &repo));
+    assert!(env.calls().contains("xtask gate0 merge"), "{}", env.calls());
+    assert_eq!(env.rev(&repo, "main"), before);
 }

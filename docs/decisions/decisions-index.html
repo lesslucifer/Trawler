@@ -918,6 +918,17 @@
             code. Rejected: the shared target, symlinking third-party parts, sccache, a dev-profile change</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-74-the-merge-proves-the-tree-it-creates.html"><code>dec-74-the-merge-proves-the-tree-it-creates.html</code></a></td>
+          <td><span class="badge id">DEC-74</span></td>
+          <td><strong>The merge into <code>main</code> proves the tree it creates.</strong> <code>pre-merge-commit</code>, and the
+            conflicted-merge path in <code>pre-commit</code>, run <code>cargo xtask gate0 merge</code> on the merged working tree
+            once <code>verify-dod hook epic</code> is green; red refuses the merge with the abort/back-merge line. Merges into
+            <code>epic/*</code> stay notes-only. Every check Gate 0 and lint spawn runs without the hook's <code>GIT_*</code>
+            (widens DEC-2's scrub). No proof is shared between checkouts (DEC-73). Rejected: Gate 0 at WU seams, trusting the
+            epic tip's proof, scrubbing in the hook scripts</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

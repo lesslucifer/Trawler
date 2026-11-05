@@ -19,6 +19,7 @@ struct Env {
     repo: std::path::PathBuf,
     home: std::path::PathBuf,
     log: std::path::PathBuf,
+    git_env_log: std::path::PathBuf,
     path: String,
 }
 
@@ -34,11 +35,16 @@ impl Env {
         fs::create_dir_all(&bin).unwrap();
         fs::create_dir_all(&home).unwrap();
         let log = dir.path().join("cargo-calls.log");
+        let git_env_log = dir.path().join("cargo-git-env.log");
 
         let shim = bin.join("cargo");
         fs::write(
             &shim,
-            format!("#!/bin/sh\necho \"$@\" >> \"{}\"\nexit {cargo_exit}\n", log.display()),
+            format!(
+                "#!/bin/sh\necho \"$@\" >> \"{}\"\nenv | grep '^GIT_' >> \"{}\"\nexit {cargo_exit}\n",
+                log.display(),
+                git_env_log.display()
+            ),
         )
         .unwrap();
         fs::set_permissions(&shim, fs::Permissions::from_mode(0o755)).unwrap();
@@ -48,6 +54,7 @@ impl Env {
             repo,
             home,
             log,
+            git_env_log,
             path: format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default()),
         };
         env.git(&["init", "-q", "-b", "main"]);
@@ -98,6 +105,24 @@ impl Env {
             .output()
             .unwrap();
         (out.status.success(), String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+
+    fn gate0_merge_inside_a_hook(&self) -> (bool, String) {
+        let out = self
+            .hermetic(env!("CARGO_BIN_EXE_xtask"))
+            .args(["gate0", "merge"])
+            .current_dir(&self.repo)
+            .env("PATH", &self.path)
+            .env("GIT_INDEX_FILE", ".git/index")
+            .env("GIT_REFLOG_ACTION", "merge epic/x")
+            .env("GIT_EDITOR", ":")
+            .output()
+            .unwrap();
+        (out.status.success(), String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+
+    fn git_env_seen_by_cargo(&self) -> String {
+        fs::read_to_string(&self.git_env_log).unwrap_or_default()
     }
 
     fn calls(&self) -> Vec<String> {
@@ -182,4 +207,39 @@ fn a_tree_change_after_the_green_re_runs_the_pair() {
     fs::write(env.repo.join("src.rs"), "pub fn a() {}\npub fn b() {}\n").unwrap();
     assert!(env.lint().0);
     assert!(env.calls().len() > after_first, "an edited tree must re-run fmt and clippy");
+}
+
+// A merge hook exports its own GIT_* (probed: GIT_INDEX_FILE, GIT_REFLOG_ACTION,
+// GIT_EDITOR, ...); a suite that inherits them reads the hook's merge as its own.
+#[test]
+fn checks_spawned_inside_a_hook_see_none_of_its_git_environment() {
+    let env = Env::new(0);
+    let (ok, said) = env.gate0_merge_inside_a_hook();
+    assert!(ok, "{said}");
+    assert!(
+        env.calls().iter().any(|c| c.contains("test")),
+        "the suite must run: {:?}",
+        env.calls()
+    );
+    assert_eq!(env.git_env_seen_by_cargo(), "", "no spawned check may inherit GIT_*");
+}
+
+#[test]
+fn a_red_merged_tree_names_the_abort_and_vouches_for_nothing() {
+    let env = Env::new(1);
+    let (ok, said) = env.gate0_merge_inside_a_hook();
+    assert!(!ok, "{said}");
+    assert!(said.contains(xtask::gate0::MERGE_REFUSED), "{said}");
+    assert!(!xtask::gate0::cache_path(&env.repo).exists(), "a red tree must not be cached");
+}
+
+#[test]
+fn a_green_merged_tree_is_cached_and_the_next_merge_of_it_spawns_nothing() {
+    let env = Env::new(0);
+    assert!(env.gate0_merge_inside_a_hook().0);
+    let after_first = env.calls().len();
+    let (ok, said) = env.gate0_merge_inside_a_hook();
+    assert!(ok);
+    assert!(said.contains("skipped"), "{said}");
+    assert_eq!(env.calls().len(), after_first, "a proven tree spawns no cargo process");
 }
