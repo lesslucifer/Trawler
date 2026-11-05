@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 0f71d52a1e438e42fa00ba5350f231eeddca6f72
+base: e31e8d4b2d594385b73f30b15b43350f06524947
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-w10-json-escape-decode-result.html
+report_sha256: efc8dbfa58d432aa54c45a78e30e467d5ad47035f353a6e4561b5e8147a0165d
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBgPNExddtzlsGZs3lfda1xbXinXHKZQJ+r5rtTTW9P9h/3IJHjxLtYxs
+  OEcGK4CTGuAbMWOJ3qDCoGMGWeefgB
+  -----END SSH SIGNATURE-----
