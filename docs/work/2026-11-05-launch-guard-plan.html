@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec13cd9f34851f0dfae6ec" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR2.W3 launch-guard plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>launch-guard — a slow-launch machine is named, not endured</h1>
+      <p>Before Gate 0 pays for a suite run it proves the machine can run one: cargo-nextest present, and a freshly linked binary launching fast.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-GATEPAR2.W3</span> · <a href="2026-11-05-gate-parity2-plan.html">epic plan</a> · <a href="../.archive/2026-11-04-push-timing-report.html">push timing report</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      When Gate 0 is about to run its checks (marker miss — in <code>gate0</code>, <code>gate0 merge</code>, <code>gate0 push</code> and the preflight),
+      it first checks two prerequisites and refuses in seconds when either fails:
+      <code>cargo nextest --version</code> must succeed (else the install line), and a freshly linked tiny binary must finish its first launch within 2 s
+      (else the Developer Tools fix line). <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> skips the launch probe. A fast verdict is cached per machine boot,
+      so a fast machine pays the probe once; a slow verdict is never cached. The serial <code>cargo test --all</code> fallback is removed.
+    </p>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="prereq-flow">
+      <pre class="mermaid">
+flowchart LR
+  G["gate0 · marker miss"] --> N{"cargo nextest --version"}
+  N -->|fails| RN["refused · install line<br/>cargo install cargo-nextest --locked"]
+  N -->|ok| O{"TRAWLER_ACCEPT_SLOW_LAUNCH=1?"}
+  O -->|yes| C["fmt · clippy · nextest run"]
+  O -->|no| K{"cached fast verdict<br/>for this boot?"}
+  K -->|yes| C
+  K -->|no| P["link probe.rs with $RUSTC<br/>launch it · wait ≤ 2 s"]
+  P -->|"> 2 s · killed"| RS["refused · Developer Tools fix line<br/>+ override"]
+  P -->|"≤ 2 s"| W["store boot key"] --> C
+      </pre>
+      <div class="caption">The marker-hit path is unchanged: a proven tree costs no probe. The probe never waits past the threshold — a slow launch is killed, so the refusal costs the link plus 2 s.</div>
+    </div>
+    <table data-c="changes">
+      <thead><tr><th>Where</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code>xtask/src/launch.rs</code> (new)</td><td>the probe: write a nonce-bearing <code>probe.rs</code> to a temp dir, link it with <code>$RUSTC</code> (default <code>rustc</code>), spawn it, poll until exit or the threshold; the boot key (<code>sysctl -n kern.boottime</code> · <code>/proc/sys/kernel/random/boot_id</code>); the cache at <code>$XDG_CACHE_HOME</code> or <code>$HOME/.cache</code> <code>/trawler/launch-fast</code></td></tr>
+        <tr><td><code>xtask/src/gate0.rs</code></td><td><code>prerequisites(repo)</code> before <code>run_checks</code> on a miss: nextest, then the probe; <code>run_checks</code> always runs <code>cargo nextest run --all</code></td></tr>
+        <tr><td><code>xtask/tests/lint_spawn.rs</code></td><td>the harness gains a <code>rustc</code> shim (its output program sleeps a set time) and a cargo shim that can deny <code>nextest</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="why-boot">Cached per boot, not forever: the assessment backlog is machine state that can arrive later; a reboot re-measures. A slow verdict is not cached, so enabling Developer Tools takes effect on the next run with no cache to clear.</div>
+    <div class="callout warn" data-c="this-machine">This machine has no <code>cargo-nextest</code>: once W3 lands, every suite-running gate here refuses until <code>cargo install cargo-nextest --locked</code> runs — that is the point of the WU.</div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-GATEPAR2 · causes C6 (first-launch assessment wait) and C7 (nextest optional, serial fallback) · push timing report F1, F3, F5 · <code>workflow.html</code> § Hooks (suite-running gates) — consistent with the W3 block in the epic plan.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected">
+      <li>A marker miss without <code>cargo-nextest</code> exits non-zero naming <code>cargo install cargo-nextest --locked</code>; no fmt, clippy or test process runs.</li>
+      <li>A marker miss where the probe's first launch exceeds 2 s exits non-zero naming System Settings → Privacy &amp; Security → Developer Tools and <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code>; no check runs.</li>
+      <li>With the override set, no probe is linked and the checks run.</li>
+      <li>A fast probe stores the boot key; the next miss on the same boot links no probe.</li>
+      <li>A marker hit runs neither prerequisite.</li>
+      <li>The suite always runs through <code>cargo nextest run --all</code>.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <thead><tr><th>Level</th><th>Test</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>unit · <code>xtask/src/launch.rs</code></td><td>verdict and cache</td><td>a launch under the threshold is fast, over it slow; a stored key matching the boot is a hit, another key a miss; the cache dir follows <code>XDG_CACHE_HOME</code> then <code>HOME</code>; the probe source carries the nonce</td></tr>
+        <tr><td>unit · <code>xtask/src/launch.rs</code></td><td>the probe against a real program</td><td>a program that exits at once is fast; one that sleeps past the threshold is killed and reported slow before it finishes</td></tr>
+        <tr><td>unit · <code>xtask/src/gate0.rs</code></td><td>refusal lines</td><td>the nextest refusal names the install command; the slow refusal names Developer Tools and the override</td></tr>
+        <tr><td>integration · <code>xtask/tests/lint_spawn.rs</code></td><td>the real <code>xtask gate0</code> against cargo + rustc shims</td><td>nextest denied → refused with the install line, no fmt/clippy/test call; slow probe → refused with the fix line, no check call, no cache; override → no rustc call, checks run; fast probe → cached, the second miss calls no rustc; a marker hit calls neither; the test call is <code>nextest run --all</code></td></tr>
+        <tr><td>e2e</td><td>—</td><td><code>waived: "the epic e2e (W5) stubs the probe above and below the threshold through the real hooks; this WU's contract is pinned at the spawned process"</code></td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

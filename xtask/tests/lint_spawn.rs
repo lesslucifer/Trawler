@@ -21,13 +21,28 @@ struct Env {
     log: std::path::PathBuf,
     git_env_log: std::path::PathBuf,
     cwd_log: std::path::PathBuf,
+    rustc: std::path::PathBuf,
+    rustc_log: std::path::PathBuf,
     path: String,
 }
+
+struct Machine {
+    nextest: bool,
+    first_launch_secs: u32,
+}
+
+const FAST: Machine = Machine { nextest: true, first_launch_secs: 0 };
 
 impl Env {
     // `cargo_exit` is what the shim reports: 0 stands in for a green fmt/clippy,
     // non-zero for a red one.
     fn new(cargo_exit: i32) -> Self {
+        Self::on(&FAST, cargo_exit)
+    }
+
+    // `first_launch_secs` is how long the program the rustc shim links runs, so
+    // the launch probe sees that machine's first-launch wait.
+    fn on(machine: &Machine, cargo_exit: i32) -> Self {
         let dir = TempDir::new().unwrap();
         let repo = dir.path().join("repo");
         let bin = dir.path().join("bin");
@@ -39,11 +54,12 @@ impl Env {
         let git_env_log = dir.path().join("cargo-git-env.log");
         let cwd_log = dir.path().join("cargo-cwd.log");
 
+        let nextest_exit = i32::from(!machine.nextest);
         let shim = bin.join("cargo");
         fs::write(
             &shim,
             format!(
-                "#!/bin/sh\necho \"$@\" >> \"{}\"\nenv | grep '^GIT_' >> \"{}\"\npwd -P >> \"{}\"\nexit {cargo_exit}\n",
+                "#!/bin/sh\n[ \"$1 $2\" = 'nextest --version' ] && exit {nextest_exit}\necho \"$@\" >> \"{}\"\nenv | grep '^GIT_' >> \"{}\"\npwd -P >> \"{}\"\nexit {cargo_exit}\n",
                 log.display(),
                 git_env_log.display(),
                 cwd_log.display()
@@ -58,6 +74,19 @@ impl Env {
         )
         .unwrap();
         fs::set_permissions(&pnpm, fs::Permissions::from_mode(0o755)).unwrap();
+        let rustc_log = dir.path().join("rustc-calls.log");
+        let rustc = bin.join("rustc-shim");
+        fs::write(
+            &rustc,
+            format!(
+                "#!/bin/sh\necho \"$@\" >> \"{}\"\nwhile [ $# -gt 0 ]; do [ \"$1\" = -o ] && out=$2; shift; done\n\
+                 printf '#!/bin/sh\\nsleep {}\\n' > \"$out\"\nchmod +x \"$out\"\n",
+                rustc_log.display(),
+                machine.first_launch_secs
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&rustc, fs::Permissions::from_mode(0o755)).unwrap();
 
         let env = Self {
             _dir: dir,
@@ -66,6 +95,8 @@ impl Env {
             log,
             git_env_log,
             cwd_log,
+            rustc,
+            rustc_log,
             path: format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default()),
         };
         env.git(&["init", "-q", "-b", "main"]);
@@ -98,6 +129,9 @@ impl Env {
     fn hermetic(&self, program: impl AsRef<Path>) -> Command {
         let mut cmd = scrubbed(program);
         cmd.env("HOME", &self.home)
+            .env("RUSTC", &self.rustc)
+            .env_remove("XDG_CACHE_HOME")
+            .env_remove(xtask::launch::ACCEPT_SLOW)
             .env("GIT_CONFIG_GLOBAL", "/dev/null")
             .env("GIT_CONFIG_SYSTEM", "/dev/null")
             .env("GIT_AUTHOR_NAME", "lint")
@@ -116,6 +150,20 @@ impl Env {
             .output()
             .unwrap();
         (out.status.success(), String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+
+    fn gate0(&self, accept_slow: bool) -> (Option<i32>, String) {
+        let mut cmd = self.hermetic(env!("CARGO_BIN_EXE_xtask"));
+        cmd.arg("gate0").current_dir(&self.repo).env("PATH", &self.path);
+        if accept_slow {
+            cmd.env(xtask::launch::ACCEPT_SLOW, "1");
+        }
+        let out = cmd.output().unwrap();
+        (out.status.code(), String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+
+    fn probes_linked(&self) -> usize {
+        fs::read_to_string(&self.rustc_log).unwrap_or_default().lines().count()
     }
 
     fn gate0_merge_inside_a_hook(&self) -> (bool, String) {
@@ -393,4 +441,57 @@ fn a_scratch_worktree_gets_the_ui_packages_before_the_suite_builds() {
     let suite = calls.iter().position(|c| c.starts_with("fmt")).expect("the suite runs");
     assert!(install < suite, "packages before the build: {calls:?}");
     env.assert_no_scratch_left();
+}
+
+const REFUSED: Option<i32> = Some(xtask::gate0::MACHINE_REFUSED);
+
+#[test]
+fn a_machine_without_nextest_is_refused_before_any_check() {
+    let env = Env::on(&Machine { nextest: false, ..FAST }, 0);
+    let (code, said) = env.gate0(false);
+    assert_eq!(code, REFUSED, "{said}");
+    assert!(said.contains("cargo install cargo-nextest --locked"), "{said}");
+    assert!(env.calls().is_empty(), "no check may run: {:?}", env.calls());
+    assert_eq!(env.probes_linked(), 0);
+    assert!(!xtask::gate0::cache_path(&env.repo).exists());
+}
+
+#[test]
+fn a_slow_first_launch_is_refused_at_the_threshold_and_measured_again_next_time() {
+    let env = Env::on(&Machine { first_launch_secs: 30, ..FAST }, 0);
+    let started = std::time::Instant::now();
+    let (code, said) = env.gate0(false);
+    assert!(started.elapsed().as_secs() < 15, "the refusal must not await the launch");
+    assert_eq!(code, REFUSED, "{said}");
+    assert!(said.contains("Developer Tools"), "{said}");
+    assert!(said.contains("TRAWLER_ACCEPT_SLOW_LAUNCH=1"), "{said}");
+    assert!(env.calls().is_empty(), "no check may run: {:?}", env.calls());
+
+    assert_eq!(env.gate0(false).0, REFUSED);
+    assert_eq!(env.probes_linked(), 2, "a slow verdict is never cached");
+}
+
+#[test]
+fn the_override_skips_the_probe_and_runs_the_checks() {
+    let env = Env::on(&Machine { first_launch_secs: 30, ..FAST }, 0);
+    let (code, said) = env.gate0(true);
+    assert_eq!(code, Some(0), "{said}");
+    assert_eq!(env.probes_linked(), 0);
+    assert!(env.calls().iter().any(|c| c == "nextest run --all"), "{:?}", env.calls());
+}
+
+#[test]
+fn a_fast_machine_pays_the_probe_once_and_the_suite_runs_through_nextest() {
+    let env = Env::new(0);
+    assert_eq!(env.gate0(false).0, Some(0));
+    fs::write(env.repo.join("src.rs"), "pub fn moved() {}\n").unwrap();
+    assert_eq!(env.gate0(false).0, Some(0));
+    let (code, said) = env.gate0(false);
+    assert_eq!(code, Some(0));
+    assert!(said.contains("gate0 skipped"), "{said}");
+
+    assert_eq!(env.probes_linked(), 1, "the fast verdict is cached for the boot");
+    let calls = env.calls();
+    assert_eq!(calls.iter().filter(|c| *c == "nextest run --all").count(), 2, "{calls:?}");
+    assert!(!calls.iter().any(|c| c.starts_with("test")), "no serial fallback: {calls:?}");
 }

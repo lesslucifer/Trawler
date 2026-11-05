@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec15759f34851f0dfae6f4">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-75: a gate refuses a machine that cannot run the suite</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-75 — a gate refuses a machine that cannot run the suite</h1>
+      <p>Before Gate 0 runs its checks it proves the machine: cargo-nextest present, and a freshly linked binary first-launching within 2 s. A failure names the machine's fix, never the tree's.</p>
+      <div class="meta">Decided 2026-11-05 · E-GATEPAR2.W3 · active · complements <a href="dec-74-the-merge-proves-the-tree-it-creates.html">DEC-74</a> · evidence: <a href="../.archive/2026-11-04-push-timing-report.html">push timing report</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>Machine first, then the tree.</strong> On a marker miss, Gate 0 (<code>gate0</code>, <code>gate0 merge</code>, <code>gate0 push</code>,
+      the preflight) checks <code>cargo nextest --version</code>, then links a nonce-bearing tiny program with <code>$RUSTC</code> and waits at most
+      2 s for its first launch. Either failure exits <strong>2</strong> with its fix line and runs no check. The suite runs only through
+      <code>cargo nextest run --all</code>. <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> skips the probe.</p>
+    </div>
+
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  G["gate0 · marker miss"] --> N{"nextest?"}
+  N -->|no| R1["exit 2 · install line"]
+  N -->|yes| K{"fast verdict<br/>cached for this boot?"}
+  K -->|yes| C["fmt · clippy · nextest run"]
+  K -->|no| P{"probe ≤ 2 s?"}
+  P -->|no| R2["exit 2 · Developer Tools line · override"]
+  P -->|yes| S["cache boot key"] --> C
+      </pre>
+      <div class="caption">A marker hit runs neither check. The override goes straight from nextest to the checks.</div>
+    </div>
+
+    <table data-c="rules">
+      <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Exit 2, not 1, and <code>gate0 merge</code>/<code>push</code> do not append their tree refusal</td><td>a red tree tells the agent to abort and back-merge; a slow machine is fixed in System Settings, and the merge is retried as it stands</td></tr>
+        <tr><td>A fast verdict is cached per boot at <code>$XDG_CACHE_HOME</code> or <code>~/.cache</code> <code>/trawler/launch-fast</code> (the boot key, not a bare verdict)</td><td>a fast machine pays one link; the assessment backlog is machine state, so a reboot measures again</td></tr>
+        <tr><td>A slow verdict is never cached</td><td>enabling Developer Tools takes effect on the next run, with no cache to clear</td></tr>
+        <tr><td>The probe never waits past 2 s; the launch is timed on another thread</td><td>the assessment can block inside the spawn; the refusal costs the link plus 2 s, not the 21 s median wait</td></tr>
+        <tr><td>Threshold 2 s</td><td>slow machine: 4.8 s minimum first launch · fast machine: 0.01–0.06 s</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="why">Why</h2>
+    <table data-c="why-table">
+      <thead><tr><th>Fact</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td>Each freshly linked binary's first launch waited a median 21 s on a Gatekeeper scan (C6, F1)</td><td>a 15-minute suite; launches past a 10 s test deadline were false reds (F3)</td></tr>
+        <tr><td>Without nextest Gate 0 fell back to serial <code>cargo test --all</code> (C7, F5)</td><td>no overlap of launch waits, and one red binary hid every later one</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Keep the <code>cargo test</code> fallback</td><td>it is the slow path the report measured, and two runners make two suites</td></tr>
+        <tr><td>Probe on every run</td><td>a fast machine would pay a link per miss for an answer that does not change within a boot</td></tr>
+        <tr><td>Cache per checkout under <code>target/</code></td><td>the wait is the machine's, not the build's; seven worktrees would each pay it</td></tr>
+        <tr><td>Change macOS security settings from code</td><td>out of scope (epic non-goal); the gate only names the setting</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li>Every contributor machine needs <code>cargo install cargo-nextest --locked</code> before its first suite-running gate.</li>
+      <li>nextest runs no doc-tests: Gate 0 runs none on any machine (it ran none already where nextest was installed). E-GATEPAR2.W4's guard fails a crate that gains a runnable example.</li>
+      <li>Held by <code>xtask/tests/lint_spawn.rs</code> (the real <code>xtask gate0</code> against cargo and rustc shims) and the unit tests in <code>xtask/src/launch.rs</code> and <code>xtask/src/gate0.rs</code>.</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
