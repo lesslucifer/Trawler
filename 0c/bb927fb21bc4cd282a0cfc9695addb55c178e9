@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+branch: HEAD
+tests:
+  unit: { count: 12, covers: "the bytes example the hint and the fault show parses as one sequence chip and keeps the draft open past each of its spaces; the fault text states the quoted form; hasOpenQuote is the filter grammar's one rule" }
+  integration: { count: 122, covers: "the data window's find and the chip box unchanged and green over the shared open-quote rule and the new hint" }
+  e2e: { waived: "a hint's words and an import of an identical function; J5's find journey is unchanged and the window's typing path is held by ChipBox's integration tests" }
