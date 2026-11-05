@@ -1017,7 +1017,7 @@
             <code>latest.json</code>. A launch checks at most once a day and only when installed from a bundle, and says
             nothing unless it offers; <em>Check for Updates…</em> always answers. The offer names both versions and says the
             captured list is cleared. An update installs only if the owner's key signed that exact version. It installs by
-            closing the main window as ⌘Q does (DEC-64), then the core stops and the app relaunches. A cancelled quit drops it.
+            making ⌘Q's quit request (DEC-64; a windowless app reopens its window to ask), then the core stops and the app relaunches. A cancelled quit drops it.
             Every bundle type updates in place, deb and rpm through <code>pkexec</code>. Only the release workflow holds the
             key. Rejected: deb/rpm via the release page, a pending update outliving its quit, unversioned signatures</td>
           <td><span class="badge auto">active</span></td>
@@ -1038,7 +1038,7 @@
           <td><strong>Unsafe is confined to the login-service crate.</strong> The workspace keeps
             <code>unsafe_code = "forbid"</code>; the macOS-only <code>login-service</code> member sets <code>deny</code> and
             holds the one <code>#[allow(unsafe_code)]</code> module that wraps SMAppService, exposing a safe API
-            <code>trawler-ui</code> uses on macOS. A test fails on a second allow. Rejected: lowering the workspace lint,
+            <code>trawler-ui</code> uses on macOS, and none below macOS 13. A test fails on a second allow. Rejected: lowering the workspace lint,
             <code>launchctl</code> or a plist write</td>
           <td><span class="badge auto">active</span></td>
         </tr>

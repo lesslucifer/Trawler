@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>DEC-84 — unsafe is confined to the login-service crate</h1>
       <p>The one exception to the workspace's <code>unsafe_code = "forbid"</code>: a tiny macOS crate that wraps SMAppService.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W8</strong> from the owner's ruling (option 1) · amends <a href="dec-77-the-app-outlives-its-window.html">DEC-77</a>'s login item on macOS · <strong>active</strong></div>
+      <div class="meta">v2 · 2026-11-06 (rule 4 — E-PKG2.W5) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W8</strong> from the owner's ruling (option 1) · amends <a href="dec-77-the-app-outlives-its-window.html">DEC-77</a>'s login item on macOS · <strong>active</strong></div>
     </div>
   </header>
   <main>
@@ -32,6 +32,7 @@
       <tr><td>1</td><td><code>login-service</code> is the only workspace member whose lints differ on <code>unsafe_code</code>, and it holds exactly one <code>#[allow(unsafe_code)]</code>, on the module that makes the four SMAppService calls</td><td>the exception stays one place to read</td></tr>
       <tr><td>2</td><td>The crate's public API is safe and carries no <code>objc2</code> type; <code>trawler-ui</code> depends on it only on macOS and stays <code>forbid</code></td><td>nothing outside the crate can reach the unsafe surface</td></tr>
       <tr><td>3</td><td>A test over the crate's sources fails when a second <code>allow(unsafe_code)</code> appears</td><td>the confinement is checked, not remembered</td></tr>
+      <tr><td>4</td><td><code>AgentService::new</code> returns none below macOS 13 (<code>NSProcessInfo isOperatingSystemAtLeastVersion</code>), so no SMAppService call is reachable there and the login item reads unavailable. The app's minimum stays macOS 11. CI runs the crate's tests on every OS</td><td>naming the class on macOS 11/12 panics in objc2, and the bundle's <code>minimumSystemVersion</code> is 11.0</td></tr>
     </table>
 
     <h2 id="rejected">Rejected</h2>
