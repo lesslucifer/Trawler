@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-PKG2
+wu: E-PKG2.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-packaging-v2-plan.html"
+    tier: T3
+    action: updated
+    distills: "W2 narrowed to the CI jobs, W3 platform fixes added, later units renumbered, Q23"
+  - path: "docs/work/2026-11-05-packaging-v2-w2-ci-platforms-plan.html"
+    tier: T3
+    action: added
+    distills: "the W2 plan"
+  - path: "docs/work/2026-11-05-packaging-v2-w2-ci-platforms-result.html"
+    tier: T3
+    action: added
+    distills: "the W2 result"
+t2_waived: "no use case or decision changes: CI jobs and a lint fix; DEC-83 absorbs the three-OS jobs at W3 or the epic close"
