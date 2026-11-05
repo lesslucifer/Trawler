@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W11
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the data window's rows cite DEC-76"
+  - path: "docs/decisions/dec-75-the-data-window.html"
+    tier: T2
+    action: deleted
+    distills: "renamed to dec-76-the-data-window.html: E-GATEPAR2 landed DEC-75 on main first"
+  - path: "docs/decisions/dec-76-the-data-window.html"
+    tier: T2
+    action: added
+    distills: "the data window as DEC-76, v4: rule 1's payload {key, title, bytes, typeHint?, heading?}, neither parsed; rejected: reading the header out of the title; the renumbering in its header"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the data window's row is DEC-76 and names the heading"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "lexicon 'data window' cites DEC-76"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-9 row: the payload's shape with heading, cites DEC-76"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-9: the payload's shape; the header draws the opener's heading or the caption whole; cites DEC-76"
+  - path: "docs/work/2026-11-05-inspect-window-w11-payload-heading-plan.html"
+    tier: T3
+    action: added
+    distills: "W11 plan v2"
+  - path: "docs/work/2026-11-05-inspect-window-w11-payload-heading-result.html"
+    tier: T3
+    action: added
+    distills: "W11 result"
