@@ -159,6 +159,17 @@ fn the_release_waits_for_every_build_and_is_only_ever_a_draft() {
 }
 
 #[test]
+fn the_downloaded_installers_are_flattened_into_dist_before_the_manifest_reads_them() {
+    let runs: Vec<String> = steps(&job("release")).iter().map(run_of).collect();
+    let flatten = runs
+        .iter()
+        .position(|r| r.contains("find dist") && r.contains("-mindepth 2") && r.contains("mv"))
+        .expect("a step moves every downloaded file up into dist");
+    let manifest = runs.iter().position(|r| r.contains("cargo xtask release-manifest")).unwrap();
+    assert!(flatten < manifest, "flatten {flatten}, manifest {manifest}");
+}
+
+#[test]
 fn the_toolchain_is_the_pinned_one_in_every_job() {
     let repo = xtask::repo_root().unwrap();
     let pinned = std::fs::read_to_string(repo.join("rust-toolchain.toml")).unwrap();

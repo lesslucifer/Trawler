@@ -32,6 +32,7 @@
       <tr><th>From the plan</th><th>Why</th></tr>
       <tr><td>the plan said "nine" target-and-kind entries</td><td>the manifest requires eighteen (both architectures of nine rows). The plan text was corrected in the DEC-86 commit</td></tr>
       <tr><td>the epic plan said signing "through tauri-action"; the workflow uses <code>cargo xtask package</code></td><td>DEC-81 rule 3 (plan choice C1)</td></tr>
+      <tr><td>the workflow needed a flatten step the plan did not name</td><td>review round 1 found, and a verifier confirmed, that <code>upload-artifact</code> keeps each file's <code>&lt;kind&gt;/</code> directory, so <code>dist/</code> held directories and <code>release-manifest</code> would have failed on every tag. A step now moves every file up into <code>dist/</code>, pinned by a <code>release_workflow</code> test written red first</td></tr>
       <tr><td>the smoke runs the installed binary with <code>--core</code>, not the window</td><td>J1 and J4 in headless form; the window e2e is W6's <code>e2e_packaging</code>. On macOS the <code>.app</code> is run as built, not mounted from the <code>.dmg</code></td></tr>
     </table>
 

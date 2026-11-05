@@ -137,6 +137,10 @@ jobs:
           merge-multiple: true
           path: dist
 
+      - run: |
+          find dist -mindepth 2 -type f -exec mv {} dist/ \;
+          find dist -mindepth 1 -type d -empty -delete
+
       - env:
           TAG: ${{ github.ref_name }}
         run: >-
