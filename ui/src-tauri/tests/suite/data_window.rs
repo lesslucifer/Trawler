@@ -1,3 +1,4 @@
+use crate::common::LOCAL_URL;
 use tauri::ipc::{CallbackFn, InvokeBody, InvokeResponseBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, MockRuntime};
 use tauri::webview::InvokeRequest;
@@ -33,7 +34,7 @@ fn invoke(
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body,
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),

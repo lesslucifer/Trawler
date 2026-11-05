@@ -59,3 +59,9 @@ pub const HARD_KILLED: trawler_ui_lib::supervisor::CoreState =
 #[cfg(windows)]
 pub const HARD_KILLED: trawler_ui_lib::supervisor::CoreState =
     trawler_ui_lib::supervisor::CoreState::Exited { code: Some(1), signal: None };
+
+#[cfg(not(windows))]
+pub const LOCAL_URL: &str = "tauri://localhost";
+
+#[cfg(windows)]
+pub const LOCAL_URL: &str = "http://tauri.localhost";
