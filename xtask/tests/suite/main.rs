@@ -3,8 +3,10 @@
 mod doc_examples;
 mod doc_hooks;
 mod e2e_gate_parity;
+mod e2e_merge_proof;
 mod gate0_cache;
 mod harness_parity;
+mod hermetic;
 mod hooks_install;
 mod lint_spawn;
 mod mr;
