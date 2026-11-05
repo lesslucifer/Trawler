@@ -1,0 +1,42 @@
+schema: cr/v5
+scope: "WU E-PKG2.W4 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: wu/packaging-v2/release-workflow
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+head: 5b0e5f4e8dddfd6821241b2106bacc1f44fb481a
+diff_sha256: c2c1950a660816624c39530a420348a05b0fe8f8d65541a2b5c97e295097d18b
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 5
+  stage_seconds:
+    gate0: 0
+    finders: 75
+    verifiers: 15
+    total: 110
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 1 }
+findings: { found: 6, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "release-manifest overwrites a platform key two installers share"
+    waived: "recorded for the fix round, which refuses the duplicate"
+  - finding: "the release workflow's version job does not run the MSI version rule"
+    waived: "DEC-86 known limit: the tag equals the gate-proven workspace version, where version_drift enforces the rule"
+  - finding: "the Windows NSIS and Linux AppImage smoke paths have no run behind them"
+    waived: "the e2e waiver names W6's first rc tag as the run; Windows/Linux runners are unavailable here"
+  - finding: "smoke filters package's options for a stage after parsing"
+    waived: "one shared flag parser; the filter is tested and refuses loudly"
+  - finding: "release_manifest's platform keys restate the matrix and Os::bundles"
+    waived: "release-manifest refuses a missing platform or kind, so drift fails the release job loudly before any draft"
+verdict: FAIL
+date: 2026-11-06
