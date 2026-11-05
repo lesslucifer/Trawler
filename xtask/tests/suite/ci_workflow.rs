@@ -203,3 +203,20 @@ fn the_pinned_toolchain_carries_clippy_and_rustfmt() {
     let text = std::fs::read_to_string(repo.join("rust-toolchain.toml")).unwrap();
     assert!(text.contains("\"clippy\"") && text.contains("\"rustfmt\""), "{text}");
 }
+
+#[test]
+fn the_lockfile_links_one_webview2_binding_so_the_windows_build_has_one_set_of_types() {
+    let repo = xtask::repo_root().unwrap();
+    let lock = std::fs::read_to_string(repo.join("Cargo.lock")).expect("Cargo.lock exists");
+    let versions = |name: &str| -> Vec<String> {
+        lock.split("[[package]]")
+            .filter(|block| block.lines().any(|l| l == format!("name = \"{name}\"")))
+            .filter_map(|block| block.lines().find_map(|l| l.strip_prefix("version = ")))
+            .map(str::to_string)
+            .collect()
+    };
+    for name in ["webview2-com", "windows"] {
+        let found = versions(name);
+        assert_eq!(found.len(), 1, "{name} resolves to more than one version: {found:?}");
+    }
+}
