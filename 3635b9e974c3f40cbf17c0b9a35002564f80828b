@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W9
+base: 374502e4ac6ee3c4e6b68b00f731df2018787fa0
+design_sha256: 3bebc5bd946e0f584a93262cd880d31911f85df840592ecff1d9cfc4361d136e
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/components/EditSurface.tsx
+    why: "a TSDoc citation renumbered DEC-71 -> DEC-75 (the record E-QUERY's landing displaced); nothing rendered changes, so no design is owed"
+  - path: ui/src/components/FormTable.tsx
+    why: "a TSDoc citation renumbered DEC-71 -> DEC-75 (the record E-QUERY's landing displaced); nothing rendered changes, so no design is owed"
+  - path: ui/src/components/HexView.tsx
+    why: "a TSDoc citation renumbered DEC-71 -> DEC-75 (the record E-QUERY's landing displaced); nothing rendered changes, so no design is owed"
+date: 2026-11-05
