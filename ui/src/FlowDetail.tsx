@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent as KeyEvent } from "react";
 import type { FlowView, HeaderView, Leg, TrawlerApi } from "./api";
 import { toCurl } from "./flow";
 import {
@@ -16,6 +16,8 @@ import {
   StatusPill,
 } from "./components/index";
 import { BodyViewer } from "./BodyViewer";
+import { openDataWindow, type DataPayload } from "./dataWindow";
+import { headersPayload, uriPayload } from "./flowPayload";
 import { HEADERS_SHARE, clamp } from "./layoutBounds";
 import type { LayoutControls } from "./useLayout";
 
@@ -38,7 +40,7 @@ function LegHeaders({ headers }: { headers: HeaderView[] }) {
       }
     >
       {headers.map((h, i) => (
-        <KeyValueRow key={i} name={h.name} value={h.value} collapsible />
+        <KeyValueRow key={i} name={h.name} value={h.value} />
       ))}
     </dl>
   );
@@ -58,6 +60,13 @@ function useHeight(): [(el: HTMLElement | null) => void, number] {
   }, []);
   return [measure, height];
 }
+
+const opensOnKey = (payload: () => DataPayload) => (event: KeyEvent) => {
+  if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key.toLowerCase() === "o") {
+    event.preventDefault();
+    void openDataWindow(payload());
+  }
+};
 
 function versionsLine(flow: FlowView): string {
   return flow.response_http_version
@@ -152,8 +161,15 @@ export function FlowDetail({
         </span>
       </header>
 
-      <div data-testid="flow-line" className="shrink-0 border-b border-hairline px-4 py-3">
-        <CopyText value={flow.uri} label="uri" />
+      <div
+        data-testid="flow-line"
+        onKeyDown={opensOnKey(() => uriPayload(flow))}
+        className="shrink-0 border-b border-hairline px-4 py-3"
+      >
+        <div className="flex min-w-0 items-center gap-chrome-gap">
+          <CopyText value={flow.uri} label="uri" oneLine className="flex-1" />
+          <IconButton glyph="window" onClick={() => void openDataWindow(uriPayload(flow))} label="open uri in data window" />
+        </div>
         <div className="mt-chrome-y flex items-center gap-2">
           <span data-wire="protocol-version" className="font-mono text-body text-ink-mute">
             {versionsLine(flow)}
@@ -177,10 +193,23 @@ export function FlowDetail({
       <div
         ref={measureHeaders}
         data-testid="headers-zone"
+        onKeyDown={headers.length > 0 ? opensOnKey(() => headersPayload(flow, leg)) : undefined}
         className="flex min-h-0 flex-col"
         style={{ maxHeight: `${ceiling * 100}%` }}
       >
-        <Section title={`Headers · ${headers.length}`} className="flex min-h-0 flex-col">
+        <Section
+          title={`Headers · ${headers.length}`}
+          className="flex min-h-0 flex-col"
+          action={
+            headers.length > 0 && (
+              <IconButton
+                glyph="window"
+                onClick={() => void openDataWindow(headersPayload(flow, leg))}
+                label={`open all ${leg} headers in data window`}
+              />
+            )
+          }
+        >
           <div data-testid="headers-scroll" className="relative min-h-0 overflow-auto">
             <LegHeaders headers={headers} />
           </div>

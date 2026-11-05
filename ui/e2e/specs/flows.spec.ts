@@ -432,23 +432,29 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(m.bodyBottom).toBeLessThanOrEqual(m.innerHeight);
   });
 
-  it("clamps a long header value to three lines, and 'more' under its name shows the rest", async () => {
-    const more = $('[data-testid="headers-scroll"]').$("button=more");
-    await more.waitForExist({ timeout: 15_000 });
-    // The row that offers "more" is the one whose value overflows its three lines.
-    const clampedCell = () =>
-      browser.execute(() => {
-        const dd = document.querySelector('[data-testid="headers-scroll"] dt:has(button)')!
-          .nextElementSibling as HTMLElement;
-        return { client: dd.clientHeight, scroll: dd.scrollHeight };
-      });
-    const before = await clampedCell();
-    expect(before.scroll).toBeGreaterThan(before.client);
-    await more.click();
-    await $('[data-testid="headers-scroll"]').$("button=less").waitForExist({ timeout: 5_000 });
-    const after = await clampedCell();
-    expect(after.client).toBeGreaterThanOrEqual(after.scroll);
-    expect(after.client).toBeGreaterThan(before.client);
+  it("keeps every long header value on one line, cut at its end, and nothing in the headers scrolls sideways (DEC-78)", async () => {
+    const scroll = $('[data-testid="headers-scroll"]');
+    await scroll.$("dt=set-cookie").waitForExist({ timeout: 15_000 });
+    const m = await browser.execute(() => {
+      const box = document.querySelector('[data-testid="headers-scroll"]') as HTMLElement;
+      const values = [...box.querySelectorAll("dd [role=button]")] as HTMLElement[];
+      const cookie = values.find((v) => v.textContent!.startsWith("session0="))!;
+      const lineHeight = parseFloat(getComputedStyle(cookie).lineHeight);
+      return {
+        tallest: Math.max(...values.map((v) => v.getBoundingClientRect().height)),
+        lineHeight,
+        cookieCut: cookie.scrollWidth > cookie.clientWidth,
+        cookieWhole: cookie.textContent!.length,
+        sideways: box.scrollWidth - box.clientWidth,
+        toggles: [...box.querySelectorAll("button")].filter((b) => /^(more|less)$/.test(b.textContent ?? "")).length,
+      };
+    });
+    expect(m.tallest).toBeLessThan(m.lineHeight * 2);
+    expect(m.cookieCut).toBe(true);
+    expect(m.cookieWhole).toBeGreaterThan(900);
+    expect(m.sideways).toBeLessThanOrEqual(0);
+    expect(m.toggles).toBe(0);
+    expect(await $('button[aria-label="open all response headers in data window"]').isExisting()).toBe(true);
   });
 
   it("states its truncation on a body past the render cap, and offers the whole in a data window", async () => {

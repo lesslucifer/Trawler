@@ -5,6 +5,8 @@ import { foldedRanges } from "@codemirror/language";
 import * as files from "./body";
 import { DataWindowScreen } from "./DataWindowScreen";
 import type { DataPayload } from "./dataWindow";
+import type { FlowView } from "./api";
+import { headersPayload } from "./flowPayload";
 import { systemZone, time, type TimeReading } from "./timeDecoder";
 
 const ROW = 20;
@@ -889,6 +891,38 @@ describe("decode", () => {
     rightClickAt(doc().indexOf(TOKEN) + 12);
     fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
     expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(selected()).toBe(TOKEN);
+  });
+
+  it("open all's headers open as text, and a right-click on a bearer token there reads it as a JWT", async () => {
+    const flow: FlowView = {
+      id: "f9",
+      started_at: "2026-11-05T10:00:00Z",
+      duration_ms: 1,
+      method: "GET",
+      uri: "https://api.example.com/me",
+      status: 200,
+      source: "captured",
+      seed: null,
+      request_http_version: "HTTP/1.1",
+      response_http_version: "HTTP/1.1",
+      request_headers: [
+        { name: "Accept", value: "application/json" },
+        { name: "Authorization", value: `Bearer ${TOKEN}` },
+        { name: "Cookie", value: `session=${"x".repeat(4096)}` },
+      ],
+      response_headers: [],
+      request_body: { state: "empty" },
+      response_body: { state: "empty" },
+    };
+    await open(headersPayload(flow, "request"));
+    expect(doc()).toBe(`Accept: application/json\nAuthorization: Bearer ${TOKEN}\nCookie: session=${"x".repeat(4096)}`);
+
+    rightClickAt(doc().indexOf(TOKEN) + 12);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(decodedText(1)).toBe('{\n  "sub": "8812"\n}');
     expect(selected()).toBe(TOKEN);
   });
 
