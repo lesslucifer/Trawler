@@ -77,7 +77,7 @@
       <pre class="mermaid">
 flowchart LR
   T["the tree + its notes<br/>(the evidence chain)"] --> G["verify-dod<br/>recomputes a verdict"]
-  G --> R["target/.gate-tally<br/>a local reading"]
+  G --> R["git common dir: trawler-gate-tally<br/>a local reading"]
   R --> C["cargo xtask tally"]
   R -. "never read by" .-> G
       </pre>
