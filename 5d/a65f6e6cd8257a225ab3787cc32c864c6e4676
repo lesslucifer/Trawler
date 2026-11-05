@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 5da65f6e6cd8257a225ab3787cc32c864c6e4676
+base: b50482c836a729bac0606755045d85eae81e0b30
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-v2-w5-bytes-first-dispatch-result.html
+report_sha256: 818ecc52fb8d80e25e676f9d0218487023802861498924cf7d40e5353186c0b5
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEA4qVBrTgmfgm6xuOe25PNp70KZgl7IhJ2dPiE++X4a4Wt53H37F7jrd8
+  bYr4sUnoAHsM+Gi5YdcAYjXFzUMV4K
+  -----END SSH SIGNATURE-----
