@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-BGSVC
+wu: E-BGSVC.W6
+branch: HEAD
+changes:
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "keyboard convention: show another page — ↑/↓ in a PageSidebar"
+  - path: "docs/work/2026-11-05-bg-service-w6-general-page-plan.html"
+    tier: T3
+    action: added
+    distills: "W6's requirement, shape and test plan"
+  - path: "docs/work/2026-11-05-bg-service-w6-general-page-result.html"
+    tier: T3
+    action: added
+    distills: "W6's outcome, deviations and evidence"
