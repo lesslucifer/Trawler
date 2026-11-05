@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! E-GATETRUTH epic e2e — the four fixes composed over one hermetic temp repo,
 //! driven through the real `xtask` binary, the real merge hook and real git
 //! (no shims).

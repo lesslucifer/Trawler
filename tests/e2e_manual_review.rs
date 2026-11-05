@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! E-NMWF epic e2e — the full manual-review flow over a hermetic temp repo,
 //! driven through the real `xtask` binary and real git (no shims).
 //!

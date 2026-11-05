@@ -7,7 +7,7 @@ use std::time::{Duration, Instant};
 
 use trawler_ui_lib::supervisor::{CoreEvent, CoreState, LogEntry, Logged, StartError, Supervisor};
 
-use crate::common::{launch, PATIENCE};
+use crate::common::{alive, kill_hard, launch, HARD_KILLED, PATIENCE};
 
 const ROLE_VAR: &str = "TRAWLER_SUPERVISOR_ROLE_CA";
 // libtest prints the test's name with no newline before the role speaks, so the
@@ -36,15 +36,6 @@ fn flows_status(api: SocketAddr) -> String {
     response.lines().next().unwrap_or_default().to_string()
 }
 
-fn alive(pid: u32) -> bool {
-    Command::new("kill")
-        .args(["-0", &pid.to_string()])
-        .stderr(Stdio::null())
-        .status()
-        .expect("kill runs")
-        .success()
-}
-
 fn eventually(what: &str, mut done: impl FnMut() -> bool) {
     let deadline = Instant::now() + PATIENCE;
     while !done() {
@@ -68,10 +59,8 @@ fn a_supervised_core_survives_a_kill_restarts_on_its_ports_and_leaves_on_stop() 
     assert!(flows_status(api).contains("200"), "the API answers at the ready line's address");
     assert!(ca.path().join("trawler-ca.pem").is_file(), "the core minted its CA in --ca-dir");
 
-    assert!(Command::new("kill").args(["-9", &pid.to_string()]).status().unwrap().success());
-    eventually("the kill is observed", || {
-        supervisor.snapshot() == CoreState::Exited { code: None, signal: Some(9) }
-    });
+    assert!(kill_hard(pid));
+    eventually("the kill is observed", || supervisor.snapshot() == HARD_KILLED);
 
     let (restarted_pid, restarted_proxy, restarted_api) = running(&supervisor.restart().unwrap());
     assert_ne!(restarted_pid, pid);
