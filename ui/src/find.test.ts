@@ -158,6 +158,20 @@ describe("marking text with chips", () => {
     expect(markText("a b", [chip("plain", "a"), chip("plain", "b")], null, 2).capped).toBe(false);
   });
 
+  it("says capped when more matches follow a count that lands exactly on the limit", () => {
+    const text = '{"a": "x", "b": "x", "c": "x"}';
+    expect(jsonMarks(text, [chip("value", "x")], 3).capped).toBe(false);
+    expect(jsonMarks(text, [chip("value", "x")], 2)).toMatchObject({ capped: true });
+    const split = jsonMarks('{"a": "x", "b": "x", "c": "y"}', [chip("value", "x")], 2);
+    expect(split.capped).toBe(false);
+    expect(jsonMarks(text, [chip("value", "x")], 2).ranges).toHaveLength(2);
+  });
+
+  it("one chip scans many parts and keeps no state between them", () => {
+    const text = JSON.stringify(Object.fromEntries(Array.from({ length: 50 }, (_, i) => [`k${i}`, "aa"])));
+    expect(jsonMarks(text, [chip("value", "a")]).ranges).toHaveLength(100);
+  });
+
   it("merges ranges that overlap but not ones that only touch", () => {
     expect(
       mergeRanges([
@@ -177,9 +191,10 @@ describe("a structure's key names", () => {
     const text = String.raw`{"a": 1, "b": {"a": 2, "x\ny": 3}}`;
     const parsed = parseJson(text);
     if (!parsed.ok) throw new Error("parse");
-    expect(structureNames(jsonStructure(parsed.root), text)).toEqual(["a", "b", "x\ny"]);
-    expect(structureNames(formStructure("a%20b=1&a%20b=2&c=3"), "a%20b=1&a%20b=2&c=3")).toEqual(["a b", "c"]);
-    expect(structureNames(formStructure("a=1&b=2&c=3"), "a=1&b=2&c=3", 2)).toEqual(["a", "b"]);
+    expect(structureNames(jsonStructure(parsed.root), text, true)).toEqual(["a", "b", "x\ny"]);
+    expect(structureNames(formStructure("a%20b=1&a%20b=2&c=3"), "a%20b=1&a%20b=2&c=3", true)).toEqual(["a b", "c"]);
+    expect(structureNames(formStructure("a%20b=1&c=3"), "a%20b=1&c=3", false)).toEqual(["a%20b", "c"]);
+    expect(structureNames(formStructure("a=1&b=2&c=3"), "a=1&b=2&c=3", true, 2)).toEqual(["a", "b"]);
   });
 });
 

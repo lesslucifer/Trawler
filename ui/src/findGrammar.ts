@@ -29,7 +29,7 @@ const HINTS: Record<Keyed, string> = {
 
 const NAMED = Object.keys(HINTS) as Keyed[];
 const NEAR_MISS_EDITS = 2;
-const HEX_PAIRS = /^\s*(?:[0-9a-fA-F]{2}\s*)+$/;
+export const HEX_PAIRS = /^\s*(?:[0-9a-fA-F]{2}\s*)+$/;
 const KEYED = /^([A-Za-z_]+):(.*)$/s;
 const NAMES_SHOWN = 12;
 

@@ -1,5 +1,5 @@
 import type { TextRange } from "./components/index";
-import type { FindChip } from "./findGrammar";
+import { HEX_PAIRS, type FindChip } from "./findGrammar";
 import type { JsonNode } from "./jsonTools";
 
 export const MATCH_LIMIT = 10_000;
@@ -17,7 +17,6 @@ export interface HexQuery {
 }
 
 const SPECIAL = /[.*+?^${}()|[\]\\]/g;
-const HEX_PAIRS = /^\s*(?:[0-9a-fA-F]{2}\s*)+$/;
 
 export function findMatches(text: string, query: string, limit = MATCH_LIMIT): Found {
   if (!query) return { ranges: [], capped: false };
@@ -65,13 +64,14 @@ export type Scan = (text: string, limit: number) => Found;
 const literal = (value: string) => value.replace(SPECIAL, "\\$&");
 
 function scanFor(source: string, flags: string): Scan {
+  let pattern: RegExp;
+  try {
+    pattern = new RegExp(source, flags);
+  } catch {
+    return () => ({ ranges: [], capped: false });
+  }
   return (text, limit) => {
-    let pattern: RegExp;
-    try {
-      pattern = new RegExp(source, flags);
-    } catch {
-      return { ranges: [], capped: false };
-    }
+    pattern.lastIndex = 0;
     const ranges: TextRange[] = [];
     for (let found = pattern.exec(text); found; found = pattern.exec(text)) {
       if (found[0] === "") {
@@ -149,12 +149,12 @@ export function formStructure(text: string): Structure {
   return { keys, values, jsonEscaped: false };
 }
 
-export function structureNames(structure: Structure, text: string, limit = 500): string[] {
+export function structureNames(structure: Structure, text: string, decodeForm: boolean, limit = 500): string[] {
   const names = new Set<string>();
   for (const { from, to } of structure.keys) {
     const raw = text.slice(from, to);
     try {
-      names.add(structure.jsonEscaped ? (JSON.parse(`"${raw}"`) as string) : decodeURIComponent(raw.replace(/\+/g, " ")));
+      names.add(structure.jsonEscaped ? (JSON.parse(`"${raw}"`) as string) : decodeForm ? decodeURIComponent(raw.replace(/\+/g, " ")) : raw);
     } catch {
       names.add(raw);
     }
@@ -168,7 +168,7 @@ function within(scan: Scan, text: string, parts: readonly TextRange[], limit: nu
   for (const part of parts) {
     const found = scan(text.slice(part.from, part.to), limit - ranges.length);
     for (const range of found.ranges) ranges.push({ from: part.from + range.from, to: part.from + range.to });
-    if (found.capped || ranges.length >= limit) return { ranges, capped: found.capped || ranges.length > limit };
+    if (found.capped) return { ranges, capped: true };
   }
   return { ranges, capped: false };
 }

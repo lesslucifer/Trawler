@@ -141,7 +141,7 @@ export function markPairs(pairs: FormPair[], chips: readonly FindChip[], limit =
     const found = key.ranges.length + value.ranges.length;
     if (found) byPair.set(pair.index, { first: total, key: key.ranges, value: value.ranges });
     total += found;
-    if (key.capped || value.capped || total >= limit) return { byPair, total, capped: key.capped || value.capped };
+    if (key.capped || value.capped) return { byPair, total, capped: key.capped || value.capped };
   }
   return { byPair, total, capped: false };
 }

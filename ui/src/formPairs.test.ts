@@ -155,6 +155,12 @@ describe("marking pairs with chips", () => {
     expect(found.byPair.get(2)?.first).toBe(3);
   });
 
+  it("says capped when a pair after the limit still matches", () => {
+    const two = parsePairs("a=1&a=1&a=1");
+    expect(markPairs(two, [{ key: "key", value: "a" }], 3).capped).toBe(false);
+    expect(markPairs(two, [{ key: "key", value: "a" }], 2)).toMatchObject({ total: 2, capped: true });
+  });
+
   it("caps across chips", () => {
     expect(markPairs(pairs, [{ key: "plain", value: "s" }, { key: "plain", value: "e" }], 4)).toMatchObject({ total: 4, capped: true });
     expect(markPairs(pairs, [])).toEqual({ byPair: new Map(), total: 0, capped: false });

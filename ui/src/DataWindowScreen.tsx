@@ -430,7 +430,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     const parsed = parseJson(flat);
     return parsed.ok ? jsonStructure(parsed.root) : null;
   }, [scoped, wantsNames, kind, flat]);
-  const names = useMemo(() => (wantsNames && structure ? structureNames(structure, flat) : NO_NAMES), [wantsNames, structure, flat]);
+  const names = useMemo(() => (wantsNames && structure ? structureNames(structure, flat, asTable) : NO_NAMES), [wantsNames, structure, flat, asTable]);
   const found = useMemo((): Search => {
     if (!hasQuery) return NOTHING_FOUND;
     if (onText) {
