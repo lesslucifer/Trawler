@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="e3a91d5c7b2046f8a1d0c6b2" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN2.W8 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN2.W8 — build: the find bar takes the query bar's UX</h1>
+      <p>The data window's find becomes a chip box over a find grammar: text and keyed chips, suggestions for the kind's keys, faults and refused chips; every chip and the draft mark, and find still never narrows.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · branch <code>wu/inspect-window-v2/find-chip-bar</code> off <code>epic/inspect-window-v2</code> at 4a71c17e · epic plan: <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a> · design: <a href="components/chip-box.html">ChipBox</a> (owner-confirmed) and <a href="2026-11-05-data-window-kinds-design-run.html">W3's run</a> (E7, E8) · record: <a href="../decisions/dec-76-the-data-window.html">DEC-76</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      In a data window, find is typed the way the flow list's filter is: Space or Tab makes a chip from the draft, suggestions offer the keys the kind offers (and the document's keys after <code>key:</code>),
+      Backspace in an empty draft removes the last chip, and a draft that does not parse says why and makes no chip. Every chip and the live draft mark their matches as one set with one count and one step order;
+      a chip the current kind cannot run is refused and marks nothing. The flow list's query bar behaves exactly as before.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN2 · the epic plan's W8 block · UC-9 find · epic expected rows 9, 10, 11 · rulings Q12 (share the box, two grammars), Q13 (live draft, Enter steps), Q14 (union, <code>-</code> a fault), Q15 (<code>key:</code> suggests the document's keys) ·
+      W3's run E7 (one box, count and ↑ ↓ outside it, placeholder lists the kind's keys) and E8 (refused face with a reason on hover, the Notice fault) · DEC-71 (QueryBar must not move) · DEC-76 (find never narrows, no request).
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <table data-c="pieces">
+      <tr><th>Piece</th><th>Where</th><th>Contract</th><th>From</th></tr>
+      <tr><td>find grammar</td><td><code>findGrammar.ts</code> (new, pure)</td>
+        <td><code>parseFind(draft)</code> → chip | fault | empty: keys <code>key value re case bytes text</code>, quotes, <code>-</code> a fault, a near-miss key (two edits) a fault, an invalid <code>re:</code> names its fault, <code>bytes:</code> must be hex pairs;
+          <code>suggestFind(draft, kind, names)</code> → the kind's keys with a hint, and the document's keys after <code>key:</code>; <code>refusedReason(chip, kind)</code>; <code>findLabel(chip)</code></td><td>Q13-Q15, E7, E8</td></tr>
+      <tr><td>marking</td><td><code>find.ts</code></td>
+        <td>a chip's scan (<code>plain</code> literal case-insensitive, <code>re</code> JS regex case-insensitive, <code>case</code> literal exact, empty matches skipped), scoped <code>key</code>/<code>value</code> ranges over a parsed JSON, over form pairs (table) and over a form's raw text, <code>bytes</code>/<code>text</code> over hex bytes,
+          and a union that merges overlapping ranges once and stops at <code>MATCH_LIMIT</code> across all chips. <code>findMatches</code>, <code>findBytes</code>, <code>readHexQuery</code>, <code>findInPairs</code> keep their contracts</td><td>Q14</td></tr>
+      <tr><td>chip box</td><td><code>components/ChipBox.tsx</code> (new, T1)</td>
+        <td>the box, chips, draft, suggestion popup, fault Notice and refused face extracted from <code>QueryBar</code>; the grammar is injected (<code>parse</code>, <code>suggest</code>, <code>label</code>); optional <code>onDraft</code>, <code>onEnter</code>, <code>onEscape</code>, <code>refused</code> (reason or null)</td><td>chip-box design, Q12</td></tr>
+      <tr><td>query bar</td><td><code>components/QueryBar.tsx</code></td><td>rebuilt on ChipBox with <code>query.ts</code> as its grammar; no behaviour change, its tests unchanged</td><td>DEC-71</td></tr>
+      <tr><td>the window</td><td><code>DataWindowScreen.tsx</code></td><td>FindBar is a ChipBox over the find grammar; chips and draft state live in the screen; one set of ranges for text, hex and the form table; kind switch refuses and un-refuses chips; count and ↑ ↓ sit outside the box; ⌘F and Esc keep their behaviour</td><td>E7, E8</td></tr>
+      <tr><td>record</td><td>DEC-76</td><td>gains the find rule: live draft, union of chips, <code>-</code> a fault, find never narrows</td><td>Q13, Q14</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>Observable at this WU's tip</th><th>Checked by</th></tr>
+      <tr><td>1</td><td>Row 9: Space makes a chip, suggestions offer the kind's keys, Backspace removes the last chip, a bad <code>re:</code> or a near-miss key shows its reason in the Notice and makes no chip</td><td>unit · integration</td></tr>
+      <tr><td>2</td><td>Row 10: chips <code>key:id</code> and <code>"user"</code> on a JSON document: the count is the sum of both, Enter steps in document order; switching to text refuses <code>key:</code>, drops its marks and leaves the other chip counting</td><td>unit · integration</td></tr>
+      <tr><td>3</td><td>Row 11: QueryBar's existing tests pass unchanged; the query bar's behaviour does not move</td><td>the existing suite</td></tr>
+      <tr><td>4</td><td>The draft marks live and Enter / ⇧Enter step with nothing highlighted; Esc closes suggestions, then clears find; <code>-</code> is a fault; overlapping chips mark once; the cap holds across chips; a regex that matches empty marks nothing and hangs nothing</td><td>unit · integration</td></tr>
+      <tr><td>5</td><td>On each kind find runs its keys: <code>key:</code> / <code>value:</code> over JSON (escaped quotes) and form pairs (duplicate keys, table and encoded text), <code>re:</code> / <code>case:</code> over text kinds and the table, <code>bytes:</code> / <code>text:</code> in hex; a plain chip in hex keeps today's guess</td><td>unit · integration</td></tr>
+    </table>
+
+    <h2 id="not-here">Not here</h2>
+    <table data-c="not-here">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr><td>narrowing, negation, JSONPath, replace</td><td>DEC-76, deferred</td></tr>
+      <tr><td>J1-J4 e2e, UC-9 and rulebook distillation, DEC-80 amendment</td><td>W9</td></tr>
+      <tr><td>an empty-draft key list in the popup (the placeholder lists the keys; an empty draft keeps Enter for stepping)</td><td>noted in the result</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>What asserts what</th></tr>
+      <tr><td>unit</td><td><code>findGrammar.test.ts</code>: each key, quotes, near-miss and far-miss keys, <code>-</code> fault, invalid regex, <code>bytes:</code> odd hex, suggestions per kind and the document's keys, refusal per kind ·
+        <code>find.test.ts</code>: <code>key:</code> / <code>value:</code> over JSON with escaped quotes, over form pairs with duplicate keys and over a raw form; <code>re:</code>, <code>case:</code>, empty-matching regex, <code>bytes:</code> / <code>text:</code>; overlapping ranges merge once; the cap across chips</td></tr>
+      <tr><td>integration</td><td><code>ChipBox.test.tsx</code> (grammar injected: chip, fault, suggestions, refused title, onDraft, onEnter, onEscape) · <code>QueryBar.test.tsx</code> unchanged · <code>DataWindowScreen.test.tsx</code>: the find bar on json, form, text, hex and a kind switch refusing a chip; the live draft with Enter stepping; the union count over two chips</td></tr>
+      <tr><td>e2e</td><td>waived at this WU: the journeys are W9's</td></tr>
+      <tr><td>before the merge</td><td>focused vitest files, <code>tsc --noEmit</code>, eslint and <code>cargo xtask gate0</code> · the code review · the design step citing the ChipBox design and W3's run blob · <code>cargo xtask verify-dod wu</code></td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
