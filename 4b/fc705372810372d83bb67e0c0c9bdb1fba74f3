@@ -1,0 +1,10 @@
+schema: doc/v1
+epic: E-PKG2
+wu: E-PKG2.W3
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-packaging-v2-w3-platform-fixes-plan.html"
+    tier: T3
+    action: added
+    distills: "the toolchain pin and the Windows test fixes plan"
+t2_waived: "T2 DEC-85 and the result report land in the following commits on this branch"
