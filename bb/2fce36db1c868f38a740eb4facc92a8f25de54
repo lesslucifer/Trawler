@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: bb2fce36db1c868f38a740eb4facc92a8f25de54
+base: 54fc1233e6c9edb9a8ad2313a6029dd22db0fde8
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-06-bg-service-epic-result.html
+report_sha256: 708489d3397f1f10d88af9a325bfad692383dfee7df929d75baec2b07b874561
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECtMEybbRAJr/PHiwBeCn3FjXd5US9KoweigKPGpr1g04Kv78vltXYV+s
+  kAcx0qTNjsTeB1uul7KgYvKyjtwAIC
+  -----END SSH SIGNATURE-----
