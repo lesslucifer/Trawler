@@ -77,7 +77,7 @@ function scanFor(source: string, flags: string): Scan {
 const hex4 = (unit: number) => unit.toString(16).padStart(4, "0");
 
 function jsonSpellings(value: string): string {
-  return Array.from(value, (char) => {
+  return value.split("").map((char) => {
     const spellings = new Set([literal(JSON.stringify(char).slice(1, -1)), literal(char)]);
     for (let i = 0; i < char.length; i += 1) {
       const unit = char.charCodeAt(i);

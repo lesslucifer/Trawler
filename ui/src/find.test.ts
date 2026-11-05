@@ -137,6 +137,12 @@ describe("marking text with chips", () => {
     expect(jsonMarks(text, [chip("case", "é")]).ranges.length).toBeGreaterThan(0);
   });
 
+  it("a character outside the BMP is found whole, escaped as a pair, raw, or mixed, and followed by more text", () => {
+    const text = String.raw`{"a": "\ud83d\ude00x", "b": "😀x", "c": "😀\ude00"}`;
+    expect(jsonMarks(text, [chip("value", "😀x")]).ranges).toHaveLength(2);
+    expect(jsonMarks(text, [chip("value", "😀")]).ranges).toHaveLength(3);
+  });
+
   it("key: and value: over text that is not a structure mark nothing", () => {
     expect(markText('{"a":1}', [chip("key", "a")], null).ranges).toEqual([]);
   });
