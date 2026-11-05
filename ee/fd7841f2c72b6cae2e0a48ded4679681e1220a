@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "WU E-PKG2.W5 -> epic/packaging-v2, round 2 (finders also read ui/src-tauri/ and login-service/ at the caller's request)"
+epic: E-PKG2
+wu: E-PKG2.W5
+branch: wu/packaging-v2/bg-service-sync
+base: 7a008d7e93b79d02fc96d997ee994d205a8120af
+head: eefd7841f2c72b6cae2e0a48ded4679681e1220a
+diff_sha256: 8027343c743ef0c494e284b55b8dd7b8bb9b7bd474bb3c05d58f0bdcf6309673
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 4
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 5, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-06
