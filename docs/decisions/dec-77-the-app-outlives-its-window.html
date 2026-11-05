@@ -80,7 +80,7 @@ flowchart LR
         “Trawler” at once (unavailable from a binary with no bundle and below macOS 13, where the class does not exist; W8, E-PKG2.W5, <a href="dec-84-unsafe-is-confined-to-the-login-service-crate.html">DEC-84</a>), Linux
         <code>$XDG_CONFIG_HOME/autostart/dev.trawler.app.desktop</code>, Windows the <code>HKCU\…\Run</code> value
         <code>Trawler</code>. It reads on whenever an entry exists, with the program it starts, read back each time and never
-        cached; writing on points it at the binary now running, or on Linux at <code>$APPIMAGE</code> when set, since an AppImage runs from a mount gone after it quits (E-PKG2.W5; the last write wins). No <code>launchctl</code>: it takes
+        cached; writing on points it at the binary now running, or on Linux at <code>$APPIMAGE</code> when the binary runs inside that image's <code>$APPDIR</code> (both are inherited by children), since an AppImage runs from a mount gone after it quits (E-PKG2.W5; the last write wins). No <code>launchctl</code>: it takes
         effect at the next login. On macOS it reads on only while the service is enabled, so awaiting approval reads off</td><td>Q7(a): works for any build, and a test writes it under a temp root. Q8: a
         mismatch is a debugging case, shown as the path on hover, not a state of its own</td></tr>
       <tr><td>10</td><td>The first ✕ that would quit — the switch unanswered and a menu-bar icon present — asks once,
