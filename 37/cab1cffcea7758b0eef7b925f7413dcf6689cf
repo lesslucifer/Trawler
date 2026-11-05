@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W6
+base: a44c3fac7e94212dcec8561b232fbf3369d8270f
+tip: 37cab1cffcea7758b0eef7b925f7413dcf6689cf
+diff_sha256: df7f7169b99f278bc49b38a79fa21dd30b5279948ebc9c6807c5ff3cdba73925
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-05
