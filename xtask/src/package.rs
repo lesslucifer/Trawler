@@ -63,6 +63,8 @@ pub fn parse(args: &[&str]) -> Result<Options, String> {
 pub const UNIVERSAL: &str = "universal-apple-darwin";
 pub const UNIVERSAL_PARTS: [&str; 2] = ["aarch64-apple-darwin", "x86_64-apple-darwin"];
 const RELEASE: &str = "release";
+pub const SIGNING_KEY_VAR: &str = "TAURI_SIGNING_PRIVATE_KEY";
+const UPDATER_ARTIFACTS: &str = r#"{"bundle":{"createUpdaterArtifacts":true}}"#;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Plan {
@@ -71,9 +73,19 @@ pub struct Plan {
     pub bundle_dir: PathBuf,
 }
 
-pub fn plan(os: Os, options: &Options, installed: &[&str]) -> Result<Plan, String> {
+/// `signs_updates`: the updater's private key is in the environment, which is
+/// true only where the owner put it (the release workflow), never for an agent.
+pub fn plan(
+    os: Os,
+    options: &Options,
+    installed: &[&str],
+    signs_updates: bool,
+) -> Result<Plan, String> {
     let mut args: Vec<String> =
         ["tauri", "build", "--bundles", os.bundles()].map(String::from).into();
+    if signs_updates {
+        args.extend(["--config".to_string(), UPDATER_ARTIFACTS.to_string()]);
+    }
     let mut bundle_dir = PathBuf::new();
     if options.universal {
         if os != Os::MacOs {
@@ -102,7 +114,8 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let options = parse(args)?;
     let os = Os::named(std::env::consts::OS)?;
     let installed = if options.universal { installed_targets()? } else { String::new() };
-    let plan = plan(os, &options, &installed.lines().collect::<Vec<_>>())?;
+    let signs_updates = std::env::var_os(SIGNING_KEY_VAR).is_some_and(|key| !key.is_empty());
+    let plan = plan(os, &options, &installed.lines().collect::<Vec<_>>(), signs_updates)?;
     let ui = repo.join("ui");
     pnpm(&ui, os.pnpm(), &["install".to_string(), "--frozen-lockfile".to_string()])?;
     pnpm(&ui, plan.program, &plan.args)?;
@@ -115,7 +128,12 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     }
     let listed: Vec<String> =
         artifacts.iter().map(|path| format!("  {}", path.display())).collect();
-    Ok((0, format!("package complete:\n{}", listed.join("\n"))))
+    let updater = if signs_updates {
+        String::new()
+    } else {
+        format!("\nupdater artifacts skipped: {SIGNING_KEY_VAR} is not set (only the release workflow holds it)")
+    };
+    Ok((0, format!("package complete:\n{}{updater}", listed.join("\n"))))
 }
 
 fn installed_targets() -> Result<String, String> {
@@ -165,7 +183,7 @@ pub fn artifacts(bundle_dir: &Path) -> Result<Vec<PathBuf>, String> {
 
 fn is_artifact(path: &Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-    [".app", ".dmg", ".msi", "-setup.exe", ".deb", ".rpm", ".AppImage"]
+    [".app", ".dmg", ".msi", "-setup.exe", ".deb", ".rpm", ".AppImage", ".app.tar.gz", ".sig"]
         .iter()
         .any(|suffix| name.ends_with(suffix))
 }
@@ -265,7 +283,7 @@ mod tests {
 
     #[test]
     fn each_host_builds_its_own_installers() {
-        let built = |os| plan(os, &Options::default(), &[]).expect("a plan");
+        let built = |os| plan(os, &Options::default(), &[], false).expect("a plan");
         assert_eq!(argv(&built(Os::MacOs)), "pnpm tauri build --bundles app,dmg");
         assert_eq!(argv(&built(Os::Windows)), "pnpm.cmd tauri build --bundles msi,nsis");
         assert_eq!(argv(&built(Os::Linux)), "pnpm tauri build --bundles deb,rpm,appimage");
@@ -274,14 +292,28 @@ mod tests {
 
     #[test]
     fn a_profile_goes_to_cargo_and_names_the_bundle_dir() {
-        let built = plan(Os::MacOs, &options(false, Some("package-test")), &[]).expect("a plan");
+        let built =
+            plan(Os::MacOs, &options(false, Some("package-test")), &[], false).expect("a plan");
         assert_eq!(argv(&built), "pnpm tauri build --bundles app,dmg -- --profile package-test");
         assert_eq!(built.bundle_dir, Path::new("package-test/bundle"));
     }
 
     #[test]
+    fn updater_artifacts_are_asked_for_exactly_when_the_key_is_there() {
+        let signed = plan(Os::MacOs, &options(false, Some("package-test")), &[], true).unwrap();
+        assert_eq!(
+            argv(&signed),
+            format!(
+                "pnpm tauri build --bundles app,dmg --config {UPDATER_ARTIFACTS} -- --profile package-test"
+            )
+        );
+        let unsigned = plan(Os::MacOs, &Options::default(), &[], false).unwrap();
+        assert!(!argv(&unsigned).contains("createUpdaterArtifacts"));
+    }
+
+    #[test]
     fn universal_targets_both_mac_architectures() {
-        let built = plan(Os::MacOs, &options(true, None), &UNIVERSAL_PARTS).expect("a plan");
+        let built = plan(Os::MacOs, &options(true, None), &UNIVERSAL_PARTS, false).expect("a plan");
         assert_eq!(
             argv(&built),
             "pnpm tauri build --bundles app,dmg --target universal-apple-darwin"
@@ -291,19 +323,19 @@ mod tests {
 
     #[test]
     fn universal_without_a_mac_target_names_the_rustup_line() {
-        let refused = plan(Os::MacOs, &options(true, None), &["aarch64-apple-darwin"]);
+        let refused = plan(Os::MacOs, &options(true, None), &["aarch64-apple-darwin"], false);
         assert!(
             refused.unwrap_err().ends_with("rustup target add x86_64-apple-darwin"),
             "the refusal names only the missing target"
         );
-        let refused = plan(Os::MacOs, &options(true, None), &[]).unwrap_err();
+        let refused = plan(Os::MacOs, &options(true, None), &[], false).unwrap_err();
         assert!(refused.ends_with("rustup target add aarch64-apple-darwin x86_64-apple-darwin"));
     }
 
     #[test]
     fn universal_off_macos_is_refused() {
         for os in [Os::Windows, Os::Linux] {
-            let refused = plan(os, &options(true, None), &UNIVERSAL_PARTS).unwrap_err();
+            let refused = plan(os, &options(true, None), &UNIVERSAL_PARTS, false).unwrap_err();
             assert!(refused.contains("macOS"), "{refused}");
         }
     }
@@ -340,6 +372,8 @@ mod tests {
         }
         std::fs::write(bundle.join("dmg/bundle_dmg.sh"), "").unwrap();
         std::fs::write(bundle.join("nsis/Trawler_0.1.0_x64-setup.exe"), "").unwrap();
+        std::fs::write(bundle.join("macos/Trawler.app.tar.gz"), "").unwrap();
+        std::fs::write(bundle.join("macos/Trawler.app.tar.gz.sig"), "").unwrap();
         let names: Vec<String> = artifacts(bundle)
             .unwrap()
             .iter()
@@ -350,6 +384,8 @@ mod tests {
             [
                 "dmg/Trawler_0.1.0_aarch64.dmg",
                 "macos/Trawler.app",
+                "macos/Trawler.app.tar.gz",
+                "macos/Trawler.app.tar.gz.sig",
                 "nsis/Trawler_0.1.0_x64-setup.exe"
             ]
         );

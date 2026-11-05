@@ -553,7 +553,8 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             crate::core::restart_core,
             crate::settings::open_settings,
             crate::data_window::open_data_window,
-            crate::data_window::take_data_payload
+            crate::data_window::take_data_payload,
+            crate::update::quit_cancelled
         ],
     )
 }
