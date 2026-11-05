@@ -3,13 +3,15 @@ const PAGE_DEFAULT = ":root{color-scheme:light;background:Canvas;color:CanvasTex
 
 export function previewDocument(source: string): string {
   const page = new DOMParser().parseFromString(source, "text/html");
-  page.querySelectorAll("meta[http-equiv], base").forEach((node) => node.remove());
+  page.querySelectorAll("meta[http-equiv], base, template, link").forEach((node) => node.remove());
   page.querySelectorAll("a, area").forEach((link) => link.setAttribute("target", "_blank"));
   const policy = page.createElement("meta");
   policy.setAttribute("http-equiv", "Content-Security-Policy");
   policy.setAttribute("content", CONTENT_SECURITY_POLICY);
+  const links = page.createElement("base");
+  links.setAttribute("target", "_blank");
   const base = page.createElement("style");
   base.textContent = PAGE_DEFAULT;
-  page.head.prepend(policy, base);
+  page.head.prepend(policy, links, base);
   return `${page.doctype ? "<!doctype html>" : ""}${page.documentElement.outerHTML}`;
 }

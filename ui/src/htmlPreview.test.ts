@@ -38,7 +38,7 @@ describe("previewDocument", () => {
 
   it("removes base under any case, in head or body, and keeps charset meta", () => {
     const page = parsed('<head><BASE href="https://x.test/"><meta charset="utf-8"></head><body><base href="//y.test/">x</body>');
-    expect(page.querySelectorAll("base")).toHaveLength(0);
+    expect(page.querySelectorAll("base[href]")).toHaveLength(0);
     expect(page.querySelector("meta[charset]")).not.toBeNull();
   });
 
@@ -54,6 +54,22 @@ describe("previewDocument", () => {
     const links = [...page.querySelectorAll("svg a")];
     expect(links).toHaveLength(2);
     expect(links.every((link) => link.getAttribute("target") === "_blank")).toBe(true);
+  });
+
+  it("drops template, whose declarative shadow root the walk cannot reach, and link hints", () => {
+    const out = previewDocument(
+      '<div><template shadowrootmode="open"><a href="https://x.test">go</a><base href="//y.test"></template></div><link rel="preconnect" href="https://x.test"><link rel="stylesheet" href="https://x.test/a.css">',
+    );
+    expect(out).not.toContain("template");
+    expect(out).not.toContain("x.test");
+    expect(out).not.toContain("y.test");
+  });
+
+  it("sets the only base itself, pointing every link at a new context the sandbox withholds", () => {
+    const bases = parsed('<base href="https://x.test/"><p>x</p>').querySelectorAll("base");
+    expect(bases).toHaveLength(1);
+    expect(bases[0].getAttribute("target")).toBe("_blank");
+    expect(bases[0].hasAttribute("href")).toBe(false);
   });
 
   it("survives a fragment, an empty text and a document with no head or html", () => {
