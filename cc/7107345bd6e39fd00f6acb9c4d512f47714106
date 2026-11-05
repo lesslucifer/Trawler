@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN
+wu: E-INSPWIN.W11
+branch: HEAD
+tests:
+  unit: { count: 74, covers: "bodyPayload's heading {what, method, host, path, query} from the flow, CONNECT with an empty path and query, the title written from the same parts; the TS frame round-trips a heading and drops one that is not five strings; queryCount; years below 100 on the proleptic Gregorian calendar - 0050-06-15T12:00:00Z at UTC reads +00:00 and an offset converts, 0000-02-29 is a Tuesday. In ui/src-tauri/src/data_window.rs, a_heading_is_relayed_unread: a TS-framed heading survives unframe then frame (red before the fix - serde dropped it). Each red before its fix" }
+  integration: { count: 116, covers: "the header draws what, method, host, path and parameter count from the heading and the title whole without one, even a title in the request shape; the pane hands the heading with its payload; through the mocked shell, a heading-bearing payload is parked and claimed intact (the_opener_s_heading_reaches_the_data_window_as_it_was_framed); the shell's data-window tests run as a module of the crate's one suite binary" }
+  e2e: { count: 8, covers: "J1 asserts the opened window's header drew the heading through the real shell (its what line and the GET label); showResponseOf retries its two radio picks, the race J4 failed on twice in four runs. cargo xtask ui e2e green after the fix and on the resynced tip: attached suite 14 of 14 spec files, owned 1 of 1" }
