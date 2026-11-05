@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: d70d6ec0c82b7217bf080f348154d9f053d398b6
+base: 4edde57435db3278ac2422260c903c4c754c6371
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-v2-w2-inspector-design-result.html
+report_sha256: ac6de810ad0e75eef64a6bf80def11ed05de07a08818cdfe187fb14e69a8c57d
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECvCb0DIEjNpcR9Y3QU2eBQFS89irc+Kpk2neGzt1Vru7zN/XqfHHzsJd
+  BGU6rhsXjqTtUv3rKoeLTjcQh3WboC
+  -----END SSH SIGNATURE-----
