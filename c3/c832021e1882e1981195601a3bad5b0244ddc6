@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: HEAD
+tests:
+  unit: { count: 17, covers: "manifest keys, signatures, refusals and notes per platform and kind; smoke's installer selection, argv, ready-line parsing and executable discovery" }
+  integration: { count: 14, covers: "release.yml's trigger, permissions, matrix, version check, package-smoke-upload order, secrets by name, draft-only release; the real macOS bundle passes xtask smoke" }
+  e2e: { waived: "the run needs GitHub, the signing secrets and a public repository; the first rc tag (W6) is the proof, and e2e_packaging is W6's" }
