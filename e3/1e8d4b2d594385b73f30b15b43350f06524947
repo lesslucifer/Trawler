@@ -1,0 +1,28 @@
+schema: doc/v1
+epic: E-INSPWIN
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "W9: E-PANELS' inspector-geometry row closed by DEC-75 rule 10; rows for the data window's filter view, jq, diff and more openers, and for the pane's pretty-JSON rewrite"
+  - path: "docs/decisions/dec-75-the-data-window.html"
+    tier: T2
+    action: added
+    distills: "W1, v3 at W7, numbered at W9: a payload by value {key, title, bytes, typeHint?}, one window per key, original and working copy, find marks, copy/save of screen and original, decode one way, one shared geometry record, no write-back, no core, no close ask"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-75 row (the data window)"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "W7: lexicon (data window, original, working copy, modified, restore original, re-indent, minified, decoded as) and the data window's keys"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-9 row; UC-5's row names the way out of a cut"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-9 section as built; UC-5's cut line and entry points open the data window"
