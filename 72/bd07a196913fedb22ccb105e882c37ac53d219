@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-76-the-data-window.html"
+    tier: T2
+    action: updated
+    distills: "its header links DEC-80, the HTML preview's reach"
+  - path: "docs/decisions/dec-78-a-long-value-is-one-line-opened-whole.html"
+    tier: T2
+    action: added
+    distills: "a wire value whose whole is one named act away in a data window may cut to one line with an end ellipsis; the more/less clamp retires"
+  - path: "docs/decisions/dec-79-the-bytes-decide-the-kind.html"
+    tier: T2
+    action: added
+    distills: "the bytes decide the kind, the label is a hint; nine kinds; the order, rules and label table readKind implements"
+  - path: "docs/decisions/dec-80-the-html-preview-holds-no-reach.html"
+    tier: T2
+    action: added
+    distills: "the HTML preview renders via srcdoc in an empty sandbox with a CSP meta first, refresh and base removed: no script, request, navigation or IPC"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "rows for DEC-78, DEC-79, DEC-80"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "wrap-not-truncate gains its second escape, DEC-78; the header cites both escapes"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w1-kind-detector-plan.html"
+    tier: T3
+    action: added
+    distills: "W1's requirement, the detector's order and label table, the test plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w1-kind-detector-result.html"
+    tier: T3
+    action: added
+    distills: "W1 delivered; DEC-77..79 shipped as DEC-78..80; evidence and follow-ups for W5"
