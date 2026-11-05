@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-BGSVC
+wu: E-BGSVC.W5
+branch: HEAD
+tests:
+  unit: { waived: "a design artifact and no code: nothing to unit-test" }
+  integration: { waived: "a design artifact and no code: the run's Tier-1 verify-doc and the owner at the mockup are its checks" }
+  e2e: { waived: "a design artifact and no code; W7 drives the built page end to end" }
