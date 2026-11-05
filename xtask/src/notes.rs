@@ -1034,7 +1034,7 @@ t2_waived: null
 
         assert!(is_code("src/lib.rs"));
         assert!(is_code("xtask/src/gate.rs"));
-        assert!(is_code("tests/api.rs"));
+        assert!(is_code("tests/suite/api.rs"));
         assert!(is_code("ui/src/FlowDetail.tsx"), "frontend source is gated code");
         assert!(is_code("ui/e2e/specs/flows.spec.ts"), "frontend e2e is gated code");
         assert!(!is_code("ui/vite.config.ts"), "ui-root config stays infra");

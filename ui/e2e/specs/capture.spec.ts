@@ -48,7 +48,7 @@ async function shellIsUp() {
 // so no test can answer those panels and no test can reach past them — pressing
 // export in this harness opens a native sheet that never closes. Those two acts
 // are proven where they are reachable: the whole HAR round trip over the real
-// engine in `tests/e2e_export.rs`, and the controls' own behaviour against a
+// engine in `tests/suite/e2e_export.rs`, and the controls' own behaviour against a
 // stubbed native layer in `CaptureControls.test.tsx`.
 describe("UC-6 / UC-7 — empty the capture, and bring a flow back", () => {
   before(async () => {
