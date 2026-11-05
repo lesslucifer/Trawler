@@ -52,7 +52,11 @@ BodyViewer · CutMarker"]
       <tbody>
         <tr><td>wdio capability</td><td><code>ui/src-tauri/tauri.conf.e2e.json</code></td><td>the inline
           <code>wdio</code> capability adds <code>data-*</code> to its windows (W1's follow-up: without it the spec
-          cannot drive a data window)</td></tr>
+          cannot drive a data window) and <code>core:window:allow-close</code>, so J4 closes a data window the way its
+          close button does — the shipped data capability has no close permission and needs none</td></tr>
+        <tr><td>a stale assertion</td><td><code>ui/e2e/specs/flows.spec.ts</code></td><td>its cut case expected
+          <em>— save to see all</em>, which W3 replaced with <em>open in data window</em> wherever an opener exists; it
+          now asserts the cut line and the button</td></tr>
         <tr><td>capability guard</td><td><code>xtask/src/ui.rs</code></td><td>a unit test: the <code>wdio</code>
           capability covers every window family any shipped capability names, so the next window family cannot be
           left undrivable</td></tr>
