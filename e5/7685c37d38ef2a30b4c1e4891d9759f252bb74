@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU E-INSPWIN2.W7 -> epic/inspect-window-v2"
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W7
+branch: wu/inspect-window-v2/html-preview
+base: 6401f2f4ef600b5fa97c3537b6c35671423dac04
+head: e57685c37d38ef2a30b4c1e4891d9759f252bb74
+diff_sha256: 944b356171c63e3c0df4b1df8b90e9caea74a0382df4f5fb87aea19998841d86
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: sonnet-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 4, verified: 1 }
+findings: { found: 7, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "settled() parses and serialises at least twice per preview toggle, about 2x one pass (1.6 s for 2 MB in jsdom, native is faster); one-shot per toggle or text change"
+    waived: "the second pass is the proof that a reparse changes nothing (a serialise-reparse mutation made a live meta refresh in an earlier round); multi-MB html is rare and the cost is not per keystroke"
+  - finding: "a MathML element carrying href is not targeted away, so a click might navigate the frame if WebKit honours it"
+    waived: "verifier: reachability unproven (MathML Core drops href); the frame stays sandbox empty with no script, impact is one user-initiated GET; revisit in W9's real-window J4"
+  - finding: "a source that settles exactly on pass 5 is shown as inert text"
+    waived: "fail-closed by design; real pages settle in 2 passes"
+  - finding: "cmd-Z and shift-cmd-Z still undo and redo the hidden source while the preview shows"
+    waived: "the preview follows the working copy, so it visibly updates; undo is a working-copy gesture in every kind"
+  - finding: "menu-open beautify runs on a multi-MB html body"
+    waived: "same pattern as js and css, waived in W6; skipped while previewing"
+earlier_rounds: "three earlier rounds on previous tips found and fixed: svg xlink links not targeted away (blocker), shift-cmd-V in typing, preview state kept across kinds, alt-Z in preview, template shadow roots (blocker), nested iframe/object/embed, ping/download, and a serialise-reparse mutation that made a live meta refresh (found by a mutation test, fixed by re-cleaning to a fixed point)"
+verdict: PASS
+date: 2026-11-05
