@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "Epic E-QUERY -> main. The whole epic's code as one range: the core's lists, negation, is and host:port (src/store.rs, src/flow.rs, src/api/routes.rs, tests/api.rs), the client grammar and QueryBar (ui/src/query.ts, components/QueryBar.tsx, App.tsx, useFlows.ts, api.ts, FlowList.tsx, viewPrefsStore.ts) and their tests, and the e2e specs (ui/e2e/specs/). ONE ROUND. W1, W3 and W4 were each reviewed on their own diff; this round judges the epic against main as a single range, the seams between the core and the client. The close commit at the tip changes no code path."
+epic: E-QUERY
+branch: epic/query-bar
+base: 4d1c1942707e767f0bf6af6c5183e7163c478a91
+head: 078e6c6f6a9147aee0e6d36fc6d2a1e154ac61f1
+diff_sha256: aef99ab56e75f99936a5d14583598c84f85e170661d1c453c62d192e234c677c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 7
+  stage_seconds:
+    gate0: 34
+    finders: 61
+    verifiers: 30
+    total: 152
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency:  { found: 3, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 8, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verified:
+  - finding: "ui/src/query.ts:27 - the type key's hint reads 'the response type, like json', while the core's ContentType predicate (src/store.rs:211-214) matches the request's OR the response's content type; with the negation this epic adds, -type:json also hides a flow whose request was JSON and whose response was HTML, which the hint tells the user it will not"
+    severity: important
+refuted: "ONE CANDIDATE REFUTED. Altitude (important): query.ts re-implements the core's value grammar. The verifier found the split deliberate (DEC-71: the grammar is the app's, the core stays keyed) and its drift loud in both directions: a looser bar meets the core's 400, which marks the chip (DEC-71 rule 6, App.tsx, FlowList.tsx, tested), and a stricter bar refuses the draft visibly. Nits recorded but unverified, as nits buy no verifier: per-flow lowercase allocations in contains_ignoring_case; Flow stores host_with_port (raised twice); FilterQuery pairs unbounded on a local-only API; QueryBar's keydown ignores isComposing under an IME; refusedParam on a non-filter 400 marks no chip."
+verdict: FAIL
+date: 2026-11-05
