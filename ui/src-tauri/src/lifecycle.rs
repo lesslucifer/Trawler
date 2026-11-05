@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::thread::JoinHandle;
 
-use tauri::{AppHandle, Manager, Runtime, WebviewWindow, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewWindow, WebviewWindowBuilder};
 
 use crate::keep_capturing::{read_keep_capturing, KeepCapturing};
 use crate::settings::MAIN_WINDOW;
@@ -16,11 +16,19 @@ pub struct Lifecycle {
     config_dir: Option<PathBuf>,
     tray: AtomicBool,
     reopening: Mutex<()>,
+    quit_requested: AtomicBool,
 }
+
+pub const QUIT_REQUEST_EVENT: &str = "quit-requested";
 
 impl Lifecycle {
     pub fn new(config_dir: Option<PathBuf>) -> Self {
-        Self { config_dir, tray: AtomicBool::new(false), reopening: Mutex::new(()) }
+        Self {
+            config_dir,
+            tray: AtomicBool::new(false),
+            reopening: Mutex::new(()),
+            quit_requested: AtomicBool::new(false),
+        }
     }
 
     pub fn config_dir(&self) -> Option<&Path> {
@@ -40,6 +48,14 @@ impl Lifecycle {
         self.tray.load(Ordering::Relaxed)
     }
 
+    pub fn request_quit(&self) {
+        self.quit_requested.store(true, Ordering::SeqCst);
+    }
+
+    pub fn take_quit_request(&self) -> bool {
+        self.quit_requested.swap(false, Ordering::SeqCst)
+    }
+
     pub fn stays_windowless(&self) -> bool {
         stays_windowless(self.keep_capturing(), self.tray_available())
     }
@@ -48,6 +64,16 @@ impl Lifecycle {
 #[tauri::command]
 pub fn tray_available(lifecycle: tauri::State<'_, Lifecycle>) -> bool {
     lifecycle.tray_available()
+}
+
+#[tauri::command]
+pub fn take_quit_request(lifecycle: tauri::State<'_, Lifecycle>) -> bool {
+    lifecycle.take_quit_request()
+}
+
+#[tauri::command]
+pub fn quit_app<R: Runtime>(app: AppHandle<R>) {
+    app.exit(0);
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -157,6 +183,32 @@ pub fn reopen_main_in_background<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<(
     })
 }
 
+// The window asks: it runs DEC-64's check and then calls `quit_app`. The flag
+// outlives a window that is still being built, whose first read takes it; the
+// event reaches a window that already listens, and whichever takes the flag acts.
+pub fn request_quit<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<()> {
+    if let Some(lifecycle) = lifecycle(app) {
+        lifecycle.request_quit();
+    }
+    let app = app.clone();
+    std::thread::spawn(move || quit_in_window(&app))
+}
+
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
+fn quit_in_window<R: Runtime>(app: &AppHandle<R>) {
+    match reopen_main(app) {
+        Ok(window) => {
+            if let Err(err) = window.emit(QUIT_REQUEST_EVENT, ()) {
+                eprintln!("announcing the quit request failed: {err}");
+            }
+        }
+        Err(err) => {
+            eprintln!("opening the main window for Quit failed: {err}");
+            app.exit(0);
+        }
+    }
+}
+
 #[cfg(target_os = "macos")]
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn set_dock<R: Runtime>(app: &AppHandle<R>, dock: Dock) {
@@ -227,6 +279,16 @@ mod tests {
         lifecycle.mark_tray(true);
         assert!(lifecycle.tray_available());
         assert!(!lifecycle.stays_windowless());
+    }
+
+    #[test]
+    fn a_quit_request_is_taken_once() {
+        let lifecycle = Lifecycle::new(None);
+        assert!(!lifecycle.take_quit_request());
+        lifecycle.request_quit();
+        lifecycle.request_quit();
+        assert!(lifecycle.take_quit_request());
+        assert!(!lifecycle.take_quit_request());
     }
 
     #[test]

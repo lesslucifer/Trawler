@@ -118,6 +118,8 @@ pub fn run() {
         login_item::login_item_read,
         login_item::login_item_write,
         lifecycle::tray_available,
+        lifecycle::take_quit_request,
+        lifecycle::quit_app,
         data_window::open_data_window,
         data_window::take_data_payload
     ]);

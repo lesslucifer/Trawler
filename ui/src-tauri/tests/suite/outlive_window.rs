@@ -8,7 +8,7 @@ use tauri::ipc::{CallbackFn, InvokeBody, InvokeResponseBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, MockRuntime};
 use tauri::utils::config::WindowConfig;
 use tauri::webview::InvokeRequest;
-use tauri::{App, Manager, WebviewWindow};
+use tauri::{App, Listener, Manager, WebviewWindow};
 use trawler_ui_lib::core::Core;
 use trawler_ui_lib::keep_capturing::{self, write_keep_capturing};
 use trawler_ui_lib::lifecycle::{self, Lifecycle};
@@ -46,7 +46,8 @@ fn app_declaring(windows: Vec<WindowConfig>, config_dir: &Path, tray: bool) -> A
         .invoke_handler(tauri::generate_handler![
             keep_capturing::keep_capturing_read,
             keep_capturing::keep_capturing_write,
-            lifecycle::tray_available
+            lifecycle::tray_available,
+            lifecycle::take_quit_request
         ])
         .build(context)
         .expect("a mock app");
@@ -180,6 +181,43 @@ fn the_page_reads_whether_this_host_has_a_menu_bar_icon() {
         let main = lifecycle::build_main(app.handle()).unwrap();
         assert_eq!(invoke(&main, "tray_available", serde_json::json!({})), tray.to_string());
     }
+}
+
+fn announced_quits(app: &App<MockRuntime>) -> std::sync::mpsc::Receiver<()> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    app.listen(lifecycle::QUIT_REQUEST_EVENT, move |_| {
+        let _ = sender.send(());
+    });
+    receiver
+}
+
+#[test]
+fn a_quit_request_with_no_window_builds_the_main_window_and_announces_to_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path(), true);
+    lifecycle::open_at_launch(app.handle(), true).unwrap();
+    assert!(app.webview_windows().is_empty());
+    let announced = announced_quits(&app);
+
+    lifecycle::request_quit(app.handle()).join().unwrap();
+
+    assert!(app.get_webview_window(MAIN_WINDOW).is_some(), "the window opens to ask");
+    assert!(announced.try_recv().is_ok(), "and is told");
+}
+
+#[test]
+fn a_quit_request_with_the_window_open_reuses_it() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app(dir.path(), true);
+    let main = lifecycle::build_main(app.handle()).unwrap();
+    let announced = announced_quits(&app);
+
+    lifecycle::request_quit(app.handle()).join().unwrap();
+
+    assert_eq!(app.webview_windows().len(), 1);
+    assert!(announced.try_recv().is_ok());
+    assert_eq!(invoke(&main, "take_quit_request", serde_json::json!({})), "true");
+    assert_eq!(invoke(&main, "take_quit_request", serde_json::json!({})), "false");
 }
 
 #[test]
