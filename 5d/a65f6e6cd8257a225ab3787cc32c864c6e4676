@@ -1,0 +1,18 @@
+schema: design/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W5
+base: b50482c836a729bac0606755045d85eae81e0b30
+design_sha256: f18de3dff3a8fa376e7f1d10341fd498251b38d04a6be45e3a5456d274075f50
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-05-inspector-one-line-design-run.html
+    blob: 2e99722d1e8a9aa6660d542abd3f9c17c75cc219
+    built: [ui/src/BodyViewer.tsx]
+  - path: docs/work/2026-11-05-data-window-kinds-design-run.html
+    blob: b374034bbc6fcb48be6665832bba792e06906c41
+    built: [ui/src/DataWindowScreen.tsx]
+undesigned:
+  - path: ui/src/components/CopyText.tsx
+    why: "one space moved in a class string so the design/vocabulary lint reads whole class names; the rendered output is unchanged"
+date: 2026-11-05
