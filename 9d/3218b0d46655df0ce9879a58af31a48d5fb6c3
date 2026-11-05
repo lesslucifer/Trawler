@@ -1,0 +1,44 @@
+schema: doc/v1
+epic: E-BGSVC
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "the app-supervises-its-core row: the app no longer ends with its window; with keep capturing on and a menu-bar icon it runs windowless and a quit request ends it through DEC-64's check (DEC-77)"
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the background-capture row closed by E-BGSVC; the owed native hardware checks; the quit paths the shell cannot route to the check (W9's review notes, W7's stale Settings switch); the owned e2e suite's shared port, spec order and Linux config dir (W7's review F1/F3/F5)"
+  - path: "docs/decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"
+    tier: T2
+    action: updated
+    distills: "rules 1 and 6: the quit request every quit Trawler can hold answers, and a close that leaves the app running asks nothing"
+  - path: "docs/decisions/dec-69-the-app-supervises-its-core.html"
+    tier: T2
+    action: updated
+    distills: "the main window's destruction ends the app unless DEC-77 keeps it running windowless behind a menu-bar icon"
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: added
+    distills: "the app outlives its window: the keep-capturing preference, one exit decision, never windowless without a menu-bar icon, --background, the tray (rule 8), the login item through SMAppService (rule 9), the once-question as the switch's first writer (rule 10)"
+  - path: "docs/decisions/dec-84-unsafe-is-confined-to-the-login-service-crate.html"
+    tier: T2
+    action: added
+    distills: "unsafe is confined to the login-service crate and its one allow module"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-77 and DEC-84 rows; the DEC-64 and DEC-69 rows follow their amendments"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "keyboard convention: show another page — ↑/↓ in a PageSidebar"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "the UC-BG index row"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-BG, keep capturing after the window closes: the once-question, the switch's states, quit paths, open at login, and its e2e proof; UC-ONBOARD's quit clause names the menu-bar Quit and the close that only hides the window"
