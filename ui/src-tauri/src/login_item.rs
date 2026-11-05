@@ -315,16 +315,28 @@ pub fn login_item_write(
     on: bool,
 ) -> Result<LoginItem, String> {
     let exe = std::env::current_exe().map_err(|err| err.to_string())?;
-    let appimage = if cfg!(target_os = "linux") { std::env::var_os(APPIMAGE_VAR) } else { None };
-    place(&login_item)?.write(on, &program_at_login(exe, appimage))
+    let image = if cfg!(target_os = "linux") {
+        std::env::var_os(APPIMAGE_VAR).zip(std::env::var_os(APPDIR_VAR))
+    } else {
+        None
+    };
+    place(&login_item)?.write(on, &program_at_login(exe, image))
 }
 
 pub const APPIMAGE_VAR: &str = "APPIMAGE";
+pub const APPDIR_VAR: &str = "APPDIR";
 
 // An AppImage runs from a mount that is gone once it quits; the file a login can
-// start again is the one its runtime names.
-pub fn program_at_login(exe: PathBuf, appimage: Option<std::ffi::OsString>) -> PathBuf {
-    appimage.map(PathBuf::from).filter(|image| image.is_absolute()).unwrap_or(exe)
+// start again is the one its runtime names, `$APPIMAGE` beside the mount `$APPDIR`.
+// Both are inherited by children, so they count only for a binary inside that mount.
+pub fn program_at_login(
+    exe: PathBuf,
+    image: Option<(std::ffi::OsString, std::ffi::OsString)>,
+) -> PathBuf {
+    image
+        .map(|(file, mount)| (PathBuf::from(file), PathBuf::from(mount)))
+        .filter(|(file, mount)| file.is_absolute() && mount.is_absolute() && exe.starts_with(mount))
+        .map_or(exe, |(file, _)| file)
 }
 
 #[cfg(test)]
@@ -350,11 +362,25 @@ mod tests {
 
     #[test]
     fn an_appimage_is_started_at_login_from_its_file_not_its_mount() {
-        let mount = PathBuf::from("/tmp/.mount_TrawlXYZ/usr/bin/trawler-ui");
+        let exe = PathBuf::from("/tmp/.mount_TrawlXYZ/usr/bin/trawler-ui");
         let image = "/home/u/Apps/Trawler_0.1.0_amd64.AppImage";
-        assert_eq!(program_at_login(mount.clone(), Some(image.into())), Path::new(image));
-        assert_eq!(program_at_login(mount.clone(), None), mount);
-        assert_eq!(program_at_login(mount.clone(), Some("relative.AppImage".into())), mount);
+        let ran = |file: &str, mount: &str| Some((file.into(), mount.into()));
+        assert_eq!(
+            program_at_login(exe.clone(), ran(image, "/tmp/.mount_TrawlXYZ")),
+            Path::new(image)
+        );
+        assert_eq!(program_at_login(exe.clone(), None), exe);
+        assert_eq!(
+            program_at_login(exe.clone(), ran("relative.AppImage", "/tmp/.mount_TrawlXYZ")),
+            exe
+        );
+    }
+
+    #[test]
+    fn an_appimage_variable_inherited_by_another_install_is_ignored() {
+        let deb = PathBuf::from("/usr/bin/trawler-ui");
+        let inherited = Some(("/home/u/Apps/Other.AppImage".into(), "/tmp/.mount_OtherAB".into()));
+        assert_eq!(program_at_login(deb.clone(), inherited), deb);
     }
 
     #[test]
