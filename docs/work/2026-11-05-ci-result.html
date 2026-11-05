@@ -27,7 +27,8 @@
         with <code>-D warnings</code> over the workspace, then <code>cargo test -p trawler -p trawler-ui</code>. A newer
         run on the same ref cancels the older one</td></tr>
       <tr><td>the pinning test is green and names what moved</td><td><span class="badge auto">delivered</span></td>
-        <td><code>ci_workflow</code>, 4 of 4. All four were red before the file existed</td></tr>
+        <td><code>ci_workflow</code>, 7 of 7. The first four were red before the file existed, and the timeout test
+        was red before the bound was added</td></tr>
       <tr><td>a run on <code>main</code> after the push; a dispatched run on a branch</td><td><span class="badge approval">owner step</span></td>
         <td>not run: pushing and dispatching are outward-facing. Both commands are staged. E-PKG2.W2 records the
         runs</td></tr>
@@ -40,20 +41,26 @@
       There was no unplanned work.</p>
 
     <h2 id="deviations">Deviations</h2>
-    <p data-item="deviations" data-c="deviations">None. Q1 (macOS minutes on a private repo) and Q2 (stable Rust, Node 24,
-      pnpm 11) were taken as proposed.</p>
+    <p data-item="deviations" data-c="deviations">Added from review round 1: <code>timeout-minutes: 45</code>, and the
+      test refuses <code>continue-on-error</code> or a skippable step. Q1 (macOS minutes on a private repo) and Q2 (stable
+      Rust, Node 24, pnpm 11) were taken as proposed.</p>
 
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">
       <tr><th>What</th><th>Where</th></tr>
-      <tr><td>integration</td><td><code>xtask/tests/suite/ci_workflow.rs</code>: triggers, permissions, the macOS job, and
-        install before clippy and tests</td></tr>
+      <tr><td>integration</td><td><code>xtask/tests/suite/ci_workflow.rs</code>: triggers, permissions, the macOS job, its
+        timeout, the setup actions and their order, install before clippy before tests, and no step that can fail
+        quietly</td></tr>
       <tr><td>unit</td><td>waived: the WU adds no product or tooling code</td></tr>
       <tr><td>e2e</td><td>waived: the proof is a real Actions run after the owner pushes <code>main</code></td></tr>
       <tr><td>the commands CI runs</td><td>both pass on this tree locally. Clippy <code>-D warnings</code> over the
         workspace is the pre-commit lint, and the tests run inside Gate 0's suite</td></tr>
+      <tr><td>review round 1</td><td>FAIL on <code>ca050e42</code>, one important verified: no job timeout, so a hang
+        would run 360 macOS minutes. Fixed in <code>b7d58515</code>, test first. Two other importants were refuted: the
+        cancelled older run on a ref is DEC-83's own rule, and pnpm/action-setup runs on the action's Node. Three nits
+        were taken in the same commit</td></tr>
       <tr><td>commits</td><td><code>30f3eabe</code> plan · <code>30d70458</code> workflow + test · <code>aba3a719</code>
-        DEC-83</td></tr>
+        DEC-83 · <code>b7d58515</code> round-1 fix</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>

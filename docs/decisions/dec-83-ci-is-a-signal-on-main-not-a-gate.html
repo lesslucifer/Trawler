@@ -36,12 +36,14 @@
         platform</td><td>an unattended, AI-first merge cannot wait on a remote service. Owner ruling Q17: a signal, not a
         gate</td></tr>
       <tr><td>5</td><td>The workflow reads the repository and writes nothing (<code>contents: read</code>). A newer run
-        on the same ref cancels the older one</td><td>least privilege; one answer per commit</td></tr>
+        on the same ref cancels the older one. A run stops after 45 minutes. No step may continue on error or be
+        skipped</td><td>least privilege; one answer per ref, the newest; a hang on a runner billed at ten times Linux's
+        rate is cut off; a signal that cannot go red is no signal</td></tr>
     </table>
 
     <h2 id="held-by">Held by</h2>
-    <p data-c="held-by"><code>xtask/tests/suite/ci_workflow.rs</code> pins rules 1, 3 and 5: the triggers, the job and its
-      commands, and the permissions. Rules 2 and 4 are facts of GitHub and of the hooks: no hook reads a CI result.</p>
+    <p data-c="held-by"><code>xtask/tests/suite/ci_workflow.rs</code> pins rules 1, 3 and 5: the triggers, the job, its
+      setup and commands in order, the permissions, the timeout, and that no step can fail quietly. Rules 2 and 4 are facts of GitHub and of the hooks: no hook reads a CI result.</p>
 
   </main>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
