@@ -933,6 +933,22 @@ describe("decode", () => {
     expect(writeText).toHaveBeenLastCalledWith("a%20b\r\n  a b  \r\nend");
   });
 
+  it("⌘⇧D after a JSON escape decodes the value behind it and ⇄ keeps the escape, the document valid", async () => {
+    const value = btoa("hello");
+    const text = `{"a": "\\n${value}"}`;
+    await open(payload({ text }));
+    act(() => {
+      view().dispatch({ selection: { anchor: text.indexOf(value) + 3 } });
+    });
+    key("D", { shiftKey: true });
+    expect(selected()).toBe(value);
+    expect(decodedText()).toBe("hello");
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with decoded" }));
+    expect(doc()).toBe(`{"a": "\\nhello"}`);
+    expect(JSON.parse(doc())).toEqual({ a: "\nhello" });
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+  });
+
   it("a malformed token says why, offers no act on it, and changes nothing", async () => {
     const bad = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ODEyIn0";
     await open(payload({ text: `{"t": "${bad}"}` }));

@@ -456,13 +456,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const decodeAt = useCallback(
     (around: Span) => {
       const surface = surfaceText(text);
-      const found = decodeAround(surface, around);
+      const found = decodeAround(surface, around, { json: kind === "json" });
       if (!found) return;
       surfaceHandle.current?.select(found.range);
       const line = (surface.slice(0, found.range.to).match(/\n/g)?.length ?? 0) + 1;
       setPeek({ origin: { type: "selection", range: found.range, line }, peeked: found.peeked });
     },
-    [text],
+    [kind, text],
   );
   const decodeRow = useCallback(
     (index: number) => {
