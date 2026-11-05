@@ -1,0 +1,49 @@
+schema: cr/v5
+scope: "epic E-INSPWIN2 (epic/inspect-window-v2) -> main, round 2"
+epic: E-INSPWIN2
+branch: epic/inspect-window-v2
+base: 8ee198f816bdc921f4c727ff705d78ea275938bd
+head: ba123d9c2e4e2ee48d41f74778cc703df766bf84
+diff_sha256: 23f0658a3b8b7177eb3c21af9ec311a48f6c0f4e80b27148b115150ca43c0022
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 7
+  stage_seconds:
+    gate0: 41
+    finders: 70
+    verifiers: 25
+    total: 140
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency: { found: 4, verified: 1 }
+    altitude: { found: 4, verified: 1 }
+findings: { found: 10, verified: 3, waived: 2 }
+waivers:
+  - finding: "a re: pattern with catastrophic backtracking freezes the data window while it is the live draft"
+    reason: "verified in round 1 (cr/v5 FAIL on 0b8a8ebf) and waived at E-INSPWIN2.W8 and carried: the pattern is user-authored and JavaScript has no regex timeout; a worker is the upgrade, the roadmap row 'Find in the data window' (docs/backlog/roadmap.html)"
+  - finding: "opening the data window's menu runs the full js-beautify pass on the body to decide the reformat row"
+    reason: "verified in round 1 and waived at E-INSPWIN2.W6 and W7: the component's preview-then-redo pattern shared with re-indent for xml and json, about 0.2 s per MiB, once per user gesture, skipped while previewing; recorded in the same roadmap row"
+nits:
+  - finding: "which find keys apply to a kind is worded again in refusedReason's NEEDS and split per part in formPairs' PART_KEYS, beside keysFor"
+    waived: "verified as a nit: NEEDS is per-key wording and PART_KEYS a per-part split not derivable from keysFor; keysFor and refusedReason are held together by findGrammar.test.ts; nothing drifts unless a key moves kind"
+  - finding: "a keyed chip typed with doubled quotes (key:\"\"abc\"\") labels as key:\"abc\", which reads back one quote layer shorter"
+    waived: "display and dedup only, on an input nobody types to find text"
+  - finding: "contentKind imports rawKind from body.ts, which also holds fetch and save IO"
+    waived: "an import of one pure function; moving it is a later tidy"
+  - finding: "findGrammar takes edits and hasOpenQuote from query.ts, coupling the two grammars"
+    waived: "deliberate: DEC-76 rule 12 types find like the filter, and the close commit 0cbb927f made the quote rule one"
+  - finding: "find orchestration (structure, names, marking) sits inline in DataWindowScreen"
+    waived: "memo glue over find.ts's pure functions, as W8's review found; every rule lives in the pure layer"
+  - finding: "previewDocument reparses at least twice to reach its fixed point"
+    waived: "the fixed point is DEC-80's guard against reparse mutation; memoised on the text"
+  - finding: "jsonSpellings builds a per-character alternation for each key/value chip on every draft keystroke"
+    waived: "linear in the typed value, which is short; W8 waived the per-keystroke scan of key:/value:"
+verdict: PASS
+date: 2026-11-06
