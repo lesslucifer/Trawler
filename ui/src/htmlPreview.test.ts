@@ -56,6 +56,15 @@ describe("previewDocument", () => {
     expect(links.every((link) => link.getAttribute("target") === "_blank")).toBe(true);
   });
 
+  it("takes the address off every MathML element, which WebKit follows as a link that no target can send away", () => {
+    const page = parsed(
+      '<math href="https://x.test/m"><mrow href="https://x.test/r"><mi href="https://x.test/i">x</mi></mrow></math><a href="https://x.test/a">a</a>',
+    );
+    expect(page.querySelectorAll("math, math *")).toHaveLength(3);
+    expect(page.querySelectorAll("math [href], math[href]")).toHaveLength(0);
+    expect(page.querySelector("a")?.getAttribute("href")).toBe("https://x.test/a");
+  });
+
   it("drops template, whose declarative shadow root the walk cannot reach, and link hints", () => {
     const out = previewDocument(
       '<div><template shadowrootmode="open"><a href="https://x.test">go</a><base href="//y.test"></template></div><link rel="preconnect" href="https://x.test"><link rel="stylesheet" href="https://x.test/a.css">',
