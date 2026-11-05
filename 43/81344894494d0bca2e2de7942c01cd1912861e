@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W6
+branch: 43813448
+changes:
+  - path: "docs/work/2026-11-05-inspect-window-v2-w6-javascript-css-plan.html"
+    tier: T3
+    action: added
+    distills: "the W6 requirement, mapping, expected rows and test plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w6-javascript-css-result.html"
+    tier: T3
+    action: added
+    distills: "the W6 outcome, evidence and follow-ups"
+t2_waived: "UC-9 javascript / css text and the reformat rulebook row are W9's distillation per the epic plan"
