@@ -220,3 +220,10 @@ fn the_lockfile_links_one_webview2_binding_so_the_windows_build_has_one_set_of_t
         assert_eq!(found.len(), 1, "{name} resolves to more than one version: {found:?}");
     }
 }
+
+#[test]
+fn the_checkout_keeps_lf_line_endings_so_windows_sees_the_bytes_the_tests_expect() {
+    let repo = xtask::repo_root().unwrap();
+    let attributes = std::fs::read_to_string(repo.join(".gitattributes")).unwrap_or_default();
+    assert!(attributes.lines().any(|l| l.trim() == "* text=auto eol=lf"), "{attributes}");
+}
