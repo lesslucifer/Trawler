@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU general-page -> epic/bg-service"
+epic: E-BGSVC
+wu: E-BGSVC.W6
+branch: wu/bg-service/general-page
+base: 85973158d0368eec417251cc1b293a00fc359bc5
+head: 811a46f6b5d7c0fc90bf3500528ccb52d396c3fd
+diff_sha256: 36a66cc9fdc1abc7980ef308e0df6b52528a7d876416fa754516afdd22c4b30b
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 1
+  stage_seconds:
+    finders: 19
+    total: 60
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
