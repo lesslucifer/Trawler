@@ -8,37 +8,31 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>Gate parity — the merge proves what the push will check</h1>
-      <p>A merge that goes green must leave a tree the push accepts, and the push must not re-pay for proof the merge already bought.</p>
-      <div class="meta">Draft v1 · 2026-11-04 · Trawler · T3 epic plan · <span class="badge id">E-GATEPAR</span></div>
+      <h1>Gate parity — each checkout runs its own hooks and builds its own code</h1>
+      <p>Parallel worktrees must not run another branch's hooks or link another branch's build. Ship that first; the merge/push parity work follows as E-GATEPAR2.</p>
+      <div class="meta">v3 · 2026-11-05 · Trawler · T3 epic plan · <span class="badge id">E-GATEPAR</span> · scope cut to W1–W3 for an early release</div>
     </div>
   </header>
   <main>
     <h2 id="intent">Intent</h2>
     <p data-item="intent">
-      Today <code>main</code> can take a green epic merge and then go red on <code>git push</code>:
-      the merge gate checks only <em>notes</em>, while the suite first runs on the <em>merged</em> tree at
-      pre-push — after the merge commit already exists on a merge-only branch. The hooks are also slow:
-      pre-push runs the whole suite blind on every push, the installed hooks have drifted from their tracked
-      sources, and the Gate 0 cache thrashes across worktrees. Fix the order (prove the merged tree at the
-      merge), then the cost: a push takes 10+ minutes, and about 95% of that is waiting on per-launch
-      executable assessment rather than running tests (<a href="2026-11-04-push-timing-report.html">push timing report</a>).
-      Reuse the merge's proof at the push, and make the remaining suite runs pay for tests, not launches. Now, because six epics run in parallel worktrees,
-      so every landing combines content no gate has tested.
+      Seven worktrees work in parallel on one machine, and two shared pieces make each one run code it did not check out.
+      <strong>Hooks</strong>: git runs copies in <code>.git/hooks</code> that cargo-husky installed once, so landed hook changes never
+      reach the machine (C4). <strong>Build output</strong>: every worktree symlinks one <code>target/</code>, where a workspace crate gets
+      the same artifact name in every checkout and the uplifted binaries (<code>target/debug/xtask</code>) have none, so a build, a test
+      or a gate in one worktree can link or execute another worktree's code with no error (C9, met live in E-GATEPAR.W1).
+      Fix both now and release early, so every worktree can back-merge <code>main</code> and stop corrupting the others.
+      The merge-proves-tree and suite-cost work in the original plan is deferred unchanged to <strong>E-GATEPAR2</strong>.
     </p>
 
     <h2 id="evidence">Root causes — observed on main @ 4d1c1942</h2>
     <table data-c="causes">
-      <thead><tr><th>#</th><th>Cause</th><th>Where</th><th>Effect</th></tr></thead>
+      <thead><tr><th>#</th><th>Cause</th><th>Where</th><th>Effect</th><th>Fixed by</th></tr></thead>
       <tbody>
-        <tr><td>C1</td><td>The merge gate never runs the suite — <code>verify-dod hook</code> checks notes, hashes, signatures only</td><td><code>.cargo-husky/hooks/pre-merge-commit</code></td><td>merge green on an untested tree</td></tr>
-        <tr><td>C2</td><td>Gate 0 proves the <em>epic tip</em>; the merge tree is epic + whatever landed on main since the fork. Check 4 (review base = merge-base) does not move when main advances without a back-merge</td><td><code>xtask/src/gate0.rs</code>, gate check 4</td><td>semantic conflicts between parallel epics surface only at push</td></tr>
-        <tr><td>C3</td><td>pre-push runs <code>cargo nextest run --all</code> unconditionally — ignores the Gate 0 cache keyed on tree content</td><td><code>.cargo-husky/hooks/pre-push</code></td><td>every push pays the full suite, even for a tree proven green minutes ago</td></tr>
-        <tr><td>C4</td><td>Installed hooks drifted from tracked sources: <code>.git/hooks/pre-commit</code> still runs raw fmt+clippy (DEC-54's cached <code>cargo xtask lint</code> never installed); <code>commit-msg</code> is the pre-DEC-10 version. cargo-husky installs only on first build</td><td><code>.git/hooks/*</code> vs <code>.cargo-husky/hooks/*</code></td><td>landed speed-ups and rule changes silently don't apply</td></tr>
-        <tr><td>C5</td><td>All worktrees symlink one <code>target/</code> (<code>.gitworktreecopy</code>), and the Gate 0 / lint markers hold a <em>single</em> key each</td><td><code>gate0::cache_path</code>, <code>lint_cache_path</code></td><td>worktree A's green overwrites B's — cache misses across 7 worktrees</td></tr>
-        <tr><td>C6</td><td>Each freshly linked test binary's first launch waits on a Gatekeeper scan in a <code>syspolicyd</code> stuck in an error loop: median 21 s × 34 binaries = 800 of 830 s on a quiet machine; launches beyond a test's deadline turn into false reds. Also 31 s of doc-tests for crates with zero doc-tests. <strong>Machine side fixed</strong> (Developer Tools exemption): suite 830 → 67 s, of which 52 s is now those empty doc-tests</td><td>machine setting · 31 test binaries + the tools tests spawn</td><td>push &gt; 10 min; random reds (<code>core_entry</code>, <code>supervisor</code>)</td></tr>
-        <tr><td>C7</td><td><code>cargo-nextest</code> not installed → the hook falls back to serial <code>cargo test --all</code>, which stops at the first red binary</td><td>machine · <code>.cargo-husky/hooks/pre-push</code></td><td>no overlap of launch waits; one false red hides the rest</td></tr>
-        <tr><td>C8</td><td>The suite's structure costs more than its tests: 3 doc-test passes for crates with <strong>zero</strong> doc-tests (52 of 67 s after the machine fix), and 31 separate test binaries, each linked and first-launched on every change</td><td><code>Cargo.toml</code> ×3, <code>tests/</code>, <code>xtask/tests/</code>, <code>ui/src-tauri/tests/</code></td><td>a full run takes ~5× its tests</td></tr>
+        <tr><td>C4</td><td>Installed hooks drifted from tracked sources: <code>.git/hooks/pre-commit</code> still runs raw fmt+clippy (DEC-54's cached <code>cargo xtask lint</code> never installed); <code>commit-msg</code> is the pre-DEC-10 version. cargo-husky installs only on first build</td><td><code>.git/hooks/*</code> vs <code>.cargo-husky/hooks/*</code></td><td>landed speed-ups and rule changes silently don't apply</td><td><span class="badge id">W1</span></td></tr>
+        <tr><td>C9</td><td>One <code>target/</code> for all worktrees. A workspace crate's artifact hash is the same in every checkout (path-relative), freshness is judged by mtime, and uplifted binaries are unhashed. Measured 2026-11-05: 72 GB, of which <code>deps/</code> holds 727 workspace-crate hashes and ~828k leftover <code>.rcgu.o</code> debug-info objects (macOS <code>split-debuginfo=unpacked</code>) against ~17 GB of third-party crates; <code>incremental/</code> 12–20 GB</td><td><code>.gitworktreecopy</code> (<code>~&gt; target</code>)</td><td>wrong code linked or run with no error: clippy here compiled against another worktree's <code>xtask</code> lib; 4 false test reds ran another worktree's <code>xtask</code> binary</td><td><span class="badge id">W2</span></td></tr>
+        <tr><td>C5</td><td>Gate 0 / lint markers hold a single key in the shared <code>target/</code></td><td><code>gate0::cache_path</code>, <code>lint_cache_path</code></td><td>worktree A's green overwrites B's</td><td><span class="badge id">W2</span> (dissolves: one <code>target/</code> per worktree)</td></tr>
+        <tr><td>C1–C3, C6–C8</td><td>merge gate never runs the suite · Gate 0 proves the epic tip, not the merge tree · pre-push re-runs the suite blind · launch-assessment wait · nextest fallback · suite structure cost</td><td>see the <a href="2026-11-04-push-timing-report.html">push timing report</a></td><td>red <code>main</code> after a green merge; 10+ min pushes</td><td><span class="badge approval">E-GATEPAR2</span></td></tr>
       </tbody>
     </table>
 
@@ -46,42 +40,42 @@
       <pre class="mermaid">
 flowchart LR
   subgraph NOW["today"]
-    A1["epic tip<br/>gate0 green"] --> A2["merge into main<br/>notes only ✅"] --> A3["merge commit<br/>exists on main"] --> A4["push: full suite<br/>on merged tree ❌"]
+    A1["worktree A"] & A2["worktree B"] -->|symlink| T["one target/<br/>xtask-H written by<br/>whoever built last"]
+    A1 & A2 -->|"git runs"| H[".git/hooks copies<br/>(drifted)"]
   end
   subgraph NEXT["after E-GATEPAR"]
-    B1["epic tip<br/>gate0 green"] --> B2["merge into main<br/>notes + gate0 on merged tree"] -->|red| B5["merge refused<br/>main untouched"]
-    B2 -->|green, cached by tree key| B3["merge commit"] --> B4["push: cache hit<br/>suite skipped"]
+    B1["worktree A"] --> TA["A's target/<br/>own crates + incremental"]
+    B2["worktree B"] --> TB["B's target/<br/>own crates + incremental"]
+    TA -. "APFS clone:<br/>third-party blocks shared" .- TB
+    B1 & B2 -->|"core.hooksPath"| HH["own checkout's<br/>.cargo-husky/hooks"]
   end
       </pre>
-      <div class="caption">Move the suite's first contact with the merged tree from push to merge; the push then reads the merge's proof.</div>
+      <div class="caption">Share only what is identical across checkouts (third-party crates, by copy-on-write blocks); everything a checkout's own sources produce stays in that checkout.</div>
     </div>
 
     <h2 id="use-cases">Use-case requirements</h2>
     <p data-item="use-cases">
       <strong>A process epic — it delivers no <code>UC-*</code> behaviour and changes no use-case contract.</strong>
-      Its contracts are the workflow's gate/hook rules (<a href="../workflow.html">workflow.html</a> § Hooks, DoD-W/DoD-E)
+      Its contracts are the workflow's hook rules (<a href="../workflow.html">workflow.html</a> § Hooks)
       and <a href="../decisions/workflow-gates.html">decisions/workflow-gates.html</a>.
     </p>
 
     <h2 id="expected">Expected result</h2>
     <ul data-item="expected">
-      <li>An epic merge into <code>main</code> whose merged tree fails fmt/clippy/suite is <strong>refused at the merge</strong>; no red merge commit ever reaches <code>main</code>. WU → <code>epic/*</code> merges keep today's notes-only gate.</li>
-      <li>A merge whose tree equals an already-green tree (the common <code>--no-ff</code> of an up-to-date branch) costs a cache lookup, not a suite run.</li>
-      <li>Pushing a ref whose tree is proven green locally skips the suite and says so (<code>gate0 skipped … (&lt;key&gt;)</code>); an unproven tree still runs it.</li>
-      <li><code>core.hooksPath</code> points at the tracked <code>.cargo-husky/hooks/</code>, so an installed copy cannot drift; a checkout without it is refused with the one fix command.</li>
-      <li>Green proofs from one worktree survive another worktree's run on the shared <code>target/</code>.</li>
-      <li>A push of a tree the merge already proved spends <strong>no time in the suite</strong>; the hook prints the cache hit.</li>
-      <li>A gate whose machine has the launch-assessment penalty (C6) says so up front with the one fix line, instead of a 10-minute run or a false red.</li>
-      <li>The push-timing report's commands, re-run at W7, show per-check wall time before vs after on the same machine. The speed claim is measured, not asserted.</li>
+      <li><code>core.hooksPath</code> points at the tracked <code>.cargo-husky/hooks/</code>, so an installed copy cannot drift; a gate in a checkout without it is refused with the one fix command. <span class="badge auto">W1 done</span></li>
+      <li>Every worktree has its own <code>target/</code> directory; a build, test or gate in one worktree never reads or overwrites another's workspace-crate artifacts or binaries.</li>
+      <li>A new worktree's <code>target/</code> starts as a copy-on-write clone holding only third-party artifacts: no extra disk at creation, no third-party rebuild, and the first build compiles only the workspace crates.</li>
+      <li>A gate in a checkout whose <code>target/</code> is still a symlink to another checkout is refused with the one fix command.</li>
+      <li>The shared tree's disk use is measured before and after the one-time prune, in the epic result.</li>
+      <li>After E-GATEPAR is on <code>main</code>, each live worktree syncs with one documented sequence (back-merge, isolate its <code>target/</code>), then one repo-wide <code>cargo xtask hooks install</code>.</li>
     </ul>
 
     <h2 id="non-goals">Non-goals</h2>
     <ul data-item="non-goals">
+      <li>Everything in <a href="#deferred">Deferred to E-GATEPAR2</a>: merge-proves-tree, push-reads-proof, launch guard, suite cost, timing re-measure.</li>
       <li>No change to what a note proves or to gate checks 1–9; the review / mr / dod chain is untouched.</li>
-      <li>No remote CI; this is local hooks only.</li>
-      <li>No sharding or test selection, and no test is removed: W6 changes how the suite is packaged, not what it checks.</li>
-      <li>No change to macOS security settings from code. The Developer Tools exemption is a user action the gate only detects and names.</li>
-      <li>Not splitting the shared <code>target/</code> per worktree (decided — see decisions).</li>
+      <li>No shared compiler cache service (sccache); APFS clones are the sharing mechanism. Non-APFS hosts fall back to a fresh, unshared <code>target/</code>.</li>
+      <li>No dev-profile change unless W2's measurement shows the leftover debug objects regrow after the prune.</li>
     </ul>
 
     <h2 id="wus">Working units</h2>
@@ -90,64 +84,59 @@ flowchart LR
         <h3 id="w1">W1 · hook-sync — installed hooks are the tracked hooks</h3>
         <p data-item="wu-summary">Make the tracked <code>.cargo-husky/hooks/</code> the hooks that actually run via <code>core.hooksPath</code> → <code>.cargo-husky/hooks/</code>, set by <code>cargo xtask hooks install</code> and verified by every gate entrypoint (unset or elsewhere → refuse with the fix command). cargo-husky's copy-install is retired. Fixes C4.</p>
         <p data-item="wu-maps-to">E-GATEPAR · C4 · workflow.html § Hooks.</p>
-        <p data-item="wu-expected">After W1, editing a tracked hook takes effect in every worktree with no rebuild; a missing <code>core.hooksPath</code> is loudly refused.</p>
-        <p data-item="wu-deps">none — lands first so W2/W3's hook edits reach the machine.</p>
+        <p data-item="wu-expected">After W1, editing a tracked hook takes effect in every worktree with no rebuild; a missing <code>core.hooksPath</code> is loudly refused. The repo-wide install waits for the sync (install refuses while a sibling worktree would lose a hook).</p>
+        <p data-item="wu-deps">none.</p>
       </div>
       <div data-wu="E-GATEPAR.W2">
-        <h3 id="w2">W2 · cache-per-key — proofs survive a shared target</h3>
-        <p data-item="wu-summary">Gate 0 and lint markers become a set of keys (e.g. <code>target/.gate0-green/&lt;key&gt;</code>, bounded/pruned) instead of one file holding the last key. Fixes C5.</p>
-        <p data-item="wu-maps-to">E-GATEPAR · C5 · DEC-54 (amended).</p>
-        <p data-item="wu-expected">Two worktrees alternating gate0 runs each hit their own cache on re-run.</p>
-        <p data-item="wu-deps">none — independent; W3/W4 rely on its cache hit rate.</p>
+        <h3 id="w2">W2 · target-isolation — each worktree builds into its own target</h3>
+        <div data-item="wu-summary">
+          <table data-c="w2-parts">
+            <thead><tr><th>Part</th><th>What</th></tr></thead>
+            <tbody>
+              <tr><td>seed</td><td><code>cargo xtask target seed</code>: clone the main checkout's <code>target/</code> with <code>cp -c -Rp</code> (APFS copy-on-write, mtimes kept), then delete from the clone every workspace-crate artifact (names from <code>cargo metadata --no-deps</code>, in <code>deps/</code>, <code>build/</code>, <code>.fingerprint/</code>, <code>examples/</code>), <code>incremental/</code>, the uplifted binaries/libs, gate markers and the non-cargo dirs. What remains is third-party only. Non-APFS: an empty <code>target/</code></td></tr>
+              <tr><td>worktree setup</td><td><code>.gitworktreecopy</code> drops <code>~&gt; target</code>; <code>post-checkout</code> runs the seed for a new worktree</td></tr>
+              <tr><td>isolate</td><td><code>cargo xtask target isolate</code>: in an existing worktree, replace the symlink with a seeded <code>target/</code> (the migration for the 7 live worktrees)</td></tr>
+              <tr><td>guard</td><td>the W1 gate guard also refuses a checkout whose <code>target</code> is a symlink, fix line <code>cargo xtask target isolate</code></td></tr>
+              <tr><td>prune</td><td><code>cargo xtask target prune</code>: delete workspace-crate artifacts and <code>incremental/</code> from the main checkout's <code>target/</code> (they rebuild once); measure before/after</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p data-item="wu-maps-to">E-GATEPAR · C9, C5 · DEC-54 (marker location unchanged, now per worktree).</p>
+        <p data-item="wu-expected">Two worktrees building the same workspace crate with different sources each run their own code; a seeded <code>target/</code> rebuilds no third-party crate; a symlinked <code>target</code> is refused at the gate.</p>
+        <p data-item="wu-deps">E-GATEPAR.W1 (the gate guard it extends).</p>
       </div>
       <div data-wu="E-GATEPAR.W3">
-        <h3 id="w3">W3 · merge-proves-tree — the merge gate runs Gate 0 on the merged tree</h3>
-        <p data-item="wu-summary">For a merge into <code>main</code> only, <code>pre-merge-commit</code> (and the conflicted-merge path in <code>pre-commit</code>) runs <code>cargo xtask gate0</code> on the merge result in the working tree after <code>verify-dod hook</code> is green; red refuses the merge with an abort/back-merge instruction. WU → <code>epic/*</code> merges are unchanged. Fixes C1 + C2.</p>
-        <p data-item="wu-maps-to">E-GATEPAR · C1, C2 · DoD-W/DoD-E "merge --no-ff" rows.</p>
-        <p data-item="wu-expected">An epic → <code>main</code> merge that combines two individually-green epics into a red tree is refused before the merge commit exists; an up-to-date merge is a cache hit; a WU → epic merge runs no suite.</p>
-        <p data-item="wu-deps">E-GATEPAR.W1 (hook must reach the machine), E-GATEPAR.W2 (cheap hits).</p>
-      </div>
-      <div data-wu="E-GATEPAR.W4">
-        <h3 id="w4">W4 · push-reads-proof — pre-push reuses Gate 0</h3>
-        <p data-item="wu-summary"><code>pre-push</code> calls <code>cargo xtask gate0</code> (cache-aware) instead of a blind suite, when the pushed sha's tree is the checked-out clean tree; otherwise it proves the pushed tree (never skips an unproven sha). Keeps the range check + notes sync. Fixes C3.</p>
-        <p data-item="wu-maps-to">E-GATEPAR · C3 · workflow.html § Hooks (pre-push).</p>
-        <p data-item="wu-expected">Push right after a green merge: no suite run. Push of a dirty or non-HEAD ref: suite runs.</p>
-        <p data-item="wu-deps">E-GATEPAR.W1, E-GATEPAR.W2.</p>
-      </div>
-      <div data-wu="E-GATEPAR.W5">
-        <h3 id="w5">W5 · launch-guard — a slow-launch machine is named, not endured</h3>
-        <p data-item="wu-summary"><code>cargo xtask hooks install</code> (W1) and the suite-running gates probe the machine once: link a fresh tiny binary and time its first launch. Above a threshold → refuse with the Developer Tools fix line, overridable by <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code>. The verdict is cached per machine. <code>cargo-nextest</code> becomes a checked prerequisite and the serial <code>cargo test</code> fallback goes. Fixes C6 (machine side), C7.</p>
-        <p data-item="wu-maps-to">E-GATEPAR · C6, C7 · push timing report F1, F3, F5.</p>
-        <p data-item="wu-expected">On a machine with the Gatekeeper wait, the gate names the cause in seconds instead of a 15-minute run or a false red; without nextest, it refuses with the install line.</p>
-        <p data-item="wu-deps">E-GATEPAR.W1 (the install entrypoint).</p>
-      </div>
-      <div data-wu="E-GATEPAR.W6">
-        <h3 id="w6">W6 · suite-cost — the suite costs its tests, not its structure</h3>
-        <p data-item="wu-summary">Cut what the suite pays around its tests. (1) <code>doctest = false</code> for each crate with zero doc-tests, plus a unit test per crate that fails when a doc comment gains a runnable example, so a doc-test is never silently dropped. (2) Integration tests consolidated to one binary per crate (<code>tests/it/main.rs</code> + modules); the feature-gated hook tests keep their own targets. (3) Re-measure with the report's run-5 script. Fixes C8.</p>
-        <p data-item="wu-maps-to">E-GATEPAR · C8 · push timing report F6, F7.</p>
-        <p data-item="wu-expected">On this machine, <code>cargo test --all</code> after a change drops from 67 s toward its 13–14 s of tests; fewer binaries to link also trims the 56 s compile; no test is lost (passed count unchanged: compare the before/after totals).</p>
-        <p data-item="wu-deps">none: independent of the gate WUs; lands before W7 so the measurement includes it.</p>
-      </div>
-      <div data-wu="E-GATEPAR.W7">
-        <h3 id="w7">W7 · e2e + distill — prove the whole loop, measure, record</h3>
-        <p data-item="wu-summary">The epic e2e (below), a re-run of the push timing report's commands (before/after per check), a new DEC, and the T1 Hooks table update (via <code>mr commit</code>).</p>
+        <h3 id="w3">W3 · close — e2e, distill, sync guide</h3>
+        <p data-item="wu-summary">The epic e2e (below), DECs, T1 updates via <code>mr commit</code>, the E-GATEPAR2 roadmap row, and the per-worktree sync sequence in the epic result.</p>
         <p data-item="wu-maps-to">E-GATEPAR · all · distillation plan.</p>
-        <p data-item="wu-expected">e2e green; before/after timings in the epic result; DEC + workflow.html current.</p>
-        <p data-item="wu-deps">E-GATEPAR.W1–W6.</p>
+        <p data-item="wu-expected">e2e green; DECs + <code>workflow.html</code> current; a sync sequence each worktree can run as written.</p>
+        <p data-item="wu-deps">E-GATEPAR.W1, E-GATEPAR.W2.</p>
       </div>
     </div>
 
+    <h2 id="deferred">Deferred to E-GATEPAR2</h2>
+    <table data-c="deferred">
+      <thead><tr><th>Was</th><th>Work</th><th>Fixes</th></tr></thead>
+      <tbody>
+        <tr><td>W3 merge-proves-tree</td><td>for a merge into <code>main</code> only, <code>pre-merge-commit</code> (and the conflicted-merge path in <code>pre-commit</code>) runs <code>cargo xtask gate0</code> on the merge result after <code>verify-dod hook</code> is green; red refuses the merge</td><td>C1, C2</td></tr>
+        <tr><td>W4 push-reads-proof</td><td><code>pre-push</code> calls the cache-aware <code>gate0</code> instead of a blind suite when the pushed sha's tree is the clean checked-out tree; otherwise proves the pushed tree</td><td>C3</td></tr>
+        <tr><td>W5 launch-guard</td><td>probe first-launch time once per machine; above a threshold refuse with the Developer Tools fix line (override <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code>); <code>cargo-nextest</code> required</td><td>C6, C7</td></tr>
+        <tr><td>W6 suite-cost</td><td><code>doctest = false</code> for crates with no doc-tests (+ a guard test); integration tests consolidated to one binary per crate</td><td>C8</td></tr>
+        <tr><td>W7 measure</td><td>re-run the push timing report's commands, before vs after</td><td>—</td></tr>
+        <tr><td><s>W2 cache-per-key</s></td><td><strong>dropped</strong>: per-worktree <code>target/</code> (this epic's W2) removes the cross-worktree overwrite it existed for; merge and push run in the same checkout and read the same marker</td><td>C5</td></tr>
+      </tbody>
+    </table>
+
     <h2 id="e2e">E2E test plan</h2>
     <div data-item="e2e-plan">
-      <p>Hermetic temp-repo harness (reuse the gate e2es' shared git harness from E-GATETRUTH), hooks installed via W1, a stub suite command so it is deterministic and fast:</p>
+      <p>Hermetic temp repo holding a tiny dependency-free cargo workspace (builds offline in seconds), hooks installed via W1, worktrees created through the real <code>post-checkout</code>:</p>
       <table data-c="e2e-table">
         <thead><tr><th>Scenario</th><th>Asserts</th></tr></thead>
         <tbody>
-          <tr><td>two epics, each green alone, merged in turn into main; the second combination breaks the suite</td><td>second merge refused at pre-merge-commit; <code>main</code> HEAD unchanged</td></tr>
-          <tr><td>green merge, then push to a local bare remote</td><td>push succeeds; suite stub not invoked (cache hit logged)</td></tr>
-          <tr><td>push of a ref whose tree was never proven</td><td>suite stub invoked once</td></tr>
-          <tr><td>launch probe stubbed above the threshold</td><td>gate refuses before any suite run, printing the Developer Tools fix line; below the threshold, the verdict is cached and the probe is not re-run</td></tr>
-          <tr><td>tracked hook edited after install</td><td>edited behaviour runs (or drift refused with fix line)</td></tr>
+          <tr><td>tracked hook edited after install</td><td>the edited behaviour runs on the next commit, in the main checkout and a linked worktree</td></tr>
+          <tr><td>two worktrees change the same workspace crate differently, build in turn, then run their binaries</td><td>each binary prints its own checkout's value; neither build reports the other's artifact fresh</td></tr>
+          <tr><td>new worktree</td><td><code>target/</code> is a directory, not a symlink; third-party artifacts present, workspace-crate artifacts and <code>incremental/</code> absent</td></tr>
+          <tr><td>a worktree whose <code>target</code> is a symlink</td><td><code>cargo xtask lint</code> refuses with <code>cargo xtask target isolate</code>; after isolate it runs</td></tr>
         </tbody>
       </table>
     </div>
@@ -155,9 +144,11 @@ flowchart LR
     <h2 id="distillation">Distillation plan</h2>
     <div data-item="distillation-plan">
       <ul>
-        <li>New DEC (next free number) — <em>the merge proves the tree it creates; the push reads that proof</em>.</li>
-        <li><a href="../decisions/workflow-gates.html">decisions/workflow-gates.html</a> + <code>decisions-index.html</code> — link it; amend DEC-54 (marker shape).</li>
-        <li>T1 <a href="../workflow.html">workflow.html</a> § Hooks + DoD rows — shape changed (merge to main runs Gate 0; launch probe + nextest prerequisites); commit via <code>cargo xtask mr commit … --as &lt;id&gt;</code>.</li>
+        <li>New DEC — <em>git runs the tracked hooks from each checkout</em> (core.hooksPath, the gate guard, install refuses to strand a worktree).</li>
+        <li>New DEC — <em>each worktree builds into its own target; only third-party artifacts are shared, by copy-on-write clone</em> (reverses the shared-<code>target/</code> choice, with the C9 measurements).</li>
+        <li><a href="../decisions/workflow-gates.html">decisions/workflow-gates.html</a> + <code>decisions-index.html</code> — link both; note DEC-54's "installed by cargo-husky at build time" consequence is superseded.</li>
+        <li>T1 <a href="../workflow.html">workflow.html</a> § Hooks (install line, gate guard) and <a href="../testing-strategy.html">testing-strategy.html</a>'s cargo-husky sentence — via <code>cargo xtask mr commit … --as &lt;id&gt;</code>.</li>
+        <li><a href="../backlog/roadmap.html">roadmap</a> Deferred backlog — an E-GATEPAR2 row carrying the deferred table above (this plan is archived at close).</li>
       </ul>
     </div>
 
@@ -166,13 +157,12 @@ flowchart LR
       <table data-c="oq">
         <thead><tr><th>Question</th><th>Decided</th></tr></thead>
         <tbody>
-          <tr><td>WU merges into <code>epic/*</code> also run Gate 0, or only epic → main?</td><td><strong>epic → main only</strong>. WU → epic merges keep the notes-only gate</td></tr>
-          <tr><td><code>core.hooksPath</code> vs reinstall-on-drift?</td><td><strong><code>core.hooksPath</code></strong> → tracked dir; repo-wide config, so every worktree follows at once</td></tr>
-          <tr><td>Shared <code>target/</code> also serialises builds via cargo's lock across worktrees. Split it?</td><td><strong>no</strong>. Out of scope; W5 measures lock wait</td></tr>
-          <tr><td>pre-push for a non-checked-out ref: build it in a temp worktree, or refuse?</td><td><strong>as proposed</strong>: run on HEAD only if HEAD's tree = pushed tree; else a temp worktree on the shared target</td></tr>
-          <tr><td>Q5 (W6): consolidate integration tests to one binary per crate (31 binaries → about 5)?</td><td><strong>yes</strong>. Fewer links and first launches on every change. Costs a move of <code>tests/*.rs</code> into <code>tests/it/</code> modules; the feature-gated hook tests stay separate</td></tr>
-          <tr><td>Q6 (W5): launch probe refuses, or only warns?</td><td><strong>refuse</strong> on gates that run the suite (merge to main, push), with the fix line, overridable by <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> for a machine where the exemption is impossible</td></tr>
-          <tr><td>Q7 (W5): make <code>cargo-nextest</code> required?</td><td><strong>yes</strong>. It overlaps launch waits and reports every red binary instead of stopping at the first</td></tr>
+          <tr><td>Release early, or finish W1–W7 first?</td><td><strong>early</strong> (owner, 2026-11-05): close after W3 so every worktree can sync; the rest becomes E-GATEPAR2</td></tr>
+          <tr><td>Split the shared <code>target/</code>?</td><td><strong>yes</strong> — reversed from v2 of this plan. C9 shows the sharing is unsound, not only slow. Sharing stays only where it is sound: third-party artifacts, by APFS clone</td></tr>
+          <tr><td>Symlink the safe parts of <code>target/</code> instead of cloning?</td><td><strong>no</strong>: cargo keeps third-party and workspace-crate artifacts in the same directories (<code>deps/</code>, <code>build/</code>, <code>.fingerprint/</code>), named only by hash, so no directory symlink separates them</td></tr>
+          <tr><td><code>core.hooksPath</code> vs reinstall-on-drift?</td><td><strong><code>core.hooksPath</code></strong> → tracked dir, relative, repo-wide once no worktree would be stranded</td></tr>
+          <tr><td><code>target/.gate-tally</code> becomes per worktree once <code>target/</code> is. Move it to the git common dir to keep one machine tally?</td><td><strong>proposed default: yes</strong> — settled in the W2 plan</td></tr>
+          <tr><td>Change the dev profile's debug info to stop <code>.rcgu.o</code> regrowth?</td><td><strong>proposed default: no</strong> — W2 measures first; prune is the fix if the size comes back</td></tr>
         </tbody>
       </table>
     </div>

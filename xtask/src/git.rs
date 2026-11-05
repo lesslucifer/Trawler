@@ -238,13 +238,13 @@ fn build_inputs(repo: &Path) -> Result<Vec<String>, String> {
 }
 
 #[cfg(unix)]
-fn is_executable(meta: &std::fs::Metadata) -> bool {
+pub(crate) fn is_executable(meta: &std::fs::Metadata) -> bool {
     use std::os::unix::fs::PermissionsExt as _;
     meta.permissions().mode() & 0o111 != 0
 }
 
 #[cfg(not(unix))]
-fn is_executable(_meta: &std::fs::Metadata) -> bool {
+pub(crate) fn is_executable(_meta: &std::fs::Metadata) -> bool {
     false
 }
 

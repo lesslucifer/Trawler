@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aeb5c0a9f34851f0dfae628" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR.W1 hook-sync plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W1 · hook-sync — installed hooks are the tracked hooks</h1>
+      <p>Git runs the hooks in the checked-out tree, never a stale copy, and every gate refuses a checkout where it would not.</p>
+      <div class="meta">Draft v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-GATEPAR.W1</span> · epic: <a href="2026-11-04-gate-parity-plan.html#w1">E-GATEPAR plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      <code>cargo xtask hooks install</code> sets <code>core.hooksPath</code> to the relative
+      <code>.cargo-husky/hooks</code>, every tracked hook is executable, and each gate entrypoint
+      (<code>verify-dod</code>, <code>gate0</code>, <code>lint</code>, <code>preflight</code>) in a tree
+      that ships <code>.cargo-husky/hooks/</code> refuses with exit 1 and the line
+      <code>cargo xtask hooks install</code> when <code>core.hooksPath</code> is unset, points
+      elsewhere, or a tracked hook is not executable.
+    </p>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart LR
+  subgraph BEFORE["today"]
+    T1[".cargo-husky/hooks/*<br/>(tracked)"] -->|"cargo-husky copies<br/>on first build only"| G1[".git/hooks/*<br/>(drifted copy)"] --> R1["git runs the copy"]
+  end
+  subgraph AFTER["after W1"]
+    T2[".cargo-husky/hooks/*<br/>(tracked, 755)"] --> R2["git runs it<br/>core.hooksPath = .cargo-husky/hooks"]
+    X["cargo xtask verify-dod · gate0 · lint · preflight"] -->|"hooksPath ≠ tracked dir<br/>or hook not +x"| REF["exit 1 + fix line"]
+  end
+      </pre>
+      <div class="caption">One copy of each hook — the one in the worktree's own checkout. The relative path makes each worktree run its own branch's hooks.</div>
+    </div>
+
+    <table data-c="changes">
+      <thead><tr><th>Change</th><th>Where</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><code>hooks install</code> + <code>hooks::verify</code></td><td><code>xtask/src/hooks.rs</code> (new), <code>xtask/src/lib.rs</code></td><td>one setter, one checker; the checker guards the gate entrypoints in <code>run</code></td></tr>
+        <tr><td>Relative path, exact match</td><td><code>hooks::verify</code></td><td>an absolute path pins every worktree to <em>one</em> worktree's hooks — the drift W1 removes</td></tr>
+        <tr><td>Check skipped when the tree has no <code>.cargo-husky/hooks/</code></td><td><code>hooks::verify</code></td><td>temp repos in the gate's own test suites ship no hooks and must keep running</td></tr>
+        <tr><td><code>commit-msg</code>, <code>pre-merge-commit</code> → mode 755</td><td><code>.cargo-husky/hooks/</code></td><td>git skips a non-executable hook under <code>core.hooksPath</code> (cargo-husky chmod-ed its copies)</td></tr>
+        <tr><td><code>cargo-husky</code> dev-dependency removed; hook headers stop saying "installed by cargo-husky"</td><td><code>Cargo.toml</code>, <code>Cargo.lock</code>, hook files</td><td>the copy-installer is the drift source</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-GATEPAR · cause C4 (installed hooks drifted from tracked sources) · <code>workflow.html</code> § Hooks — consistent with the W1 summary block in the <a href="2026-11-04-gate-parity-plan.html#w1">epic plan</a>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected">
+      <li>After <code>cargo xtask hooks install</code>, editing a tracked hook changes what the next <code>git commit</code> runs — no build, no reinstall — in the main checkout and every linked worktree.</li>
+      <li>In a checkout without <code>core.hooksPath</code> (or with it pointing elsewhere), <code>cargo xtask lint</code> / <code>gate0</code> / <code>verify-dod …</code> / <code>preflight …</code> print the refusal and <code>cargo xtask hooks install</code>, exit 1, and run nothing else.</li>
+      <li>A tracked hook that loses its executable bit is refused by the same check, by name.</li>
+      <li>This machine: <code>core.hooksPath</code> set once in the shared repo config — all worktrees switch at once.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <thead><tr><th>Level</th><th>Test</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>unit</td><td><code>xtask/src/hooks.rs</code> tests (temp <code>git init</code> repos)</td><td>no tracked dir → pass · unset → refused, names the fix line · absolute/other path → refused · relative tracked path → pass · a non-executable hook → refused by name · <code>install</code> writes the relative value and then verifies green</td></tr>
+        <tr><td>unit</td><td>tracked hooks are executable (reads the real <code>.cargo-husky/hooks/</code>)</td><td>every file in the tracked dir has an executable bit — pins the 755 mode change</td></tr>
+        <tr><td>integration</td><td><code>xtask/tests/hooks_install.rs</code> (real <code>xtask</code> binary, hermetic temp repo + linked worktree, scrubbed <code>GIT_*</code>/HOME)</td><td>(1) gate entrypoint (<code>lint</code>) in an un-installed tree exits 1 with the fix line and spawns no cargo · (2) after <code>hooks install</code>, a tracked <code>pre-commit</code> edit takes effect on the next commit · (3) a linked worktree runs <em>its own</em> checkout's hook without a second install</td></tr>
+        <tr><td>e2e</td><td>—</td><td>owned by the epic e2e (W7, scenario "tracked hook edited after install"); not repeated here</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
