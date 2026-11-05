@@ -95,7 +95,7 @@ mod post_tool_use {
     fn green_ready_doc_is_silent() {
         let out = run_on_doc(green_ready_doc(), "result.html");
         assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
-        assert!(stderr(&out).is_empty());
+        assert_eq!(stderr(&out), "");
     }
 
     #[test]
@@ -132,7 +132,7 @@ mod post_tool_use {
     fn codex_patch_payload_is_silent_on_a_green_doc() {
         let out = run_on_codex_patch(green_ready_doc(), "result.html");
         assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
-        assert!(stderr(&out).is_empty());
+        assert_eq!(stderr(&out), "");
     }
 
     #[test]

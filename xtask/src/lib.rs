@@ -541,8 +541,8 @@ mod tests {
             super::tips_from_reflog("merge wu/x/one wu/x/two"),
             vec!["wu/x/one", "wu/x/two"]
         );
-        assert!(super::tips_from_reflog("pull origin main").is_empty());
-        assert!(super::tips_from_reflog("").is_empty());
+        assert_eq!(super::tips_from_reflog("pull origin main").len(), 0);
+        assert_eq!(super::tips_from_reflog("").len(), 0);
     }
 
     #[test]

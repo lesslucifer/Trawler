@@ -719,7 +719,7 @@ mod tests {
         let message = super::records(b"not a record\nstill not one\n", Path::new("/t/.gate-tally"))
             .expect_err("no record is readable");
         assert!(message.contains("none is a readable record"), "{message}");
-        assert!(super::records(b"\n\n", Path::new("/t/.gate-tally")).unwrap().is_empty());
+        assert_eq!(super::records(b"\n\n", Path::new("/t/.gate-tally")).unwrap().len(), 0);
     }
 
     fn bill(finders: u32, verifiers: u32, by_finder: &[(&str, u32, u32)]) -> Fleet {
