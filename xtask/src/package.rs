@@ -102,7 +102,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let installed = if options.universal { installed_targets()? } else { String::new() };
     let plan = plan(os, &options, &installed.lines().collect::<Vec<_>>())?;
     let ui = repo.join("ui");
-    pnpm(&ui, os.pnpm(), &["install".to_string()])?;
+    pnpm(&ui, os.pnpm(), &["install".to_string(), "--frozen-lockfile".to_string()])?;
     pnpm(&ui, plan.program, &plan.args)?;
     let bundle_dir = repo.join("target").join(&plan.bundle_dir);
     let artifacts = artifacts(&bundle_dir)?;
@@ -185,27 +185,40 @@ fn verify_signature(app: &Path) -> Result<(), String> {
     }
 }
 
-/// The raw value of `key` inside `[section]` of a TOML file, quotes kept; an
-/// array runs to its closing bracket, across lines.
-fn toml_value<'a>(toml: &'a str, section: &str, key: &str) -> Option<&'a str> {
+fn without_comment(line: &str) -> &str {
+    let mut quoted = false;
+    for (at, c) in line.char_indices() {
+        match c {
+            '"' => quoted = !quoted,
+            '#' if !quoted => return &line[..at],
+            _ => {}
+        }
+    }
+    line
+}
+
+/// The value of `key` inside `[section]` of a TOML file, quotes kept and
+/// comments dropped; an array runs to its closing bracket, across lines.
+fn toml_value(toml: &str, section: &str, key: &str) -> Option<String> {
     let mut inside = false;
-    let mut rest = toml;
-    while !rest.is_empty() {
-        let (line, after) = rest.split_once('\n').unwrap_or((rest, ""));
-        let trimmed = line.trim();
-        if trimmed.starts_with('[') {
-            inside = trimmed == section;
-        } else if let Some((k, v)) = line.split_once('=').filter(|_| inside) {
-            if k.trim() == key {
-                let from_value = &rest[line.len() - v.trim_start().len()..];
-                return if from_value.starts_with('[') {
-                    from_value.find(']').map(|end| &from_value[..=end])
-                } else {
-                    Some(v.trim())
-                };
+    let mut lines = toml.lines().map(without_comment).map(str::trim);
+    while let Some(line) = lines.next() {
+        if line.starts_with('[') {
+            inside = line == section;
+            continue;
+        }
+        let Some((k, v)) = line.split_once('=').filter(|_| inside) else { continue };
+        if k.trim() != key {
+            continue;
+        }
+        let mut value = v.trim().to_string();
+        if value.starts_with('[') {
+            while !value.contains(']') {
+                value.push('\n');
+                value.push_str(lines.next()?);
             }
         }
-        rest = after;
+        return Some(value);
     }
     None
 }
@@ -214,16 +227,28 @@ fn unquoted(value: &str) -> Option<&str> {
     value.strip_prefix('"')?.strip_suffix('"')
 }
 
-pub fn workspace_version(root_manifest: &str) -> Option<&str> {
-    unquoted(toml_value(root_manifest, "[workspace.package]", "version")?)
+pub fn workspace_version(root_manifest: &str) -> Option<String> {
+    unquoted(&toml_value(root_manifest, "[workspace.package]", "version")?).map(str::to_string)
 }
 
-fn workspace_members(root_manifest: &str) -> Vec<&str> {
-    let list = toml_value(root_manifest, "[workspace]", "members").unwrap_or_default();
-    let mut members: Vec<&str> =
-        list.trim_matches(['[', ']']).split(',').filter_map(|m| unquoted(m.trim())).collect();
-    members.insert(0, ".");
-    members
+fn workspace_members(root_manifest: &str) -> Result<Vec<String>, String> {
+    let mut members = vec![".".to_string()];
+    let Some(list) = toml_value(root_manifest, "[workspace]", "members") else {
+        return Ok(members);
+    };
+    for entry in list.trim_matches(['[', ']']).split(',').map(str::trim).filter(|e| !e.is_empty()) {
+        let member = unquoted(entry).ok_or_else(|| {
+            format!("Cargo.toml: [workspace] members holds {entry}, not a quoted path")
+        })?;
+        members.push(member.to_string());
+    }
+    Ok(members)
+}
+
+fn inherits_version(manifest: &str) -> bool {
+    toml_value(manifest, "[package]", "version.workspace").as_deref() == Some("true")
+        || toml_value(manifest, "[package]", "version")
+            .is_some_and(|value| value.replace(' ', "") == "{workspace=true}")
 }
 
 /// Every place the version could drift from `[workspace.package] version`,
@@ -236,11 +261,15 @@ pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
     let Some(version) = workspace_version(&root) else {
         return Ok(vec!["Cargo.toml: no [workspace.package] version".to_string()]);
     };
+    let members = match workspace_members(&root) {
+        Ok(members) => members,
+        Err(unreadable) => return Ok(vec![unreadable]),
+    };
     let mut drift = Vec::new();
-    for member in workspace_members(&root) {
-        let manifest = Path::new(member).join("Cargo.toml");
+    for member in members {
+        let manifest = Path::new(&member).join("Cargo.toml");
         let manifest = manifest.to_string_lossy();
-        if toml_value(&read(&manifest)?, "[package]", "version.workspace") != Some("true") {
+        if !inherits_version(&read(&manifest)?) {
             drift.push(format!("{manifest}: [package] must say version.workspace = true"));
         }
     }
@@ -253,7 +282,7 @@ pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
         );
     }
     let ui_version = json("ui/package.json")?["version"].as_str().map(str::to_string);
-    if ui_version.as_deref() != Some(version) {
+    if ui_version != Some(version.clone()) {
         drift.push(format!("ui/package.json: version {ui_version:?}, the workspace is {version}"));
     }
     Ok(drift)
@@ -375,13 +404,13 @@ mod tests {
 
     #[test]
     fn the_workspace_version_is_read_from_its_own_section() {
-        assert_eq!(workspace_version(ROOT), Some("1.2.3-rc.1"));
+        assert_eq!(workspace_version(ROOT).as_deref(), Some("1.2.3-rc.1"));
         assert_eq!(workspace_version("[package]\nversion = \"9.9.9\"\n"), None);
     }
 
     #[test]
     fn the_members_are_the_root_and_the_listed_crates() {
-        assert_eq!(workspace_members(ROOT), [".", "xtask", "ui/src-tauri"]);
+        assert_eq!(workspace_members(ROOT).unwrap(), [".", "xtask", "ui/src-tauri"]);
     }
 
     const MULTILINE_ROOT: &str = "[workspace]\nmembers = [\n    \"xtask\",\n    \"ui/src-tauri\",\n]\n\n\
@@ -389,7 +418,30 @@ mod tests {
 
     #[test]
     fn members_listed_over_several_lines_are_all_read() {
-        assert_eq!(workspace_members(MULTILINE_ROOT), [".", "xtask", "ui/src-tauri"]);
+        assert_eq!(workspace_members(MULTILINE_ROOT).unwrap(), [".", "xtask", "ui/src-tauri"]);
+    }
+
+    const COMMENTED_ROOT: &str = "[workspace] # the crates\nmembers = [\n    \"xtask\", # tooling\n    # \"retired\", ] gone\n    \"ui/src-tauri\",\n]\n\n\
+        [workspace.package]\nversion = \"1.2.3-rc.1\" # bumped by a release commit\n";
+
+    #[test]
+    fn comments_neither_drop_a_member_nor_end_the_list() {
+        assert_eq!(workspace_members(COMMENTED_ROOT).unwrap(), [".", "xtask", "ui/src-tauri"]);
+        assert_eq!(workspace_version(COMMENTED_ROOT).as_deref(), Some("1.2.3-rc.1"));
+    }
+
+    #[test]
+    fn a_member_entry_that_is_not_a_quoted_path_is_named_not_skipped() {
+        let root = "[workspace]\nmembers = [\"xtask\", crates/*]\n";
+        assert!(workspace_members(root).unwrap_err().contains("crates/*"));
+    }
+
+    #[test]
+    fn both_spellings_of_inheritance_inherit() {
+        assert!(inherits_version("[package]\nversion.workspace = true # one source\n"));
+        assert!(inherits_version("[package]\nversion = { workspace = true }\n"));
+        assert!(!inherits_version("[package]\nversion = \"0.1.0\"\n"));
+        assert!(!inherits_version("[dependencies]\nversion.workspace = true\n"));
     }
 
     #[test]
