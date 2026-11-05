@@ -955,6 +955,19 @@
             window, live data, lifted pane caps, write-back, a close ask, the payload in a URL or as JSON</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-81-one-version-a-release-only-bundle-one-package-command.html"><code>dec-81-one-version-a-release-only-bundle-one-package-command.html</code></a></td>
+          <td><span class="badge id">DEC-81</span></td>
+          <td><strong>One version, a release-only bundle, one package command.</strong> The version is
+            <code>[workspace.package] version</code>; members inherit it, <code>tauri.conf.json</code> carries none,
+            <code>ui/package.json</code> equals it, and a test over <code>cargo metadata</code> holds all of them to
+            <code>trawler-ui</code>'s. Vite records <code>ui/dist/bundle-flavour</code>, and the shell rebuilds a bundle of
+            the other flavour, so the e2e bundle ships only under the <code>e2e</code> feature. <code>cargo xtask package
+            [--universal] [--profile]</code> builds the host's installers from the frozen lockfile with
+            <code>VITE_E2E</code> removed, signs ad-hoc on macOS and refuses unless <code>codesign --verify</code> passes.
+            Rejected: a version rewritten from the tag, staleness by age, reading manifests' text</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

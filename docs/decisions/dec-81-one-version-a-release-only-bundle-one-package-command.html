@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4d5b9f34851f0dfae8af">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-81: one version, a release-only bundle, one package command</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-81 — one version, a release-only bundle, one package command</h1>
+      <p>What every Trawler installer is built from: one committed version, a front-end bundle that can never be the e2e
+        one, and one command that builds and checks the host's installers.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG.W1</strong> from the owner's
+        rulings Q2, Q3, Q8, Q15 and Q18 on the E-PKG plan · UC-INSTALL (the artifact; the release itself is E-PKG2's) ·
+        <strong>active</strong> · numbered DEC-81 because DEC-77 to DEC-80 are held by epics still open</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Before</th><th>What went wrong</th></tr>
+      <tr><td><code>0.1.0</code> typed in five files</td><td>a release's tag could be checked against none of them, because
+        no one of them was the version</td></tr>
+      <tr><td>the shell's build script judged <code>ui/dist</code> stale by age alone</td><td>a <code>cargo run</code>
+        after <code>cargo xtask ui e2e</code> embedded the e2e bundle, WebDriver plugin included (E-ONEAPP.W1's
+        finding)</td></tr>
+      <tr><td>the app ran only from a clone</td><td>nothing built, signed or checked an installer</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The version is <code>[workspace.package] version</code> and nothing else. A bundle
+        says which flavour it is, and the app embeds only the flavour its build wants. <code>cargo xtask package</code>
+        is the one way an installer is built, and on macOS it does not finish until the signature verifies.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The version lives in <code>[workspace.package] version</code>; every member says
+        <code>version.workspace = true</code>; <code>tauri.conf.json</code> carries none, so Tauri stamps
+        <code>trawler-ui</code>'s; <code>ui/package.json</code> equals it. <code>the_tree_carries_one_version</code> reads
+        the members through <code>cargo metadata</code> and is red when any member or <code>ui/package.json</code> differs
+        from what <code>trawler-ui</code> ships</td><td>a release checks its tag against this one value and never rewrites it
+        (Q8, Q18). Reading <code>cargo metadata</code>, not the manifests' text, leaves membership to Cargo (W1's review,
+        round 3)</td></tr>
+      <tr><td>2</td><td>Vite writes <code>ui/dist/bundle-flavour</code>: <code>e2e</code> when <code>VITE_E2E</code> is set,
+        <code>release</code> otherwise. The shell's build script wants <code>e2e</code> only under the <code>e2e</code>
+        feature. A bundle of the other flavour, or one that records none, is stale however new, and is rebuilt in the
+        wanted flavour</td><td>the WebDriver plugin can reach a build only through the feature that asks for it</td></tr>
+      <tr><td>3</td><td><code>cargo xtask package [--universal] [--profile &lt;name&gt;]</code> installs the UI's packages
+        from the lockfile unchanged (<code>--frozen-lockfile</code>) and runs <code>tauri build</code> with the host's
+        bundles: <code>app,dmg</code> · <code>msi,nsis</code> · <code>deb,rpm,appimage</code>. <code>VITE_E2E</code> is
+        removed from its environment. A request it cannot meet is refused before any build: <code>--universal</code> off
+        macOS, or without both Mac targets (the refusal names the <code>rustup target add</code> line)</td><td>the release
+        workflow and the packaging e2e build what a person builds (Q15); a release never rewrites its own lockfile</td></tr>
+      <tr><td>4</td><td>No paid certificate (Q3). macOS signs ad-hoc (<code>signingIdentity: "-"</code>, Tauri's default
+        hardened-runtime flag kept), and <code>package</code> refuses unless the <code>.app</code> passes
+        <code>codesign --verify --deep --strict</code>. Windows ships unsigned</td><td>an unsigned arm64 binary is killed
+        at launch; a check inside the command means no caller can skip it</td></tr>
+      <tr><td>5</td><td><code>[profile.package-test]</code> is <code>release</code> without LTO, for the tests that
+        package; <code>--universal</code> builds <code>universal-apple-darwin</code>, one <code>.dmg</code> for both
+        architectures (Q2)</td><td>a packaging test pays for bundling, not for link-time optimisation</td></tr>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>rewrite the version from the tag, as Strata does</td><td>the released binary would be built from a tree no
+        gate proved (Q18)</td></tr>
+      <tr><td>keep judging the bundle by age, and rebuild it before each release</td><td>leaves <code>cargo run</code>
+        embedding the e2e bundle, which is where the finding came from</td></tr>
+      <tr><td>read the members' versions from the manifests' text</td><td>it took two review rounds to stop hiding a member,
+        and it duplicated <code>cargo metadata</code></td></tr>
+    </table>
+
+    <h2 id="held-by">Held by</h2>
+    <table data-c="held-by">
+      <tr><th>Rule</th><th>Test</th></tr>
+      <tr><td>1</td><td><code>xtask/src/package.rs</code>: <code>the_tree_carries_one_version</code>,
+        <code>each_source_that_disagrees_is_named</code></td></tr>
+      <tr><td>2</td><td><code>ui/src-tauri/src/bundle.rs</code> unit tests; <code>xtask/tests/package_bundle.rs</code>
+        case 1 (a plain build after an e2e bundle)</td></tr>
+      <tr><td>3–5</td><td><code>xtask/src/package.rs</code> plan and refusal tests; <code>package_bundle</code> case 2
+        (a package built with <code>VITE_E2E=1</code> set, verified, and captured through under a launcher's
+        environment), run with <code>--features package-tests</code></td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

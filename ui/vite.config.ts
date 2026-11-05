@@ -1,11 +1,24 @@
 /// <reference types="vitest/config" />
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
 const host = process.env.TAURI_DEV_HOST;
 
+// The shell's build script reads this file and rebuilds a bundle of the other
+// flavour, so an e2e bundle is never embedded in a release (bundle.rs).
+const bundleFlavour: Plugin = {
+  name: "bundle-flavour",
+  generateBundle() {
+    this.emitFile({
+      type: "asset",
+      fileName: "bundle-flavour",
+      source: process.env.VITE_E2E ? "e2e" : "release",
+    });
+  },
+};
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), bundleFlavour],
   clearScreen: false,
   server: {
     port: 1420,

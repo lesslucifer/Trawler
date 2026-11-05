@@ -5,6 +5,7 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
 use crate::git::git;
@@ -53,22 +54,26 @@ struct Target {
     name: String,
 }
 
+/// The checkout's own `cargo metadata`, read into whichever fields the caller names.
+pub fn cargo_metadata<T: DeserializeOwned>(checkout: &Path) -> Result<T, String> {
+    let out = Command::new("cargo")
+        .args(["metadata", "--no-deps", "--offline", "--format-version", "1"])
+        .current_dir(checkout)
+        .output()
+        .map_err(|e| format!("failed to spawn cargo metadata: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "cargo metadata in {} failed: {}",
+            checkout.display(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    serde_json::from_slice(&out.stdout).map_err(|e| format!("cargo metadata output: {e}"))
+}
+
 impl Workspace {
     pub fn of(checkout: &Path) -> Result<Self, String> {
-        let out = Command::new("cargo")
-            .args(["metadata", "--no-deps", "--offline", "--format-version", "1"])
-            .current_dir(checkout)
-            .output()
-            .map_err(|e| format!("failed to spawn cargo metadata: {e}"))?;
-        if !out.status.success() {
-            return Err(format!(
-                "cargo metadata in {} failed: {}",
-                checkout.display(),
-                String::from_utf8_lossy(&out.stderr).trim()
-            ));
-        }
-        let metadata: Metadata = serde_json::from_slice(&out.stdout)
-            .map_err(|e| format!("cargo metadata output: {e}"))?;
+        let metadata: Metadata = cargo_metadata(checkout)?;
         Ok(Self::named(metadata.packages.iter().flat_map(|package| {
             std::iter::once(package.name.as_str())
                 .chain(package.targets.iter().map(|t| t.name.as_str()))
