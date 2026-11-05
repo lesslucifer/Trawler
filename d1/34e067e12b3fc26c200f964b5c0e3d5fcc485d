@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU E-PKG2.W5 -> epic/packaging-v2 (finders also read ui/src-tauri/ and login-service/ at the caller's request)"
+epic: E-PKG2
+wu: E-PKG2.W5
+branch: wu/packaging-v2/bg-service-sync
+base: 7a008d7e93b79d02fc96d997ee994d205a8120af
+head: d134e067e12b3fc26c200f964b5c0e3d5fcc485d
+diff_sha256: 8027343c743ef0c494e284b55b8dd7b8bb9b7bd474bb3c05d58f0bdcf6309673
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 4
+  by_finder:
+    correctness: { found: 4, verified: 3 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 6, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "a window closed under a failed-install dialog on the quit_app path reaches update::end with nothing pending and exits under the dialog"
+    waived: "fixed in the next commit with C1's fix (end does not exit while a failed install is told); this note binds d134e067, before it"
+  - finding: "no test drives quit_app -> update::end with a staged update"
+    waived: "update::end's install calls restart, which re-executes the test binary under the mock runtime; W6's rc update is the hand check, and the next commit tests end's no-exit-while-telling branch"
+verdict: FAIL
+date: 2026-11-06
