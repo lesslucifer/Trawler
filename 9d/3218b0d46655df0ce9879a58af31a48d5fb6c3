@@ -1,0 +1,48 @@
+schema: cr/v5
+scope: "epic E-BGSVC -> main"
+epic: E-BGSVC
+branch: epic/bg-service
+base: 8ee198f816bdc921f4c727ff705d78ea275938bd
+head: 9d3218b0d46655df0ce9879a58af31a48d5fb6c3
+diff_sha256: 193ba4f40b419f9009ca14162abbf7f3fc2224eca72aa77d4cac72f8d1f1a72c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 11
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency: { found: 5, verified: 0 }
+    altitude: { found: 6, verified: 0 }
+findings: { found: 14, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "tray apply re-decodes and re-sets an unchanged glyph on every core-state change (ui/src-tauri, outside the hash)"
+    waived: "cold path, one small PNG per state change"
+  - finding: "every window destroy reads keep-capturing.json before checking the label is main (ui/src-tauri)"
+    waived: "one small file read per window destroy; DEC-77 rule 2 reads on every decision, never cached"
+  - finding: "each close makes two IPC reads (keep_capturing_read, tray_available)"
+    waived: "cold path; tray availability is the shell fact DEC-77 makes the window ask for"
+  - finding: "a Windows login-item write spawns reg.exe again to read back (ui/src-tauri)"
+    waived: "DEC-77 rule 9: the OS entry is read back each time, the last write wins"
+  - finding: "a tray Quit with no window builds the main window to run the check (ui/src-tauri)"
+    waived: "deliberate: DEC-77 rule 10 and DEC-64, the window asks"
+  - finding: "the close-time rule is encoded in closeDecision and again in stays_windowless"
+    waived: "verifier refuted the drift: DEC-77 rule 2 reads on every decision; the residual stale-Settings case is on the roadmap"
+  - finding: "the quit-vs-close state machine lives in a React hook"
+    waived: "verifier refuted: DEC-77 rule 10 and DEC-64 put the check in the window; a new entry point calls request_quit and needs no hook change"
+  - finding: "keepCapturing writes then destroys in two steps; quitInstead swallows a failed write"
+    waived: "quitInstead is the user answer even unstored, by design (the next close asks again)"
+  - finding: "Linux/Windows login-item logic lives in the shell while macOS lives in login-service"
+    waived: "DEC-84 puts only the unsafe macOS path in its own crate"
+  - finding: "General.tsx and closeConfirm.ts each handle a refused preference write"
+    waived: "they share refusalWords; the reactions differ by surface"
+  - finding: "handler_names would split a cfg(any(a, b)) attribute on its comma"
+    waived: "no such attribute exists in the handler list; the detector unit test pins the gated case it reads"
+verdict: FAIL
+date: 2026-11-06
