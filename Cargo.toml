@@ -2,6 +2,9 @@
 members = ["xtask", "ui/src-tauri"]
 default-members = [".", "ui/src-tauri"]
 
+[workspace.package]
+version = "0.1.0"
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 rust_2018_idioms = { level = "warn", priority = -1 }
@@ -21,7 +24,7 @@ print_stderr = "warn"
 
 [package]
 name = "trawler"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 description = "A native HTTP(S) debugging proxy that intercepts and inspects network traffic, à la Charles / Proxyman"
 license = "MIT"
@@ -106,3 +109,8 @@ workspace = true
 lto = true
 codegen-units = 1
 strip = true
+
+[profile.package-test]
+inherits = "release"
+lto = false
+codegen-units = 16
