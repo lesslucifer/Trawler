@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: be4fbb461692c0b6e235b518b1ae30be095bd966
+base: a2098f848515f891ebcb10670585ea0c9e3b1678
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w7-e2e-distill-result.html
+report_sha256: d9c82550234abc6014b9245d6bb7b637b499102e512517264c00d68852184a83
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECd6I9mmfwbv/OSRAr24I+lg7GuIfk04a9uBJiOK4j0Jzr8GRjij7kv4Z
+  5xABgfiAb++OhGDi+zdN3mzt4CqxAL
+  -----END SSH SIGNATURE-----
