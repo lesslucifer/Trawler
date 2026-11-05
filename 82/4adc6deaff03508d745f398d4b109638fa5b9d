@@ -1,0 +1,22 @@
+schema: cr/v5
+scope: "standalone commit 824adc6d on epic/bg-service"
+base: 72472a3764126201cb65b608bf58f8a8a618879a
+head: 824adc6deaff03508d745f398d4b109638fa5b9d
+diff_sha256: 2d2961d8dccf646e71793628b475a69c59222dafc77f3128476ff1225c6363c9
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
