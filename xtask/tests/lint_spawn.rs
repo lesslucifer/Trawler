@@ -20,6 +20,7 @@ struct Env {
     home: std::path::PathBuf,
     log: std::path::PathBuf,
     git_env_log: std::path::PathBuf,
+    cwd_log: std::path::PathBuf,
     path: String,
 }
 
@@ -36,18 +37,27 @@ impl Env {
         fs::create_dir_all(&home).unwrap();
         let log = dir.path().join("cargo-calls.log");
         let git_env_log = dir.path().join("cargo-git-env.log");
+        let cwd_log = dir.path().join("cargo-cwd.log");
 
         let shim = bin.join("cargo");
         fs::write(
             &shim,
             format!(
-                "#!/bin/sh\necho \"$@\" >> \"{}\"\nenv | grep '^GIT_' >> \"{}\"\nexit {cargo_exit}\n",
+                "#!/bin/sh\necho \"$@\" >> \"{}\"\nenv | grep '^GIT_' >> \"{}\"\npwd -P >> \"{}\"\nexit {cargo_exit}\n",
                 log.display(),
-                git_env_log.display()
+                git_env_log.display(),
+                cwd_log.display()
             ),
         )
         .unwrap();
         fs::set_permissions(&shim, fs::Permissions::from_mode(0o755)).unwrap();
+        let pnpm = bin.join("pnpm");
+        fs::write(
+            &pnpm,
+            format!("#!/bin/sh\necho \"pnpm $@ in $(pwd -P)\" >> \"{}\"\nexit 0\n", log.display()),
+        )
+        .unwrap();
+        fs::set_permissions(&pnpm, fs::Permissions::from_mode(0o755)).unwrap();
 
         let env = Self {
             _dir: dir,
@@ -55,6 +65,7 @@ impl Env {
             home,
             log,
             git_env_log,
+            cwd_log,
             path: format!("{}:{}", bin.display(), std::env::var("PATH").unwrap_or_default()),
         };
         env.git(&["init", "-q", "-b", "main"]);
@@ -121,6 +132,42 @@ impl Env {
         (out.status.success(), String::from_utf8_lossy(&out.stdout).into_owned())
     }
 
+    fn git_stdout(&self, args: &[&str]) -> String {
+        let out = self.hermetic("git").args(args).current_dir(&self.repo).output().unwrap();
+        String::from_utf8_lossy(&out.stdout).trim().to_string()
+    }
+
+    fn gate0_push(&self, refspecs: &str) -> (bool, String) {
+        use std::io::Write as _;
+        let mut child = self
+            .hermetic(env!("CARGO_BIN_EXE_xtask"))
+            .args(["gate0", "push"])
+            .current_dir(&self.repo)
+            .env("PATH", &self.path)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        child.stdin.take().unwrap().write_all(refspecs.as_bytes()).unwrap();
+        let out = child.wait_with_output().unwrap();
+        (out.status.success(), String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+
+    fn cargo_dirs(&self) -> Vec<String> {
+        fs::read_to_string(&self.cwd_log).unwrap_or_default().lines().map(str::to_string).collect()
+    }
+
+    fn scratch_root(&self) -> std::path::PathBuf {
+        self.repo.join("target").join("push-proof").canonicalize().unwrap()
+    }
+
+    fn assert_no_scratch_left(&self) {
+        let root = self.repo.join("target").join("push-proof");
+        let left = fs::read_dir(&root).map_or(0, Iterator::count);
+        assert_eq!(left, 0, "the scratch worktree must be removed");
+        assert_eq!(self.git_stdout(&["worktree", "list"]).lines().count(), 1);
+    }
+
     fn git_env_seen_by_cargo(&self) -> String {
         fs::read_to_string(&self.git_env_log).unwrap_or_default()
     }
@@ -135,6 +182,10 @@ impl Env {
             .find(|c| c.starts_with("clippy"))
             .expect("lint must spawn clippy on a cache miss")
     }
+}
+
+fn push_line(sha: &str) -> String {
+    format!("refs/heads/epic/x {sha} refs/heads/epic/x 0000000000000000000000000000000000000000\n")
 }
 
 // Git exports GIT_* to a test process running under a hook; inherited, GIT_DIR
@@ -242,4 +293,104 @@ fn a_green_merged_tree_is_cached_and_the_next_merge_of_it_spawns_nothing() {
     assert!(ok);
     assert!(said.contains("skipped"), "{said}");
     assert_eq!(env.calls().len(), after_first, "a proven tree spawns no cargo process");
+}
+
+#[test]
+fn a_push_of_the_proven_clean_head_spawns_nothing() {
+    let env = Env::new(0);
+    let (ok, said) = env.gate0_push(&push_line(&env.git_stdout(&["rev-parse", "HEAD"])));
+    assert!(ok, "{said}");
+    let after_first = env.calls().len();
+    let (ok, said) = env.gate0_push(&push_line(&env.git_stdout(&["rev-parse", "HEAD"])));
+    assert!(ok);
+    assert!(said.contains("gate0 skipped"), "the push reads the marker: {said}");
+    assert_eq!(env.calls().len(), after_first, "a proven tree spawns no cargo process");
+}
+
+#[test]
+fn a_push_of_another_tree_is_proven_in_a_scratch_worktree_then_removed() {
+    let env = Env::new(0);
+    let older = env.git_stdout(&["rev-parse", "HEAD"]);
+    fs::write(env.repo.join("src.rs"), "pub fn b() {}\n").unwrap();
+    env.git(&["commit", "-q", "-am", "next"]);
+
+    let (ok, said) = env.gate0_push(&push_line(&older));
+    assert!(ok, "{said}");
+    assert!(said.contains(&format!("pushed {}", &older[..10])), "{said}");
+    let scratch = env.scratch_root();
+    assert!(
+        env.cargo_dirs().iter().any(|dir| dir.starts_with(scratch.to_str().unwrap())),
+        "the suite must run in the scratch worktree: {:?}",
+        env.cargo_dirs()
+    );
+    env.assert_no_scratch_left();
+}
+
+#[test]
+fn a_dirty_worktree_never_vouches_for_the_pushed_head() {
+    let env = Env::new(0);
+    let head = env.git_stdout(&["rev-parse", "HEAD"]);
+    fs::write(env.repo.join("src.rs"), "pub fn dirty() {}\n").unwrap();
+
+    let (ok, said) = env.gate0_push(&push_line(&head));
+    assert!(ok, "{said}");
+    let scratch = env.scratch_root();
+    let dirs = env.cargo_dirs();
+    assert!(
+        !dirs.is_empty() && dirs.iter().all(|dir| dir.starts_with(scratch.to_str().unwrap())),
+        "{dirs:?}"
+    );
+    env.assert_no_scratch_left();
+}
+
+#[test]
+fn a_red_pushed_tree_refuses_and_leaves_no_scratch() {
+    let env = Env::new(1);
+    let head = env.git_stdout(&["rev-parse", "HEAD"]);
+    fs::write(env.repo.join("src.rs"), "pub fn dirty() {}\n").unwrap();
+
+    let (ok, said) = env.gate0_push(&push_line(&head));
+    assert!(!ok, "{said}");
+    assert!(said.contains(xtask::gate0::PUSH_REFUSED), "{said}");
+    env.assert_no_scratch_left();
+}
+
+#[test]
+fn a_push_of_only_notes_and_deletions_runs_no_gate0() {
+    let env = Env::new(0);
+    let zero = "0000000000000000000000000000000000000000";
+    let head = env.git_stdout(&["rev-parse", "HEAD"]);
+    let refspecs = format!(
+        "refs/notes/test {head} refs/notes/test {zero}\n(delete) {zero} refs/heads/gone {head}\n"
+    );
+    let (ok, said) = env.gate0_push(&refspecs);
+    assert!(ok, "{said}");
+    assert!(env.calls().is_empty(), "{:?}", env.calls());
+}
+
+#[test]
+fn a_scratch_worktree_gets_the_ui_packages_before_the_suite_builds() {
+    let env = Env::new(0);
+    fs::create_dir_all(env.repo.join("ui")).unwrap();
+    fs::write(env.repo.join("ui/package.json"), "{}\n").unwrap();
+    env.git(&["add", "-A"]);
+    env.git(&["commit", "-q", "-m", "ui"]);
+    let head = env.git_stdout(&["rev-parse", "HEAD"]);
+    fs::write(env.repo.join("src.rs"), "pub fn dirty() {}\n").unwrap();
+
+    let (ok, said) = env.gate0_push(&push_line(&head));
+    assert!(ok, "{said}");
+    let calls = env.calls();
+    let install = calls
+        .iter()
+        .position(|c| c.starts_with("pnpm install --frozen-lockfile"))
+        .expect("the scratch must install the UI packages");
+    let scratch = env.scratch_root();
+    assert!(
+        calls[install].ends_with(scratch.join(&head[..10]).join("ui").to_str().unwrap()),
+        "{calls:?}"
+    );
+    let suite = calls.iter().position(|c| c.starts_with("fmt")).expect("the suite runs");
+    assert!(install < suite, "packages before the build: {calls:?}");
+    env.assert_no_scratch_left();
 }

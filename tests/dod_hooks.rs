@@ -314,13 +314,49 @@ fn pre_push_syncs_notes_refs_and_range_checks_epic_pushes() {
     env.git_ok(&repo, &["notes", "--ref=test", "add", "-m", "schema: test/v2", "HEAD"]);
 
     env.git_ok(&repo, &["push", "-q", "origin", "epic/x"]);
-    assert!(env.calls().contains("nextest run --all") || env.calls().contains("test --all"));
+    assert!(env.calls().contains("xtask gate0 push"), "the push proves its tree: {}", env.calls());
     env.git_ok(&bare, &["show-ref", "--verify", "-q", "refs/notes/test"]);
 
     env.git_ok(&repo, &["checkout", "-q", "epic/x"]);
     env.git_ok(&repo, &["merge", "-q", "--no-ff", "-m", "merge wu", "wu/x/one"]);
     env.git_ok(&repo, &["push", "-q", "origin", "epic/x"]);
     assert!(env.calls().contains("xtask verify-dod range"), "updated epic push must range-check");
+}
+
+#[test]
+fn pre_push_asks_gate0_and_never_runs_the_suite_blind() {
+    let hook = fs::read_to_string(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(".cargo-husky/hooks/pre-push"),
+    )
+    .expect("read the versioned pre-push hook");
+    assert!(
+        hook.lines().any(|line| line.trim_start().ends_with("| cargo xtask gate0 push")),
+        "the hook must hand its refspecs to the marker-aware gate: {hook}"
+    );
+    for blind in ["cargo nextest", "cargo test"] {
+        assert!(
+            !hook.lines().any(|line| line.trim_start().starts_with(blind)),
+            "`{blind}` straight from the hook ignores the tree-keyed marker"
+        );
+    }
+}
+
+#[test]
+fn a_red_pushed_tree_refuses_the_push_and_the_remote_stays_empty() {
+    let tmp = tempfile::tempdir().unwrap();
+    let env = Env::answering(tmp.path(), 0, 1);
+    let repo = repo_with_wu_branch(&env, tmp.path());
+    install_hook(&repo, "pre-push");
+    let bare = tmp.path().join("origin.git");
+    env.git_ok(tmp.path(), &["init", "-q", "--bare", "origin.git"]);
+    env.git_ok(&repo, &["remote", "add", "origin", bare.to_str().unwrap()]);
+
+    assert!(!env.git(&repo, &["push", "-q", "origin", "epic/x"]), "a red Gate 0 refuses");
+    assert!(env.calls().contains("xtask gate0 push"), "{}", env.calls());
+    assert!(
+        !env.git(&bare, &["show-ref", "--verify", "-q", "refs/heads/epic/x"]),
+        "nothing may reach the remote"
+    );
 }
 
 fn merge_into_main(env: &Env, repo: &Path) -> bool {
