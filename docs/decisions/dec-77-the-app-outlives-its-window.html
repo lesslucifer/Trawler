@@ -11,8 +11,8 @@
       <h1>DEC-77 — the app outlives its window</h1>
       <p>The background service is the app process with no window: it keeps supervising its core after the main
         window closes, but only while a menu-bar icon can bring the window back.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W1</strong> from the owner's
-        rulings on the epic plan's Q1–Q3, Q6, Q11–Q13 · UC-BG, UC-4 · amends
+      <div class="meta">v2 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W1</strong> from the owner's
+        rulings on the epic plan's Q1–Q4, Q6, Q10–Q13 · rule 8 by <strong>E-BGSVC.W2</strong> · UC-BG, UC-4 · amends
         <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a> rule 14 · <strong>active</strong></div>
     </div>
   </header>
@@ -65,6 +65,13 @@ flowchart LR
       <tr><td>6</td><td><code>--background</code> skips the launch window, only while a tray exists; else the window opens.
         A second launch always opens or focuses it</td><td>Q6: the login item launches with no window (expected #8, #9)</td></tr>
       <tr><td>7</td><td>Data windows close with the main window in either case</td><td>Q13, DEC-76 rule 6</td></tr>
+      <tr><td>8</td><td>The menu-bar icon is built at every launch, after the core and before the launch window is
+        decided; built = the host's tray availability (rule 1). A template glyph (ring + disc running, ring alone
+        stopped) and a first line follow the core's state — Capturing · Capture service starting · Capture service
+        stopped · Attached to &lt;api&gt; — then Open Trawler, Settings…, Restart capture service (enabled only while an
+        owned core is stopped, through the supervisor's restart) and Quit Trawler. No notification</td><td>Q4, Q10: one
+        place that always says whether capture runs and reaches the window. Restart greys out rather than vanishing, so
+        the menu keeps its shape</td></tr>
     </table>
 
     <h2 id="alternatives">Rejected</h2>
