@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU inspect-window/json-escape-decode -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W10
+branch: wu/inspect-window/json-escape-decode
+base: e31e8d4b2d594385b73f30b15b43350f06524947
+head: 0f71d52a1e438e42fa00ba5350f231eeddca6f72
+diff_sha256: d5e3415bc95099fd38a8cce4f6e570a9e6a53bd09ad9d73cd52b3fae8c8ad129
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 3
+  stage_seconds:
+    gate0: 28
+    total: 47
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 3, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "in JSON mode a deliberate selection that begins on an escape's letter (the n of \\n) is moved past the escape"
+    waived: "in a JSON string that letter is part of the escape, never content; decoding from it is the bug this WU fixes"
+  - finding: "a span beginning inside the hex digits of a \\uXXXX escape is not moved, so an explicit selection starting mid-escape can still decode and splice inside it"
+    waived: "only an explicit selection that starts inside the four hex digits reaches it; the caret, grown and run candidates all start at the escape's u and are moved; the peek shows the selected range before any replace, and the step is undoable"
+  - finding: "dateTimeAround runs before candidates without the json flag"
+    waived: "a date-time match starts on a digit, which is never an escape letter, so no date-time can begin inside an escape"
+verdict: PASS
+date: 2026-11-05
