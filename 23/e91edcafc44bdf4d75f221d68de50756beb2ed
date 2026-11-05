@@ -1,7 +1,7 @@
 schema: mr/v1
 level: working-unit
 tip: 23e91edcafc44bdf4d75f221d68de50756beb2ed
-base: f1f350f4064a7b3377c79864d0f470848e8bba42
+base: 23e91edcafc44bdf4d75f221d68de50756beb2ed
 tier: key
 signer: vuluu
 report: docs/work/2026-11-05-target-isolation-result.html
@@ -11,6 +11,6 @@ sig: |
   -----BEGIN SSH SIGNATURE-----
   U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
   hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
-  ZWQyNTUxOQAAAEDm7hbaofLy3+LbTtMpBO91pVGw/6zGt/A9xTXsEAjsLkS9R3GaAlMGpK
-  TCc66kmD4kpGn2CA44t3/XCIO2G98K
+  ZWQyNTUxOQAAAECFXrrDh1A4V8jOjPEe8nTgNbTrNUxvbDK2PlhHaac2jzz3oapMHRNSKZ
+  I6BNmHyQ6ZwsrPrKYKESh5AeMBc80A
   -----END SSH SIGNATURE-----
