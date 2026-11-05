@@ -326,6 +326,29 @@ mod tests {
         );
     }
 
+    // The channel is the project's public release, read only through the
+    // owner's key, and a signature must name the version it was made for.
+    #[test]
+    fn the_shipped_config_trusts_only_the_owner_key_on_the_public_channel() {
+        let config: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).expect("valid json");
+        let updater = &config["plugins"]["updater"];
+        assert_eq!(
+            updater["endpoints"],
+            serde_json::json!([
+                "https://github.com/lesslucifer/Trawler/releases/latest/download/latest.json"
+            ])
+        );
+        assert_eq!(updater["requireSignedVersion"], true);
+        assert!(updater.get("dangerousInsecureTransportProtocol").is_none());
+        let pubkey = updater["pubkey"].as_str().expect("a public key");
+        let decoded = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, pubkey)
+            .expect("a base64 public key");
+        assert!(String::from_utf8(decoded)
+            .unwrap()
+            .starts_with("untrusted comment: minisign public key: "));
+    }
+
     #[test]
     fn a_staged_update_is_taken_once_and_a_cancel_drops_it() {
         let pending: Pending<&str> = Pending::default();

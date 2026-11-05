@@ -29,8 +29,11 @@ impl Key {
         b64(&self.0.pk.to_box().unwrap().into_string())
     }
 
-    fn sign(&self, data: &[u8]) -> String {
-        b64(&minisign::sign(Some(&self.0.pk), &self.0.sk, data, None, None).unwrap().into_string())
+    /// Signed as `tauri build` signs: the version rides in the trusted comment.
+    fn sign(&self, data: &[u8], version: &str) -> String {
+        let trusted = format!("timestamp:1793870000\tfile:Trawler.app.tar.gz\tversion:{version}");
+        let signed = minisign::sign(Some(&self.0.pk), &self.0.sk, data, Some(&trusted), None);
+        b64(&signed.unwrap().into_string())
     }
 }
 
@@ -113,7 +116,11 @@ fn app() -> App<MockRuntime> {
     let mut context = mock_context(noop_assets());
     context.config_mut().plugins.0.insert(
         "updater".into(),
-        serde_json::json!({ "pubkey": "", "dangerousInsecureTransportProtocol": true }),
+        serde_json::json!({
+            "pubkey": "",
+            "dangerousInsecureTransportProtocol": true,
+            "requireSignedVersion": true
+        }),
     );
     mock_builder().plugin(tauri_plugin_updater::Builder::new().build()).build(context).unwrap()
 }
@@ -136,7 +143,7 @@ fn a_channel_with_no_newer_version_offers_nothing_and_changes_nothing() {
     let key = Key::new();
     let installed = Installed::new();
     let current = app.package_info().version.to_string();
-    let origin = channel(&current, &key.sign(&archive(NEXT)), archive(NEXT));
+    let origin = channel(&current, &key.sign(&archive(NEXT), &current), archive(NEXT));
 
     let found =
         tauri::async_runtime::block_on(updater(&app, &key, origin, &installed.executable).check());
@@ -150,7 +157,7 @@ fn an_update_signed_by_another_key_is_refused_and_the_app_is_untouched() {
     let app = app();
     let (trusted, forger) = (Key::new(), Key::new());
     let installed = Installed::new();
-    let origin = channel("0.2.0", &forger.sign(&archive(NEXT)), archive(NEXT));
+    let origin = channel("0.2.0", &forger.sign(&archive(NEXT), "0.2.0"), archive(NEXT));
 
     let refused = tauri::async_runtime::block_on(async {
         let update = updater(&app, &trusted, origin, &installed.executable)
@@ -175,7 +182,7 @@ fn a_verified_update_replaces_the_app_and_leaves_the_ca_as_it_was() {
     let app = app();
     let key = Key::new();
     let installed = Installed::new();
-    let origin = channel("0.2.0", &key.sign(&archive(NEXT)), archive(NEXT));
+    let origin = channel("0.2.0", &key.sign(&archive(NEXT), "0.2.0"), archive(NEXT));
 
     let installed_update = tauri::async_runtime::block_on(async {
         let update = updater(&app, &key, origin, &installed.executable)
@@ -190,4 +197,27 @@ fn a_verified_update_replaces_the_app_and_leaves_the_ca_as_it_was() {
     installed_update.unwrap();
     assert_eq!(installed.binary(), NEXT);
     assert_eq!(std::fs::read(&installed.ca).unwrap(), CA);
+}
+
+#[test]
+fn a_genuine_archive_announced_as_another_version_is_refused() {
+    let app = app();
+    let key = Key::new();
+    let installed = Installed::new();
+    let origin = channel("0.3.0", &key.sign(&archive(NEXT), "0.2.0"), archive(NEXT));
+
+    let refused = tauri::async_runtime::block_on(async {
+        let update = updater(&app, &key, origin, &installed.executable)
+            .check()
+            .await
+            .unwrap()
+            .expect("0.3.0 is offered");
+        update.download_and_install(|_, _| {}, || {}).await
+    });
+
+    assert!(
+        matches!(refused, Err(tauri_plugin_updater::Error::SignedVersionMismatch { .. })),
+        "a signature for 0.2.0 cannot install as 0.3.0, got {refused:?}"
+    );
+    assert_eq!(installed.binary(), CURRENT);
 }
