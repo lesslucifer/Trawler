@@ -47,20 +47,29 @@ function clearSavedState() {
 }
 
 // The user's keep-capturing answer would keep the app running windowless after
-// quitTheApp destroys its window, so the run holds it aside and stores off; a kept
-// copy already there is the user's own, left by a run that never completed.
+// quitTheApp destroys its window, so the run holds it aside and stores off. The
+// kept file always exists while a run holds the answer, empty when the user had
+// none, so a run that never completed leaves the user's own state to restore.
 const KEEP_CAPTURING = resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app/keep-capturing.json");
 const KEEP_CAPTURING_KEPT = `${KEEP_CAPTURING}.e2e-kept`;
 
 function storeKeepCapturingOff() {
-  if (existsSync(KEEP_CAPTURING) && !existsSync(KEEP_CAPTURING_KEPT)) renameSync(KEEP_CAPTURING, KEEP_CAPTURING_KEPT);
   mkdirSync(dirname(KEEP_CAPTURING), { recursive: true });
+  if (!existsSync(KEEP_CAPTURING_KEPT)) {
+    if (existsSync(KEEP_CAPTURING)) renameSync(KEEP_CAPTURING, KEEP_CAPTURING_KEPT);
+    else writeFileSync(KEEP_CAPTURING_KEPT, "");
+  }
   writeFileSync(KEEP_CAPTURING, JSON.stringify({ keepCapturing: false }));
 }
 
 function restoreKeepCapturing() {
-  if (existsSync(KEEP_CAPTURING_KEPT)) renameSync(KEEP_CAPTURING_KEPT, KEEP_CAPTURING);
-  else rmSync(KEEP_CAPTURING, { force: true });
+  if (!existsSync(KEEP_CAPTURING_KEPT)) return;
+  if (readFileSync(KEEP_CAPTURING_KEPT, "utf8") === "") {
+    rmSync(KEEP_CAPTURING, { force: true });
+    rmSync(KEEP_CAPTURING_KEPT);
+  } else {
+    renameSync(KEEP_CAPTURING_KEPT, KEEP_CAPTURING);
+  }
 }
 
 // The shell reads the Android emulator through the first SDK that holds adb,
@@ -189,6 +198,7 @@ export const config: WebdriverIO.Config = {
     await seedSentFlow();
   },
   onComplete: async (_exitCode, _config, _capabilities, results) => {
+    restoreKeepCapturing();
     writeFileSync(
       RUN_TALLY,
       JSON.stringify({
@@ -208,6 +218,5 @@ export const config: WebdriverIO.Config = {
     rmSync(PORTS_FILE, { force: true });
     if (fakeSdk) rmSync(fakeSdk, { recursive: true, force: true });
     clearSavedState();
-    restoreKeepCapturing();
   },
 };
