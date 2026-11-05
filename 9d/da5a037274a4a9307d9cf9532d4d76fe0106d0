@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-BGSVC
+wu: E-BGSVC.W8
+branch: HEAD
+tests:
+  unit: { count: 23, covers: "fake LoginRegistry: on registers, off unregisters, a refusal is the box's text, not-enabled reads off; app-bundle detection; the bundled plist's keys and plutil lint; SMAppService status mapping; exactly one allow(unsafe_code) in login-service; the package check names an app lacking the plist" }
+  integration: { count: 7, covers: "the login_item commands over IPC with a fake registry and with no place (the unavailable text); the packaged .app carries the plist and verifies; opt-in sfltool dumpbtm check after the user's untick" }
