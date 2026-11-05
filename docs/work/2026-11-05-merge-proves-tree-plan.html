@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec0d669f34851f0dfae6af" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR2.W1 merge-proves-tree plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>merge-proves-tree — the merge into main runs Gate 0 on the tree it creates</h1>
+      <p>No merge commit reaches <code>main</code> unless the merged tree passes fmt, clippy and the suite in the checkout making it.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-GATEPAR2.W1</span> · <a href="2026-11-05-gate-parity2-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      A merge into <code>main</code> — automatic (<code>pre-merge-commit</code>) or a conflicted completion (<code>pre-commit</code> with
+      <code>MERGE_HEAD</code>) — runs <code>cargo xtask gate0 merge</code> on the merged working tree after <code>verify-dod hook epic</code>
+      is green and is refused when it is red, while a merge into <code>epic/*</code> runs no Gate 0, and every check Gate 0 spawns runs
+      with no <code>GIT_*</code> variable in its environment.
+    </p>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="hook-order">
+      <pre class="mermaid">
+flowchart LR
+  M["git merge --no-ff epic/x<br/>(HEAD = main)"] --> V{"verify-dod hook epic"}
+  V -->|red| R1["refused · gate0 never starts"]
+  V -->|green| G{"gate0 merge<br/>key = merged working tree"}
+  G -->|marker holds key| H["skip · merge commit"]
+  G -->|"fmt · clippy · suite green"| W["marker written · merge commit"]
+  G -->|red| R2["refused · main unchanged<br/>git merge --abort, back-merge, fix on the epic"]
+      </pre>
+      <div class="caption">Notes first (cheap, sub-second), then the tree. Into <code>epic/*</code> the chain stops after <code>verify-dod hook wu</code>, as today.</div>
+    </div>
+    <table data-c="changes">
+      <thead><tr><th>Where</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code>.cargo-husky/hooks/pre-merge-commit</code></td><td><code>exec verify-dod</code> becomes: run it; for <code>main</code> then <code>exec cargo xtask gate0 merge</code></td></tr>
+        <tr><td><code>.cargo-husky/hooks/pre-commit</code></td><td>conflicted completion on <code>main</code>: the same two steps</td></tr>
+        <tr><td><code>xtask/src/gate0.rs</code></td><td><code>merge(repo)</code> = <code>gate0</code> whose red verdict carries the refusal and the abort/back-merge line; <code>run</code> strips every inherited <code>GIT_*</code> from the checks it spawns (C10 — probed: the hook exports <code>GIT_INDEX_FILE</code>, <code>GIT_REFLOG_ACTION=merge &lt;branch&gt;</code>, <code>GIT_EDITOR</code>, <code>GIT_PREFIX</code>, <code>GIT_EXEC_PATH</code>)</td></tr>
+        <tr><td><code>xtask/src/lib.rs</code></td><td><code>["gate0", "merge"]</code> dispatch; gated like <code>gate0</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-GATEPAR2 · causes C1 (merge gate never runs the suite), C2 (Gate 0 proves the tip, not the merge tree), C10 (hook env reaches the suite) · DoD-E "merge --no-ff into main" · <code>workflow.html</code> § Hooks — consistent with the W1 block in the epic plan.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected">
+      <li>A merge into <code>main</code> whose merged tree fails Gate 0 exits non-zero at the hook; <code>main</code> HEAD is unchanged and the output names <code>git merge --abort</code> and the back-merge.</li>
+      <li>A red <code>verify-dod hook epic</code> refuses before Gate 0 starts.</li>
+      <li>A merged tree this checkout already proved green is a marker hit — no fmt, clippy or test process.</li>
+      <li>A WU merge into <code>epic/*</code> spawns no Gate 0.</li>
+      <li>A check spawned by Gate 0 or lint sees no <code>GIT_*</code> variable, whatever the caller exported.</li>
+      <li>DEC-74 recorded and linked from <code>workflow-gates.html</code> and the decisions index.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <thead><tr><th>Level</th><th>Test</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>unit · <code>xtask/src/gate0.rs</code></td><td>the check command strips <code>GIT_*</code></td><td>every <code>GIT_*</code> name in a given environment is removed from the built command; other variables untouched</td></tr>
+        <tr><td>unit · <code>xtask/src/gate0.rs</code></td><td>merge verdict</td><td>red → exit 1, message names <code>git merge --abort</code> and the back-merge; green / skip → passed through unchanged</td></tr>
+        <tr><td>unit · <code>xtask/src/lib.rs</code></td><td>the gated entrypoints</td><td><code>gate0 merge</code> refuses a checkout whose git runs other hooks, like <code>gate0</code></td></tr>
+        <tr><td>integration · <code>tests/dod_hooks.rs</code> (<code>hook-tests</code>)</td><td>the real tracked hooks against a cargo shim that answers per subcommand</td><td>into <code>main</code>: <code>verify-dod hook epic</code> then <code>gate0 merge</code>, merge commit lands · red Gate 0 → merge refused, <code>main</code> unchanged · red verify-dod → no Gate 0 call · into <code>epic/*</code> → no Gate 0 call · conflicted completion on <code>main</code> → both run, red Gate 0 refuses the commit</td></tr>
+        <tr><td>integration · <code>xtask/tests/lint_spawn.rs</code></td><td>the real <code>xtask gate0 merge</code> against a cargo shim that logs its environment</td><td>called with <code>GIT_INDEX_FILE</code>, <code>GIT_REFLOG_ACTION</code>, <code>GIT_EDITOR</code> set, no spawned cargo sees a <code>GIT_*</code>; red shim → exit 1 with the abort line and no marker; green → marker written, rerun skips</td></tr>
+        <tr><td>e2e</td><td>—</td><td><code>waived: "the epic e2e (W5) merges two real epics through the real hooks and the real suite; this WU's contract is fully pinned at the hook seam"</code></td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
