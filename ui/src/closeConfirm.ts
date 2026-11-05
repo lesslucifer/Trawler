@@ -202,8 +202,8 @@ export function useProxyCloseConfirm(
         }
         const decision = closeDecision("close", keep ?? "off", tray === true);
         if (decision === "closes") return;
-        // The shell re-reads both at Destroyed: a close decided on a fallback
-        // could be kept running behind the user's quit, so it ends the app itself.
+        // The shell re-reads both at Destroyed, so a close decided on a fallback
+        // leaves an unasked close to it, and only a quit the user answered ends the app here.
         ending.current = keep === null || tray === null ? "quit" : "close";
         if (decision === "asks-keep") {
           e.preventDefault();
@@ -216,10 +216,9 @@ export function useProxyCloseConfirm(
           e.preventDefault();
           return;
         }
-        if (asked === null && ending.current === "close") return;
+        if (asked === null) return;
         e.preventDefault();
-        if (asked === null) await quitApp();
-        else setPrompt(asked);
+        setPrompt(asked);
       })
       .then((u) => (disposed ? u() : (unlisten = u)));
 

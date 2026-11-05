@@ -695,7 +695,7 @@ test("a shell that cannot read the switch or the icon checks, as a quit always d
   expect(result.current.asking).toBe(false);
 });
 
-describe("a close decided on a reading that fell back ends the app itself", () => {
+describe("a close decided on a reading that fell back", () => {
   test("its quit ends in quit_app, never a destroy the shell could keep running behind", async () => {
     const f = shellDeps("ours", { keep: "on", unreadable: true });
     const { result } = shellConfirm(f);
@@ -706,12 +706,11 @@ describe("a close decided on a reading that fell back ends the app itself", () =
     expect(f.destroy).not.toHaveBeenCalled();
   });
 
-  test("with nothing to ask it holds the window and ends in quit_app", async () => {
+  test("with nothing to ask it closes and leaves the stored switch to the shell", async () => {
     const f = shellDeps("none", { keep: "on", unreadable: true });
     shellConfirm(f);
     const preventDefault = await closeAndWait(f);
-    expect(preventDefault).toHaveBeenCalledOnce();
-    expect(f.ran("quit_app")).toBe(true);
-    expect(f.destroy).not.toHaveBeenCalled();
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(f.ran("quit_app")).toBe(false);
   });
 });
