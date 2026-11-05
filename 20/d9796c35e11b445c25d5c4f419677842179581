@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-GATEPAR
+wu: E-GATEPAR.W1
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-04-gate-parity-plan.html"
+    tier: T3
+    action: updated
+    distills: "epic plan v3: C9 shared-target clobber added, W2 target-isolation and W3 close; merge/push parity work deferred to E-GATEPAR2"
+  - path: "docs/work/2026-11-05-hook-sync-plan.html"
+    tier: T3
+    action: added
+    distills: "W1 requirement, shape and test plan"
+  - path: "docs/work/2026-11-05-hook-sync-result.html"
+    tier: T3
+    action: added
+    distills: "W1 outcome, deviations (chmod fix line, stranded-worktree refusal, worktree-scoped install here), evidence and follow-ups"
+t2_waived: "the epic distillation plan puts the new DEC and the workflow.html/testing-strategy.html updates at W3 (close); W1's result report lists them"
