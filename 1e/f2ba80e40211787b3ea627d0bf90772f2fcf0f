@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 1ef2ba80e40211787b3ea627d0bf90772f2fcf0f
+base: b40a2df880b5d8fb11d4274ce118d76c6b8e19c5
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w1-outlive-window-result.html
+report_sha256: aa28aa3616d1ea58c43489b7c10a6f173a616c6726df12ef5327a68654b51f50
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEClzzMq19tY++Sn/Dz+UTQPptYf2gDWm1K5f78cK3lWrKzKqQYV1ZQw60
+  BtCN4fyeGTJDSg9ztySpS1aFL4cDwL
+  -----END SSH SIGNATURE-----
