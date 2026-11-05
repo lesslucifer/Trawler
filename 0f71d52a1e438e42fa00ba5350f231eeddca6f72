@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W10
+base: e31e8d4b2d594385b73f30b15b43350f06524947
+design_sha256: a2b85337e42f82a88c550215731d4241b54aa45065d4eb926524eafb9ac99d39
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/DataWindowScreen.tsx
+    why: "decodeAt passes json: kind === 'json' to decodeAround (and kind joins its dependencies), so the value found after a JSON escape starts past it; the peek, its labels and the selection's look are unchanged"
+date: 2026-11-05
