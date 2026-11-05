@@ -86,7 +86,9 @@
         <td>a page that subscribes, then reads, would otherwise show a line heard on both twice. A crash's last
         lines stay readable after the restart that follows it</td></tr>
       <tr><td>14</td><td>Settings is a second window (<code>settings</code>), opened or focused by ⌘,. The main window
-        is the app: once it is destroyed the app exits, whatever else is open</td>
+        is the app: once it is destroyed the app exits, whatever else is open — unless
+        <a href="dec-77-the-app-outlives-its-window.html">DEC-77</a> keeps it running windowless behind a menu-bar
+        icon (amended by E-BGSVC.W1)</td>
         <td>Q7: closing the last window quits. A Settings window left open must not keep the core alive with no
         main window</td></tr>
     </table>

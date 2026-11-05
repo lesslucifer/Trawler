@@ -35,6 +35,7 @@ describe("UC-SVC — an attached core is shown as attached", () => {
       timeoutMsg: "no settings window opened",
     });
     await browser.switchToWindow("settings");
+    await $("button=Capture service").click();
     await $("h1=Capture service").waitForDisplayed({ timeout: 15_000 });
 
     expect(await $("body").getText()).toContain("attached — started outside this app");

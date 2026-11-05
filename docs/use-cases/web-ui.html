@@ -14,7 +14,7 @@
       UC-5 inspect), plus the native app's setup screen for capturing this machine or another device
       (UC-ONBOARD), the HAR round trip — taking a capture out and bringing one back (UC-6) — clearing the
       capture (UC-7), and sending a request again, edited or from scratch (UC-8).</p>
-      <div class="meta">v14 · 2026-09-25 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v15 · 2026-11-05 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span>, rebuilt on the platform axis with
       reach beyond loopback by <span class="badge id">E-ONBOARD</span> ·
@@ -25,7 +25,7 @@
       <span class="badge id">E-QUERY.W1</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
       UC-ONBOARD's moves and dot by E-ONBRVP.W1, its state words, own request and scannable code, and UC-4's
       way into setup, by <span class="badge id">E-ONBRVP.W2</span> · This machine's status by
-      <span class="badge id">E-ONBRVP.W3</span> · UC-SVC by <span class="badge id">E-ONEAPP.W3</span></div>    </div>
+      <span class="badge id">E-ONBRVP.W3</span> · UC-SVC by <span class="badge id">E-ONEAPP.W3</span> · UC-BG by <span class="badge id">E-BGSVC</span></div>    </div>
   </header>
   <main>
 
@@ -466,6 +466,24 @@
       core started, so a crash's last lines outlive the restart after it. It follows new lines while scrolled to the bottom,
       and offers <em>show newest</em> otherwise. A failed restart is said with its reason and a <em>try again</em>. There is
       no stop: quitting stops the service (Q14).</p>
+
+    <h2 id="uc-bg">UC-BG — Keep capturing after the window closes</h2>
+    <p data-c="uc-bg-contract">The first ✕ that would quit asks once, <em>keep capturing after the window closes?</em>, and the answer is the
+      switch (<span class="badge id">E-BGSVC</span>, <a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a> rule 10).
+      Settings → General holds it and <em>open Trawler at login</em>; nothing else does.</p>
+    <table data-c="uc-bg-states">
+      <tr><th>The user</th><th>Happens</th></tr>
+      <tr><td>✕, switch unanswered, menu-bar icon present</td><td>asks; <em>keep capturing</em> stores on and closes the window with no proxy read, the app and its core keep capturing; <em>quit</em> stores off and then runs <a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>'s check; ✕ or Esc cancels, stores nothing, the next ✕ asks again</td></tr>
+      <tr><td>✕, switch on, icon present</td><td>closes at once; no ask, no proxy read, nothing stopped</td></tr>
+      <tr><td>✕, switch off, or no icon</td><td>quits as before DEC-77, through DEC-64's check</td></tr>
+      <tr><td>⌘Q, or Quit from the menu-bar icon</td><td>always a quit: the main window is opened if none is, DEC-64's check runs, then the app exits and stops its core. It never asks the keep-capturing question</td></tr>
+      <tr><td>Open Trawler, Settings…, the Dock, a second launch</td><td>rebuilds or focuses the main window; the list reloads from the core</td></tr>
+      <tr><td>Open Trawler at login</td><td>macOS: registers the bundled launch agent with <code>SMAppService</code>, so “Trawler” shows in Login Items; an unbundled build refuses with its reason and the switch stays off. Linux and Windows write their own entry. A login launch starts with <code>--background</code> and opens no window</td></tr>
+    </table>
+    <p class="kd" data-c="uc-bg-proof">Proven by <code>background-asked</code>, <code>-off</code>, <code>-keep</code> and <code>-quit</code>
+      <code>.spec.ts</code> in the owned e2e suite: the ask and its cancel, the stored answers, ✕ ending the app, capture with no window,
+      <code>quit_app</code> and a quit request, ports freed, all under a temp <code>HOME</code>. The menu-bar menu, the Dock, a real login and the
+      Windows and Linux trays are native and owed on the <a href="../backlog/roadmap.html">roadmap</a>.</p>
 
     <h2 id="uc-onboard">UC-ONBOARD — Set up capture, for this machine or another device</h2>
     <div data-c="uc-onboard-contract">
@@ -988,7 +1006,7 @@ the client lacks the certificate"]
           and a clipboard write the browser refuses says so rather than doing nothing visible</td></tr>
         <tr><td>Quitting asks first while something still routes through Trawler, and only then</td><td>E-ONBRVP.W11
           (<a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>): the
-          window's ✕ and ⌘Q (Trawler's own Quit) ask; the Dock's Quit and a logout cannot be held and do not. It asks
+          window's ✕ and ⌘Q (Trawler's own Quit, and the menu-bar icon's) ask, except a ✕ that only closes the window while <a href="#uc-bg">UC-BG</a>'s switch is on; the Dock's Quit and a logout cannot be held and do not. It asks
           while this machine routes through Trawler — its address, localhost or this machine's own address on
           Trawler's port — and offers <em>stop routing through Trawler</em> on macOS and Windows, the command inline
           elsewhere; while this machine's proxy could not be read, saying so; and while reach is armed or the

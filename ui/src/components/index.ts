@@ -37,6 +37,8 @@ export { QueryBar } from "./QueryBar";
 export type { QueryBarHandle, QueryBarProps } from "./QueryBar";
 export type { NoticeTone } from "./Notice";
 export { Section } from "./Section";
+export { PageSidebar } from "./PageSidebar";
+export type { SidebarPage } from "./PageSidebar";
 export { SegmentedControl } from "./SegmentedControl";
 export type { SegmentOption } from "./SegmentedControl";
 export { Select } from "./Select";

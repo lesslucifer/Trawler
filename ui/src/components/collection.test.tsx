@@ -87,6 +87,14 @@ const SPECIMENS: Record<string, ReactElement> = {
     />
   ),
   Section: <collection.Section title="request">body</collection.Section>,
+  PageSidebar: (
+    <collection.PageSidebar
+      pages={[{ value: "general", label: "General" }]}
+      value="general"
+      onChange={() => {}}
+      ariaLabel="pages"
+    />
+  ),
   SegmentedControl: (
     <collection.SegmentedControl
       options={[{ value: "raw", label: "raw" }]}

@@ -1,91 +1,21 @@
 import { browser, $, $$, expect } from "@wdio/globals";
 import { execFileSync } from "node:child_process";
-import { createServer, request, type Server } from "node:http";
-import { createServer as createListener } from "node:net";
+import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { appOf, everythingStopped, invoke, onWindow, portOf, runningCore, sendThroughProxy, type Running } from "./app.ts";
 import { quitTheApp } from "./quit.ts";
-
-type Running = { state: "running"; pid: number; proxy: string; api: string };
-type CoreState = Running | { state: "starting" | "exited" | "attached" };
 
 const MAIN = "main";
 const SETTINGS = "settings";
 const ORIGIN_PATH = "/one-app";
 
-async function invoke<T>(command: string): Promise<T> {
-  const answer = await browser.executeAsync(
-    (name: string, done: (answer: { ok?: unknown; refused?: string }) => void) => {
-      (window as unknown as { __TAURI__: { core: { invoke: (c: string) => Promise<unknown> } } }).__TAURI__.core
-        .invoke(name)
-        .then(
-          (ok) => done({ ok }),
-          (refused: unknown) => done({ refused: String(refused) }),
-        );
-    },
-    command,
-  );
-  if (answer.refused !== undefined) throw new Error(`${command} refused: ${answer.refused}`);
-  return answer.ok as T;
-}
-
-async function runningOtherThan(pid: number | null): Promise<Running> {
-  let state: CoreState | undefined;
-  await browser.waitUntil(
-    async () => {
-      state = await invoke<CoreState>("core_status");
-      return state.state === "running" && state.pid !== pid;
-    },
-    { timeout: 30_000, timeoutMsg: `the core never ran (last read ${JSON.stringify(state)})` },
-  );
-  return state as Running;
-}
-
-const portOf = (address: string) => Number(address.split(":").pop());
-
-const isAlive = (pid: number) => {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    return (err as NodeJS.ErrnoException).code === "EPERM";
-  }
-};
-
-const parentOf = (pid: number) => Number(execFileSync("ps", ["-o", "ppid=", "-p", String(pid)]).toString().trim());
 const commandOf = (pid: number) => execFileSync("ps", ["-o", "comm=", "-p", String(pid)]).toString().trim();
-
-const bindable = (port: number) =>
-  new Promise<boolean>((done) => {
-    const listener = createListener();
-    listener.once("error", () => done(false));
-    listener.listen(port, "127.0.0.1", () => listener.close(() => done(true)));
-  });
 
 function startOrigin(): Promise<Server> {
   return new Promise((ready) => {
     const origin = createServer((_, res) => res.end("hello from the one-app origin"));
     origin.listen(0, "127.0.0.1", () => ready(origin));
   });
-}
-
-function sendThroughProxy(proxy: string, url: string): Promise<number> {
-  const [host, port] = proxy.split(":");
-  return new Promise((answered, failed) => {
-    const sent = request({ host, port: Number(port), method: "GET", path: url }, (res) => {
-      res.resume();
-      res.on("end", () => answered(res.statusCode ?? 0));
-    });
-    sent.once("error", failed);
-    sent.end();
-  });
-}
-
-async function onWindow(label: string) {
-  await browser.waitUntil(async () => (await browser.getWindowHandles()).includes(label), {
-    timeout: 15_000,
-    timeoutMsg: `no ${label} window opened`,
-  });
-  await browser.switchToWindow(label);
 }
 
 const statusReads = (words: string) =>
@@ -106,8 +36,8 @@ describe("E-ONEAPP — one launch is the whole app", () => {
   before(async () => {
     await $("header").waitForExist({ timeout: 30_000 });
     origin = await startOrigin();
-    first = await runningOtherThan(null);
-    appPid = parentOf(first.pid);
+    first = await runningCore(null);
+    appPid = appOf(first.pid);
   });
 
   after(() => {
@@ -146,6 +76,7 @@ describe("E-ONEAPP — one launch is the whole app", () => {
   it("J2 · the Capture service page shows the running core", async () => {
     await invoke("open_settings");
     await onWindow(SETTINGS);
+    await $("button=Capture service").click();
     await $("h1=Capture service").waitForDisplayed({ timeout: 15_000 });
     await statusReads("running");
     expect(await $('[data-wire="process id"]').getText()).toBe(String(first.pid));
@@ -164,7 +95,7 @@ describe("E-ONEAPP — one launch is the whole app", () => {
 
   it("J2 · restart brings the API back on the same address", async () => {
     await $("button=restart").click();
-    second = await runningOtherThan(first.pid);
+    second = await runningCore(first.pid);
     expect(second.api).toBe(first.api);
     expect(second.proxy).toBe(first.proxy);
     expect((await fetch(`http://${second.api}/flows`)).status).toBe(200);
@@ -179,11 +110,6 @@ describe("E-ONEAPP — one launch is the whole app", () => {
   it("J3 · quitting from the window stops the core and frees its ports", async () => {
     await browser.switchToWindow(MAIN);
     await quitTheApp();
-    await browser.waitUntil(async () => !isAlive(second.pid) && !isAlive(appPid), {
-      timeout: 15_000,
-      timeoutMsg: `still alive after the quit: ${[appPid, second.pid].filter(isAlive).join(", ")}`,
-    });
-    expect(await bindable(portOf(second.proxy))).toBe(true);
-    expect(await bindable(portOf(second.api))).toBe(true);
+    expect(await everythingStopped(second, appPid)).toBe(true);
   });
 });
