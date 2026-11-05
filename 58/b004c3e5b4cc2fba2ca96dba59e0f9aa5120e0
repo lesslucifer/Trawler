@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "WU E-PKG2.W3 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W3
+branch: wu/packaging-v2/platform-fixes
+base: b62541e9ec5bc75f317339fcdfbb4dd5ac4d33df
+head: 58b004c3e5b4cc2fba2ca96dba59e0f9aa5120e0
+diff_sha256: b1568af790d18f291164b8b3566730520d10ef415c58a3e93a5ff7e52637e85c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-sonnet-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
