@@ -126,7 +126,7 @@ function wallClock(seconds: number, zone: string, fraction: string): WallClock {
   const beforeCommonEra = parts.find((each) => each.type === "era")?.value === "BC";
   const year = beforeCommonEra ? 1 - part("year") : part("year");
   const asUtc = utcMilliseconds(year, part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
-  const date = `${pad(year, 4)}-${pad(part("month"))}-${pad(part("day"))}`;
+  const date = `${year < 0 ? "-" : ""}${pad(Math.abs(year), 4)}-${pad(part("month"))}-${pad(part("day"))}`;
   const text = `${date} ${pad(part("hour"))}:${pad(part("minute"))}:${pad(part("second"))}${fraction ? `.${fraction}` : ""}`;
   return { date, text, offsetMinutes: Math.round((asUtc - seconds * 1000) / 60000) };
 }
