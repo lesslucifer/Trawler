@@ -220,7 +220,7 @@ mod tests {
         assert_eq!(values(&request, "content-length"), vec!["16"]);
 
         let empty = wire_request(outgoing("http://b.test/", &[("Content-Length", "12")], b""));
-        assert!(values(&empty, "content-length").is_empty());
+        assert_eq!(values(&empty, "content-length").len(), 0);
     }
 
     #[test]

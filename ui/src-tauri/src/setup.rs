@@ -2075,9 +2075,9 @@ mod tests {
         let two = "-----BEGIN CERTIFICATE-----\nBBB\n-----END CERTIFICATE-----";
 
         assert_eq!(pem_blocks(&format!("{one}\n{two}\n")), [one, two]);
-        assert!(pem_blocks("").is_empty());
-        assert!(pem_blocks("security: SecKeychainSearchCopyNext: not found").is_empty());
-        assert!(pem_blocks("-----BEGIN CERTIFICATE-----\ntruncated").is_empty());
+        assert_eq!(pem_blocks("").len(), 0);
+        assert_eq!(pem_blocks("security: SecKeychainSearchCopyNext: not found").len(), 0);
+        assert_eq!(pem_blocks("-----BEGIN CERTIFICATE-----\ntruncated").len(), 0);
     }
 
     // On Windows the proxy lives under HKCU and needs no elevation at all, so
@@ -2607,8 +2607,9 @@ mod tests {
 
     #[test]
     fn nothing_held_removes_nothing() {
-        assert!(
-            remove_ca_commands(Path::new("/tmp/trawler-ca.pem"), HASH, &Held::default()).is_empty()
+        assert_eq!(
+            remove_ca_commands(Path::new("/tmp/trawler-ca.pem"), HASH, &Held::default()).len(),
+            0
         );
     }
 
@@ -2869,8 +2870,9 @@ mod tests {
                 argv(&["xcrun", "simctl", "keychain", "B", "add-root-cert", "/tmp/trawler-ca.pem"]),
             ]
         );
-        assert!(
-            simulator_trust_commands(&Simulators::default(), Path::new("/tmp/x.pem")).is_empty()
+        assert_eq!(
+            simulator_trust_commands(&Simulators::default(), Path::new("/tmp/x.pem")).len(),
+            0
         );
     }
 
@@ -2940,7 +2942,7 @@ mod tests {
         assert!(
             windows[0].ends_with("adb.exe") && windows[0].to_string_lossy().contains("Android")
         );
-        assert!(adb_candidates("freebsd", |_| None).is_empty());
+        assert_eq!(adb_candidates("freebsd", |_| None).len(), 0);
     }
 
     #[test]
@@ -3172,7 +3174,7 @@ NecwLoyuObd5tf9Qwxdkolo=
         ] {
             assert!(script.contains(part), "{part}");
         }
-        assert!(emulator_install_commands(&Emulators::default(), Path::new("/t"), "h").is_empty());
+        assert_eq!(emulator_install_commands(&Emulators::default(), Path::new("/t"), "h").len(), 0);
     }
 
     #[test]

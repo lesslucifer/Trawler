@@ -656,7 +656,7 @@ mod tests {
             r#"{"android":{"adb":false,"sdk":null,"avd":null},"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#,
         );
         assert!(!no_adb.emulator_read().adb);
-        assert!(no_adb.emulator_read().emulators.is_empty());
+        assert_eq!(no_adb.emulator_read().emulators.len(), 0);
         assert!(Scenario::default().emulator_read().adb);
     }
 

@@ -558,7 +558,7 @@ async fn a_cursor_the_ring_evicted_ends_the_walk_rather_than_restarting_it() {
 
     let (status, page) = json(&r, &format!("/flows?limit=2&cursor={evicted}")).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(page["flows"].as_array().unwrap().is_empty());
+    assert_eq!(page["flows"].as_array().unwrap().len(), 0);
     assert!(page["next_cursor"].is_null());
 }
 
