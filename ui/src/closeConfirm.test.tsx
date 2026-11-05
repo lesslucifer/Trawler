@@ -460,6 +460,19 @@ describe("the once-question", () => {
     expect(result.current.asking).toBe(true);
   });
 
+  test("a refusal does not outlive its question: a quit request closes it, and the next ✕ asks clean", async () => {
+    const f = shellDeps("none", { keep: "unanswered", writeFails: true });
+    const { result } = shellConfirm(f);
+    await closeAndWait(f);
+    await act(async () => result.current.keepCapturing());
+    expect(result.current.keepRefused).toBe("permission denied");
+    await f.request();
+    expect(result.current.asking).toBe(false);
+    await closeAndWait(f);
+    expect(result.current.asking).toBe(true);
+    expect(result.current.keepRefused).toBeNull();
+  });
+
   test("an answer that cannot be stored leaves the window open when keeping, and still quits when quitting", async () => {
     const keeping = shellDeps("none", { keep: "unanswered", writeFails: true });
     const kept = shellConfirm(keeping);

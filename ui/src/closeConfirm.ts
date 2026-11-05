@@ -204,6 +204,7 @@ export function useProxyCloseConfirm(
         ending.current = "close";
         if (decision === "asks-keep") {
           e.preventDefault();
+          setKeepRefused(null);
           setAsking(true);
           return;
         }
