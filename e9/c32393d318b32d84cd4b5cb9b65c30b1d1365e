@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: e9c32393d318b32d84cd4b5cb9b65c30b1d1365e
+base: 33088b5a65bd3524377739d8b8ffc89a1a7025f0
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-w7-e2e-result.html
+report_sha256: 007f930aca75819d42abfb9a7bcf4f9431d739c7eecb04c85cde1ddec63040db
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDJ/K5zaCUqOxWkW1QcpAQ/bWBiNElDhW+2iqptdT+d+i7R23GV1l5V27
+  IuVEvfKPyD7dPWMHcRfyLT7vFGProO
+  -----END SSH SIGNATURE-----
