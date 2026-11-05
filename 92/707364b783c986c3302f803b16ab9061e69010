@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 92707364b783c986c3302f803b16ab9061e69010
+base: 8dd19f05d1fd7a467984631af0e3b1fb7d09bb24
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-v2-w4-one-line-values-result.html
+report_sha256: 9c5adda62f655215210f28567a10bc67b0603c68aff5c8c2549de8b59f165618
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBp44zlE7vIT8eBxpdnlar4IBgc662OUSyPS9u0ptLWj8x+zxl02HxZvc
+  4HbvySkpDJcM2/OC0rW9ZHBDv7SywG
+  -----END SSH SIGNATURE-----
