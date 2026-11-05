@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4b889f34851f0dfae87a">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-80: the HTML preview holds no reach</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-80 — the HTML preview holds no reach</h1>
+      <p>The data window may draw captured HTML, but in a frame that runs no script, loads nothing, goes nowhere and
+        holds none of the app's powers.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-INSPWIN2.W1</strong> from the owner's rulings on
+        the epic plan's Q9–Q10 · UC-9 · extends <a href="dec-76-the-data-window.html">DEC-76</a> · <strong>active</strong> · planned as
+        DEC-79 (DEC-next-c); DEC-80 because E-BGSVC.W1 minted DEC-77 first · built by E-INSPWIN2.W7</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Today</th><th>The risk</th></tr>
+      <tr><td>The app runs with no content security policy (<code>tauri.conf.json</code> <code>security.csp: null</code>), and a
+        data window holds <code>core:default</code>, the save dialog and file write (DEC-76 rule 9)</td>
+        <td>captured HTML is untrusted: rendered into the window's own document, its scripts would reach the app's IPC</td></tr>
+      <tr><td>DEC-76: the data window makes no request</td><td>an image, stylesheet, font or prefetch in the page would
+        make one, and tell its server the page was opened</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> The html kind's <em>preview</em> renders the working copy through
+        <code>srcdoc</code> in <code>&lt;iframe sandbox=""&gt;</code>, with a CSP <code>&lt;meta&gt;</code> placed before any
+        author content and meta refresh and <code>&lt;base&gt;</code> removed. It is read-only and follows the working copy.
+        Source ⇄ preview is a toggle inside the html kind (Q10).</p>
+    </div>
+
+    <h2 id="rules">The guards</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Threat</th><th>Guard</th></tr>
+      <tr><td>1</td><td>Script reaching Tauri IPC, the parent window or storage</td><td>an empty <code>sandbox</code>: no
+        <code>allow-scripts</code>, no <code>allow-same-origin</code> — the frame is an opaque origin that runs nothing</td></tr>
+      <tr><td>2</td><td>A request leaving the machine: tracking pixel, CSS <code>url()</code>, font, prefetch, media</td><td>CSP
+        <code>default-src 'none'; style-src 'unsafe-inline'; img-src data:</code>, first in the document; DEC-76's "no request"
+        stays true</td></tr>
+      <tr><td>3</td><td>Navigation, form posts, popups</td><td>the empty sandbox withholds <code>allow-forms</code>,
+        <code>allow-popups</code>, <code>allow-top-navigation</code></td></tr>
+      <tr><td>4</td><td>A meta refresh, or a <code>&lt;base&gt;</code> re-pointing relative links</td><td>removed before render,
+        under any case and attribute order</td></tr>
+      <tr><td>5</td><td>A write-back through the preview</td><td>read-only; edits happen in the source view, the preview
+        re-renders from the working copy</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Render the HTML into the window's own DOM, sanitized</td><td>a sanitizer is an allow-list to get right forever; an
+        opaque sandbox needs none</td></tr>
+      <tr><td>A switch to load remote resources or run scripts</td><td>breaks DEC-76's "no request"; a later epic, if ever</td></tr>
+      <tr><td>Rule 12 on DEC-76</td><td>owner, Q9: the first surface that renders untrusted markup gets its own record</td></tr>
+      <tr><td>The preview in a second window</td><td>owner, Q10: a toggle keeps source and preview over one working copy</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
