@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec0f4c9f34851f0dfae6d2" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR2.W1 merge-proves-tree result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>merge-proves-tree — result</h1>
+      <p>A merge into <code>main</code> now runs Gate 0 on the tree it creates, after the epic gate, and is refused when that tree is red.</p>
+      <div class="meta">2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-GATEPAR2.W1</span> · <a href="2026-11-05-merge-proves-tree-plan.html">plan</a> · <a href="2026-11-05-gate-parity2-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <thead><tr><th>Expected</th><th>Shipped</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Red merged tree → merge into <code>main</code> refused, <code>main</code> unchanged, abort/back-merge line</td><td><code>pre-merge-commit</code> runs <code>cargo xtask gate0 merge</code> after <code>verify-dod hook epic</code>; a red verdict appends <code>gate0::MERGE_REFUSED</code></td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>Red epic gate refuses before Gate 0 starts</td><td>notes gate runs first under <code>set -e</code></td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>Conflicted completion on <code>main</code> gated the same way</td><td><code>pre-commit</code>'s <code>MERGE_HEAD</code> path runs both steps</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>A tree already proven in the checkout is a marker hit</td><td><code>merge</code> is <code>gate0</code> plus the refusal text, so it reads the same tree-keyed marker</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>WU merge into <code>epic/*</code> spawns no Gate 0</td><td>unchanged notes-only path</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>No spawned check sees a <code>GIT_*</code> variable</td><td><code>gate0::check_command</code> strips every inherited <code>GIT_*</code> for fmt, clippy, nextest/test and the nextest probe (lint included)</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>DEC-74 recorded and linked</td><td>new record; index row; DEC-2's scrub row points at it</td><td><span class="badge auto">delivered</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">none — the plan already carried C10 (the hook's <code>GIT_*</code>), found by probing the hook environment while planning.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <thead><tr><th>Kind</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>unit</td><td><code>xtask/src/gate0.rs</code>: <code>a_check_runs_without_any_inherited_git_variable</code>, <code>a_red_merge_names_the_abort_and_the_back_merge</code>, <code>a_green_or_skipped_merge_passes_through_unchanged</code> · <code>xtask/src/lib.rs</code>: <code>gate0 merge</code> in <code>the_hook_and_merge_entrypoints_are_gated</code></td></tr>
+        <tr><td>integration · hook seam</td><td><code>tests/dod_hooks.rs</code> (<code>hook-tests</code>), 6 new: order notes → tree, red tree refuses with <code>main</code> unchanged, red notes never start Gate 0, the WU seam runs none, conflicted completion green and red</td></tr>
+        <tr><td>integration · spawned process</td><td><code>xtask/tests/lint_spawn.rs</code>, 3 new: the real <code>xtask gate0 merge</code> under a poisoned hook env → no <code>GIT_*</code> reaches cargo; red → refusal text, no marker; green → marker, re-run spawns nothing. Mutation check: with the scrub disabled the env test fails, listing <code>GIT_REFLOG_ACTION=merge epic/x</code></td></tr>
+        <tr><td>e2e</td><td>waived — the epic e2e (W5) merges two real epics through the real hooks and suite</td></tr>
+        <tr><td>suite</td><td><code>cargo xtask gate0</code> green on the WU tree (37 s); <code>cargo test --features hook-tests --test dod_hooks</code> 19/19</td></tr>
+        <tr><td>commits</td><td><code>4e8612dd</code> on <code>wu/gate-parity2/merge-proves-tree</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: <a href="../decisions/dec-74-the-merge-proves-the-tree-it-creates.html">DEC-74</a> (new), <a href="../decisions/decisions-index.html">decisions-index</a> row, <a href="../decisions/workflow-gates.html#dec-2">DEC-2</a>'s scrub row widened. T1 <code>workflow.html</code> § Hooks (pre-merge-commit and pre-commit rows) is owed at W5 via <code>mr commit</code>, per the epic's distillation plan: until then the T1 row reads "runs the gate on MERGE_HEAD" without the tree step.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li>W2 (push-reads-proof) reads the marker this merge writes; the push-side env scrub comes for free since pre-push will call Gate 0.</li>
+      <li>W5: the T1 Hooks rows, and the e2e's two-epics-combine-red scenario through the real suite.</li>
+    </ul>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
