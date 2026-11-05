@@ -24,7 +24,9 @@
 flowchart LR
   T(["tag v‹version›"]) --> V{"= workspace version?"}
   V -- no --> X["red · nothing built"]
-  V -- yes --> B["× 5: xtask package → xtask smoke → upload"]
+  V -- yes --> K{"signing key set?"}
+  K -- no --> X
+  K -- yes --> B["× 5: rustc host check → package --build-only → package --bundle-only (key) → smoke → upload"]
   B --> R["release-manifest → draft release"]
   R --> P(["owner publishes"])
       </pre>
@@ -37,13 +39,23 @@ flowchart LR
       <tr><td>1</td><td><code>release.yml</code> runs on a <code>v*</code> tag push and nothing else. Its first job fails unless the tag is <code>v</code> plus <code>[workspace.package]</code> version; it rewrites nothing (Q18)</td><td>the released binary is built from exactly the tagged, gate-proven tree. A dispatch has no tag to check</td></tr>
       <tr><td>2</td><td>Five targets build with <code>cargo xtask package</code>: macOS universal, Windows x64 and arm64, Linux x64 and arm64 (Q16). Not <code>tauri-action</code></td><td>DEC-81 rule 3: the one command that builds an installer also verifies it. A second build path would skip that</td></tr>
       <tr><td>3</td><td>Each build runs <code>cargo xtask smoke</code> before its upload: the package's own installer is installed in a temp dir, its core runs headless, a request through the proxy is captured, the CA is served, and quitting frees both ports. The macOS packaging test runs the same command</td><td>a red smoke uploads nothing. One code path runs in the gate and in the release</td></tr>
-      <tr><td>4</td><td>The signing key and its password reach only the package step, by secret name (DEC-82 rule 6). The job token is read-only except in the release job</td><td>least privilege; no agent ever holds the key</td></tr>
+      <tr><td>4</td><td>The signing key and its password reach only the <code>--bundle-only</code> step, by secret name (DEC-82 rule 6); <code>pnpm install</code>, vite and every <code>build.rs</code> run before it in <code>--build-only</code>, keyless. The first build step fails when the key secret is empty. The job token is read-only except in the release job, and no checkout keeps it in git</td><td>least privilege: third-party build code never sees the key; no agent ever holds the key</td></tr>
       <tr><td>5</td><td><code>cargo xtask release-manifest</code> writes <code>latest.json</code> with an entry per target and install kind (deb and rpm included, Q20), signatures and tag-scoped URLs, plus notes headed by each OS's first-open steps (<code>.github/release-notes.md</code>). It refuses a missing <code>.sig</code> or target</td><td>a partial release never reaches a draft, and an update never meets a platform with no entry</td></tr>
       <tr><td>6</td><td>The release is created with <code>--draft</code>, never <code>--prerelease</code>; publishing the draft is the release (Q5)</td><td><code>releases/latest/download</code> skips prereleases, so a prerelease would not reach installed apps. The owner may tick it by hand on a draft nobody should update to</td></tr>
+      <tr><td>7</td><td>A version is <code>≤255.≤255.≤65535</code> with at most a numeric pre-release <code>≤65535</code>: rcs are <code>0.1.0-1</code>, <code>0.1.0-2</code>, never <code>0.1.0-rc.1</code>. <code>cargo xtask package</code>'s version check calls anything else drift</td><td>WiX (tauri-bundler <code>convert_version</code>) maps the pre-release into the MSI's fourth field and refuses a non-numeric one; NSIS only warns. No <code>wix.version</code> override to keep in sync</td></tr>
+      <tr><td>8</td><td>Every action is pinned to a commit SHA (version in the trailing comment); no cache is restored; each runner's <code>rustc -vV</code> host must be its row's (Windows arm64 really builds arm64); one release per ref runs at a time, never cancelled</td><td>a moved tag or a poisoned cache cannot reach a signed release; an emulated x64 toolchain cannot ship as arm64</td></tr>
+      <tr><td>9</td><td>The release job downloads each artifact into its own folder and flattens with <code>mv -n</code>; a leftover folder (two artifacts sharing a name) is red. A re-run deletes a pre-existing <em>draft</em> of its tag before creating; a published release makes the create fail</td><td>no silent overwrite; a re-run never needs hand cleanup and never touches a published release</td></tr>
+    </table>
+
+    <h2 id="limits">Known limits</h2>
+    <table data-c="limits">
+      <tr><th>Limit</th><th>Why accepted</th></tr>
+      <tr><td>The version job proves tag = workspace version, not that the tagged commit is on <code>main</code> or green in CI</td><td>only the owner tags; the merge gate already proves every <code>main</code> tree</td></tr>
+      <tr><td>The smoke passes the NSIS <code>/D=</code> destination through Rust's argument quoting, and the silent installer has no own timeout</td><td>the runner temp path has no spaces, so no quote is added; a hung installer is ended by the job's 90-minute timeout. Windows-only, cannot be proven off a Windows runner</td></tr>
     </table>
 
     <h2 id="held">Held by</h2>
-    <p data-c="held"><code>xtask/tests/suite/release_workflow.rs</code> pins rules 1 to 4 and 6 (and the toolchain of DEC-85, which now also covers <code>release.yml</code>'s jobs: a bump changes <code>rust-toolchain.toml</code> and every <code>toolchain:</code> line in <code>ci.yml</code> and <code>release.yml</code>). The <code>release_manifest</code> and <code>smoke</code> unit tests pin rules 3 and 5. The run itself needs GitHub, the secrets and a public repository, and is proven by the first rc tag (E-PKG2.W6).</p>
+    <p data-c="held"><code>xtask/tests/suite/release_workflow.rs</code> pins rules 1 to 4, 6, 8 and 9; <code>package</code>'s unit tests pin rule 7 and the keyless build split (and the toolchain of DEC-85, which now also covers <code>release.yml</code>'s jobs: a bump changes <code>rust-toolchain.toml</code> and every <code>toolchain:</code> line in <code>ci.yml</code> and <code>release.yml</code>). The <code>release_manifest</code> and <code>smoke</code> unit tests pin rules 3 and 5. The run itself needs GitHub, the secrets and a public repository, and is proven by the first rc tag (E-PKG2.W6).</p>
 
   </main>
   <script type="module">
