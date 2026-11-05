@@ -1,4 +1,4 @@
-import { mergeRanges, MATCH_LIMIT, scanOf } from "./find";
+import { mergeRanges, MATCH_LIMIT, scanOf, type Scan } from "./find";
 import type { FindChip } from "./findGrammar";
 import type { TextRange } from "./components/index";
 
@@ -123,21 +123,29 @@ const PART_KEYS: Record<PairPart, readonly FindChip["key"][]> = {
   value: ["plain", "re", "case", "value"],
 };
 
-function markPart(text: string, part: PairPart, chips: readonly FindChip[], limit: number) {
-  const lists = chips.flatMap((chip) => {
+function markPart(text: string, scans: readonly Scan[], limit: number) {
+  return mergeRanges(
+    scans.map((scan) => scan(text, limit)),
+    limit,
+  );
+}
+
+function scansFor(part: PairPart, chips: readonly FindChip[]): Scan[] {
+  return chips.flatMap((chip) => {
     const scan = PART_KEYS[part].includes(chip.key) ? scanOf(chip) : null;
-    return scan ? [scan(text, limit)] : [];
+    return scan ? [scan] : [];
   });
-  return mergeRanges(lists, limit);
 }
 
 export function markPairs(pairs: FormPair[], chips: readonly FindChip[], limit = MATCH_LIMIT): PairsFound {
   const byPair = new Map<number, PairMatches>();
   let total = 0;
   if (chips.length === 0) return { byPair, total, capped: false };
+  const keyScans = scansFor("key", chips);
+  const valueScans = scansFor("value", chips);
   for (const pair of pairs) {
-    const key = markPart(pair.key, "key", chips, limit - total);
-    const value = markPart(pair.value, "value", chips, limit - total - key.ranges.length);
+    const key = markPart(pair.key, keyScans, limit - total);
+    const value = markPart(pair.value, valueScans, limit - total - key.ranges.length);
     const found = key.ranges.length + value.ranges.length;
     if (found) byPair.set(pair.index, { first: total, key: key.ranges, value: value.ranges });
     total += found;

@@ -70,6 +70,7 @@ export function parseFind(draft: string): FoundDraft {
     const [, typed, rest] = keyed;
     const key = typed.toLowerCase();
     if (isKeyed(key)) {
+      if (rest.startsWith('"') && !(rest.length >= 2 && rest.endsWith('"'))) return { fault: "a quote is opened and never closed" };
       const value = unquote(rest);
       if (!value) return { fault: `${key}: needs something to find after it — ${HINTS[key]}` };
       if (key === "re") {
@@ -104,7 +105,7 @@ export function suggestFind(draft: string, kind: DataKind, names: readonly strin
     if (keyed[1].toLowerCase() !== "key" || !keys.includes("key")) return [];
     const typed = keyed[2].toLowerCase();
     return names
-      .filter((name) => name.toLowerCase().includes(typed) && name.toLowerCase() !== typed)
+      .filter((name) => !name.includes('"') && name.toLowerCase().includes(typed) && name.toLowerCase() !== typed)
       .slice(0, NAMES_SHOWN)
       .map((name) => ({ kind: "value", text: `key:${quoted(name)}`, hint: "a key in this document" }));
   }

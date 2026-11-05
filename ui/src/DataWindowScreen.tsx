@@ -175,7 +175,7 @@ function findCount(hasQuery: boolean, found: Search, current: number): string {
 const faceOf = (chip: FindChip): ChipFace => ({
   text: findLabel(chip),
   key: chip.key === "plain" ? undefined : chip.key,
-  value: chip.key === "plain" && /\s/.test(chip.value) ? `"${chip.value}"` : chip.value,
+  value: chip.key === "plain" ? findLabel(chip) : chip.value,
 });
 
 function FindBar({
@@ -421,7 +421,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     () => [...chips, ...("chip" in drafted ? [drafted.chip] : [])].filter((chip) => refusedReason(chip, kind) === null),
     [chips, drafted, kind],
   );
-  const hasQuery = chips.length > 0 || draft.trim() !== "";
+  const hasQuery = chips.length > 0 || "chip" in drafted;
   const wantsNames = /^key:/i.test(draft.trim());
   const scoped = marking.some((chip) => chip.key === "key" || chip.key === "value");
   const structure = useMemo((): Structure | null => {

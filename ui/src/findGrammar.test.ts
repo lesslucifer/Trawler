@@ -32,6 +32,7 @@ describe("parseFind", () => {
     expect(parseFind("-")).toEqual({ chip: chip("plain", "-") });
     expect(parseFind('"open')).toEqual({ fault: "a quote is opened and never closed" });
     expect(parseFind('" "')).toEqual({ fault: "the quotes hold nothing" });
+    expect(parseFind('key:"a b')).toEqual({ fault: "a quote is opened and never closed" });
     expect(parseFind("key:")).toMatchObject({ fault: expect.stringContaining("key: needs something to find") });
     expect(parseFind("re:(")).toMatchObject({ fault: expect.stringContaining("not a regular expression") });
     expect(parseFind("bytes:8")).toEqual({ fault: "bytes: takes hex pairs, like 89 50 4e" });
@@ -65,6 +66,10 @@ describe("suggestFind", () => {
     expect(suggestFind("key:", "text", names)).toEqual([]);
     expect(suggestFind("value:", "json", names)).toEqual([]);
     expect(suggestFind("key:", "json", names)[0].kind).toBe("value");
+  });
+
+  it("never offers a name that holds a quote, since typing it back would read as a different name", () => {
+    expect(suggestFind("key:", "json", ['a"b', "ab"]).map((r) => r.text)).toEqual(["key:ab"]);
   });
 
   it("shows at most a screenful of names", () => {

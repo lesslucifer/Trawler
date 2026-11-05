@@ -75,7 +75,7 @@ function ChipView({ face, reason, refused, onRemove }: { face: ChipFace; reason:
  * ChipBox — one box of typed chips and a draft: a draft becomes a chip when the caller's grammar parses it, suggestions follow it, a fault says why it did not, and a chip the caller refuses is marked.
  * @tier T1 — owns the box, chips, the draft's keys, the suggestion list, the fault slot and the refused face; what parses, what is suggested and what is refused are the caller's grammar
  * @anatomy Field's box, flex-wrap · chips: wash-tint pill, mono, key ink-mute, value ink, IconButton × 24 · refused: warn border + ⚠, reason as title · draft: borderless mono input, min-w-field-sm · suggestions: Select's popup under the draft · fault: inline warn Notice in their place
- * @use a typed search over keys and text: the flow list's filter (QueryBar) and the data window's find. Enter or Tab takes the highlighted suggestion (a key goes into the draft, a value becomes a chip), Space outside quotes takes the draft as typed, ↑/↓ move the highlight without wrapping, Backspace in an empty draft removes the last chip. With onEnter, Enter on nothing highlighted calls it instead of taking the draft; with onDraft every keystroke is reported; with onEscape, Esc closes the suggestions and then clears the draft and calls it
+ * @use a typed search over keys and text: the flow list's filter (QueryBar) and the data window's find. Enter or Tab takes the highlighted suggestion (a key goes into the draft, a value becomes a chip), Space outside quotes takes the draft as typed, ↑/↓ move the highlight without wrapping, Backspace in an empty draft removes the last chip. With onEnter, Enter calls it instead of taking the draft, unless the user moved to a row or the highlighted row is a value (a key row is taken by Tab, so a draft that starts a key name still steps); with onDraft every keystroke is reported; with onEscape, Esc closes the suggestions and then clears the draft and calls it
  * @avoid one free-text value (Field) · one choice among options (Select) · owning a grammar · editing a chip in place
  * @states rest · focused with suggestions · moved · faulted · chips · a refused chip
  * @madeof IconButton · Notice
@@ -162,7 +162,7 @@ export function ChipBox<C>({
         return;
       case "Enter":
         event.preventDefault();
-        if (highlighted) take(highlighted);
+        if (highlighted && (!onEnter || moved !== null || highlighted.kind !== "key")) take(highlighted);
         else if (onEnter) onEnter(event.shiftKey);
         else if (draft.trim()) accept(draft);
         return;

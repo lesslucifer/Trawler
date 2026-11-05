@@ -1439,6 +1439,17 @@ describe("the find bar's chips", () => {
     expect(chipTexts()).toEqual(["key:id"]);
   });
 
+  it("Enter steps matches of a draft that starts a key name, and Tab takes the key", async () => {
+    await open(payload({ text: '{"key": "x", "key2": "key"}' }));
+    type("ke");
+    expect(findCount()).toHaveTextContent("1 of 3");
+    press("Enter");
+    expect(findCount()).toHaveTextContent("2 of 3");
+    expect(findBox()).toHaveValue("ke");
+    press("Tab");
+    expect(findBox()).toHaveValue("key:");
+  });
+
   it("a draft that does not parse says why and makes no chip; a near-miss key too", async () => {
     await open(payload({ text: JSON_DOC }));
     type("re:(");

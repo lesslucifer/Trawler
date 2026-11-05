@@ -130,13 +130,23 @@ describe("ChipBox", () => {
     expect(chipTexts()).toEqual([]);
   });
 
-  it("Enter takes a highlighted suggestion even when onEnter is given", () => {
+  it("with onEnter, Enter steps over a key row nobody moved to, Tab takes it, and Enter takes a row that was moved to or a value row", () => {
     const onEnter = vi.fn();
     const { draft, type, press } = mount({ onEnter });
     type("k");
     press("Enter");
+    expect(draft).toHaveValue("k");
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    press("ArrowDown");
+    press("Enter");
     expect(draft).toHaveValue("key:");
-    expect(onEnter).not.toHaveBeenCalled();
+    type("key:a");
+    press("Enter");
+    expect(chipTexts()).toEqual(["key:alpha"]);
+    expect(onEnter).toHaveBeenCalledTimes(1);
+    type("k");
+    press("Tab");
+    expect(draft).toHaveValue("key:");
   });
 
   it("Esc closes the suggestions first, then clears the draft and calls onEscape", () => {
