@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W5
+branch: HEAD
+tests:
+  unit: { waived: "no production code changes - W5 adds only test code and docs" }
+  integration: { waived: "W5 adds no production code; W1-W3 own the hook and gate contracts in tests/dod_hooks.rs, xtask/tests/suite/lint_spawn.rs and gate0's unit tests" }
+  e2e: { count: 1, covers: "the epic's four scenarios through the real tracked hooks and xtask: a slow-launch probe refuses the merge into main before any suite (exit 2, fix line); a fast probe is linked once and cached; two epics green alone are refused together at pre-merge-commit with the abort line and main unchanged; a push after the green merge reads the marker and runs no test binary; a push of a non-HEAD sha is proven once in a scratch worktree before it leaves" }
