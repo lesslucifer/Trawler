@@ -2,34 +2,8 @@ import type { BodyFetch, BodyView, FlowView, Leg } from "./api";
 import type { DataPayload } from "./dataWindow";
 import { flowCaption } from "./flowPayload";
 
-// Content-type → renderer dispatch, the core UC-5 contract. Decoded bodies
-// dispatch on the served content type; raw bodies sniff bytes (rawKind),
-// because stored bytes may be compressed regardless of what the type claims.
-export type BodyKind = "json" | "xml" | "image" | "form" | "text" | "hex";
-
-export function bodyKind(contentType: string | null): BodyKind {
-  const mime = (contentType ?? "").split(";")[0].trim().toLowerCase();
-  if (mime === "application/json" || mime.endsWith("+json")) return "json";
-  if (mime.startsWith("image/")) return "image";
-  if (mime === "application/x-www-form-urlencoded") return "form";
-  if (
-    mime === "application/xml" ||
-    mime === "text/xml" ||
-    mime === "text/html" ||
-    mime.endsWith("+xml")
-  ) {
-    return "xml";
-  }
-  if (
-    mime.startsWith("text/") ||
-    mime === "application/javascript" ||
-    mime === "application/ecmascript"
-  ) {
-    return "text";
-  }
-  return "hex";
-}
-
+// Raw bodies sniff bytes (rawKind), because stored bytes may be compressed
+// regardless of what the type claims; the pretty body's kind is readKind's.
 export function rawKind(bytes: Uint8Array): "text" | "hex" {
   try {
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);

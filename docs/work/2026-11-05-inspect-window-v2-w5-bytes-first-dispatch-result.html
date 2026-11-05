@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="b0c2769a3828ec79caddccca" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN2.W5 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN2.W5 — result</h1>
+      <p>The inspector's pretty body and the data window read their kind from the bytes, the pane says when the bytes overruled the served type,
+        and the window's status bar says what decided.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · branch <code>wu/inspect-window-v2/bytes-first-dispatch</code> · plan:
+        <a href="2026-11-05-inspect-window-v2-w5-bytes-first-dispatch-plan.html">W5 plan</a> · design:
+        <a href="2026-11-05-inspector-one-line-design-run.html">W2's run</a> (D5) · <a href="2026-11-05-data-window-kinds-design-run.html">W3's run</a> (E1, E6) · epic plan:
+        <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Delivered</th></tr>
+      <tr><td>nine-kind vocabulary, <code>detectKind</code> retired</td><td>Delivered: <code>DataKind</code> is <code>ContentKind</code>, <code>DATA_KINDS</code> lists nine rows; <code>detectKind</code>, <code>sniff</code>, <code>FROM_BYTES</code>, <code>bodyKind</code> and <code>BodyKind</code> removed</td></tr>
+      <tr><td><code>overruled</code>, <code>servedAs</code>, <code>decidedBy</code></td><td>Delivered in <code>contentKind.ts</code> (not <code>dataKind.ts</code>, which would have made the two modules import each other)</td></tr>
+      <tr><td>the pane</td><td>Delivered: pretty mode reads <code>readKind</code>, memoized; html renders through the XML renderer, javascript and css through the text renderer; the statement sits in the toolbar after the raw / pretty switch; raw mode unchanged</td></tr>
+      <tr><td>the window</td><td>Delivered: <code>readKind</code>, nine picker rows, the status text from <code>decidedBy</code>; html reads as xml and javascript / css as text for every tool until W6 / W7</td></tr>
+      <tr><td>Expected rows 1–6</td><td>All hold: see the evidence</td></tr>
+    </table>
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan said</th><th>Shipped</th><th>Why</th></tr>
+      <tr><td>a pane test unchanged for existing label-agreeing bodies</td><td><code>perf.test.tsx</code>'s lossy-text marker test now asserts hex</td><td>a <code>text/*</code> body whose bytes are not UTF-8 is hex by DEC-79 (Q5: a binary body is hex whatever its label); the lossy text with a size marker is reachable only by picking text in the window. A Latin-1 <code>text/html</code> page therefore shows as hex in the pane where it showed as lossy text</td></tr>
+      <tr><td>—</td><td><code>CopyText.tsx</code>: one space moved in a class string</td><td>W4 left the <code>design/vocabulary</code> eslint rule red (<code>rounded-button</code> fused to an interpolation); fixed here so the UI lint is clean</td></tr>
+    </table>
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>Commits</td><td><code>c8e0c654</code> plan · <code>74f54ee5</code> the build and its tests</td></tr>
+      <tr><td>Unit</td><td><code>contentKind.test.ts</code>: <code>overruled</code>, <code>servedAs</code>, <code>decidedBy</code> over agreeing, generic, wrong, absent and image labels and the pick wording · <code>dataKind.test.ts</code>: the nine rows · <code>body.test.ts</code>: <code>bodyKind</code> cases removed</td></tr>
+      <tr><td>Integration</td><td><code>BodyViewer.test.tsx</code>: JSON-as-text/plain and HTML-as-octet-stream render by their bytes with the statement; broken JSON, agreeing and unlabelled bodies say nothing; binary under text/plain is hex; raw mode says nothing · <code>DataWindowScreen.test.tsx</code>: the status bar for each wording, the nine-row picker, a pick and its restore, JSON-as-text/plain with JSON's tools, the existing binary and non-UTF-8 cases under the new wording</td></tr>
+      <tr><td>E2E</td><td>waived as planned: J2 (the pane and the window over real flows) is W9's</td></tr>
+      <tr><td>Suites</td><td><code>pnpm exec vitest run</code>, <code>tsc --noEmit</code>, eslint and <code>cargo xtask gate0</code> on the tip</td></tr>
+    </table>
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">Nothing new in T2: UC-5's dispatch and UC-9's detection text, and the status bar's wording, are W9's distillation per the epic plan. The new functions carry no comments; their names and the plan table state the rule.</p>
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W6 · W7</td><td>Replace the <code>SURFACE_KIND</code> map in <code>DataWindowScreen.tsx</code> (html to xml, javascript / css to text) with real surfaces, and the pane's html / javascript / css renderer cases likewise</td></tr>
+      <tr><td>W9</td><td>J2 over real windows; UC-5 and UC-9 text (<code>web-ui.html</code> still says <em>detected from …</em>)</td></tr>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import { rawKind } from "./body";
-import { signatureOf } from "./dataKind";
+import { kindLabel, signatureOf } from "./dataKind";
 
 export type ContentKind = "json" | "form" | "xml" | "html" | "javascript" | "css" | "text" | "hex" | "image";
 
@@ -92,4 +92,19 @@ export function readKind(bytes: Uint8Array, label?: string | null): KindReading 
   const labelled = labelKind(served);
   const kind = decideKind(bytes, labelled);
   return { kind, by: kind === labelled ? "label" : "bytes", label: served };
+}
+
+export function overruled({ kind, by, label }: KindReading): boolean {
+  if (by !== "bytes" || label === null) return false;
+  return labelKind(label) !== null || (kind !== "text" && kind !== "hex");
+}
+
+export function servedAs(reading: KindReading): string | null {
+  return overruled(reading) ? `${kindLabel(reading.kind)} · served as ${reading.label}` : null;
+}
+
+export function decidedBy(reading: KindReading, picked: boolean): string {
+  if (picked) return `read ${kindLabel(reading.kind)} from ${reading.by === "bytes" ? "its bytes" : reading.label}`;
+  if (overruled(reading)) return `read from its bytes · served as ${reading.label}`;
+  return reading.label === null ? "read from its bytes" : `from ${reading.label}`;
 }

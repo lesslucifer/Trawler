@@ -1,7 +1,6 @@
 import { memo, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import type { BodyFetch, BodyView, FlowView, Leg, TrawlerApi } from "./api";
 import {
-  bodyKind,
   bodyNotice,
   bodyPayload,
   bodyText,
@@ -10,7 +9,6 @@ import {
   rawKind,
   saveBody,
   saveFilename,
-  type BodyKind,
 } from "./body";
 import {
   CopyButton,
@@ -25,6 +23,7 @@ import {
   TextRenderer,
   XmlRenderer,
 } from "./components/index";
+import { readKind, servedAs, type ContentKind } from "./contentKind";
 import { openDataWindow } from "./dataWindow";
 
 const MODES = [
@@ -32,11 +31,12 @@ const MODES = [
   { value: "raw", label: "raw" },
 ];
 
-function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
+function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: ContentKind }) {
   switch (kind) {
     case "json":
       return <JsonRenderer text={bodyText(fetched.bytes)} />;
     case "xml":
+    case "html":
       return <XmlRenderer text={bodyText(fetched.bytes)} />;
     case "form":
       return <FormRenderer text={bodyText(fetched.bytes)} />;
@@ -44,6 +44,8 @@ function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: BodyKind }) {
       return <ImageRenderer bytes={fetched.bytes} contentType={fetched.contentType} />;
     case "hex":
       return <HexRenderer bytes={fetched.bytes} />;
+    case "javascript":
+    case "css":
     case "text": {
       const decoded = decodeBody(fetched.bytes);
       return (
@@ -76,8 +78,12 @@ export const BodyViewer = memo(function BodyViewer({
   const body: BodyView | null = leg === "request" ? flow.request_body : flow.response_body;
   const notice = bodyNotice(body);
   const loaded = fetched !== null && fetched !== "error" ? fetched : null;
-  const kind: BodyKind | null =
-    loaded && (pretty ? bodyKind(loaded.contentType) : rawKind(loaded.bytes));
+  const reading = useMemo(
+    () => (loaded && pretty ? readKind(loaded.bytes, loaded.contentType) : null),
+    [loaded, pretty],
+  );
+  const kind: ContentKind | null = loaded && (reading ? reading.kind : rawKind(loaded.bytes));
+  const statement = reading && servedAs(reading);
 
   useEffect(() => {
     setFetched(null);
@@ -128,6 +134,11 @@ export const BodyViewer = memo(function BodyViewer({
           onChange={(value) => onPretty(value === "pretty")}
           ariaLabel={`${leg} body mode`}
         />
+        {statement && (
+          <span data-testid="served-as" className="font-ui text-chrome text-ink-mute">
+            {statement}
+          </span>
+        )}
         {loaded && (
           <span className="ml-auto flex items-center gap-chrome-gap">
             {kind !== "image" && (

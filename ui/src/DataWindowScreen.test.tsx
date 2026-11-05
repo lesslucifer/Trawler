@@ -43,6 +43,11 @@ function payload(over: Partial<DataPayload> & { text?: string } = {}): DataPaylo
   return { key: "k", title: "response body · GET api.example.com/v2/x", bytes: encode(text), typeHint: "application/json", ...rest };
 }
 
+function pickKind(name: string) {
+  fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
+  fireEvent.click(screen.getByRole("option", { name }));
+}
+
 async function open(handed: DataPayload | null) {
   const take = () => Promise.resolve(handed);
   render(<DataWindowScreen take={take} />);
@@ -144,7 +149,7 @@ describe("a 2 MB JSON payload", () => {
     await open(payload({ text: big }));
     expect(view().state.doc.length).toBe(big.length);
     expect(view().state.readOnly).toBe(false);
-    expect(screen.getByTestId("detected")).toHaveTextContent("detected from application/json");
+    expect(screen.getByTestId("detected")).toHaveTextContent("from application/json");
     expect(footer()).toHaveTextContent(files.humanBytes(big.length));
     expect(footer()).toHaveTextContent(`${big.split("\n").length} lines`);
     expect(screen.queryByTestId("modified")).toBeNull();
@@ -203,6 +208,8 @@ describe("bytes the text cannot hold", () => {
   it("data that is not valid UTF-8 stays read-only and says why, so no edit can rewrite the bytes around it", async () => {
     const bytes = new Uint8Array([0x61, 0xe9, 0x62]);
     await open(payload({ bytes, typeHint: "text/plain", text: undefined }));
+    expect(screen.getByTestId("detected")).toHaveTextContent("from text/plain");
+    pickKind("text");
     expect(screen.getByText(/not valid UTF-8/)).toBeInTheDocument();
     expect(view().state.readOnly).toBe(true);
     expect(footer()).toHaveTextContent("read-only");
@@ -332,7 +339,7 @@ describe("a 1 MiB binary payload", () => {
 
   it("the whole dump, read-only, ⋯ holding only save, copy delivering the dump", async () => {
     await open(payload({ bytes, typeHint: "application/octet-stream", text: undefined }));
-    expect(screen.getByTestId("detected")).toHaveTextContent("detected from its bytes");
+    expect(screen.getByTestId("detected")).toHaveTextContent("from application/octet-stream");
     expect(footer()).toHaveTextContent("read-only");
     expect(footer()).toHaveTextContent("1.0 MiB");
 
@@ -359,10 +366,44 @@ describe("the kind", () => {
     await open(payload());
     fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
     fireEvent.click(screen.getByRole("option", { name: "text" }));
-    expect(screen.getByTestId("detected")).toHaveTextContent("your choice · detected JSON from application/json");
+    expect(screen.getByTestId("detected")).toHaveTextContent("read JSON from application/json");
     fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
     fireEvent.click(screen.getByRole("option", { name: "JSON" }));
-    expect(screen.getByTestId("detected")).toHaveTextContent(/^detected from application\/json$/);
+    expect(screen.getByTestId("detected")).toHaveTextContent(/^from application\/json$/);
+  });
+
+  it("the picker offers nine kinds, the pick overrides, and the detected kind restores the wording", async () => {
+    await open(payload({ typeHint: "text/plain" }));
+    fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent?.replace("✓", ""))).toEqual([
+      "JSON", "form", "XML", "HTML", "JavaScript", "CSS", "text", "hex", "image",
+    ]);
+    fireEvent.click(screen.getByRole("option", { name: "text" }));
+    expect(screen.getByTestId("detected")).toHaveTextContent("read JSON from its bytes");
+    pickKind("JSON");
+    expect(screen.getByTestId("detected")).toHaveTextContent(/^read from its bytes · served as text\/plain$/);
+  });
+
+  it.each([
+    ["JSON served as text/plain", '{"a":1}', "text/plain", "read from its bytes · served as text/plain"],
+    ["JSON with no label", '{"a":1}', undefined, "read from its bytes"],
+    ["HTML served as application/octet-stream", "<!doctype html><p>x</p>", "application/octet-stream", "read from its bytes · served as application/octet-stream"],
+    ["broken JSON under text/plain", "{oops", "text/plain", "from text/plain"],
+  ])("%s: the status bar says what decided", async (_name, text, typeHint, said) => {
+    await open(payload({ text, typeHint }));
+    expect(screen.getByTestId("detected")).toHaveTextContent(new RegExp(`^${said.replace(/[/]/g, "\\/")}$`));
+  });
+
+  it("JSON served as text/plain opens as JSON, with its tools", async () => {
+    await open(payload({ text: '{"a":1}', typeHint: "text/plain" }));
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.getByRole("group", { name: "indent" })).toBeInTheDocument();
+  });
+
+  it("HTML served as application/octet-stream opens with the markup tools; broken JSON stays text", async () => {
+    await open(payload({ text: "<!doctype html><html><body><p>x</p></body></html>", typeHint: "application/octet-stream" }));
+    fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
+    expect(screen.getByRole("option", { name: "HTML", selected: true })).toBeInTheDocument();
   });
 
   it("an image offers fit and actual size in ⋯", async () => {
@@ -548,6 +589,7 @@ describe("indent and sort keys", () => {
 
   it("a read-only JSON text offers fold to, never a reformat", async () => {
     await open(payload({ bytes: new Uint8Array([0x7b, 0x22, 0x61, 0x22, 0x3a, 0x22, 0xe9, 0x22, 0x7d]), text: undefined }));
+    pickKind("JSON");
     fireEvent.click(screen.getByRole("button", { name: "more" }));
     expect(screen.queryByRole("group", { name: "indent" })).toBeNull();
     expect(screen.queryByRole("menuitem", { name: /^sort keys/ })).toBeNull();

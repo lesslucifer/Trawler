@@ -24,7 +24,8 @@ import {
   type Peeked,
   type Span,
 } from "./decoders";
-import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
+import { decidedBy, readKind } from "./contentKind";
+import { DATA_KINDS, READ_ONLY_KINDS, type DataKind } from "./dataKind";
 import { findBytes, findMatches, readHexQuery, type HexQueryMode } from "./find";
 import {
   addPairAfter,
@@ -102,6 +103,18 @@ interface Peek {
 }
 type NodePart = "path" | "value";
 type ImageSize = "fit" | "actual";
+
+const SURFACE_KIND = {
+  json: "json",
+  form: "form",
+  xml: "xml",
+  html: "xml",
+  javascript: "text",
+  css: "text",
+  text: "text",
+  hex: "hex",
+  image: "image",
+} as const;
 
 const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
 
@@ -308,7 +321,7 @@ function useSettled<T>(value: T): T {
 }
 
 function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
-  const detected = useMemo(() => detectKind(payload.typeHint, payload.bytes), [payload]);
+  const reading = useMemo(() => readKind(payload.bytes, payload.typeHint), [payload]);
   const decoded = useMemo(() => decodeBody(payload.bytes, { keepBom: true }), [payload]);
   const original = decoded.text;
   const [history, setHistory] = useState<History>(() => startHistory(original));
@@ -330,7 +343,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const { state: copied, copy } = useCopy(payload);
   const settled = useSettled(history);
 
-  const kind = override ?? detected.kind;
+  const picked = override ?? reading.kind;
+  const kind = SURFACE_KIND[picked];
   const lineBreak = useMemo(() => lineBreakOf(original), [original]);
   const lossy = !decoded.whole && !READ_ONLY_KINDS.has(kind);
   const mixed = lineBreak === null && !READ_ONLY_KINDS.has(kind);
@@ -820,9 +834,9 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       <footer className="flex flex-wrap items-center gap-x-3 gap-y-chrome-tight border-t border-hairline px-4 py-chrome-y font-ui text-chrome text-ink-mute">
         <Select
           options={DATA_KINDS}
-          value={kind}
+          value={picked}
           onChange={(id) => {
-            setOverride(id === detected.kind ? null : (id as DataKind));
+            setOverride(id === reading.kind ? null : (id as DataKind));
             setMenu(null);
           }}
           label="treat the data as"
@@ -830,7 +844,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
           opens="above"
         />
         <span data-testid="detected">
-          {override ? `your choice · detected ${kindLabel(detected.kind)} from ${detected.from}` : `detected from ${detected.from}`}
+          {decidedBy(reading, override !== null)}
         </span>
         <span>{humanBytes(shownSize)}</span>
         {!readOnly && !empty && <span>{asTable ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}

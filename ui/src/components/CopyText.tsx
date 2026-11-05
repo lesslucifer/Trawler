@@ -55,7 +55,7 @@ export function CopyText({
       </span>
       {(confirming || failed) && (
         <span
-          className={`ml-control-gap ${oneLine ? "shrink-0 " : ""}rounded-button border px-chrome-x font-ui text-label ${
+          className={`ml-control-gap ${oneLine ? "shrink-0" : ""} rounded-button border px-chrome-x font-ui text-label ${
             confirming ? "border-ok text-ok" : "border-warn text-warn"
           }`}
         >
