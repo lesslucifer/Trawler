@@ -605,24 +605,14 @@ describe("a quit request", () => {
     },
   );
 
-  test("a keep write that never settles is called too late, and the question's other answers work again", async () => {
-    vi.useFakeTimers();
-    try {
-      const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
-      const { result } = shellConfirm(f);
-      await closeAndWait(f);
-      const keeping = Promise.resolve(result.current.keepCapturing());
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(3000);
-        await keeping;
-      });
-      expect(result.current.keepRefused).toBe("it took too long");
-      expect(f.destroy).not.toHaveBeenCalled();
-      act(() => result.current.cancelAsk());
-      expect(result.current.asking).toBe(false);
-    } finally {
-      vi.useRealTimers();
-    }
+  test("a keep write that never settles does not hold a quit request", async () => {
+    const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
+    const { result } = shellConfirm(f);
+    await closeAndWait(f);
+    void result.current.keepCapturing();
+    await f.request();
+    await waitFor(() => expect(f.ran("quit_app")).toBe(true));
+    expect(result.current.asking).toBe(false);
   });
 
   test.each(["cancelAsk", "quitInstead"] as const)(

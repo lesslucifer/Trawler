@@ -66,8 +66,6 @@ export const NO_QUIT_FACTS: QuitFacts = { answering: true, ownAddresses: [], rea
 // quit (W11's review, rounds 1 and 2).
 export const QUIT_READ_MS = 1500;
 
-const KEEP_WRITE_LATE = "it took too long";
-
 export function bounded<T>(read: Promise<T>, fallback: T, ms = QUIT_READ_MS): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const late = new Promise<T>((resolve) => {
@@ -264,7 +262,11 @@ export function useProxyCloseConfirm(
     },
     // While the answer is being stored the question's other answers wait: a
     // cancel or a quit racing the write would leave the stored switch and the
-    // window disagreeing about what the user chose.
+    // window disagreeing about what the user chose. The write is a small file
+    // behind one command and is not bounded: a timeout would release the wait
+    // while the write could still land, which is the same disagreement. A
+    // request to quit the app is not held by it, so a write that never settles
+    // never makes the window unquittable.
     // The answer is the switch. A write that fails leaves the window and the
     // question open, saying why: closing into a state nothing recorded would ask
     // again blind, and a question that vanishes reads as a cancel.
@@ -275,14 +277,10 @@ export function useProxyCloseConfirm(
       setKeepRefused(null);
       let refusal: string | null = null;
       try {
-        refusal = await bounded(
-          deps.invoke("keep_capturing_write", { on: true }).then(() => null, (err: unknown) => {
-            console.error("storing keep capturing failed:", err);
-            return refusalWords(err);
-          }),
-          KEEP_WRITE_LATE,
-          2 * QUIT_READ_MS,
-        );
+        await deps.invoke("keep_capturing_write", { on: true });
+      } catch (err) {
+        console.error("storing keep capturing failed:", err);
+        refusal = refusalWords(err);
       } finally {
         storingKeep.current = false;
       }
