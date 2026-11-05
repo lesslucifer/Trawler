@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU inspect-window/payload-heading -> epic/inspect-window (round 4)"
+epic: E-INSPWIN
+wu: E-INSPWIN.W11
+branch: wu/inspect-window/payload-heading
+base: 5a9b9086daccb3e0b3adea95426e08a578cdc6e6
+head: 04f513747be0ab87dec90f95d273a7dc179193ea
+diff_sha256: 187ae2a0c39fc6cfdce685327b3777f71904d1356353b5d39eae39b891e9f415
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 46
+    finders: 166
+    total: 166
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 1, verified: 1 }
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "queryCount, a display helper with one caller (the screen's Caption), sits in dataWindow.ts, the transport module"
+    waived: "it counts the parameters of the Heading's query, a type dataWindow.ts owns and documents; one pure function with one caller, nothing drifts where it stands"
+verdict: PASS
+date: 2026-11-05
