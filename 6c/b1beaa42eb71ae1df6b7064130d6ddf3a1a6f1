@@ -26,6 +26,9 @@ fleet:
     altitude: { found: 2, verified: 1 }
 findings: { found: 12, verified: 10, waived: 0 }
 waivers: []
+walk_waivers:
+  - seam: b3ab1e01a8
+    why: "a standalone renumber commit (DEC-69 -> DEC-70, main's DEC-69 landed first) whose only change to the three rendered files is the decision number inside their TSDoc comments: nothing rendered changes, so no design accounting is owed; the epic's code review against main judged those files at the tip"
 nits:
   - finding: "the found and pairs memos run findMatches/findInPairs and parsePairs on the live text each keystroke, not on the settled copy"
     waived: "linear in the payload, capped at MATCH_LIMIT matches, and run only while a find query is open or the form kind shows; settling them on the 250 ms copy would show a match count for text the user has already changed; not measured, left for a perf WU if a large form lags"
