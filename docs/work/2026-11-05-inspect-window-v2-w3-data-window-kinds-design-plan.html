@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec5bae9f34851f0dfae970" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN2.W3 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN2.W3 — design run: the data window's new kinds and find</h1>
+      <p>One closed run that draws the data window reading a kind from its bytes, the html, javascript and css kinds, a
+        preview that holds no reach, and find typed the way the flow list's filter is.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · branch <code>wu/inspect-window-v2/data-window-kinds-design</code> off
+        <code>epic/inspect-window-v2</code> at 71224073 · epic plan: <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      W3 delivers one design run at <code>docs/work/2026-11-05-data-window-kinds-design-run.html</code> that mounts the real collection
+      (<code>Menu</code>, <code>EditSurface</code>, <code>Select</code>, <code>Notice</code>, the header's buttons) around a stateful data window:
+      the status bar naming what decided the kind, the kind picker's nine rows, the ⋯ menu for javascript, css and html, the html
+      source ⇄ preview with what the preview withheld, and the find bar as a chip box with suggestions, a fault, a refused chip and one
+      count over several chips. The owner reviews it, it closes in three steps, and a <code>design/v1</code> note on the tip names it.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN2 · the epic plan's W3 block and its find-bar section · UC-9 kinds, detection and find · epic expected rows 5 (window),
+      6–10 as drawn states · rulings Q6, Q7, Q10, Q12–Q15 · DEC-79 · DEC-80 · DEC-76 · DEC-71 (the query bar this borrows from) · DEC-53.
+    </p>
+
+    <h2 id="what">What the run must decide</h2>
+    <table data-c="decides">
+      <tr><th>#</th><th>Decision</th><th>Where it lands</th></tr>
+      <tr><td>1</td><td>the status bar's words for what decided the kind (label, bytes over a label, bytes alone, the user's pick)</td><td>run mockup · W5</td></tr>
+      <tr><td>2</td><td>where html's source ⇄ preview switch lives and its key</td><td>run mockup · W7</td></tr>
+      <tr><td>3</td><td>what the preview says about what it withheld</td><td>run mockup · the preview surface proposal · W7</td></tr>
+      <tr><td>4</td><td>what find does while the preview shows</td><td>run mockup · W7, W8</td></tr>
+      <tr><td>5</td><td>the javascript and css reformat act: its name, its key, what it says when it cannot</td><td>run mockup · W6</td></tr>
+      <tr><td>6</td><td>the kind picker's nine labels and order</td><td>run mockup · W5</td></tr>
+      <tr><td>7</td><td>the find bar as a chip box: placeholder, suggestion rows per kind, where the count and steps sit</td><td>run · the chip box proposal · W8</td></tr>
+      <tr><td>8</td><td>a chip the kind cannot run, and a draft that does not parse</td><td>run mockup · W8</td></tr>
+      <tr><td>9</td><td>the chip box's shape: what <code>QueryBar</code> gives up to share it</td><td>run · a component design · W8</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>Observable at this WU's tip</th><th>Checked by</th></tr>
+      <tr><td>1</td><td>the run carries <code>data-artifact="design-run"</code>, is archived, has a minted htmldoc id, loads the bootstrap</td><td>htmldoc·id · 6·run-closed</td></tr>
+      <tr><td>2</td><td>the mockup mounts the collection from <code>window.Trawler</code>; state toggles cover json-from-bytes, html source and
+        preview, javascript reformatted, css, the picker open, find with two chips, suggestions, a fault, a refused chip</td><td>assets·specimen · mockup·state · the owner</td></tr>
+      <tr><td>3</td><td>every Given (the payload, <code>readKind</code>'s reading, the nine kinds, the override, the preview's reach, the find grammar) is answered</td><td>capabilities·answered</td></tr>
+      <tr><td>4</td><td>a key path for each pointer act; new keys on proposals</td><td>keyboard-parity·path</td></tr>
+      <tr><td>5</td><td>the review item records the owner's round</td><td>review·recorded</td></tr>
+      <tr><td>6</td><td><code>design/v1</code> on the tip names the run and every component design, with an empty built set</td><td>9·design · design-scope</td></tr>
+    </table>
+
+    <h2 id="not-here">Not here</h2>
+    <table data-c="not-here">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr><td>any file under <code>ui/src/</code>; the formatter dependency</td><td>W5–W8</td></tr>
+      <tr><td>the inspector</td><td>W2's run, closed</td></tr>
+      <tr><td>UC-9, the rulebook's keyboard rows</td><td>proposed here, written at W9's distillation</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p data-c="test-why">No code path changes; each layer is waived with its reason.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>What asserts what</th></tr>
+      <tr><td>unit</td><td>waived: "the WU adds no executable code; its artifacts are a design run and a component design, and every
+        predicate over them is a verify-doc rule with its own tests in xtask"</td></tr>
+      <tr><td>integration</td><td>waived: "the contract is a green, closed, citable run; verify-doc asserts green, 6·run-closed asserts closed at
+        this merge, design-scope and 9·design assert W5–W8 can cite it"</td></tr>
+      <tr><td>e2e</td><td>waived: "a design doc renders no surface a driver can touch; W9's J2–J5 drive the built window"</td></tr>
+      <tr><td>before the merge</td><td><code>cargo xtask verify-doc</code> on the run, the component design, this plan and the result · the headless
+        render check and a screenshot of each state · <code>cargo xtask design-scope</code> · <code>cargo xtask verify-dod wu</code></td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

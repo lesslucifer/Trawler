@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec5baf9f34851f0dfae972">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run: the data window's new kinds and find</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .statebtn{margin-top:10px;margin-right:6px;border:1px solid var(--line);border-radius:4px;
+      padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    .a-mock h2,.a-mock h3{margin:0;padding:0;border:0}
+    .a-fit{overflow:hidden;border:1px solid var(--line);border-radius:4px}
+    .a-mock{transform-origin:top left}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run: the data window's new kinds and find</h1>
+      <p>The data window reads a kind from its bytes and says what decided it; html, javascript and css become kinds of their
+        own; html gains a preview that runs nothing and loads nothing; find is typed the way the flow list's filter is.</p>
+      <div class="meta">Design run · closed 2026-11-05 after the owner's round 1 (accept all, one wording comment on E1) · Trawler · T3 (docs/work/) · <strong>E-INSPWIN2.W3</strong> ·
+        branch <code>wu/inspect-window-v2/data-window-kinds-design</code> · epic <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a> ·
+        <a href="2026-11-05-inspect-window-v2-w3-data-window-kinds-design-plan.html">WU plan</a> · component:
+        <a href="components/chip-box.html">ChipBox</a> · within
+        <a href="../decisions/dec-79-the-bytes-decide-the-kind.html">DEC-79</a>,
+        <a href="../decisions/dec-80-the-html-preview-holds-no-reach.html">DEC-80</a> and
+        <a href="../decisions/dec-76-the-data-window.html">DEC-76</a></div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="archived">
+
+    <h2 id="mockup">Mockup</h2>
+    <p class="kd">Live. Pick a payload with the buttons under the frame. In find, type <code>ke</code> to see the suggestions,
+      take one with Enter or Tab, type a word and press Space to make a chip, Enter to step, Backspace on an empty draft to drop the
+      last chip; try <code>re:(</code> + Space. Open ⋯ for reformat and the html view. Change the kind in the status bar. The frame
+      is the window at 1200&nbsp;px, scaled to fit.</p>
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-fit" id="fit">
+          <div class="a-mock relative flex flex-col bg-canvas font-ui text-ink" id="mock">
+            <div class="a-zone shrink-0" id="m-head" data-zone="window header"></div>
+            <div class="a-zone shrink-0" id="m-find" data-zone="find bar"></div>
+            <div class="a-zone flex min-h-0 min-w-0 flex-1 flex-col" id="m-surface" data-zone="surface"
+              data-wire="collection" data-order="wire"></div>
+            <div class="a-zone shrink-0" id="m-foot" data-zone="status bar"></div>
+            <div class="a-zone pointer-events-none absolute inset-0" id="m-menu" data-zone="menus"></div>
+          </div>
+        </div>
+        <div class="mt-2 font-ui text-chrome text-ink-mute" id="readout"></div>
+        <span class="hidden w-pane-label" aria-hidden="true"></span>
+      </div>
+      <p>overflow: window header, find bar and status bar pinned, each one row that wraps as the window narrows; the find bar's
+        chips wrap onto a second row inside the box rather than scroll. surface: the one zone that scrolls, both ways, inside itself,
+        uncapped (DEC-76 rule 7); in html's preview the frame fills the surface and scrolls inside itself. menus: the ⋯ menu, the
+        kind picker and the find suggestions float over every other zone, one at a time.</p>
+      <p class="kd">Payload is mono: the surface, the chips and the draft. The status bar's words are ui. Highlighting for
+        javascript, css and html is stubbed here (EditSurface ships json, xml and plain today; W6 and W7 add the three).</p>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-js"
+        data-label-off="▶ javascript (minified)" data-label-on="◀ back to JSON">▶ javascript (minified)</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-css"
+        data-label-off="▶ css" data-label-on="◀ back to JSON">▶ css</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="p-html"
+        data-label-off="▶ html, source" data-label-on="◀ back to JSON">▶ html, source</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="preview"
+        data-label-off="▶ html, preview" data-label-on="◀ html, source">▶ html, preview</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="labelled"
+        data-label-off="▶ JSON served as JSON" data-label-on="◀ JSON served as text/plain">▶ JSON served as JSON</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="picked"
+        data-label-off="▶ the user picked text" data-label-on="◀ the detected kind">▶ the user picked text</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="reformatted"
+        data-label-off="▶ javascript reformatted" data-label-on="◀ as handed in">▶ javascript reformatted</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="more"
+        data-label-off="▶ ⋯ open" data-label-on="◀ ⋯ closed">▶ ⋯ open</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="chips"
+        data-label-off="▶ find: two chips" data-label-on="◀ find: empty">▶ find: two chips</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="suggest"
+        data-label-off="▶ find: suggestions" data-label-on="◀ find: closed">▶ find: suggestions</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="fault"
+        data-label-off="▶ find: a draft that does not parse" data-label-on="◀ find: no fault">▶ find: a draft that does not parse</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="refused"
+        data-label-off="▶ find: a chip the kind cannot run" data-label-on="◀ find: every chip runs">▶ find: a chip the kind cannot run</button>
+      <script type="text/babel">
+        const { React, createRoot, CopyButton, IconButton, Select, Notice, Menu, EditSurface } = window.Trawler;
+        const { useSyncExternalStore, useRef, useEffect } = React;
+
+        const WIN = 1200;
+        const FRAME_H = 640;
+        const DOC = { users: [
+          { id: 8812, name: "Ada Park", user: { role: "owner", email: "ada@example.com" } },
+          { id: 8813, name: "Bo Chen", user: { role: "member", email: "bo@example.com" } },
+          { id: 8814, name: "user name with spaces", user: { role: "member", email: "cy@example.com" } },
+        ], total: 3, next: null };
+        const JS_MIN = '!function(){"use strict";const e=document.querySelector("#app"),t={user:null,retries:3};function n(o){return fetch("/api/v2/session",{credentials:"include"}).then(r=>r.ok?r.json():Promise.reject(r.status)).then(r=>{t.user=r.user,e.dataset.ready="1"}).catch(r=>o>0?n(o-1):console.warn("session",r))}n(t.retries)}();';
+        const JS_PRETTY = `!function () {
+  "use strict";
+  const e = document.querySelector("#app"),
+    t = { user: null, retries: 3 };
+  function n(o) {
+    return fetch("/api/v2/session", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((r) => {
+        (t.user = r.user), (e.dataset.ready = "1");
+      })
+      .catch((r) => (o > 0 ? n(o - 1) : console.warn("session", r)));
+  }
+  n(t.retries);
+}();`;
+        const CSS = `:root{--brand:#2b6cb0}body{margin:0;font:14px/1.5 system-ui}.card{border:1px solid #ddd;border-radius:8px;padding:12px}.card .user{font-weight:600}@media (max-width:600px){.card{padding:8px}}`;
+        const HTML = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="3;url=https://tracker.example.net/next">
+  <title>Account 8812</title>
+  <link rel="stylesheet" href="https://cdn.example-static.com/site.css">
+  <style>body{font:14px/1.5 system-ui;margin:16px} .user{font-weight:600} .muted{opacity:.6}</style>
+  <script src="https://cdn.example-static.com/app.js"><\/script>
+<\/head>
+<body>
+  <h1>Account 8812</h1>
+  <p class="user">Ada Park · owner</p>
+  <p class="muted">Signed in from Safari on macOS.</p>
+  <img src="https://tracker.example.net/pixel.gif?u=8812" alt="">
+  <form action="https://api.example.com/logout" method="post"><button>Sign out</button></form>
+  <script>document.body.dataset.ran = "yes"; fetch("https://tracker.example.net/beacon");<\/script>
+<\/body>
+<\/html>`;
+        const CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">`;
+        const PAGE_DEFAULT = `<style>:root{color-scheme:light;background:Canvas;color:CanvasText}<\/style>`;
+        const previewDoc = (html) => CSP + PAGE_DEFAULT + html.replace(/<meta[^>]*http-equiv=["']?refresh[^>]*>/gi, "").replace(/<base\b[^>]*>/gi, "");
+
+        const PAYLOADS = {
+          json: { title: "response body · GET api.example.com/v2/users", label: "text/plain", detected: "json", by: "bytes", text: JSON.stringify(DOC, null, 2) },
+          js: { title: "response body · GET cdn.example-static.com/session.min.js", label: "application/javascript", detected: "javascript", by: "label", text: JS_MIN },
+          css: { title: "response body · GET cdn.example-static.com/site.min.css", label: "text/css", detected: "css", by: "label", text: CSS },
+          html: { title: "response body · GET app.example.com/account/8812", label: "text/html", detected: "html", by: "label", text: HTML },
+        };
+        const KINDS = [
+          { id: "json", label: "JSON" }, { id: "form", label: "form" }, { id: "xml", label: "XML" }, { id: "html", label: "HTML" },
+          { id: "javascript", label: "JavaScript" }, { id: "css", label: "CSS" }, { id: "text", label: "text" },
+          { id: "hex", label: "hex" }, { id: "image", label: "image" },
+        ];
+        const labelOf = (id) => KINDS.find((k) => k.id === id).label;
+        const sizeLabel = (n) => (n >= 1024 ? `${(n / 1024).toFixed(1)} KiB` : `${n} B`);
+        const SURFACE_LANG = { json: "json", xml: "xml", html: "xml", javascript: "plain", css: "plain", text: "plain", form: "plain" };
+        const FIND_KEYS = {
+          json: [["key:", "only inside keys"], ["value:", "only inside values"], ["re:", "a regular expression"], ["case:", "match case"]],
+          form: [["key:", "only inside keys"], ["value:", "only inside values"], ["re:", "a regular expression"], ["case:", "match case"]],
+          text: [["re:", "a regular expression"], ["case:", "match case"]],
+          hex: [["bytes:", "hex pairs, like 89 50 4e"], ["text:", "ASCII"]],
+        };
+        const keysFor = (kind) => FIND_KEYS[kind] ?? FIND_KEYS.text;
+        const KNOWN = ["key", "value", "re", "case", "bytes", "text"];
+
+        const store = (() => {
+          let state = { flags: new Set(), chips: [], draft: "", fault: null, open: false, moved: 0, at: 0, k: 1, menu: false, reformatted: null, preview: null };
+          const subs = new Set();
+          return {
+            get: () => state,
+            set: (patch) => { state = { ...state, ...(typeof patch === "function" ? patch(state) : patch) }; subs.forEach((f) => f()); },
+            sub: (f) => { subs.add(f); return () => subs.delete(f); },
+          };
+        })();
+        const useStore = () => useSyncExternalStore(store.sub, store.get);
+        const mockEl = () => document.getElementById("mock");
+        const setFlag = (flag, on) => mockEl().classList.toggle(flag, on);
+
+        const payloadOf = (s) => (s.flags.has("p-js") || s.flags.has("reformatted") ? PAYLOADS.js : s.flags.has("p-css") ? PAYLOADS.css
+          : s.flags.has("p-html") || s.flags.has("preview") ? PAYLOADS.html : PAYLOADS.json);
+        const kindOf = (s) => (s.flags.has("picked") ? "text" : payloadOf(s).detected);
+        const previewing = (s) => kindOf(s) === "html" && (s.preview ?? s.flags.has("preview"));
+        const textOf = (s) => (payloadOf(s) === PAYLOADS.js && (s.reformatted ?? s.flags.has("reformatted")) ? JS_PRETTY : payloadOf(s).text);
+        const servedLabel = (s) => (s.flags.has("labelled") && payloadOf(s) === PAYLOADS.json ? "application/json" : payloadOf(s).label);
+        const byOf = (s) => (payloadOf(s) === PAYLOADS.json ? (s.flags.has("labelled") ? "label" : "bytes") : "label");
+
+        function parseDraft(draft, kind) {
+          const text = draft.trim();
+          if (!text) return { empty: true };
+          if (text.startsWith("-")) return { fault: "find marks what it finds; there is nothing to exclude, so - has no meaning here" };
+          const keyed = /^([a-z]+):(.*)$/i.exec(text);
+          if (keyed) {
+            const [, key, rest] = keyed;
+            const value = rest.replace(/^"(.*)"$/, "$1");
+            if (!KNOWN.includes(key)) {
+              const near = KNOWN.find((k) => 2 >= [...k].filter((c, i) => key[i] !== c).length + Math.abs(k.length - key.length));
+              if (near) return { fault: `no key ${key}: — did you mean ${near}:?` };
+              return { chip: { key: "text", value: text } };
+            }
+            if (!value) return { fault: `${key}: needs something to find after it` };
+            if (key === "re") { try { new RegExp(value); } catch (e) { return { fault: `not a regular expression: ${e.message.replace(/^Invalid regular expression: /, "")}` }; } }
+            return { chip: { key, value } };
+          }
+          return { chip: { key: "text", value: text.replace(/^"(.*)"$/, "$1") } };
+        }
+        const refused = (chip, kind) => chip.key !== "text" && !keysFor(kind).some(([k]) => k === `${chip.key}:`);
+        const chipLabel = (c) => (c.key === "text" ? (/\s/.test(c.value) ? `"${c.value}"` : c.value) : `${c.key}:${c.value}`);
+
+        function rangesFor(text, chip, kind) {
+          if (refused(chip, kind)) return [];
+          const out = [];
+          const push = (re, group) => { for (let m = re.exec(text); m; m = re.exec(text)) { if (m[0] === "") { re.lastIndex++; continue; }
+            const from = m.index + (group ? m[0].indexOf(m[group]) : 0); out.push({ from, to: from + (group ? m[group].length : m[0].length) }); } };
+          const esc = (v) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          if (chip.key === "key") push(new RegExp(`"([^"]*${esc(chip.value)}[^"]*)"\\s*:`, "gi"), 1);
+          else if (chip.key === "value") push(new RegExp(`:\\s*"?([^",\\n}]*${esc(chip.value)}[^",\\n}]*)`, "gi"), 1);
+          else if (chip.key === "re") { try { push(new RegExp(chip.value, "gi")); } catch {} }
+          else if (chip.key === "case") push(new RegExp(esc(chip.value), "g"));
+          else push(new RegExp(esc(chip.value), "gi"));
+          return out;
+        }
+        function matchesOf(s) {
+          const kind = kindOf(s);
+          const text = textOf(s);
+          const all = s.chips.flatMap((c) => rangesFor(text, c, kind));
+          const live = parseDraft(s.draft, kind);
+          if (live.chip && !s.open) all.push(...rangesFor(text, live.chip, kind));
+          const seen = new Set();
+          return all.sort((a, b) => a.from - b.from).filter((r) => { const k = `${r.from}:${r.to}`; if (seen.has(k)) return false; seen.add(k); return true; });
+        }
+
+        function forceFlags(flags) {
+          const kind = flags.has("p-js") || flags.has("reformatted") ? "javascript" : flags.has("p-css") ? "css" : flags.has("p-html") || flags.has("preview") ? "html" : "json";
+          const chips = flags.has("chips") ? (kind === "json" ? [{ key: "key", value: "user" }, { key: "text", value: "user name" }] : [{ key: "text", value: "user" }]) : [];
+          if (flags.has("refused")) chips.unshift({ key: "key", value: "id" });
+          const draft = flags.has("suggest") ? "ke" : flags.has("fault") ? "re:(" : "";
+          const fault = flags.has("fault") ? parseDraft("re:(", kind).fault : null;
+          store.set({ flags, chips, draft, fault, open: flags.has("suggest") || flags.has("fault"), moved: 0, at: 0,
+            menu: flags.has("more"), reformatted: null, preview: null });
+          if (flags.has("refused") && !flags.has("picked")) setFlag("picked", true);
+        }
+
+        function Head() {
+          const s = useStore();
+          const more = useRef(null);
+          return (
+            <header className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-2">
+              <span className="min-w-0 flex-1 truncate font-ui text-control text-ink-body">{payloadOf(s).title}</span>
+              {!previewing(s) && <CopyButton label="copy" getPayload={() => textOf(s)} />}
+              <span ref={more} id="more-anchor">
+                <IconButton glyph="more" label="more" expanded={s.menu} onClick={() => store.set((x) => ({ menu: !x.menu }))} />
+              </span>
+            </header>
+          );
+        }
+
+        function Find() {
+          const s = useStore();
+          const input = useRef(null);
+          const kind = kindOf(s);
+          if (previewing(s)) return null;
+          const rows = s.open && !s.fault ? suggestRows(s.draft, kind) : [];
+          const active = Math.min(s.moved, Math.max(rows.length - 1, 0));
+          const matches = matchesOf(s);
+          const total = matches.length;
+          const accept = (text) => {
+            const parsed = parseDraft(text, kind);
+            if (parsed.fault) return store.set({ fault: parsed.fault, open: true });
+            if (parsed.chip) store.set((x) => ({ chips: [...x.chips, parsed.chip], draft: "", fault: null, moved: 0, at: 0 }));
+          };
+          const take = (row) => (row.key ? store.set({ draft: row.text, moved: 0 }) : accept(row.text));
+          const onKeyDown = (e) => {
+            const hl = rows[active];
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") { if (!rows.length) return; e.preventDefault(); store.set({ moved: Math.max(0, Math.min(rows.length - 1, active + (e.key === "ArrowDown" ? 1 : -1))) }); }
+            else if (e.key === "Tab" && !e.shiftKey) { if (hl) { e.preventDefault(); take(hl); } else if (s.draft.trim()) { e.preventDefault(); accept(s.draft); } }
+            else if (e.key === "Enter") { e.preventDefault(); if (hl && s.open) take(hl); else if (total) store.set((x) => ({ at: (x.at + (e.shiftKey ? total - 1 : 1)) % total })); }
+            else if (e.key === " " && s.draft.trim() && (s.draft.match(/"/g) || []).length % 2 === 0) { e.preventDefault(); accept(s.draft); }
+            else if (e.key === "Escape") { if (s.open) store.set({ open: false }); else store.set({ chips: [], draft: "", fault: null }); }
+            else if (e.key === "Backspace" && s.draft === "" && s.chips.length) { e.preventDefault(); store.set((x) => ({ chips: x.chips.slice(0, -1), at: 0 })); }
+          };
+          const count = !s.chips.length && !s.draft ? "" : total ? `${Math.min(s.at, total - 1) + 1} of ${total}` : "no match";
+          return (
+            <div className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y">
+              <div onMouseDown={(e) => { if (e.target === e.currentTarget) { e.preventDefault(); input.current?.focus(); } }}
+                className="flex min-w-0 flex-1 flex-wrap items-center gap-chrome-tight rounded-button border border-hairline bg-canvas p-chrome-tight hover:border-ink-mute focus-within:border-ink-mute">
+                {s.chips.map((c, i) => {
+                  const no = refused(c, kind);
+                  return (
+                    <span key={`${chipLabel(c)}-${i}`} aria-invalid={no || undefined}
+                      title={no ? `${c.key}: needs ${c.key === "bytes" || c.key === "text" ? "hex" : "JSON or form"}; this is ${labelOf(kind)}` : undefined}
+                      className={`inline-flex min-h-control items-center rounded-button border bg-wash-tint pl-chrome-x font-mono text-control text-ink ${no ? "border-warn" : "border-transparent"}`}>
+                      {no && <span aria-hidden="true" className="mr-chrome-tight text-warn">⚠</span>}
+                      {c.key !== "text" && <span className="text-ink-mute">{c.key}:</span>}
+                      <span data-wire="find-chip" className="break-all font-mono">{c.key === "text" && /\s/.test(c.value) ? `"${c.value}"` : c.value}</span>
+                      <IconButton glyph="close" size={24} label={`remove ${chipLabel(c)}`} onClick={() => store.set((x) => ({ chips: x.chips.filter((_, j) => j !== i), at: 0 }))} />
+                    </span>
+                  );
+                })}
+                <div className="relative min-w-field-sm flex-1">
+                  <input ref={input} type="text" role="combobox" aria-label="find" aria-expanded={rows.length > 0 || !!s.fault}
+                    aria-invalid={!!s.fault || undefined} spellCheck={false} autoComplete="off" value={s.draft} data-wire="find-draft"
+                    placeholder={s.chips.length ? "add to find" : `find — ${keysFor(kind).map(([k]) => k).join(" ")} or any text`}
+                    onChange={(e) => store.set({ draft: e.target.value, fault: null, open: true, moved: 0, at: 0 })}
+                    onFocus={() => store.set({ open: true })} onKeyDown={onKeyDown}
+                    className="h-control w-full border-none bg-transparent px-chrome-x font-mono text-control text-ink outline-none placeholder:font-ui placeholder:text-ink-mute" />
+                  {(rows.length > 0 || s.fault) && (
+                    <div className="absolute left-0 top-full z-popup mt-chrome-y min-w-picker overflow-hidden rounded-card border border-hairline bg-canvas shadow-pop">
+                      {s.fault ? (
+                        <div className="px-control-x py-control-y"><Notice tone="warn">{s.fault}</Notice></div>
+                      ) : (
+                        <ul role="listbox" className="py-chrome-tight">
+                          {rows.map((row, i) => (
+                            <li key={row.text} role="option" aria-selected={i === active}
+                              onMouseDown={(e) => { e.preventDefault(); take(row); }}
+                              className={`flex min-h-control cursor-pointer items-center gap-chrome-gap px-control-x py-control-y ${i === active ? "bg-wash-tint text-ink" : "text-ink-body"}`}>
+                              <span className="font-mono text-control">{row.text}</span>
+                              <span className="font-ui text-chrome text-ink-mute">{row.hint}</span>
+                              {i === active && <span className="ml-auto font-ui text-chrome text-ink-mute">{row.key ? "Tab" : "Enter"}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <span data-testid="find-count" className="whitespace-nowrap font-ui text-chrome text-ink-mute">{count}</span>
+              <IconButton glyph="previous" label="previous match" disabled={!total} onClick={() => store.set((x) => ({ at: (x.at + total - 1) % total }))} />
+              <IconButton glyph="next" label="next match" disabled={!total} onClick={() => store.set((x) => ({ at: (x.at + 1) % total }))} />
+            </div>
+          );
+        }
+        function suggestRows(draft, kind) {
+          const text = draft.trim().toLowerCase();
+          if (!text) return keysFor(kind).map(([k, hint]) => ({ text: k, hint, key: true }));
+          if (text === "key:" && (kind === "json" || kind === "form")) {
+            return ["id", "name", "user", "role", "email", "total", "next"].map((k) => ({ text: `key:${k}`, hint: "a key in this document" }));
+          }
+          return keysFor(kind).filter(([k]) => k.startsWith(text) && k !== text).map(([k, hint]) => ({ text: k, hint, key: true }));
+        }
+
+        function Surface() {
+          const s = useStore();
+          const kind = kindOf(s);
+          const text = textOf(s);
+          if (previewing(s)) {
+            return (
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="border-b border-hairline px-4 py-chrome-y">
+                  <Notice detail="the preview follows the working copy; edit in source">scripts, forms and anything remote are not run or loaded</Notice>
+                </div>
+                <iframe title="preview" sandbox="" srcDoc={previewDoc(text)} className="min-h-0 flex-1 border-0" />
+              </div>
+            );
+          }
+          const matches = matchesOf(s);
+          return (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <EditSurface key={`${kind}-${text.length}`} text={text} language={SURFACE_LANG[kind] ?? "plain"} wrap={kind === "css" || kind === "javascript"}
+                matches={matches} current={Math.min(s.at, Math.max(matches.length - 1, 0))} reveal={matches.length ? s.at : undefined}
+                onChange={() => {}} testId="data-surface" />
+            </div>
+          );
+        }
+
+        function Foot() {
+          const s = useStore();
+          const p = payloadOf(s);
+          const kind = kindOf(s);
+          const picked = s.flags.has("picked");
+          const served = servedLabel(s);
+          const by = byOf(s);
+          const decided = picked
+            ? `read ${labelOf(p.detected)} from ${by === "bytes" ? "its bytes" : served}`
+            : by === "bytes" ? `read from its bytes · served as ${served}` : `from ${served}`;
+          const modified = p === PAYLOADS.js && (s.reformatted ?? s.flags.has("reformatted"));
+          const text = textOf(s);
+          return (
+            <footer className="flex flex-wrap items-center gap-x-3 gap-y-chrome-tight border-t border-hairline px-4 py-chrome-y font-ui text-chrome text-ink-mute">
+              <Select options={KINDS} value={kind} onChange={(id) => setFlag("picked", id !== p.detected)} label="treat the data as" searchable={false} opens="above" />
+              <span data-testid="detected">{decided}</span>
+              {kind === "html" && (
+                <span className="flex items-center gap-chrome-tight">
+                  {["source", "preview"].map((v) => (
+                    <button key={v} type="button" aria-pressed={(v === "preview") === previewing(s)}
+                      onClick={() => store.set({ preview: v === "preview" })}
+                      className={`rounded-button px-chrome-x ${(v === "preview") === previewing(s) ? "bg-wash-active text-ink" : "hover:bg-wash-hover"}`}>{v}</button>
+                  ))}
+                </span>
+              )}
+              <span>{sizeLabel(text.length)}</span>
+              <span>{text.split("\n").length} lines</span>
+              <span className="ml-auto flex items-center gap-x-3">
+                {modified && <span className="text-ink">modified · 1 edit</span>}
+              </span>
+            </footer>
+          );
+        }
+
+        function Menus() {
+          const s = useStore();
+          const kind = kindOf(s);
+          if (!s.menu) return <div data-menus="closed" />;
+          const sections = [[
+            { label: "undo", keys: "⌘Z", disabled: !(s.reformatted ?? s.flags.has("reformatted")), why: "nothing to undo", run: () => store.set({ reformatted: false }) },
+            { label: "restore original", disabled: !(s.reformatted ?? s.flags.has("reformatted")), why: "unmodified", run: () => store.set({ reformatted: false }) },
+          ]];
+          if (kind === "javascript" || kind === "css") {
+            sections.push([
+              { label: "reformat", keys: "⌥⇧F", run: () => store.set({ reformatted: true }) },
+              { label: "wrap long lines", keys: "⌥Z", checked: true, run: () => {} },
+            ]);
+          }
+          if (kind === "html") {
+            sections.push([
+              { label: "show", choices: [{ id: "source", label: "source" }, { id: "preview", label: "preview" }], value: previewing(s) ? "preview" : "source", pick: (id) => store.set({ preview: id === "preview" }) },
+              { label: "re-indent", keys: "⌥⇧F", disabled: previewing(s), why: "shown in preview", run: () => {} },
+            ]);
+          }
+          sections.push([{ label: "copy original", run: () => {} }, { label: "save", keys: "⌘S", run: () => {} }, { label: "save original", run: () => {} }]);
+          return <div className="pointer-events-auto"><Menu label="more" sections={sections} at={{ x: WIN - 256 - 16, y: 40 }} onClose={() => store.set({ menu: false })} /></div>;
+        }
+
+        const mount = (id, node) => createRoot(document.getElementById(id)).render(node);
+        mount("m-head", <Head />);
+        mount("m-find", <Find />);
+        mount("m-surface", <Surface />);
+        mount("m-foot", <Foot />);
+        mount("m-menu", <Menus />);
+
+        const mock = mockEl();
+        const fit = document.getElementById("fit");
+        const readout = document.getElementById("readout");
+        function apply() {
+          const s = store.get();
+          const k = Math.min(1, Math.floor((fit.parentElement.clientWidth / WIN) * 20) / 20);
+          mock.style.width = `${WIN}px`;
+          mock.style.height = `${FRAME_H}px`;
+          mock.style.transform = `scale(${k})`;
+          fit.style.height = `${FRAME_H * k}px`;
+          fit.style.maxWidth = `${WIN}px`;
+          const kind = kindOf(s);
+          readout.textContent = `window ${WIN} × 800 · kind ${labelOf(kind)} · ${s.chips.length} chip${s.chips.length === 1 ? "" : "s"} · ${matchesOf(s).length} marks` +
+            (previewing(s) ? " · preview: sandbox=\"\", CSP default-src 'none', refresh and base removed" : "");
+        }
+        store.sub(apply);
+        mock.addEventListener("keydown", (e) => {
+          const cmd = e.metaKey || e.ctrlKey;
+          if (cmd && e.key === "f") { e.preventDefault(); store.set({ preview: false }); setTimeout(() => mock.querySelector("#m-find input")?.focus()); }
+          if (cmd && e.shiftKey && e.key.toLowerCase() === "v" && kindOf(store.get()) === "html") { e.preventDefault(); store.set((x) => ({ preview: !previewing(x) })); }
+          if (e.altKey && e.shiftKey && e.code === "KeyF" && (kindOf(store.get()) === "javascript" || kindOf(store.get()) === "css")) { e.preventDefault(); store.set({ reformatted: true }); }
+        });
+        new MutationObserver(() => forceFlags(new Set(mock.classList))).observe(mock, { attributes: true, attributeFilter: ["class"] });
+        new ResizeObserver(() => requestAnimationFrame(apply)).observe(fit.parentElement);
+        forceFlags(new Set(mock.classList));
+      </script>
+    </div>
+
+    <h3 id="calls">Calls for the owner</h3>
+    <table data-c="calls">
+      <tr><th>#</th><th>The run drew</th><th>The alternatives</th></tr>
+      <tr><td>E1</td><td>the status bar says what decided the kind: <em>from text/html</em> (the label) · <em>read from its bytes · served as
+        text/plain</em> (bytes over a label) · <em>read from its bytes</em> (no label) · <em>read JSON from its bytes</em> (a pick: the picker shows the chosen kind, the bar names what the bytes read)</td>
+        <td>(b) a ⚠ before the kind when the bytes overrule the label; (c) only the kind, nothing about why</td></tr>
+      <tr><td>E2</td><td>html's <em>source · preview</em> is a two-choice switch in the status bar beside the kind, also a choice row in ⋯,
+        key ⇧⌘V</td><td>(b) in ⋯ only, keeping the bar to state; (c) a button in the header beside ⋯</td></tr>
+      <tr><td>E3</td><td>the preview opens under one muted line: <em>scripts, forms and anything remote are not run or loaded</em> — the same
+        sentence every time</td><td>(b) a count of what was withheld (<em>2 scripts · 3 remote resources</em>), which parses the page; (c) say nothing</td></tr>
+      <tr><td>E4</td><td>the find bar leaves while the preview shows; ⌘F returns to source and focuses find</td><td>(b) find stays and marks the
+        source behind the preview; Enter switches to source</td></tr>
+      <tr><td>E5</td><td>javascript and css gain <em>reformat</em> in ⋯, key ⌥⇧F (XML's re-indent key, so one key reformats every kind); one
+        undoable step; when the formatter cannot read the text the row is disabled and says why</td><td>(b) call it <em>beautify</em> or
+        <em>pretty-print</em>; (c) a key of its own</td></tr>
+      <tr><td>E6</td><td>the picker's nine rows: JSON · form · XML · HTML · JavaScript · CSS · text · hex · image — XML and HTML split</td>
+        <td>(b) keep <em>XML / HTML</em> as one row and switch to preview by the label</td></tr>
+      <tr><td>E9</td><td>the preview paints the page as a browser would, light, with the page's own colours: a light default
+        (<code>color-scheme: light</code>, the system <code>Canvas</code> / <code>CanvasText</code>) goes in ahead of the page's own CSS, so the
+        page's styles still win. It is the app's one light surface, because it shows someone else's page</td><td>(b) a dark default, which turns
+        most pages' black text unreadable; (c) no default, which shows the window's dark canvas through a page that sets no background</td></tr>
+      <tr><td>E7</td><td>find is the query bar's box: chips and the draft wrap in one box; the count and ↑ ↓ sit outside it on the right;
+        the placeholder lists the keys this kind offers (<em>find — key: value: re: case: or any text</em>); suggestions drop under the draft,
+        the highlighted row naming the key that takes it</td><td>(b) the count inside the box after the draft</td></tr>
+      <tr><td>E8</td><td>a chip the kind cannot run keeps its place with the query bar's refused face (warn border, ⚠), marks nothing, and says
+        why on hover; a draft that does not parse shows the query bar's warn Notice in the suggestions' place and makes no chip</td>
+        <td>(b) drop a chip the kind cannot run when the kind changes</td></tr>
+    </table>
+    <p class="kd">Already ruled, drawn as ruled: the chip box is shared with the query bar and each bar keeps its own grammar (Q12); the draft
+      marks live and Enter steps (Q13); several chips mark as one set and <code>-</code> is a fault (Q14); <code>key:</code> suggests the
+      document's keys (Q15).</p>
+
+    <h2 id="given">Given: what the window is handed</h2>
+    <p>Not given (may not be assumed to exist): running the page's scripts or loading anything remote (DEC-80) · a find that narrows or
+      replaces · syntax highlighting for javascript, css and html in EditSurface today (W6, W7) · a formatter today (W6).</p>
+    <table data-item="capabilities" data-c="given-table">
+      <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
+      <tr><td>the payload <code>{key, title, heading, bytes, typeHint?}</code> (DEC-76)</td><td>used</td><td>header title, the surface, the status bar's size</td></tr>
+      <tr><td><code>readKind(bytes, typeHint)</code> → <code>{kind, by, label}</code> (DEC-79)</td><td>used</td><td>the status bar's words (E1) and the picker's start</td></tr>
+      <tr><td>the nine kinds</td><td>used</td><td>the kind picker (E6); each kind's ⋯ rows and find keys</td></tr>
+      <tr><td>the kind override</td><td>used</td><td>the picker; the bar then names the kind it read (<em>read JSON from its bytes</em>)</td></tr>
+      <tr><td>the preview's reach (DEC-80)</td><td>used</td><td>a real <code>sandbox=""</code> frame over <code>srcdoc</code>, the CSP meta first, refresh and base removed (E2–E4)</td></tr>
+      <tr><td>the working copy, undo, restore (DEC-76)</td><td>used</td><td><em>reformat</em> is one undoable step; ⋯ undo and restore original</td></tr>
+      <tr><td>the find grammar (Q12–Q15)</td><td>used</td><td>the find bar's chips, suggestions, faults and refused chips (E7, E8)</td></tr>
+      <tr><td><code>payload.key</code></td><td>deliberately unused</td><td>opaque; only the shell reads it (DEC-76 rule 3)</td></tr>
+      <tr><td>form, xml, hex and image kinds</td><td>deliberately unused</td><td>unchanged by this run beyond their find keys and their picker rows; E-INSPWIN's run holds their screens</td></tr>
+      <tr><td><code>prefers-reduced-motion</code></td><td>deliberately unused</td><td>nothing animates</td></tr>
+    </table>
+
+    <h2 id="keyboard">Keyboard</h2>
+    <table data-item="keyboard" data-c="keyboard-table">
+      <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
+      <tr><td>click into find</td><td>find bar</td><td>⌘F (also leaves the preview)</td></tr>
+      <tr><td>click a suggestion</td><td>find bar</td><td>↑ / ↓ then Enter or Tab (QueryBar's convention)</td></tr>
+      <tr><td>click a chip's ×</td><td>find bar</td><td>Backspace on an empty draft removes the last chip · Tab to the × and Enter</td></tr>
+      <tr><td>click ↑ / ↓ beside the count</td><td>find bar</td><td>Enter / ⇧Enter or ⌘G / ⇧⌘G (unchanged)</td></tr>
+      <tr><td>open ⋯ and pick a row</td><td>header</td><td>Tab to ⋯, Enter, ↑ / ↓, Enter (Menu)</td></tr>
+      <tr><td>click <em>reformat</em></td><td>⋯</td><td>proposed: ⌥⇧F on javascript and css (XML's re-indent key)</td></tr>
+      <tr><td>click <em>source</em> / <em>preview</em></td><td>status bar · ⋯</td><td>proposed: ⇧⌘V toggles</td></tr>
+      <tr><td>pick a kind</td><td>status bar</td><td>Tab to the picker, Enter, ↑ / ↓, Enter (Select)</td></tr>
+      <tr><td>scroll the preview</td><td>surface</td><td>Tab into the frame, then the arrow keys and Space</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
+      <tr><td>component</td><td><a href="components/chip-box.html">ChipBox</a> (T1): chips, a draft, suggestions, a fault and refused chips, the grammar
+        injected; <code>QueryBar</code> and the find bar are each made of it</td><td>QueryBar owns query.ts's grammar; Q12 rules one box, two grammars</td><td>W8</td></tr>
+      <tr><td>local element</td><td>the preview surface: a <code>sandbox=""</code> frame, its statement line</td><td>no member renders untrusted markup; DEC-80 rules a frame</td><td>W7</td></tr>
+      <tr><td>local element</td><td>the status bar's <em>source · preview</em> switch, Menu's choice-row look</td><td>SegmentedControl is control-tall; the bar is chrome-tall</td><td>W7</td></tr>
+      <tr><td>component delta</td><td><code>EditSurface</code> languages: javascript, css, html</td><td>it ships json, xml and plain</td><td>W6, W7</td></tr>
+      <tr><td>rulebook vocabulary</td><td>⌥⇧F reformats any kind that can be (XML, javascript, css); ⇧⌘V source ⇄ preview</td><td>today ⌥⇧F is XML's only</td><td>W9</td></tr>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr><td>nothing: the owner's round 1 settled E1–E9, the one open call</td><td>the owner (ruled 2026-11-05)</td><td>drew the recommended option of each; all held, E1's pick wording trimmed</td></tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>Start: the epic plan's W3 block, its find-bar section and rulings Q6, Q7, Q10, Q12–Q15</td><td>capabilities · mockup · keyboard ·
+          proposals: the status bar's words, the nine-row picker, ⋯ for javascript, css and html, the sandboxed preview, the find chip box</td>
+          <td><code>DEC-79</code> · <code>DEC-80</code> · <code>DEC-76</code> · <code>DEC-71</code></td></tr>
+        <tr><td>Round 1, the owner (2026-11-05, relayed by the router): E1–E9 accepted as drawn and the ChipBox design confirmed, with one
+          comment on E1's pick leg, <em>your choice ·</em>: "no need this"</td><td>mockup · calls · capabilities: after a pick the status bar
+          drops the <em>your choice ·</em> prefix and says <em>read JSON from its bytes</em>, because the picker already shows the kind the user
+          chose. E2–E9 and the rest of E1 stand as drawn; the proposals and the ChipBox design stand as written</td><td>taste · <code>DEC-79</code>
+          rule 7 · <code>Select</code> · ChipBox @anatomy</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
