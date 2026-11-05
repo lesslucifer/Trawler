@@ -1,0 +1,22 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W3
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-data-window-kinds-design-run.html"
+    tier: T3
+    action: added
+    distills: "the closed design run: the status bar naming what decided the kind, the nine-row picker, reformat for javascript and css, html source and a sandboxed preview with a light page default, find as a chip box with suggestions, faults and refused chips, the keyboard rows"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w3-data-window-kinds-design-plan.html"
+    tier: T3
+    action: added
+    distills: "W3's requirement: one closed run on the data window's kinds, preview and find, the nine decisions it must make, the test plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w3-data-window-kinds-design-result.html"
+    tier: T3
+    action: added
+    distills: "W3 delivered: the run closed in round 1 with E1-E9 held and E1's pick wording trimmed, ChipBox confirmed; evidence and follow-ups for W5-W9"
+  - path: "docs/work/components/chip-box.html"
+    tier: T3
+    action: added
+    distills: "the confirmed T1 ChipBox design: one box of typed chips and a draft over an injected grammar, shared by QueryBar and the find bar; W8 builds it"
+t2_waived: "a design reaches UC-9 and the rulebook once it is built: W8 retires the ChipBox design into its TSDoc, W9 distills UC-9 and the keyboard rows"
