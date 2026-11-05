@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-BGSVC
+wu: E-BGSVC.W6
+base: 85973158d0368eec417251cc1b293a00fc359bc5
+design_sha256: 8a1c4434b174407d3d02aed5249a2917d733ef42221030393c3553977e937bd3
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-05-bg-service-general-design-run.html
+    blob: 38a949adb67281612315b5be2448ba01ce3109cc
+    built: [ui/src/components/PageSidebar.tsx, ui/src/General.tsx, ui/src/Settings.tsx]
+undesigned:
+  - path: ui/src/CaptureService.tsx
+    why: "its outer padding and canvas moved to the Settings frame that now hosts it; the page's own layout and content are unchanged"
+  - path: ui/src/main.tsx
+    why: "the settings page now mounts Settings instead of CaptureService directly; routing only, nothing rendered of its own"
+date: 2026-11-05
