@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU release-bundle -> epic/packaging"
+epic: E-PKG
+wu: E-PKG.W1
+branch: wu/packaging/release-bundle
+base: 75683030831a22484997eb5cf4fc9f1eabb37472
+head: 3d426e46cb2d1acae3ae5ce89ad170c5d1961da2
+diff_sha256: 13e3a5e11048adc78e2cfed0822f20136ea7c04b84781501f9aeaf835e89f905
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 4
+  stage_seconds:
+    gate0: 18
+    finders: 50
+    verifiers: 45
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "--profile dev (or test/bench) names target/dev/bundle, where cargo writes the dev profile to target/debug"
+    waived: "package builds release-derived profiles only (release, package-test); a dev-profile bundle is no use the epic has"
+  - finding: "the integration test's ready() drops the core's stdout after the first line, so a later stdout write would hit a closed pipe"
+    waived: "the core writes only its ready line to stdout (src/cli.rs) and logs to stderr, and Rust ignores SIGPIPE, so a later write could only return EPIPE"
+  - finding: "the flavour marker reads process.env.VITE_E2E while main.tsx reads import.meta.env, which Vite also fills from .env files"
+    waived: "ui/ carries no .env file, and every flavoured build (xtask ui e2e, walkthrough, bundle.rs, package) sets or removes the variable in the process environment"
+  - finding: "the shared cargo_metadata reader sits in target.rs rather than a neutral module"
+    waived: "two callers; a module of its own is due when a third arrives (W4's tag check is the likely one)"
+verdict: PASS
+date: 2026-11-05
