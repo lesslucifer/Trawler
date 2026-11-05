@@ -4,7 +4,7 @@ const PAGE_DEFAULT = ":root{color-scheme:light;background:Canvas;color:CanvasTex
 export function previewDocument(source: string): string {
   const page = new DOMParser().parseFromString(source, "text/html");
   page.querySelectorAll("meta[http-equiv], base").forEach((node) => node.remove());
-  page.querySelectorAll("a[href], area[href]").forEach((link) => link.setAttribute("target", "_blank"));
+  page.querySelectorAll("a, area").forEach((link) => link.setAttribute("target", "_blank"));
   const policy = page.createElement("meta");
   policy.setAttribute("http-equiv", "Content-Security-Policy");
   policy.setAttribute("content", CONTENT_SECURITY_POLICY);

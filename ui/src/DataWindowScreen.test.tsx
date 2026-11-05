@@ -1045,6 +1045,21 @@ describe("html source and preview", () => {
     expect(document.activeElement).toBe(findBox());
   });
 
+  it("coming back to html after another kind opens the source, not the preview", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    pickKind("text");
+    pickKind("HTML");
+    expect(showing("source")).toBe(true);
+    expect(screen.getByTestId("data-surface")).toBeInTheDocument();
+  });
+
+  it("⇧⌘V typed in the find box is left to the box", async () => {
+    await openPage();
+    fireEvent.keyDown(findBox(), { key: "v", metaKey: true, shiftKey: true });
+    expect(showing("source")).toBe(true);
+  });
+
   it("choosing another kind in the picker leaves the preview; other kinds have no switch", async () => {
     await openPage();
     fireEvent.click(screen.getByRole("button", { name: "preview" }));

@@ -27,7 +27,8 @@
     <h2 id="deviations">Deviations</h2>
     <table data-item="deviations" data-c="deviations">
       <tr><th>Plan said</th><th>Done</th><th>Why</th></tr>
-      <tr><td>CSP as DEC-80 states it</td><td>CSP adds <code>form-action 'none'</code>; links get <code>target="_blank"</code></td><td>Stronger than the record, never weaker. A click on a link would otherwise navigate the frame itself (the sandbox withholds only top navigation and popups); <code>_blank</code> under an empty sandbox does nothing. DEC-80's guard 3 text is for W9's distillation to amend.</td></tr>
+      <tr><td>CSP as DEC-80 states it</td><td>CSP adds <code>form-action 'none'</code>; links (html and svg alike) get <code>target="_blank"</code></td><td>Stronger than the record, never weaker. A click on a link would otherwise navigate the frame itself (the sandbox withholds only top navigation and popups); <code>_blank</code> under an empty sandbox does nothing. DEC-80's guard 3 text is for W9's distillation to amend.</td></tr>
+      <tr><td>Nothing in the plan</td><td>Once focus is inside the preview frame, <code>⌘F</code>, <code>⇧⌘V</code> and Esc do not reach the window; the status-bar switch and ⋯ stay reachable</td><td>The frame is an opaque origin that runs no script, so it can pass no key out (DEC-80 guard 1). Accepted as the cost of the guard; click outside the frame or use the switch.</td></tr>
     </table>
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence" data-c="evidence">

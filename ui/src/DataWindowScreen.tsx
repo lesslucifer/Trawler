@@ -416,8 +416,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     };
   }, [codeKind]);
   const menuCode = useMemo(
-    () => (codeKind && !readOnly && menu && beautifier ? reformatCode(beautifier, codeKind, text, breakWith) : null),
-    [codeKind, readOnly, menu, beautifier, text, breakWith],
+    () => (codeKind && !readOnly && !previewing && menu && beautifier ? reformatCode(beautifier, codeKind, text, breakWith) : null),
+    [codeKind, readOnly, previewing, menu, beautifier, text, breakWith],
   );
   const menuXml = useMemo(
     () => (kind === "xml" && !readOnly && menu ? reindentXml(text, breakWith) : null),
@@ -476,6 +476,9 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       }),
     [beautifier, breakWith, codeKind],
   );
+  useEffect(() => {
+    if (kind !== "html") setPreview(false);
+  }, [kind]);
   const showPreview = useCallback((on: boolean) => {
     setPreview(on);
     setMenu(null);
@@ -578,7 +581,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         return;
       }
       if (!command && event.altKey && !typing) {
-        if (event.code === "KeyZ" && !event.shiftKey && onText) {
+        if (event.code === "KeyZ" && !event.shiftKey && onText && !previewing) {
           event.preventDefault();
           setWrap((on) => !on);
         } else if (event.code === "KeyF" && event.shiftKey && kind === "xml" && !readOnly) {
@@ -595,7 +598,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       if (key === "d" && event.shiftKey && !typing) {
         event.preventDefault();
         decodeNow();
-      } else if (key === "v" && event.shiftKey && kind === "html") {
+      } else if (key === "v" && event.shiftKey && kind === "html" && !typing) {
         event.preventDefault();
         showPreview(!previewing);
       } else if (key === "f" && previewing) {

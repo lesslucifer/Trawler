@@ -46,7 +46,14 @@ describe("previewDocument", () => {
     const page = parsed('<a href="https://x.test" target="_self">a</a><area href="/y"><a name="n">b</a>');
     expect(page.querySelector("a[href]")?.getAttribute("target")).toBe("_blank");
     expect(page.querySelector("area")?.getAttribute("target")).toBe("_blank");
-    expect(page.querySelector("a[name]")?.hasAttribute("target")).toBe(false);
+    expect(page.querySelector("a[name]")?.getAttribute("target")).toBe("_blank");
+  });
+
+  it("targets svg links away too, whichever attribute carries the address", () => {
+    const page = parsed('<svg xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="https://x.test"><text>go</text></a><a href="https://y.test"><text>go</text></a></svg>');
+    const links = [...page.querySelectorAll("svg a")];
+    expect(links).toHaveLength(2);
+    expect(links.every((link) => link.getAttribute("target") === "_blank")).toBe(true);
   });
 
   it("survives a fragment, an empty text and a document with no head or html", () => {
