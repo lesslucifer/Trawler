@@ -55,9 +55,14 @@ fn the_menu_follows_a_killed_core_and_restarts_it_on_its_ports() {
     assert_eq!(ports(&app.state::<Core>().state()), ports(&running), "on the same ports");
     eventually("the icon reads capturing", || shown(&app).status == "Capturing");
     assert!(!shown(&app).restart, "Restart is greyed again");
+
+    tray::on_state(app.handle(), &CoreState::Exited { code: None, signal: Some(9) });
+    assert_eq!(shown(&app).status, "Capturing", "a late exit report never outranks the core");
     app.state::<Core>().stop();
 }
 
+// macOS refuses a native tray off the main thread, which is where a test runs.
+#[cfg(target_os = "macos")]
 #[test]
 fn a_host_that_cannot_build_the_tray_is_never_left_windowless() {
     let app = app();

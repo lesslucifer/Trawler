@@ -119,10 +119,10 @@ pub fn shown<R: Runtime>(app: &AppHandle<R>) -> Option<TrayView> {
 /// app is never left windowless without it (DEC-77 rule 1).
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn install<R: Runtime>(app: &AppHandle<R>) -> bool {
-    let state = app.try_state::<Core>().map_or(CoreState::Starting, |core| core.state());
-    track(app, &state);
-    let built = build(app, &view(&state));
+    track(app, &latest(app, &CoreState::Starting));
+    let built = build(app);
     if let Err(err) = &built {
+        app.remove_tray_by_id(TRAY_ID);
         eprintln!("no menu-bar icon on this host: {err}");
     }
     if let Some(lifecycle) = app.try_state::<Lifecycle>() {
@@ -133,28 +133,49 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) -> bool {
 
 // The icon goes first: a host that cannot show one refuses it before any menu,
 // which muda would rather panic over off the main thread.
-fn build<R: Runtime>(app: &AppHandle<R>, shown: &TrayView) -> tauri::Result<()> {
+fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    let shown = view(&latest(app, &CoreState::Starting));
     let tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(glyph_image(shown.glyph)?)
         .icon_as_template(true)
         .tooltip("Trawler")
         .on_menu_event(|app, event| handle(app, event.id().as_ref()))
         .build(app)?;
-    let (menu, items) = NativeItems::menu(app, shown)?;
+    let (menu, items) = NativeItems::menu(app, &shown)?;
     tray.set_menu(Some(menu))?;
     app.manage(items);
+    apply(app, &CoreState::Starting);
     Ok(())
 }
 
+fn latest<R: Runtime>(app: &AppHandle<R>, reported: &CoreState) -> CoreState {
+    app.try_state::<Core>().map_or_else(|| reported.clone(), |core| core.state())
+}
+
+// Observer calls race each other (an exit and a restart's start publish from two
+// threads), so the payload's order is not the core's. Every apply runs on the
+// main thread, in the order queued, and shows the supervisor's state at that
+// moment: the last one to run always shows the newest.
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn on_state<R: Runtime>(app: &AppHandle<R>, state: &CoreState) {
+    let (main, reported) = (app.clone(), state.clone());
+    if let Err(err) = app.run_on_main_thread(move || apply(&main, &reported)) {
+        eprintln!("queueing the menu bar's update failed: {err}");
+    }
+}
+
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
+fn apply<R: Runtime>(app: &AppHandle<R>, reported: &CoreState) {
     let Some(recorded) = app.try_state::<Shown>() else { return };
-    let shown = view(state);
+    let shown = view(&latest(app, reported));
     *recorded.0.lock().unwrap_or_else(PoisonError::into_inner) = shown.clone();
     let listed = app.try_state::<NativeItems<R>>().map(|items| items.show(&shown));
-    let drawn = app
-        .tray_by_id(TRAY_ID)
-        .map(|tray| glyph_image(shown.glyph).and_then(|image| tray.set_icon(Some(image))));
+    // tray-icon's set_icon drops the template flag the builder set (0.24).
+    let drawn = app.tray_by_id(TRAY_ID).map(|tray| {
+        glyph_image(shown.glyph)
+            .and_then(|image| tray.set_icon(Some(image)))
+            .and_then(|()| tray.set_icon_as_template(true))
+    });
     for failed in [listed, drawn].into_iter().flatten().filter_map(Result::err) {
         eprintln!("showing the capture service's state in the menu bar failed: {failed}");
     }
