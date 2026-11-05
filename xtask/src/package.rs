@@ -121,6 +121,12 @@ fn installed_targets() -> Result<String, String> {
         .args(["target", "list", "--installed"])
         .output()
         .map_err(|e| format!("failed to launch rustup (is it installed?): {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "rustup target list --installed failed: {}",
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
@@ -179,17 +185,27 @@ fn verify_signature(app: &Path) -> Result<(), String> {
     }
 }
 
-/// The raw value of `key` inside `[section]` of a TOML file, quotes kept.
+/// The raw value of `key` inside `[section]` of a TOML file, quotes kept; an
+/// array runs to its closing bracket, across lines.
 fn toml_value<'a>(toml: &'a str, section: &str, key: &str) -> Option<&'a str> {
     let mut inside = false;
-    for line in toml.lines().map(str::trim) {
-        if line.starts_with('[') {
-            inside = line == section;
+    let mut rest = toml;
+    while !rest.is_empty() {
+        let (line, after) = rest.split_once('\n').unwrap_or((rest, ""));
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') {
+            inside = trimmed == section;
         } else if let Some((k, v)) = line.split_once('=').filter(|_| inside) {
             if k.trim() == key {
-                return Some(v.trim());
+                let from_value = &rest[line.len() - v.trim_start().len()..];
+                return if from_value.starts_with('[') {
+                    from_value.find(']').map(|end| &from_value[..=end])
+                } else {
+                    Some(v.trim())
+                };
             }
         }
+        rest = after;
     }
     None
 }
@@ -366,6 +382,23 @@ mod tests {
     #[test]
     fn the_members_are_the_root_and_the_listed_crates() {
         assert_eq!(workspace_members(ROOT), [".", "xtask", "ui/src-tauri"]);
+    }
+
+    const MULTILINE_ROOT: &str = "[workspace]\nmembers = [\n    \"xtask\",\n    \"ui/src-tauri\",\n]\n\n\
+        [workspace.package]\nversion = \"1.2.3-rc.1\"\n\n[package]\nname = \"trawler\"\nversion.workspace = true\n";
+
+    #[test]
+    fn members_listed_over_several_lines_are_all_read() {
+        assert_eq!(workspace_members(MULTILINE_ROOT), [".", "xtask", "ui/src-tauri"]);
+    }
+
+    #[test]
+    fn a_member_typing_its_version_is_drift_however_the_members_are_laid_out() {
+        let typed = "[package]\nname = \"m\"\nversion = \"1.2.3-rc.1\"\n";
+        let dir = tree(MULTILINE_ROOT, typed, "{}", r#"{"version":"1.2.3-rc.1"}"#);
+        let drift = version_drift(dir.path()).unwrap().join("\n");
+        assert!(drift.contains("xtask/Cargo.toml"), "{drift}");
+        assert!(drift.contains("ui/src-tauri/Cargo.toml"), "{drift}");
     }
 
     fn tree(root: &str, member: &str, tauri_conf: &str, package_json: &str) -> tempfile::TempDir {
