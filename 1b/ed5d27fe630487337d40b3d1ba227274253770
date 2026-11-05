@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-PKG2
+wu: E-PKG2.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html"
+    tier: T2
+    action: added
+    distills: "the update rules: channel and throttle, always asking, the owner's key with signed versions, the quit through DEC-64, in-place updates on every bundle type, the key only in the release workflow"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-82 row"
+  - path: "docs/work/2026-11-05-packaging-v2-plan.html"
+    tier: T3
+    action: updated
+    distills: "the owner's rulings Q20 (a), Q21 (a), Q22 (b) and the deb/rpm statements made consistent"
+  - path: "docs/work/2026-11-05-packaging-v2-w1-updater-plan.html"
+    tier: T3
+    action: added
+    distills: "the W1 plan carried from E-PKG.W3, with its rulings"
+  - path: "docs/work/2026-11-05-packaging-v2-w1-updater-result.html"
+    tier: T3
+    action: added
+    distills: "the W1 result: outcome, deviations, evidence, distillation, follow-ups"
