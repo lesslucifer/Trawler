@@ -1,7 +1,7 @@
 schema: design/v1
 epic: E-INSPWIN
 base: 00cbc1500e94c43b57626097ae8568b39748cb37
-design_sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+design_sha256: 006d21e8f711da4a00a4ac8f4d42f2ceefd2ed569fd2610f8ce0ee847228c2f5
 verdict: PASS
 artifacts: []
 implements:
