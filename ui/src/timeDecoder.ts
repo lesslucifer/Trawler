@@ -60,15 +60,19 @@ function fromTimestamp(whole: string, fraction: string | undefined): Instant | s
   };
 }
 
+function utcMilliseconds(year: number, monthIndex: number, day: number, hour = 0, minute = 0, second = 0): number {
+  const at = new Date(0);
+  at.setUTCFullYear(year, monthIndex, day);
+  at.setUTCHours(hour, minute, second);
+  return at.getTime();
+}
+
 function civil(year: number, month: number, day: number, hour: number, minute: number, second: number): number | string {
   if (month < 1 || month > 12) return `month ${pad(month)} is not a month`;
-  const days = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const days = new Date(utcMilliseconds(year, month, 0)).getUTCDate();
   if (day < 1 || day > days) return `${pad(year, 4)}-${pad(month)}-${pad(day)} is not a day of the calendar`;
   if (hour > 23 || minute > 59 || second > 59) return `${pad(hour)}:${pad(minute)}:${pad(second)} is not a time of day`;
-  const at = new Date(0);
-  at.setUTCFullYear(year, month - 1, day);
-  at.setUTCHours(hour, minute, second);
-  return at.getTime() / 1000;
+  return utcMilliseconds(year, month - 1, day, hour, minute, second) / 1000;
 }
 
 function fromIso(match: RegExpExecArray): Instant | string {
@@ -110,6 +114,7 @@ function wallClock(seconds: number, zone: string, fraction: string): WallClock {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: zone,
     hourCycle: "h23",
+    era: "short",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -118,8 +123,10 @@ function wallClock(seconds: number, zone: string, fraction: string): WallClock {
     second: "2-digit",
   }).formatToParts(new Date(seconds * 1000));
   const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((each) => each.type === type)!.value);
-  const asUtc = Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
-  const date = `${pad(part("year"), 4)}-${pad(part("month"))}-${pad(part("day"))}`;
+  const beforeCommonEra = parts.find((each) => each.type === "era")?.value === "BC";
+  const year = beforeCommonEra ? 1 - part("year") : part("year");
+  const asUtc = utcMilliseconds(year, part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
+  const date = `${pad(year, 4)}-${pad(part("month"))}-${pad(part("day"))}`;
   const text = `${date} ${pad(part("hour"))}:${pad(part("minute"))}:${pad(part("second"))}${fraction ? `.${fraction}` : ""}`;
   return { date, text, offsetMinutes: Math.round((asUtc - seconds * 1000) / 60000) };
 }

@@ -388,6 +388,7 @@ test("↗ hands the data window what the pane holds, in the mode it shows", asyn
   expect(openDataWindow).toHaveBeenCalledWith({
     key: `${flow().id}:response:pretty`,
     title: "response body · GET api.example.com/v2/x?y=1",
+    heading: { what: "response body", method: "GET", host: "api.example.com", path: "/v2/x", query: "?y=1" },
     bytes,
     typeHint: "application/json",
   });

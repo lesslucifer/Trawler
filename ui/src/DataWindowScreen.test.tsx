@@ -93,29 +93,34 @@ describe("what the window was handed", () => {
   });
 });
 
-describe("the header reads the caption in parts", () => {
+describe("the header draws the opener's heading", () => {
+  const heading = { what: "request body · raw", method: "POST", host: "www.example.com", path: "/ajax/bnzai", query: "?__a=1&__req=7n&lsd=x" };
+  const title = "request body · raw · POST www.example.com/ajax/bnzai?__a=1&__req=7n&lsd=x";
+
   it("what above; the method, host, path and query on one line, the whole caption on hover", async () => {
-    const title = "request body · raw · POST www.example.com/ajax/bnzai?__a=1&__req=7n&lsd=x";
-    await open(payload({ title }));
-    const heading = screen.getByRole("heading", { name: title });
-    expect(heading).toHaveAttribute("title", title);
+    await open(payload({ title, heading }));
+    const drawn = screen.getByRole("heading", { name: title });
+    expect(drawn).toHaveAttribute("title", title);
     expect(screen.getByText("request body · raw").tagName).toBe("P");
-    expect(within(heading).getByText("POST")).toBeInTheDocument();
-    expect(within(heading).getByText("www.example.com")).toHaveClass("text-ink");
-    expect(within(heading).getByText("/ajax/bnzai")).toHaveClass("text-ink-body");
-    expect(within(heading).getByText("?__a=1&__req=7n&lsd=x")).toHaveClass("text-ink-mute");
-    expect(within(heading).getByText("3 params")).toBeInTheDocument();
-    expect(within(heading).getByText("?__a=1&__req=7n&lsd=x").parentElement).toHaveClass("truncate");
+    expect(within(drawn).getByText("POST")).toBeInTheDocument();
+    expect(within(drawn).getByText("www.example.com")).toHaveClass("text-ink");
+    expect(within(drawn).getByText("/ajax/bnzai")).toHaveClass("text-ink-body");
+    expect(within(drawn).getByText("?__a=1&__req=7n&lsd=x")).toHaveClass("text-ink-mute");
+    expect(within(drawn).getByText("3 params")).toBeInTheDocument();
+    expect(within(drawn).getByText("?__a=1&__req=7n&lsd=x").parentElement).toHaveClass("truncate");
   });
 
-  it("a target with no query names no params", async () => {
-    await open(payload());
+  it("a heading with no query names no params", async () => {
+    await open(payload({ heading: { what: "response body", method: "GET", host: "api.example.com", path: "/v2/x", query: "" } }));
+    expect(within(screen.getByRole("heading")).getByText("GET")).toBeInTheDocument();
     expect(within(screen.getByRole("heading")).queryByText(/param/)).toBeNull();
   });
 
-  it("a caption of another shape is shown whole on one line", async () => {
-    await open(payload({ title: "a pasted note" }));
-    expect(screen.getByRole("heading", { name: "a pasted note" })).toHaveClass("truncate");
+  it("without a heading the title is shown whole on one line, even one shaped like a request", async () => {
+    await open(payload({ title }));
+    const drawn = screen.getByRole("heading", { name: title });
+    expect(drawn).toHaveClass("truncate");
+    expect(within(drawn).queryByText("POST")).toBeNull();
   });
 });
 

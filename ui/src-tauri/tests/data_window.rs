@@ -47,6 +47,7 @@ fn payload(key: &str, title: &str, bytes: Vec<u8>) -> Payload {
             key: key.into(),
             title: title.into(),
             type_hint: Some("application/octet-stream".into()),
+            heading: None,
         },
         bytes,
     }
@@ -86,6 +87,18 @@ fn ten_mebibytes_reach_the_data_window_byte_identical_and_only_once() {
 
     assert_eq!(unframe(&claim(&data)), Ok(handed));
     assert!(claim(&data).is_empty());
+}
+
+#[test]
+fn the_opener_s_heading_reaches_the_data_window_as_it_was_framed() {
+    let (app, main) = app();
+    let mut handed = payload("headed", "request body · POST example.com/a?b=1", b"{}".to_vec());
+    handed.caption.heading = Some(serde_json::json!({
+        "what": "request body", "method": "POST", "host": "example.com", "path": "/a", "query": "?b=1"
+    }));
+    open(&main, &handed);
+    let claimed = claim(&window(&app, "headed"));
+    assert_eq!(unframe(&claimed), Ok(handed));
 }
 
 #[test]

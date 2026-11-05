@@ -91,6 +91,17 @@ describe("a date-time string", () => {
   });
 });
 
+describe("years below 100", () => {
+  it("read on the proleptic Gregorian calendar, the zone's own offset", () => {
+    expect(read("0050-06-15T12:00:00Z", "UTC")).toMatchObject({ local: "0050-06-15 12:00:00 +00:00", utc: "0050-06-15 12:00:00Z" });
+    expect(read("0050-06-15T12:00:00+02:00", "UTC").local).toBe("0050-06-15 10:00:00 +00:00");
+  });
+
+  it("year 0 is a leap year", () => {
+    expect(read("0000-02-29").local).toBe("0000-02-29, Tuesday");
+  });
+});
+
 describe("the local time", () => {
   it("follows the zone's offset across a daylight-saving edge", () => {
     expect(read("2026-11-01T05:30:00Z", NEW_YORK).local).toBe("2026-11-01 01:30:00 -04:00");

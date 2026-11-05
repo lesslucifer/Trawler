@@ -9,8 +9,8 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { byteLength, captionFilename, captionParts, decodeBody, hexDump, humanBytes, queryCount, saveBody } from "./body";
-import { claimOnce, openDataWindow, takeDataPayload, type DataPayload } from "./dataWindow";
+import { byteLength, captionFilename, decodeBody, hexDump, humanBytes, saveBody } from "./body";
+import { claimOnce, openDataWindow, queryCount, takeDataPayload, type DataPayload, type Heading } from "./dataWindow";
 import {
   contentKey,
   decode,
@@ -271,25 +271,24 @@ function DecodePeek({
   );
 }
 
-function Caption({ title }: { title: string }) {
-  const { what, target } = captionParts(title);
-  if (!target) {
+function Caption({ title, heading }: { title: string; heading?: Heading }) {
+  if (!heading) {
     return (
       <h1 title={title} className="min-w-0 flex-1 truncate font-ui text-note text-ink">
         {title}
       </h1>
     );
   }
-  const params = queryCount(target.query);
+  const params = queryCount(heading.query);
   return (
     <div className="min-w-0 flex-1">
-      <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">{what}</p>
+      <p className="font-ui text-chrome uppercase tracking-label text-ink-mute">{heading.what}</p>
       <h1 aria-label={title} title={title} className="flex min-w-0 items-baseline gap-2">
-        <MethodLabel method={target.method} className="shrink-0" />
+        <MethodLabel method={heading.method} className="shrink-0" />
         <span className="min-w-0 truncate font-mono text-body">
-          <span className="text-ink">{target.host}</span>
-          <span className="text-ink-body">{target.path}</span>
-          <span className="text-ink-mute">{target.query}</span>
+          <span className="text-ink">{heading.host}</span>
+          <span className="text-ink-body">{heading.path}</span>
+          <span className="text-ink-mute">{heading.query}</span>
         </span>
         {params > 0 && <span className="shrink-0 font-ui text-chrome text-ink-mute">{plural(params, "param")}</span>}
       </h1>
@@ -790,7 +789,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-canvas text-ink">
       <header className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-2">
-        <Caption title={payload.title} />
+        <Caption title={payload.title} heading={payload.heading} />
         {!empty && kind !== "image" && <CopyButton label="copy" getPayload={onScreen} />}
         {!empty && (
           <span ref={more}>
