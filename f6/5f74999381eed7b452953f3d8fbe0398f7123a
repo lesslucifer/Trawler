@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: f65f74999381eed7b452953f3d8fbe0398f7123a
+base: bd49c25e7400372885c39a2e14454c374d339ac6
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-merge-proves-tree-result.html
+report_sha256: 21c2fcca64cb2f6af465067e48eefae11ca96262eb44fbb9fd9b675300584761
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECs9qiA7P+I0V46k7jI6S4Uj1WQzaX45ZTnRcl1Knebz17ySK8D/82HSQ
+  3ect2s0b+2/2wTMoJc+bI7pPzHDpgE
+  -----END SSH SIGNATURE-----
