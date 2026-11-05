@@ -6,14 +6,15 @@ use std::path::{Path, PathBuf};
 use crate::gate::{short, Report};
 use crate::notes::{Candidates, CrNote, Fleet, StageSeconds};
 
-// The gate's own measurement, in the shape of Gate 0's cache: a local file under
-// target/, appended on every gate run that computes a report, read only by
-// `cargo xtask tally`. It is never a git note and never syncs, because a
+// The gate's own measurement: a local file in the git common dir, so every
+// worktree of one clone appends to the same reading, appended on every gate run
+// that computes a report, read only by `cargo xtask tally`. It is never a git note and never syncs, because a
 // measurement that ships with the repository is a claim about a machine rather
 // than a reading of one (DEC-2's recompute-don't-trust, applied to a tally
 // instead of a receipt). Nothing in the gate reads it back: delete the file and
 // every verdict is what it was.
-const FILE_NAME: &str = ".gate-tally";
+const FILE_NAME: &str = "trawler-gate-tally";
+const LEGACY: &str = ".gate-tally";
 const LEVELS: [&str; 3] = ["commit", "working-unit", "epic"];
 const STATUSES: [&str; 3] = ["exempt", "green", "red"];
 // The last field written and the first one required back: a tear anywhere
@@ -136,7 +137,30 @@ fn distinct(items: impl Iterator<Item = String>) -> Vec<String> {
 }
 
 pub fn path(repo: &Path) -> PathBuf {
-    repo.join("target").join(FILE_NAME)
+    crate::git::git(repo, &["rev-parse", "--path-format=absolute", "--git-common-dir"])
+        .map_or_else(|_| repo.join("target"), PathBuf::from)
+        .join(FILE_NAME)
+}
+
+/// Moves the records a checkout kept in `target/.gate-tally`, before the tally
+/// left `target/`, into [`path`]. `None` when there was no such file.
+pub fn fold_legacy(repo: &Path) -> Result<Option<usize>, String> {
+    let legacy = repo.join("target").join(LEGACY);
+    let bytes = match std::fs::read(&legacy) {
+        Ok(bytes) => bytes,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(e) => return Err(format!("read {}: {e}", legacy.display())),
+    };
+    let text = String::from_utf8_lossy(&bytes);
+    let mut lines: String = text.lines().flat_map(|line| [line, "\n"]).collect();
+    let file = path(repo);
+    if let Ok(current) = std::fs::read(&file) {
+        lines.push_str(&String::from_utf8_lossy(&current));
+    }
+    std::fs::write(&file, &lines).map_err(|e| format!("write {}: {e}", file.display()))?;
+    bound(&file, KEEP)?;
+    std::fs::remove_file(&legacy).map_err(|e| format!("remove {}: {e}", legacy.display()))?;
+    Ok(Some(text.lines().count()))
 }
 
 /// Rounds the tip's own line paid. The code review writes one `cr` note per run
@@ -885,5 +909,57 @@ mod tests {
         let text = summarise(&[], &Path::new("/repo").join("target").join(FILE_NAME));
         assert!(text.contains("no gate runs recorded yet"), "{text}");
         assert!(text.contains(&format!("target/{FILE_NAME}")), "{text}");
+    }
+
+    fn git_repo() -> (tempfile::TempDir, std::path::PathBuf) {
+        let dir = tempfile::TempDir::new().unwrap();
+        let repo = dir.path().join("main");
+        std::fs::create_dir(&repo).unwrap();
+        for args in
+            [&["init", "-q", "-b", "main"][..], &["commit", "-q", "--allow-empty", "-m", "init"]]
+        {
+            crate::git::git_env(
+                &repo,
+                args,
+                &[
+                    ("GIT_AUTHOR_NAME", "t"),
+                    ("GIT_AUTHOR_EMAIL", "t@t.invalid"),
+                    ("GIT_COMMITTER_NAME", "t"),
+                    ("GIT_COMMITTER_EMAIL", "t@t.invalid"),
+                ],
+            )
+            .unwrap();
+        }
+        (dir, repo)
+    }
+
+    #[test]
+    fn every_worktree_of_a_clone_reads_one_tally_in_the_git_common_dir() {
+        let (dir, repo) = git_repo();
+        let linked = dir.path().join("linked");
+        crate::git::git(&repo, &["worktree", "add", "-q", "-b", "side", linked.to_str().unwrap()])
+            .unwrap();
+        let common = std::fs::canonicalize(repo.join(".git")).unwrap();
+        assert_eq!(super::path(&repo), common.join(FILE_NAME));
+        assert_eq!(super::path(&linked), common.join(FILE_NAME));
+    }
+
+    #[test]
+    fn a_legacy_target_tally_is_folded_in_ahead_of_the_newer_records() {
+        let (_dir, repo) = git_repo();
+        let (old, new) = (
+            entry("working-unit", "aaa111", "green", Some(1), &[]),
+            entry("epic", "bbb222", "red", Some(2), &["7·walk"]),
+        );
+        std::fs::write(super::path(&repo), format!("{}\n", new.line())).unwrap();
+        let legacy = repo.join("target").join(super::LEGACY);
+        std::fs::create_dir_all(legacy.parent().unwrap()).unwrap();
+        std::fs::write(&legacy, old.line()).unwrap();
+
+        assert_eq!(super::fold_legacy(&repo).unwrap(), Some(1));
+
+        assert_eq!(entries(&repo), vec![old, new]);
+        assert!(!legacy.exists());
+        assert_eq!(super::fold_legacy(&repo).unwrap(), None, "a second fold has nothing to move");
     }
 }

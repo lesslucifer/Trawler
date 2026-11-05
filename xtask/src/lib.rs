@@ -9,6 +9,7 @@ pub mod notes;
 pub mod notes_write;
 pub mod preflight;
 pub mod tally;
+pub mod target;
 pub mod ui;
 pub mod walkthrough;
 pub mod wizard;
@@ -35,6 +36,9 @@ usage:
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask lint                                           (pre-commit hook: fmt+clippy, skipped when this tree content already passed them)
   cargo xtask hooks install                                  (git runs the tracked .cargo-husky/hooks/ in every worktree; the gates above refuse a checkout without it)
+  cargo xtask target seed                                    (this checkout's absent target/ gets the main checkout's third-party artifacts, cloned copy-on-write)
+  cargo xtask target isolate [<checkout>]                    (a symlinked target/ becomes the checkout's own, seeded; the gates above refuse a symlinked one)
+  cargo xtask target prune                                   (drop workspace-crate artifacts, incremental/ and uplifted files from target/; prints what it freed)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
   cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
@@ -57,6 +61,9 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         if let Some(refusal) = hooks::refusal(repo)? {
             return Ok((1, refusal));
         }
+        if let Some(refusal) = target::refusal(repo) {
+            return Ok((1, refusal));
+        }
     }
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
@@ -68,6 +75,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["gate0"] => gate0::gate0(repo),
         ["lint"] => gate0::lint(repo),
         ["hooks", rest @ ..] => hooks::run(rest, repo),
+        ["target", rest @ ..] => target::run(rest, repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["ui", rest @ ..] => ui::run(rest, repo),
@@ -390,6 +398,20 @@ mod tests {
         {
             assert!(is_gate(gate), "{gate:?} must refuse a checkout whose git runs other hooks");
         }
+    }
+
+    #[test]
+    fn a_symlinked_target_refuses_the_gates_after_the_hooks_check() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let shared = dir.path().join("shared");
+        std::fs::create_dir(&shared).unwrap();
+        let repo = dir.path().join("wt");
+        std::fs::create_dir(&repo).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&shared, repo.join("target")).unwrap();
+        let (code, said) = super::run(&["lint".to_string()], &repo).unwrap();
+        assert_eq!(code, 1);
+        assert!(said.contains(crate::target::ISOLATE), "{said}");
     }
 
     // `hooks install` is the refusal's own fix, and verify-doc runs from the
