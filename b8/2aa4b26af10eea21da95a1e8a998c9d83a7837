@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W8
+base: 4a71c17edbf9f4d119506d6fee111067d2f64020
+design_sha256: 37aaada6c4b42196fd17b79c1c4553d35a0e7a73dcf18d06b04862cb2d9f6057
+verdict: PASS
+artifacts: [docs/work/2026-11-05-data-window-kinds-design-run.html]
+implements:
+  - path: docs/work/components/chip-box.html
+    blob: 720156df86d222b176b1b0a9c6f67868b8151880
+    built: [ui/src/components/ChipBox.tsx, ui/src/components/QueryBar.tsx]
+  - path: docs/work/2026-11-05-data-window-kinds-design-run.html
+    blob: de28c5d172c6cc42e1c16c2b8c76dc12734c9ec2
+    built: [ui/src/DataWindowScreen.tsx]
+date: 2026-11-05
