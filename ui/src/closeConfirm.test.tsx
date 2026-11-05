@@ -605,32 +605,25 @@ describe("a quit request", () => {
     },
   );
 
-  test("a cancel while keep capturing is being stored keeps the window: the answer was withdrawn", async () => {
-    const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
-    const { result } = shellConfirm(f);
-    await closeAndWait(f);
-    const answering = Promise.resolve(result.current.keepCapturing());
-    act(() => result.current.cancelAsk());
-    f.releaseWrite();
-    await act(async () => {
-      await answering;
-    });
-    expect(f.destroy).not.toHaveBeenCalled();
-    expect(result.current.asking).toBe(false);
-  });
-
-  test("a quit chosen while keep capturing is being stored is the answer that ends the window", async () => {
-    const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
-    const { result } = shellConfirm(f);
-    await closeAndWait(f);
-    const keeping = Promise.resolve(result.current.keepCapturing());
-    const quitting = Promise.resolve(result.current.quitInstead());
-    f.releaseWrite();
-    await act(async () => {
-      await Promise.all([keeping, quitting]);
-    });
-    expect(f.destroy).toHaveBeenCalledOnce();
-  });
+  test.each(["cancelAsk", "quitInstead"] as const)(
+    "%s while keep capturing is being stored waits: the stored switch and the window agree",
+    async (other) => {
+      const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
+      const { result } = shellConfirm(f);
+      await closeAndWait(f);
+      const keeping = Promise.resolve(result.current.keepCapturing());
+      await act(async () => {
+        await result.current[other]();
+      });
+      expect(f.invoke).not.toHaveBeenCalledWith("keep_capturing_write", { on: false });
+      expect(result.current.asking).toBe(true);
+      f.releaseWrite();
+      await act(async () => {
+        await keeping;
+      });
+      expect(f.destroy).toHaveBeenCalledOnce();
+    },
+  );
 
   test("a ✕ while a quit prompt is open changes nothing and the quit still ends in quit_app", async () => {
     const f = shellDeps("ours", { keep: "unanswered" });

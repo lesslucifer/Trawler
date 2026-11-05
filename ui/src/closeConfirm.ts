@@ -112,7 +112,7 @@ export function useProxyCloseConfirm(
   const [keepRefused, setKeepRefused] = useState<string | null>(null);
   const ending = useRef<RequestKind>("close");
   const quitRequests = useRef(0);
-  const askAnswers = useRef(0);
+  const storingKeep = useRef(false);
   const quitsAnswering = useRef(0);
   const quitPromptShown = useRef(false);
   const question = useRef<() => Promise<QuitPrompt | null>>(async () => null);
@@ -260,31 +260,34 @@ export function useProxyCloseConfirm(
       quitPromptShown.current = false;
       setPrompt(null);
     },
+    // While the answer is being stored the question's other answers wait: a
+    // cancel or a quit racing the write would leave the stored switch and the
+    // window disagreeing about what the user chose.
     // The answer is the switch. A write that fails leaves the window and the
     // question open, saying why: closing into a state nothing recorded would ask
     // again blind, and a question that vanishes reads as a cancel.
     keepCapturing: async () => {
+      if (storingKeep.current) return;
       const requestsSeen = quitRequests.current;
-      const answer = ++askAnswers.current;
+      storingKeep.current = true;
       setKeepRefused(null);
       try {
         await deps.invoke("keep_capturing_write", { on: true });
       } catch (err) {
         console.error("storing keep capturing failed:", err);
-        if (quitRequests.current === requestsSeen && askAnswers.current === answer) {
-          setKeepRefused(refusalWords(err));
-        }
+        if (quitRequests.current === requestsSeen) setKeepRefused(refusalWords(err));
         return;
+      } finally {
+        storingKeep.current = false;
       }
-      if (askAnswers.current !== answer) return;
       setAsking(false);
       if (quitRequests.current === requestsSeen) await destroy();
     },
     // Quit is the user's answer even where it could not be stored: the next
     // close simply asks again.
     quitInstead: async () => {
+      if (storingKeep.current) return;
       const requestsSeen = quitRequests.current;
-      askAnswers.current += 1;
       setAsking(false);
       setKeepRefused(null);
       ending.current = "close";
@@ -298,7 +301,7 @@ export function useProxyCloseConfirm(
       else setPrompt(asked);
     },
     cancelAsk: () => {
-      askAnswers.current += 1;
+      if (storingKeep.current) return;
       setAsking(false);
       setKeepRefused(null);
     },
