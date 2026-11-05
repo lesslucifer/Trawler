@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec02d99f34851f0dfae66e" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W8 result: time decoder</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W8 — result</h1>
+      <p>A timestamp or a date-time string now decodes in W6's peek to the user's local time, beside UTC and how long
+        ago or ahead it is — or the reason it cannot.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-INSPWIN.W8</span> · branch
+        <code>wu/inspect-window/time-decoder</code> · <a href="2026-11-05-inspect-window-w8-time-decoder-plan.html">WU
+        plan</a> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Shipped</th><th></th></tr>
+      <tr><td>right-click on a JSON timestamp decodes it as time</td><td>the number found and selected; <em>decoded as
+        time</em>: <em>local · &lt;zone&gt;</em> <code>2026-11-05 11:00:00 +07:00</code>, <em>UTC</em>
+        <code>2026-11-05 04:00:00Z</code>, <em>read as Unix time, seconds · now</em>; seconds, ms, µs and ns told apart
+        by digit count (9–10, 12–13, 15–16, 18–19), the fraction kept to its significant digits</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>⇄ replaces with the local time, one step</td><td><em>replace with local time</em>; in JSON a value outside a
+        string becomes a quoted string, one inside a string its content; undo restores it</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>the pointer inside a date-time string finds it whole</td><td>an ISO 8601 or HTTP date spanning the pointer
+        or a rough selection is taken whole — spaces, colons and commas included — before W6's value runs</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a form row's HTTP date by ⌘⇧D</td><td><em>read as HTTP date</em>; the cookie form with dashes too; ⇄ writes
+        the local time into the value</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a zone-less date-time or a date off the calendar says why</td><td><em>not base64, URL-encoded, a JWT or a
+        time: it names no zone, so it cannot be moved to local time</em>; <em>2026-02-30 is not a day of the
+        calendar</em>, an hour past 23, an unknown month, a digit count that names no unit — no ⇄, nothing changes</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>↗ opens the local time</td><td>as <code>text/plain</code>, titled <em>&lt;title&gt; · decoded time</em></td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>JWT, base64 and URL read as in W6</td><td>W6's decoder and screen tests pass unchanged but for the reason's
+        wording, which now names time</td><td><span class="badge auto">delivered</span></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>—</td><td>a bare JSON value replaced by ⇄ is now quoted for every decoder, not only time</td><td>the rule
+        sits in the screen's splice, where W6's review waived the same nit (a bare token replaced as string content);
+        base64 and JWT values are always inside strings, so their behaviour is unchanged</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>commits</td><td><code>ba6ec94a</code> plan (and the epic plan's W8) · <code>75ccfe28</code> the time
+        decoder, its place among the decoders and in <code>decodeAround</code>, the peek's time body, the JSON
+        quoting</td></tr>
+      <tr><td>unit</td><td><code>timeDecoder</code> (10, at Asia/Ho_Chi_Minh and a fixed now: each unit by digit count
+        with its fraction; 11 and 14 digits and a fraction past seconds refused; ISO with Z, ±HH:MM, ±HHMM, a space, no
+        seconds, lower case, nine fraction digits, a comma; HTTP and cookie dates; zone-less, Feb 30, month 13, hour 24,
+        an unknown month, free text — each reason; America/New_York across the November DST edge; relative ago and
+        ahead in seconds, minutes, hours, days, months, years; <code>looksLikeTime</code>; <code>TIME_SHAPE</code> over a
+        line) · <code>decoders</code> (7 new: the guess, time over base64 for a timestamp, the zone-less reason, a
+        date-time found whole from a cursor and from a rough selection, the zone-less reason kept around the pointer, a
+        bare timestamp found as a value, what time replaces and opens with)</td></tr>
+      <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (4 new: a JSON number from the
+        right-click showing local, UTC and read-as, ⇄ quoting it and ⌘Z; a date-time string found whole and replaced inside
+        its quotes; a form row's HTTP date by ⌘⇧D and ⇄; a zone-less date-time's reason with nothing changed)</td></tr>
+      <tr><td>suites</td><td>vitest 61 286 in 93 files green; eslint and <code>tsc</code> clean; the pre-commit fmt and
+        clippy green</td></tr>
+      <tr><td>e2e</td><td>waived: W7's J3 decodes the decoded payload's <code>exp</code> through the real windows</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2 waived: no decision, use case or rule changed. UC-9's decoder
+      rows gain time with W7, as the epic's distillation plan says.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>owner try-out</td><td>the zone-less refusal (plan's choices): keep it, or read such a date-time as UTC and
+        say so</td></tr>
+      <tr><td>W7</td><td>J3's <code>exp</code> step; UC-9 lists time among the decoders</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

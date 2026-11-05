@@ -36,15 +36,15 @@
     <table data-c="inputs">
       <thead><tr><th>Input</th><th>Example</th><th>Read as</th></tr></thead>
       <tbody>
-        <tr><td>9–10 digits, optional <code>.fraction</code></td><td><code>1762315200</code>,
-          <code>1762315200.25</code></td><td>Unix time, seconds</td></tr>
-        <tr><td>12–13 digits</td><td><code>1762315200250</code></td><td>Unix time, milliseconds</td></tr>
-        <tr><td>15–16 digits</td><td><code>1762315200250000</code></td><td>Unix time, microseconds</td></tr>
-        <tr><td>18–19 digits</td><td><code>1762315200250000000</code></td><td>Unix time, nanoseconds</td></tr>
+        <tr><td>9–10 digits, optional <code>.fraction</code></td><td><code>1793851200</code>,
+          <code>1793851200.25</code></td><td>Unix time, seconds</td></tr>
+        <tr><td>12–13 digits</td><td><code>1793851200250</code></td><td>Unix time, milliseconds</td></tr>
+        <tr><td>15–16 digits</td><td><code>1793851200250000</code></td><td>Unix time, microseconds</td></tr>
+        <tr><td>18–19 digits</td><td><code>1793851200250000000</code></td><td>Unix time, nanoseconds</td></tr>
         <tr><td>ISO 8601 / RFC 3339 with <code>Z</code> or an offset; <code>T</code> or a space; seconds and a fraction
-          optional</td><td><code>2025-11-05T04:00:00.25Z</code>, <code>2025-11-05 11:00+07:00</code></td><td>ISO 8601</td></tr>
-        <tr><td>HTTP date (RFC 9110) and the cookie form with dashes</td><td><code>Wed, 05 Nov 2025 04:00:00 GMT</code>,
-          <code>Wed, 05-Nov-2025 04:00:00 GMT</code></td><td>HTTP date</td></tr>
+          optional</td><td><code>2026-11-05T04:00:00.25Z</code>, <code>2026-11-05 11:00+07:00</code></td><td>ISO 8601</td></tr>
+        <tr><td>HTTP date (RFC 9110) and the cookie form with dashes</td><td><code>Thu, 05 Nov 2026 04:00:00 GMT</code>,
+          <code>Thu, 05-Nov-2026 04:00:00 GMT</code></td><td>HTTP date</td></tr>
       </tbody>
     </table>
 
@@ -68,7 +68,7 @@ flowchart LR
       <tbody>
         <tr><td>logic</td><td><code>timeDecoder.ts</code> (new)</td><td><code>time(input, zone?, now?)</code>: the inputs
           above to <code>{kind: "time", local, zone, utc, readAs, relative, text, bytes}</code> or a reason; the fraction
-          kept to the digits given; a date off the calendar, an hour past 23, a zone-less date-time each with its reason;
+          kept to its significant digits; a date off the calendar, an hour past 23, a zone-less date-time each with its reason;
           <code>TIME_SHAPE</code> finds a date-time inside a line (it holds spaces, colons and commas, which split W6's
           value runs)</td></tr>
         <tr><td>decoders</td><td><code>decoders.ts</code></td><td><code>time</code> joins the decoders (label
@@ -93,7 +93,7 @@ flowchart LR
           digits is binary with no signature, which never reads well (W6's rule); W6 dropped the switch</td></tr>
         <tr><td>timestamps before 1973 or past 2286 in seconds</td><td>not read as time (their digit counts are not a
           unit's)</td><td>the digit count is the only unit signal; a short number is far likelier an id than a date</td></tr>
-        <tr><td>local time format</td><td><code>2025-11-05 11:00:00.25 +07:00</code></td><td>sortable, the offset
+        <tr><td>local time format</td><td><code>2026-11-05 11:00:00.25 +07:00</code></td><td>sortable, the offset
           explicit, the zone name beside it in the label</td></tr>
       </tbody>
     </table>
@@ -102,18 +102,18 @@ flowchart LR
     <table data-item="expected" data-c="expected">
       <thead><tr><th>State</th><th>Expected</th></tr></thead>
       <tbody>
-        <tr><td>right-click on <code>1762315200</code> in <code>{"exp": 1762315200}</code></td><td>the number selected; a
+        <tr><td>right-click on <code>1793851200</code> in <code>{"exp": 1793851200}</code></td><td>the number selected; a
           peek <em>decoded as time</em>: <em>local · &lt;zone&gt;</em> the local time, <em>UTC</em>
-          <code>2025-11-05 04:00:00Z</code>, <em>read as Unix time, seconds · 3 days ago</em></td></tr>
-        <tr><td>⇄ on it</td><td><code>{"exp": "2025-11-05 11:00:00 +07:00"}</code> (at +07:00) as one step
+          <code>2026-11-05 04:00:00Z</code>, <em>read as Unix time, seconds · now</em></td></tr>
+        <tr><td>⇄ on it</td><td><code>{"exp": "2026-11-05 11:00:00 +07:00"}</code> (at +07:00) as one step
           <em>replaced the selection with its decoded form</em>; undo restores the number</td></tr>
-        <tr><td>right-click inside <code>"2025-11-05T04:00:00Z"</code>, nothing selected</td><td>the whole date-time
+        <tr><td>right-click inside <code>"2026-11-05T04:00:00Z"</code>, nothing selected</td><td>the whole date-time
           selected (not the run around the pointer) and read as ISO 8601</td></tr>
-        <tr><td>a form row <code>expires=Wed, 05 Nov 2025 04:00:00 GMT</code>, ⌘⇧D</td><td>read as HTTP date; ⇄ writes the
+        <tr><td>a form row <code>expires=Thu, 05 Nov 2026 04:00:00 GMT</code>, ⌘⇧D</td><td>read as HTTP date; ⇄ writes the
           local time into the value</td></tr>
-        <tr><td><code>2025-11-05T04:00:00</code></td><td><em>not base64, URL-encoded, a JWT or a time: it names no zone,
+        <tr><td><code>2026-11-05T04:00:00</code></td><td><em>not base64, URL-encoded, a JWT or a time: it names no zone,
           so it cannot be moved to local time</em>; nothing changes</td></tr>
-        <tr><td><code>2025-02-30T04:00:00Z</code></td><td>the reason: <em>2025-02-30 is not a day of the calendar</em></td></tr>
+        <tr><td><code>2026-02-30T04:00:00Z</code></td><td>the reason: <em>2026-02-30 is not a day of the calendar</em></td></tr>
         <tr><td>a JWT, base64 or URL value</td><td>reads exactly as in W6</td></tr>
       </tbody>
     </table>
