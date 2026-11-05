@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W7
+branch: HEAD
+tests:
+  unit: { count: 16, covers: "previewDocument puts the CSP first in head, removes meta refresh under case, order, entity and slash variants and every base, targets links away, survives fragments and no-head documents, keeps a doctype only if present; html re-indent keeps every token, pre, CRLF and the trailing break rule" }
+  integration: { count: 123, covers: "html opens in its own surface with find; re-indent is one named undoable step with restore exact and never offered read-only; the preview frame has an empty sandbox and a srcdoc carrying the CSP before the page, follows edits, hides editor and find bar, disables re-indent with its reason; the switch, the menu row and shift-cmd-V agree; cmd-F returns to source with find focused; picking another kind leaves preview; the html language mounts, colours and folds" }
+  e2e: { waived: "J4 over a real window with a beacon is W9's, per the plan" }
