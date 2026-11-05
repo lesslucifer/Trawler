@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU E-PKG2.W5 -> epic/packaging-v2, round 3 (finders also read ui/src-tauri/ and login-service/ at the caller's request)"
+epic: E-PKG2
+wu: E-PKG2.W5
+branch: wu/packaging-v2/bg-service-sync
+base: 7a008d7e93b79d02fc96d997ee994d205a8120af
+head: 5bccd658c347e5c0b8e0e7073f03e90cac65ccdc
+diff_sha256: 8027343c743ef0c494e284b55b8dd7b8bb9b7bd474bb3c05d58f0bdcf6309673
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 5
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "program_at_login compares the resolved current_exe with a raw $APPDIR, so a mount under a symlinked TMPDIR falls back to the executable"
+    waived: "the fallback is the pre-W5 behaviour, never a wrong program; the AppImage runtime mounts under /tmp by default"
+  - finding: "Telling's doc comment says the last window is already gone, but end now also runs from quit_app with the window open"
+    waived: "comment wording only; the hold and the no-exit-while-told branch cover both paths and are tested"
+  - finding: "lifecycle::quit_in_window takes update::Pending while update::stage_and_quit calls lifecycle::request_quit"
+    waived: "refuted as a defect in round 2 (A1, Q2): DEC-82 rule 4 puts the drop where the quit request fails; one crate, no duplicated rule"
+  - finding: "login_item_write picks the AppImage program in the command rather than in Place"
+    waived: "refuted in round 2 (P2): on Linux the only place is Place::File, and program_at_login is the one tested rule"
+  - finding: "holds_exit_request in lib.rs combines update's and lifecycle's exit holds"
+    waived: "refuted in round 2 (Q3): lib.rs is the composition root and the only module that sees both rules"
+verdict: PASS
+date: 2026-11-06
