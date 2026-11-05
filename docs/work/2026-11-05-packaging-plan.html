@@ -10,10 +10,18 @@
     <div class="inner">
       <h1>E-PKG — Trawler ships on macOS, Windows and Linux, and updates itself</h1>
       <p>A <code>v*</code> tag builds every platform's installer in GitHub Actions. A user installs one, and later gets each new version from inside the app.</p>
-      <div class="meta">v3 · 2026-11-05 · owner rulings on Q1, Q3, Q4, Q5, Q7, Q14, Q16–Q19 and the other proposals accepted, 2026-11-05 · Trawler · T3 epic plan · <span class="badge id">E-PKG</span> · branch <code>epic/packaging</code> · WU branches <code>wu/packaging/&lt;slug&gt;</code> · lands after E-BGSVC · from the roadmap row left by E-ONEAPP Q3</div>
+      <div class="meta">v4 · 2026-11-05 · re-scoped by the owner to close with W1 · v3 · owner rulings on Q1, Q3, Q4, Q5, Q7, Q14, Q16–Q19 and the other proposals accepted, 2026-11-05 · Trawler · T3 epic plan · <span class="badge id">E-PKG</span> · branch <code>epic/packaging</code> · WU branches <code>wu/packaging/&lt;slug&gt;</code> · lands after E-BGSVC · from the roadmap row left by E-ONEAPP Q3</div>
     </div>
   </header>
   <main>
+    <div class="callout warn" data-c="rescope">
+      <strong>Re-scoped at close (owner, 2026-11-05).</strong> E-PKG closes with what landed, <strong>W1</strong>:
+      expected #1 and #2, and DEC-81. W2 to W6 move unchanged to <strong>E-PKG2</strong>, planned off <code>main</code>
+      after this merge. That covers expected #3 to #7, UC-INSTALL's release, UC-UPDATE, and the e2e journeys J1 to J4.
+      W2 waits for E-CI's <code>ci.yml</code> on <code>main</code>. W3's plan was written on
+      <code>wu/packaging/updater</code>, with its signing-key question (Q7) open. Every ruling below carries over as it
+      stands.
+    </div>
     <h2 id="intent">Intent</h2>
     <p data-item="intent">
       Trawler only runs from a clone today, through <code>cargo run</code>, and only on macOS has it ever run. This epic makes it installable and
@@ -136,7 +144,7 @@ flowchart LR
         <p data-item="wu-deps">none, because E-ONEAPP (on main) gave one workspace and one self-spawning binary.</p>
       </div>
       <div data-wu="E-PKG.W2">
-        <h3 id="w2">W2 · platform bring-up — the app builds, passes its tests and captures on Windows and Linux</h3>
+        <h3 id="w2"><span class="badge approval">moved to E-PKG2</span> W2 · platform bring-up — the app builds, passes its tests and captures on Windows and Linux</h3>
         <p data-item="wu-summary">
           Adds Ubuntu and Windows jobs to <code>.github/workflows/ci.yml</code>: clippy and <code>cargo test -p trawler -p trawler-ui</code> on
           <code>ubuntu-22.04</code> (with Strata's WebKitGTK deps, under xvfb) and <code>windows-latest</code>, next to E-CI's macOS job. The workflow runs on push to
@@ -153,7 +161,7 @@ flowchart LR
         <p data-item="wu-deps">E-CI on <code>main</code> (Q19). Runs alongside W1.</p>
       </div>
       <div data-wu="E-PKG.W3">
-        <h3 id="w3">W3 · updater — the app asks, verifies and relaunches as the new version</h3>
+        <h3 id="w3"><span class="badge approval">moved to E-PKG2</span> W3 · updater — the app asks, verifies and relaunches as the new version</h3>
         <p data-item="wu-summary">
           Adds <code>tauri-plugin-updater</code> with <code>createUpdaterArtifacts</code>, and the public key in <code>tauri.conf.json</code>. The private key and its
           password are repository secrets (Q7). The endpoint is
@@ -170,7 +178,7 @@ flowchart LR
         <p data-item="wu-deps">E-PKG.W1 (the package command that emits the updater archives).</p>
       </div>
       <div data-wu="E-PKG.W4">
-        <h3 id="w4">W4 · release workflow — a tag builds every installer and a draft release</h3>
+        <h3 id="w4"><span class="badge approval">moved to E-PKG2</span> W4 · release workflow — a tag builds every installer and a draft release</h3>
         <p data-item="wu-summary">
           Adds <code>.github/workflows/release.yml</code>, modelled on Strata's. It triggers on a <code>v*</code> tag and runs a matrix over macOS universal,
           Windows x64 and arm64, and Linux x64 and arm64 (Q16). It fails when the tag differs from the workspace version (Q18), and signs ad-hoc on macOS through
@@ -187,7 +195,7 @@ flowchart LR
         <p data-item="wu-deps">E-PKG.W1 (package), W2 (each OS builds and passes), W3 (updater artifacts and the key).</p>
       </div>
       <div data-wu="E-PKG.W5">
-        <h3 id="w5">W5 · bg-service sync — package and update what E-BGSVC added</h3>
+        <h3 id="w5"><span class="badge approval">moved to E-PKG2</span> W5 · bg-service sync — package and update what E-BGSVC added</h3>
         <p data-item="wu-summary">
           Once E-BGSVC is on <code>main</code>, this WU merges <code>main</code> into <code>epic/packaging</code>. It then makes each piece E-BGSVC added work from the
           installed app on each OS and survive an update: a core running with no window, launch at login (whatever mechanism E-BGSVC chose, pointed at the installed path)
@@ -202,7 +210,7 @@ flowchart LR
         <p data-item="wu-deps">E-BGSVC merged into <code>main</code> · E-PKG.W4.</p>
       </div>
       <div data-wu="E-PKG.W6">
-        <h3 id="w6">W6 · close — the epic's e2e, the first release, the distillation</h3>
+        <h3 id="w6"><span class="badge approval">moved to E-PKG2</span> W6 · close — the epic's e2e, the first release, the distillation</h3>
         <p data-item="wu-summary">
           The e2e below, then two rc tags pushed by the owner: the first rc is installed in the Mac and the VMs, then the second is published and taken by update
           on each. The results are recorded in the epic result. The distillation follows, and the roadmap and backlog rows close.
@@ -215,6 +223,11 @@ flowchart LR
 
     <h2 id="e2e">E2E test plan</h2>
     <div data-item="e2e-plan">
+      <p class="callout" data-c="e2e-at-close"><strong>At this close.</strong> The epic's e2e is
+        <code>xtask/tests/package_bundle.rs</code>, run at the epic tip. It covers W1's whole flow: a real
+        <code>cargo xtask package</code> with <code>VITE_E2E</code> set, a release-flavoured bundle, an <code>.app</code>
+        green under <code>codesign --verify --deep --strict</code>, and the packaged binary capturing a request under a
+        launcher's environment. <code>e2e_packaging</code> and its journeys below move to E-PKG2.</p>
       <p>
         One hermetic Rust e2e, <code>e2e_packaging</code>, built from the real <code>cargo xtask package</code> with the <code>package-test</code> profile (Q15).
         <code>HOME</code> (<code>%APPDATA%</code> on Windows) is a tempdir, and every origin and manifest is a local server. It runs in the local gate on macOS and in
@@ -236,6 +249,10 @@ flowchart LR
 
     <h2 id="distillation">Distillation plan</h2>
     <div data-item="distillation-plan">
+      <p class="callout" data-c="distillation-at-close"><strong>At this close.</strong> T2: DEC-81 and its index row,
+        plus the roadmap's packaging row, now begun and carried by E-PKG2. T1: <code>architecture.html</code>'s Run/dev
+        row for <code>cargo xtask package</code>. T0: the Commands line gains it (Q13). The release DEC, the update DEC,
+        UC-INSTALL, UC-UPDATE and the testing-strategy row move to E-PKG2.</p>
       <table data-c="distillation">
         <thead><tr><th>Tier</th><th>Doc</th><th>Absorbs</th></tr></thead>
         <tbody>
