@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadBeautifier, reformatCode } from "./codeTools";
 
 const stripped = (text: string) => text.replace(/\s+/g, "");
@@ -54,5 +54,17 @@ describe("reformatCode", () => {
 
   it("loads the formatter once", async () => {
     expect(await loadBeautifier()).toBe(await loadBeautifier());
+  });
+
+  it("a failed load is not cached: the next call tries again", async () => {
+    vi.resetModules();
+    vi.doMock("js-beautify", () => {
+      throw new Error("chunk failed");
+    });
+    const fresh = await import("./codeTools");
+    await expect(fresh.loadBeautifier()).rejects.toThrow();
+    vi.doUnmock("js-beautify");
+    vi.resetModules();
+    expect(await fresh.loadBeautifier()).toHaveProperty("js");
   });
 });

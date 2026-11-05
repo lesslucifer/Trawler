@@ -6,6 +6,7 @@ import * as files from "./body";
 import { DataWindowScreen } from "./DataWindowScreen";
 import type { DataPayload } from "./dataWindow";
 import type { FlowView } from "./api";
+import * as codeTools from "./codeTools";
 import { loadBeautifier } from "./codeTools";
 import { headersPayload } from "./flowPayload";
 import { systemZone, time, type TimeReading } from "./timeDecoder";
@@ -901,6 +902,19 @@ describe("javascript and css", () => {
     expect(doc().split("\n").length).toBeGreaterThan(5);
     fireEvent.click(moreItem(/^restore original/));
     expect(doc()).toBe(js);
+  });
+
+  it("a formatter that cannot load is named on the disabled row, not called loading", async () => {
+    const failing = vi.spyOn(codeTools, "loadBeautifier").mockRejectedValue(new Error("chunk failed"));
+    try {
+      await open(payload({ text: js, typeHint: "application/javascript" }));
+      await act(async () => {});
+      const item = moreItem(/^reformat/);
+      expect(item).toHaveAttribute("aria-disabled", "true");
+      expect(item).toHaveTextContent("the formatter could not be loaded");
+    } finally {
+      failing.mockRestore();
+    }
   });
 
   it("reformats css the same way and keeps CRLF", async () => {

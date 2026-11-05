@@ -394,10 +394,14 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const parses = menuJson?.ok ?? false;
   const codeKind = kind === "javascript" || kind === "css" ? kind : null;
   const [beautifier, setBeautifier] = useState<Beautifier | null>(null);
+  const [formatterFailed, setFormatterFailed] = useState(false);
   useEffect(() => {
     if (!codeKind) return;
     let live = true;
-    void loadBeautifier().then((loaded) => live && setBeautifier(loaded));
+    loadBeautifier().then(
+      (loaded) => live && setBeautifier(loaded),
+      () => live && setFormatterFailed(true),
+    );
     return () => {
       live = false;
     };
@@ -673,7 +677,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
                 label: "reformat",
                 keys: "⌥⇧F",
                 disabled: !menuCode?.ok,
-                why: menuCode ? (menuCode.ok ? undefined : menuCode.reason) : "the formatter is loading",
+                why: menuCode
+                  ? menuCode.ok
+                    ? undefined
+                    : menuCode.reason
+                  : formatterFailed
+                    ? "the formatter could not be loaded"
+                    : "the formatter is loading",
                 run: reformatSource,
               },
             ]),

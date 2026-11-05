@@ -12,10 +12,16 @@ const INDENT_SIZE = 2;
 let loading: Promise<Beautifier> | null = null;
 
 export function loadBeautifier(): Promise<Beautifier> {
-  loading ??= import("js-beautify").then((module) => {
-    const { js, css } = module.default ?? module;
-    return { js, css };
-  });
+  loading ??= import("js-beautify").then(
+    (module) => {
+      const { js, css } = module.default ?? module;
+      return { js, css };
+    },
+    (error: unknown) => {
+      loading = null;
+      throw error;
+    },
+  );
   return loading;
 }
 
