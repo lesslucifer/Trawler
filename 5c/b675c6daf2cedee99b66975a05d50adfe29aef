@@ -1,0 +1,46 @@
+schema: cr/v5
+scope: "WU E-PKG2.W4 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: wu/packaging-v2/release-workflow
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+head: 5cb675c6daf2cedee99b66975a05d50adfe29aef
+diff_sha256: e94f4bd091317864aca06d34327cbb8fa4e848b00286371cba06d18a101d57a6
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  stage_seconds:
+    gate0: 0
+    finders: 75
+    verifiers: 25
+    total: 118
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 5, verified: 0 }
+findings: { found: 7, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "smoke::core_args and parse_ready restate the core's launch contract beside src/cli.rs and the supervisor (verifier: important refuted to nit)"
+    waived: "the smoke is a black-box check of the shipped binary and xtask stays free of the trawler crate; both sides pin the same ready-line literal in unit tests"
+  - finding: "installer suffixes appear in package, smoke::pick and release_manifest::keys_of (verifier: important refuted to nit)"
+    waived: "three different rules sharing suffix strings; a renamed kind fails required_keys or pick loudly by name"
+  - finding: "smoke builds a full package plan only to read its bundle_dir"
+    waived: "plan is the one source of bundle_dir the release_workflow test also ties the upload dirs to"
+  - finding: "the MSI version rule lives in version_drift and the release version job does not call it"
+    waived: "DEC-86 known limit: the tag equals the gate-proven workspace version"
+  - finding: "release-manifest's flag scan ignores unknown flags"
+    waived: "its only caller is release.yml, pinned by release_workflow; a missing flag already prints usage"
+  - finding: "a failed Linux smoke may leave the AppImage's extracted child running briefly"
+    waived: "it exits on stdin EOF, which the dropped Core closes; runners are ephemeral"
+  - finding: "the draft re-run, mv -n clash and upload globs are pinned by YAML shape, never executed"
+    waived: "the declared e2e waiver names W6's first rc tag as the run"
+verdict: PASS
+date: 2026-11-06
