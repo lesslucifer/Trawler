@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-GATEPAR
+branch: HEAD
+tests:
+  unit: { count: 44, covers: "hooks refusal for unset/other/absolute core.hooksPath and non-executable hooks, install writes the relative value and refuses to strand a worktree; deps/ crate-stem parsing, profile detection, seed keeps only third-party entries and mtimes, prune keeps third-party and counts bytes, refusal only for a symlinked target; one gate tally path in the git common dir and the legacy fold" }
+  integration: { count: 24, covers: "real xtask binary on hermetic repos: an uninstalled gate refuses with no cargo spawned, an edited tracked hook runs next commit, a linked worktree runs its own hook; a seed holds third-party artifacts only and the next build compiles only the crate, two checkouts each run their own build, a symlinked lint is refused then runs after isolate, isolate is idempotent, prune keeps third-party and folds the tally; post-checkout seeds via the source's xtask; the tally lives in the common dir" }
+  e2e: { count: 1, covers: "the whole epic in one hermetic repo through the real tracked post-checkout and the real xtask: each checkout runs its own edited hook after one install, a new worktree gets a seeded target with no workspace artifact, two worktrees each run their own build of one crate without recompiling the third-party dep, a symlinked target refuses lint until isolate, then lint is green" }
