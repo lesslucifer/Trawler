@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 3807690793d034ed3880f62868e9f906b41fa685
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-packaging-v2-w4-release-workflow-result.html
+report_sha256: 3f4a7c382acfdefd3ccc0b0306ba35675eaf8ec1dc55e595b1edceb633420784
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAED2/oGhqvlF5RDvduwVIOw98kUTXnIAqykTYj/JFhb3QFYigDrMf4D/0q
+  pdB2H3E8wd3uSLxlFicrBxJyGQEtoD
+  -----END SSH SIGNATURE-----
