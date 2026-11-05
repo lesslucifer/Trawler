@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR
+wu: E-GATEPAR.W2
+branch: wu/gate-parity/target-isolation
+tests:
+  unit: { count: 43, covers: "crate stem of every deps/ name shape (hashed, lib-prefixed, rcgu leftovers with and without hash); hyphen normalisation and libc not owned by c; profile detection incl. <triple>/<profile>; seed keeps only third-party entries and their mtimes, a missing source seeds an empty target; prune removes own entries, incremental, examples and uplifted files, keeps third-party, counts bytes; refusal only for a symlinked target; lint in a symlinked checkout is refused with the isolate line; one tally path in the git common dir from main and a linked worktree; a legacy target tally folds in ahead of newer records" }
+  integration: { count: 34, covers: "real xtask binary + real cargo on a hermetic workspace with an out-of-workspace path dep: a seed holds the dep's artifacts and none of the crate's, and the next build compiles only the crate; one crate built from different sources (older mtime) in two checkouts runs each checkout's own code; a symlinked lint is refused without spawning cargo and runs after isolate; isolate <path> and idempotence; prune drops the workspace build, keeps third-party, folds the legacy tally. post-checkout calls the source checkout's xtask target seed, and without one leaves no target and prints a note. The gate tally lives in the git common dir" }
+  e2e: { waived: "owned by the epic e2e at W3 (scenarios: two worktrees, new worktree, symlinked target)" }
