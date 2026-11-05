@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W5
+branch: HEAD
+tests:
+  unit: { count: 75, covers: "overruled, servedAs and decidedBy over agreeing, generic, wrong, absent and image labels and the pick wording; the nine picker rows; bodyKind cases removed with the function" }
+  integration: { count: 121, covers: "the pane over JSON-as-text/plain, HTML-as-octet-stream, broken JSON, agreeing and unlabelled bodies, binary under text/plain and raw mode; the window's status bar for each wording, the nine-row picker with a pick and its restore, JSON-as-text/plain with JSON tools, non-UTF-8 text reached by a pick" }
+  e2e: { waived: "J2 (the pane and the window over real flows) is W9's per the epic plan; no existing e2e spec asserts the retired wording" }
