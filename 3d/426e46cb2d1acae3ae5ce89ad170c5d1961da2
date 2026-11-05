@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-PKG
+wu: E-PKG.W1
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the row 'a plain cargo run after an e2e run embeds the e2e bundle' closed by E-PKG.W1, naming the flavour mechanism and its tests"
+  - path: "docs/work/2026-11-05-packaging-w1-release-bundle-plan.html"
+    tier: T3
+    action: added
+    distills: "the W1 plan: requirement, mapping, expected result, test plan"
+  - path: "docs/work/2026-11-05-packaging-w1-release-bundle-result.html"
+    tier: T3
+    action: added
+    distills: "the W1 result: outcome, deviations, evidence, distillation, follow-ups"
