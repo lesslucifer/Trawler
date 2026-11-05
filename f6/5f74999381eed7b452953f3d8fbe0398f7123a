@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W1
+branch: HEAD
+tests:
+  unit: { count: 25, covers: "Gate 0's check command strips every inherited GIT_* and keeps other variables; a red merge verdict names git merge --abort and the back-merge while green and skip pass through; gate0 merge is a gated entrypoint" }
+  integration: { count: 27, covers: "the real tracked hooks: a merge into main runs verify-dod hook epic then gate0 merge, a red tree refuses with main unchanged, a red epic gate never starts Gate 0, a WU seam runs no Gate 0, conflicted completion on main gated both ways; the real xtask gate0 merge under a poisoned hook env spawns no cargo with GIT_*, a red tree prints the refusal and caches nothing, a green tree caches and the re-run spawns nothing" }
+  e2e: { waived: "the epic e2e (E-GATEPAR2.W5) merges two real epics through the real hooks and suite; this WU's contract is fully pinned at the hook seam and the spawned process" }
