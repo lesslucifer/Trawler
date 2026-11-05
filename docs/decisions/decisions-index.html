@@ -1007,7 +1007,7 @@
             <code>v*</code> tag and fails unless it equals the workspace version. Five targets build with
             <code>cargo xtask package</code>, each is smoke-tested (<code>cargo xtask smoke</code>) before it uploads, and
             <code>cargo xtask release-manifest</code> writes <code>latest.json</code> (every target and install kind) and the
-            first-open notes for a draft, never a prerelease. The key reaches only a sign step after a keyless build and bundle (<code>tauri signer sign --app-version</code>);
+            first-open notes for a draft, never a prerelease. The key reaches only a sign step after a keyless build and bundle (the lockfile's <code>tauri signer sign --app-version</code>, never through pnpm);
             rcs are numeric (<code>0.1.0-1</code>, an MSI refuses <code>rc.1</code>); actions pinned to SHAs, no caches</td>
           <td><span class="badge auto">active</span></td>
         </tr>
