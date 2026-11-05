@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "epic E-BGSVC -> main (merged with E-INSPWIN2)"
+epic: E-BGSVC
+branch: epic/bg-service
+base: 54fc1233e6c9edb9a8ad2313a6029dd22db0fde8
+head: 8237b0adaf0eb402ad8cd39809dd24b5c5743536
+diff_sha256: 743bd580aaa32ed390d1f443c447c5c64277b5be509768f9ea727dc783ab4c93
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 3, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "Dock policy is raised by each window opener, not by the lifecycle's window-count hook (ui/src-tauri, outside the hash)"
+    waived: "not reachable: a data window opens only from the main window, which holds the Dock"
+  - finding: "core::setup installs the tray and opens the launch window, composition that belongs in lib.rs (ui/src-tauri, outside the hash)"
+    waived: "the order tray-before-launch-window is DEC-77 rule 8's and lives where the core's state first exists"
+verdict: FAIL
+date: 2026-11-06
