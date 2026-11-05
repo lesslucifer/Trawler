@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec6eff9f34851f0dfaea21">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-83: CI is a signal on main, not a gate</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-83 — CI is a signal on <code>main</code>, not a gate</h1>
+      <p>GitHub Actions builds and tests what landed, on platforms this Mac cannot be. It never decides what lands.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-CI.W1</strong> from the owner's
+        rulings Q17 and Q19 on E-PKG2's plan · no use case (infrastructure) · relates to
+        <a href="dec-74-the-merge-proves-the-tree-it-creates.html">DEC-74</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td><code>.github/workflows/ci.yml</code> runs on a push to <code>main</code> and on
+        <code>workflow_dispatch</code>, and on nothing else: no <code>epic/*</code>, <code>wu/*</code> or pull-request
+        trigger (Q17)</td><td>main is what shipped. A branch runs only when someone asks</td></tr>
+      <tr><td>2</td><td>A branch is run by hand: <code>gh workflow run ci.yml --ref &lt;branch&gt;</code>. GitHub can
+        dispatch only a workflow that exists on the default branch, which is why this file reached <code>main</code>
+        before the platform work that needs it (Q19)</td><td>Windows and Linux fixes are seen before the epic merges,
+        without CI on every push</td></tr>
+      <tr><td>3</td><td>CI runs clippy with <code>-D warnings</code> and the <code>trawler</code> and
+        <code>trawler-ui</code> tests, after installing the UI's packages from the lockfile. xtask's gate suites, vitest,
+        the WebDriver e2e and nextest stay local</td><td>the core and the app are what each platform must build and run.
+        The gate tooling is macOS-only and local by DEC-74</td></tr>
+      <tr><td>4</td><td>Nothing refuses on a CI result: no required checks, no branch protection, no hook that reads
+        it. The local gates are the gates (DEC-74). A red run is a finding for the next epic that touches that
+        platform</td><td>an unattended, AI-first merge cannot wait on a remote service. Owner ruling Q17: a signal, not a
+        gate</td></tr>
+      <tr><td>5</td><td>The workflow reads the repository and writes nothing (<code>contents: read</code>). A newer run
+        on the same ref cancels the older one. A run stops after 45 minutes. No step may continue on error or be
+        skipped</td><td>least privilege; one answer per ref, the newest; a hang on a runner billed at ten times Linux's
+        rate is cut off; a signal that cannot go red is no signal</td></tr>
+    </table>
+
+    <h2 id="held-by">Held by</h2>
+    <p data-c="held-by"><code>xtask/tests/suite/ci_workflow.rs</code> pins rules 1, 3 and 5: the triggers, the job, its
+      setup and commands in order, the permissions, the timeout, and that no step can fail quietly. Rules 2 and 4 are facts of GitHub and of the hooks: no hook reads a CI result.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

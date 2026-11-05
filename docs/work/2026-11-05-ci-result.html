@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec6f269f34851f0dfaea29" data-artifact="epic-result wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-CI result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-CI result — <code>ci.yml</code> is ready for <code>main</code></h1>
+      <p>Delivered locally. The workflow's first real run happens when the owner pushes <code>main</code>, which is
+      outward-facing and so the owner's step.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 epic + WU result (collapsed) · <span class="badge id">E-CI</span>
+      · <span class="badge id">E-CI.W1</span> · <code>wu/ci/ci-yml</code> → <code>epic/ci</code> → <code>main</code> ·
+      plan: <code>2026-11-05-ci-plan.html</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Expected</th><th>Verdict</th><th>Observed</th></tr>
+      <tr><td><code>ci.yml</code>: push to <code>main</code> and <code>workflow_dispatch</code> only, one
+        <code>macos-latest</code> job, <code>contents: read</code></td><td><span class="badge auto">delivered</span></td>
+        <td><code>.github/workflows/ci.yml</code>. The job runs a frozen-lockfile pnpm install in <code>ui</code>, clippy
+        with <code>-D warnings</code> over the workspace, then <code>cargo test -p trawler -p trawler-ui</code>. A newer
+        run on the same ref cancels the older one</td></tr>
+      <tr><td>the pinning test is green and names what moved</td><td><span class="badge auto">delivered</span></td>
+        <td><code>ci_workflow</code>, 7 of 7. The first four were red before the file existed, and the timeout test
+        was red before the bound was added</td></tr>
+      <tr><td>a run on <code>main</code> after the push; a dispatched run on a branch</td><td><span class="badge approval">owner step</span></td>
+        <td>not run: pushing and dispatching are outward-facing. Both commands are staged. E-PKG2.W2 records the
+        runs</td></tr>
+      <tr><td>Intent: E-PKG2.W2 can dispatch Windows and Linux runs on its branch</td><td><span class="badge auto">unblocked once pushed</span></td>
+        <td>the file reaches <code>main</code> with this epic's merge; GitHub sees it after the push</td></tr>
+    </table>
+
+    <h2 id="rollup">Per-WU rollup</h2>
+    <p data-item="wu-rollup" data-c="rollup">E-CI.W1 (ci-yml) was the only planned WU, and it was delivered as planned.
+      There was no unplanned work.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations" data-c="deviations">Added from review round 1: <code>timeout-minutes: 45</code>, and the
+      test refuses <code>continue-on-error</code> or a skippable step. Q1 (macOS minutes on a private repo) and Q2 (stable
+      Rust, Node 24, pnpm 11) were taken as proposed.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>integration</td><td><code>xtask/tests/suite/ci_workflow.rs</code>: triggers, permissions, the macOS job, its
+        timeout, the setup actions and their order, install before clippy before tests, and no step that can fail
+        quietly</td></tr>
+      <tr><td>unit</td><td>waived: the WU adds no product or tooling code</td></tr>
+      <tr><td>e2e</td><td>waived: the proof is a real Actions run after the owner pushes <code>main</code></td></tr>
+      <tr><td>the commands CI runs</td><td>both pass on this tree locally. Clippy <code>-D warnings</code> over the
+        workspace is the pre-commit lint, and the tests run inside Gate 0's suite</td></tr>
+      <tr><td>review round 1</td><td>FAIL on <code>ca050e42</code>, one important verified: no job timeout, so a hang
+        would run 360 macOS minutes. Fixed in <code>b7d58515</code>, test first. Two other importants were refuted: the
+        cancelled older run on a ref is DEC-83's own rule, and pnpm/action-setup runs on the action's Node. Three nits
+        were taken in the same commit</td></tr>
+      <tr><td>commits</td><td><code>30f3eabe</code> plan · <code>30d70458</code> workflow + test · <code>aba3a719</code>
+        DEC-83 · <code>b7d58515</code> round-1 fix</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2: <a href="../decisions/dec-83-ci-is-a-signal-on-main-not-a-gate.html">DEC-83</a>
+      and its index row cover the triggers, dispatch by hand, what runs and what stays local, and that nothing refuses on a
+      result. T1 <code>testing-strategy.html</code> is left to E-PKG2's close, once three platforms run. The plan and this
+      report are archived at the epic's close (DEC-3).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>Item</th><th>Owner</th></tr>
+      <tr><td>Push <code>main</code> so GitHub has the workflow, then confirm the first run is green</td><td>owner (staged)</td></tr>
+      <tr><td>Ubuntu and Windows jobs, dispatched on the WU branch until green</td><td>E-PKG2.W2</td></tr>
+      <tr><td><code>testing-strategy.html</code> says every push runs fmt, clippy, the suite and a coverage floor. Today
+        CI runs on <code>main</code> only, without fmt or a coverage floor (DEC-83)</td><td>E-PKG2's close (T1, by its
+        plan)</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
