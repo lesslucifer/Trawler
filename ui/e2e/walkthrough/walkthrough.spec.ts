@@ -136,7 +136,8 @@ const walk: Walk = {
     await $('[data-testid="status-dot"]').click();
   },
   async filter(text: string) {
-    await $('[aria-label="filter"]').setValue(text);
+    await $('[aria-label="filter"]').click();
+    await browser.keys([...text.split(""), "Enter"]);
   },
   // Another device's unmarked request counts only between two readings of this
   // machine (DEC-63), and the watch that takes them stops while the window is

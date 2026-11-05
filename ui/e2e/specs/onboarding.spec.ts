@@ -1,6 +1,7 @@
 import { browser, $, $$, expect } from "@wdio/globals";
 import { readFileSync } from "node:fs";
 import { PORTS_FILE } from "../wdio.conf.ts";
+import { addChips, chips, removeEveryChip } from "./query.ts";
 
 const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as {
   api: string;
@@ -99,7 +100,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     await expect($('[data-testid="flow-row"]')).not.toBeExisting();
     await expect($('[data-testid="platform"]')).toBeExisting();
     await expect($('[data-testid="steps"]')).toBeExisting();
-    await expect($('[aria-label="host"]')).not.toBeExisting();
+    await expect($('[aria-label="filter"]')).not.toBeExisting();
   });
 
   it("this machine is already the answer, and its three tasks are numbered and read at once", async () => {
@@ -226,7 +227,7 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
   // list's view, never the setup screen's evidence.
   it("re-entry with the list filtered to nothing still reads the new request", async () => {
     await button("‹ show traffic").click();
-    await $('[aria-label="filter"]').setValue("no-such-path.test");
+    await addChips("no-such-path.test");
     await browser.waitUntil(async () => (await rowCount()) === 0, {
       timeout: 15_000,
       timeoutMsg: "non-matching filter did not empty the list",
@@ -248,12 +249,13 @@ describe("UC-ONBOARD — set up capture, on the platform axis", () => {
     );
   });
 
-  it("back from setup keeps the list's filter, and clearing it brings the rows back", async () => {
+  it("back from setup keeps the list's chip, and removing it brings the rows back", async () => {
     await button("‹ show traffic").click();
     await $('[aria-label="filter"]').waitForExist({ timeout: 15_000 });
+    expect(await chips()).toEqual(["no-such-path.test"]);
     expect(await rowCount()).toBe(0);
 
-    await $('[aria-label="filter"]').clearValue();
+    await removeEveryChip();
     await browser.waitUntil(async () => (await rowCount()) >= 1, {
       timeout: 15_000,
     });
