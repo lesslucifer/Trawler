@@ -1,0 +1,41 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W9
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-76-the-data-window.html"
+    tier: T2
+    action: updated
+    distills: "cross-links to DEC-78, DEC-79 and DEC-80"
+  - path: "docs/decisions/dec-80-the-html-preview-holds-no-reach.html"
+    tier: T2
+    action: updated
+    distills: "v2: the guards as built (form-action, links aimed away, MathML href removed, nested content, the fixed-point clean), how it is held, the accepted focus cost"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-80 row states the built guards and the real-window proof"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "the preview shortcut row, re-indent for html, javascript and css, and ChipBox as the tenant of the suggestion, Space and Backspace rows"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-5 and UC-9 rows: one-line values, bytes-first kinds, the preview, find as a chip bar"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-5 one-line values and openers replace the clamp, bytes-first dispatch with the statement; UC-9 nine kinds, javascript and css, preview, find, the inspector's openers and the epic's e2e"
+  - path: "docs/work/2026-11-05-inspect-window-v2-epic-result.html"
+    tier: T3
+    action: added
+    distills: "the epic's result report, archived at close"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w9-e2e-distillation-plan.html"
+    tier: T3
+    action: added
+    distills: "this WU's plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w9-e2e-distillation-result.html"
+    tier: T3
+    action: added
+    distills: "this WU's result"
