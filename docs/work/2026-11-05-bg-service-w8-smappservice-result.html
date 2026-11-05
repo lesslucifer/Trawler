@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec74be9f34851f0dfaea58" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W8 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W8 — result</h1>
+      <p>On macOS the login item is registered with SMAppService from the packaged app, so ticking and unticking show in System Settings at once.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU result · branch <code>wu/bg-service/login-item-smappservice</code> · plan: <a href="2026-11-05-bg-service-w8-smappservice-plan.html">W8 plan</a> · new workspace member <code>login-service</code> (a Cargo.toml policy-adjacent change, <a href="../decisions/dec-84-unsafe-is-confined-to-the-login-service-crate.html">DEC-84</a>)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Plan's expected</th><th>Status</th><th>What shipped</th></tr>
+      <tr><td>1 · fake registry: on registers, off unregisters, refusal text, status maps</td><td><span class="badge auto">delivered</span></td>
+        <td><code>LoginRegistry</code> + <code>apply</code> in <code>login_item.rs</code>; the real one wraps <code>trawler-login-service</code></td></tr>
+      <tr><td>2 · the .app carries the plist; package fails without it</td><td><span class="badge auto">delivered</span></td>
+        <td><code>tauri.conf.json</code> <code>bundle.macOS.files</code>; <code>verify_login_agent</code> in <code>xtask/src/package.rs</code></td></tr>
+      <tr><td>3 · after unregister, no <code>dev.trawler.app</code> in <code>sfltool dumpbtm</code></td><td><span class="badge approval">user step</span></td>
+        <td>opt-in test <code>TRAWLER_BTM_UNTICKED=1</code> checks the dump after the user unticks; registering is staged for the user (SMAppService answers only to the running .app)</td></tr>
+      <tr><td>4 · no bundle reads unavailable and says so</td><td><span class="badge auto">delivered</span></td>
+        <td><code>login_item::UNAVAILABLE</code>, returned by both commands when the exe is not in a <code>.app</code></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>v1: SMAppService called from <code>trawler-ui</code></td><td>a macOS-only crate holds the four unsafe calls (plan v2, DEC-84)</td><td>the calls are <code>unsafe fn</code> and the workspace forbids unsafe</td></tr>
+      <tr><td>integration: unregister then check status</td><td>the opt-in test checks only <code>sfltool dumpbtm</code> after the user's untick</td><td>a test process has no main bundle, so it cannot reach the app's service</td></tr>
+      <tr><td>—</td><td><code>unregister</code> returns Ok when the service is not registered</td><td>SMAppService errors with job-not-found, which would surface as “couldn't save”</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>unit</td><td><code>login_item.rs</code> (fake registry, refusal, bundle detection, plist contents + <code>plutil -lint</code>) · <code>login-service</code> (status mapping, one-allow grep) · <code>xtask</code> package (plist check names the .app)</td></tr>
+      <tr><td>integration</td><td><code>tests/suite/login_item.rs</code>: commands over a fake registry; unavailable text · <code>package_bundle.rs</code>: packaged .app holds the plist, signature verifies</td></tr>
+      <tr><td>packaged</td><td><code>cargo test -p xtask --features package-tests --test package_bundle</code> green on this machine</td></tr>
+      <tr><td>lint</td><td>clippy pedantic clean across the workspace including <code>login-service</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <tr><th>Tier</th><th>Doc</th><th>Absorbed</th></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-84-unsafe-is-confined-to-the-login-service-crate.html">DEC-84</a> + index</td><td>the unsafe exception and its confinement</td></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a> rule 9</td><td>the macOS entry is the SMAppService-registered bundled agent; unavailable without a bundle</td></tr>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <tr><th>Owner</th><th>Item</th></tr>
+      <tr><td>router / user</td><td>CLAUDE.md says “unsafe_code forbidden (see Cargo.toml)”; it may want a qualifier for <code>login-service</code>. Not edited here (T0)</td></tr>
+      <tr><td>user</td><td>hand-try on the packaged app, before it: <code>rm ~/Library/LaunchAgents/dev.trawler.app.plist</code> (D2)</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
