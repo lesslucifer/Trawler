@@ -24,8 +24,8 @@
         rustfmt), and every <code>ci.yml</code> job installs the same version</td><td>CI floated to the newest stable
         while the Mac ran 1.97, so clippy lints differed between the two and a tree green locally went red on CI</td></tr>
       <tr><td>2</td><td>A bump is one commit that changes <code>rust-toolchain.toml</code> and every
-        <code>toolchain:</code> line in <code>ci.yml</code> together, with the tree clean under the new clippy</td><td>the
-        <code>ci_workflow</code> suite fails when the file and any job disagree, or when the version is not exact</td></tr>
+        <code>toolchain:</code> line in <code>ci.yml</code> and <code>release.yml</code> together, with the tree clean under the new clippy</td><td>the
+        <code>ci_workflow</code> and <code>release_workflow</code> suites fail when the file and any job disagree, or when the version is not exact</td></tr>
     </table>
 
     <h2 id="windows">Windows rules</h2>

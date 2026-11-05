@@ -1000,6 +1000,16 @@
             mock-runtime tests, <code>eol=lf</code></td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-86-a-tag-ships-every-platform-as-a-draft.html"><code>dec-86-a-tag-ships-every-platform-as-a-draft.html</code></a></td>
+          <td><span class="badge id">DEC-86</span></td>
+          <td><strong>A tag ships every platform, as a draft the owner publishes.</strong> <code>release.yml</code> runs on a
+            <code>v*</code> tag and fails unless it equals the workspace version. Five targets build with
+            <code>cargo xtask package</code>, each is smoke-tested (<code>cargo xtask smoke</code>) before it uploads, and
+            <code>cargo xtask release-manifest</code> writes <code>latest.json</code> (every target and install kind) and the
+            first-open notes for a draft, never a prerelease. The key reaches only the package step</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

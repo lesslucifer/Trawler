@@ -72,7 +72,7 @@ flowchart LR
       <tr><td><code>*-setup.exe</code> / <code>*.msi</code></td><td><code>windows-{x86_64,aarch64}</code> (the NSIS one) and <code>-nsis</code> / <code>-msi</code></td></tr>
       <tr><td><code>*.AppImage</code> / <code>*.deb</code> / <code>*.rpm</code></td><td><code>linux-{x86_64,aarch64}</code> (the AppImage one) and <code>-appimage</code> / <code>-deb</code> / <code>-rpm</code> (Q20)</td></tr>
     </table>
-    <p data-c="refusals">The command refuses when an installer has no <code>.sig</code>, or when any of the nine target-and-kind entries above is missing, so a partial release cannot reach a draft.</p>
+    <p data-c="refusals">The command refuses when an installer has no <code>.sig</code>, or when any of the eighteen target, architecture and kind entries (both architectures of each row above, plus the plain keys) is missing, so a partial release cannot reach a draft.</p>
 
     <h2 id="secrets">Secrets and prerequisites (owner's, outward-facing)</h2>
     <table data-c="secrets">
@@ -94,7 +94,7 @@ flowchart LR
     <div>
       <div>
         <h3 id="w4">W4 · release workflow</h3>
-        <p>Commits in order: the plan; <code>release-manifest</code> with its unit tests and the notes template; <code>smoke</code> with its unit tests and the packaging test switched to it; <code>release.yml</code> with its pinning suite; DEC-86 and the index.</p>
+        <p>Commits in order: the plan; <code>release-manifest</code> with its unit tests and the notes template; <code>smoke</code> with its unit tests and the packaging test switched to it; <code>release.yml</code> with its pinning suite; DEC-86, the index and DEC-85's bump line (now also release.yml).</p>
         <p>E-PKG2 · Q1, Q4, Q5, Q16, Q18, Q20.</p>
         <p>The pinning suite, the two commands' tests and actionlint are green; the workflow's first run is the owner's rc tag.</p>
         <p>W1 (updater artifacts), W3 (each OS builds) on <code>epic/packaging-v2</code></p>
