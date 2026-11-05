@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: a92752a8ca0db8ee8216aa8e4b87bed7f7830efd
+base: 5bf2d86bc9d31a93ebca3f4a936941d08e31a094
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-launch-guard-result.html
+report_sha256: a4e902a8faaadf40a9c00e4dcc7564caf44ff2d9129a9ee6b76fe2592fe864bd
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBuRtV1ZCrYa3R5pPqhJa9NIRXvpjQ9hONBGGW3XGQZDmlrhoR62Vtsg3
+  YWgCY+sDkEbAB7JiOpgH1c8g2nliED
+  -----END SSH SIGNATURE-----
