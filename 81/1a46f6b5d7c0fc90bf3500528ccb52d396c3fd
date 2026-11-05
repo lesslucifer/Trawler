@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-BGSVC
+wu: E-BGSVC.W6
+branch: HEAD
+tests:
+  unit: { count: 13, covers: "PageSidebar's tablist, roving tabindex, ↑/↓ moving and showing without wrap, no state of its own; General per reading (on ticked, off and unanswered unticked), the trayless reason with no line, the login tooltip, one write per tick, a refused write named with the box re-read on both switches" }
+  integration: { count: 11, covers: "the Settings screen opens on General and moves to the Capture service page and back by ↓/↑ and by click; tray_available answers the host's marked availability over IPC beside the preference commands" }
+  e2e: { count: 7, covers: "the journeys that read the Capture service page reach it through the sidebar; cargo xtask ui e2e green, attached 14/14 and owned 1/1" }
