@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W9
+branch: HEAD
+tests:
+  unit: { count: 15, covers: "the preview document: policy first, refresh and base removed under every spelling, links and svg links aimed away, every MathML element's href removed while an anchor's stays, template, link, nested frames and plugins dropped, the fixed point and the inert fallback, doctype only when present" }
+  integration: { count: 112, covers: "the data window's html preview cases, unchanged and green over the changed sanitiser: the frame's empty sandbox, the policy before the page's styles, no refresh, no request made, follows an edit, the switch, the menu row and the shortcut agree" }
+  e2e: { count: 27, covers: "J1 long values on one line, whole on click and in the window, JWT decoded, a second open all focuses; J2 the bytes decide in pane and window; J3 javascript found, reformatted, undone and restored to the served bytes; J4 a page that reaches out by script, image, stylesheet and refresh reaches a local beacon unguarded and never in the preview, and the real engine finds only retargeted anchors in the preview's markup; J5 find typed like the filter, with the flow list's filter still narrowing; the data-window spec over the shared helpers" }
