@@ -37,6 +37,11 @@ pub fn pick(os: Os, artifacts: &[PathBuf]) -> Result<Source, String> {
     })
 }
 
+fn is_installed_executable(name: &str) -> bool {
+    let lower = name.to_ascii_lowercase();
+    Path::new(&lower).extension().is_some_and(|e| e == "exe") && !lower.starts_with("uninstall")
+}
+
 pub fn installer_args(install_dir: &Path) -> Vec<OsString> {
     let mut destination = OsString::from("/D=");
     destination.push(install_dir);
@@ -115,11 +120,7 @@ fn install(source: &Source, into: &Path) -> Result<Program, String> {
             if !status.success() {
                 return Err(format!("{} exited with {status}", setup.display()));
             }
-            let path = only_file(into, |name| {
-                let lower = name.to_ascii_lowercase();
-                Path::new(&lower).extension().is_some_and(|e| e == "exe")
-                    && !lower.starts_with("uninstall")
-            })?;
+            let path = only_file(into, is_installed_executable)?;
             Ok(Program { path, leading_args: vec![] })
         }
     }
@@ -338,15 +339,11 @@ mod tests {
     #[test]
     fn the_executable_is_the_only_file_the_installer_left_besides_the_uninstaller() {
         let dir = tempfile::tempdir().unwrap();
-        for name in ["trawler-ui.exe", "uninstall.exe", "notes.txt"] {
+        for name in ["Trawler-UI.EXE", "Uninstall.exe", "notes.txt"] {
             std::fs::write(dir.path().join(name), "").unwrap();
         }
-        let keep = |name: &str| {
-            let lower = name.to_ascii_lowercase();
-            Path::new(&lower).extension().is_some_and(|e| e == "exe")
-                && !lower.starts_with("uninstall")
-        };
-        assert_eq!(only_file(dir.path(), keep).unwrap(), dir.path().join("trawler-ui.exe"));
+        let keep = is_installed_executable;
+        assert_eq!(only_file(dir.path(), keep).unwrap(), dir.path().join("Trawler-UI.EXE"));
         std::fs::write(dir.path().join("second.exe"), "").unwrap();
         assert!(only_file(dir.path(), keep).unwrap_err().contains("expected one executable"));
     }

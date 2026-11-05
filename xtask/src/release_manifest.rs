@@ -89,7 +89,9 @@ pub fn manifest(
                 "signature": signature.trim(),
                 "url": format!("{}/{name}", release.download_base),
             });
-            platforms.insert(key, entry);
+            if platforms.insert(key.clone(), entry).is_some() {
+                return Err(format!("two installers claim the updater entry {key}; {name} is one"));
+            }
         }
     }
     let missing: Vec<String> =
@@ -171,11 +173,7 @@ mod tests {
 
     fn full() -> Vec<(String, Option<String>)> {
         let mut names = INSTALLERS.to_vec();
-        names.extend([
-            "Trawler_0.1.0_aarch64.deb",
-            "Trawler-0.1.0-1.aarch64.rpm",
-            "Trawler_0.1.0_universal.dmg",
-        ]);
+        names.extend(["Trawler-0.1.0-1.aarch64.rpm", "Trawler_0.1.0_universal.dmg"]);
         signed(&names)
     }
 
@@ -235,6 +233,14 @@ mod tests {
         assets[1].1 = None;
         let refusal = manifest(&release(), &assets).unwrap_err();
         assert!(refusal.contains("Trawler_0.1.0_x64-setup.exe has no .sig"), "{refusal}");
+    }
+
+    #[test]
+    fn two_installers_for_one_entry_are_refused_not_overwritten() {
+        let mut assets = full();
+        assets.extend(signed(&["Trawler_0.1.0_x64_de-DE.msi"]));
+        let refusal = manifest(&release(), &assets).unwrap_err();
+        assert!(refusal.contains("windows-x86_64-msi"), "{refusal}");
     }
 
     #[test]
