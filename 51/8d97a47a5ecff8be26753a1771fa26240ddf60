@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: HEAD
+tests:
+  unit: { count: 39, covers: "package's keyless --build-only, --bundle-only and full argv per host and universal (never createUpdaterArtifacts), --sign-only's tauri signer argv and bundle dir, the profile refusal for bundle and sign, the signed set = every installer the release manifest maps, the macOS .app.tar.gz with the app at its root and no AppleDouble entries, the flags, smoke refusing every stage flag, the MSI version rule as drift; manifest keys, signatures, refusals and notes; smoke's selection, installed-executable rule, argv, ready line, executable discovery" }
+  integration: { count: 21, covers: "release.yml's trigger, permissions, concurrency, matrix with each row's rustc host check and upload dir tied to package::plan, version check, compile-bundle-smoke-sign-upload order, the key and password only in the --sign-only step (exactly those two env vars, no uses:) and the presence check first, SHA pins, no cache, no persisted credentials, pinned toolchain, no continue-on-error, collision-safe flatten, draft-only re-run; the real macOS bundle passes xtask smoke" }
+  e2e: { waived: "the run needs GitHub, the signing secrets and a public repository; the first rc tag (W6) is the proof, and e2e_packaging is W6's" }
