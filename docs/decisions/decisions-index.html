@@ -979,6 +979,16 @@
             Rejected: a version rewritten from the tag, staleness by age, reading manifests' text</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-84-unsafe-is-confined-to-the-login-service-crate.html"><code>dec-84-unsafe-is-confined-to-the-login-service-crate.html</code></a></td>
+          <td><span class="badge id">DEC-84</span></td>
+          <td><strong>Unsafe is confined to the login-service crate.</strong> The workspace keeps
+            <code>unsafe_code = "forbid"</code>; the macOS-only <code>login-service</code> member sets <code>deny</code> and
+            holds the one <code>#[allow(unsafe_code)]</code> module that wraps SMAppService, exposing a safe API
+            <code>trawler-ui</code> uses on macOS. A test fails on a second allow. Rejected: lowering the workspace lint,
+            <code>launchctl</code> or a plist write</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-BGSVC.W8 — the login item through SMAppService</h1>
       <p>On macOS the login item is registered with Background Task Management itself, so ticking and unticking show in System Settings at once.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch <code>wu/bg-service/login-item-smappservice</code> off <code>epic/bg-service</code> · fixes W4's macOS entry; W6's page stays as signed</div>
+      <div class="meta">v2 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch <code>wu/bg-service/login-item-smappservice</code> off <code>epic/bg-service</code> · fixes W4's macOS entry; W6's page stays as signed</div>
     </div>
   </header>
   <main>
@@ -31,8 +31,18 @@
       <tr><td><code>ui/src-tauri/launch-agent/dev.trawler.app.plist</code></td><td>new static file: <code>Label</code>, <code>BundleProgram</code> <code>Contents/MacOS/trawler-ui</code>, <code>ProgramArguments</code> with <code>--background</code>, <code>RunAtLoad</code>. No rendering, no path escaping.</td></tr>
       <tr><td><code>tauri.conf.json</code></td><td><code>bundle.macOS.files</code> maps <code>Library/LaunchAgents/dev.trawler.app.plist</code> to that file, so it lands in <code>Contents/Library/LaunchAgents</code> before the ad-hoc signing</td></tr>
       <tr><td><code>login_item.rs</code></td><td>trait <code>LoginRegistry</code> (<code>enabled</code>, <code>register</code>, <code>unregister</code>) and a pure <code>apply(registry, on)</code>; <code>Place::Service</code> on macOS holds the real one (objc2-service-management <code>SMAppService::agentServiceWithPlistName</code>) when the exe sits in a <code>.app</code>, else the place is none and the existing “no place” error becomes the unavailable text. <code>Format::LaunchAgent</code> and its plist rendering are deleted; Linux and Windows are untouched.</td></tr>
-      <tr><td><code>Cargo.toml</code></td><td>macOS-only dependency <code>objc2-service-management</code> (+ <code>objc2-foundation</code> already in the lock)</td></tr>
+      <tr><td><code>login-service/</code> (crate <code>trawler-login-service</code>)</td><td>new workspace member, macOS only: a safe API over <code>SMAppService</code> (<code>new(plist_name)</code>, <code>enabled</code>, <code>register</code>, <code>unregister</code>); depends on <code>objc2-service-management</code> and <code>objc2-foundation</code>. Its <code>[lints.rust]</code> sets <code>unsafe_code = "deny"</code> with exactly one <code>#[allow(unsafe_code)]</code> module that holds the four calls. <code>trawler-ui</code> stays <code>forbid</code> and depends on the crate through a macOS target-gated dependency.</td></tr>
+      <tr><td>root <code>Cargo.toml</code></td><td><code>[workspace] members</code> gains <code>login-service</code>; <code>[workspace.lints]</code> unchanged</td></tr>
+      <tr><td><a href="../decisions/dec-84-unsafe-is-confined-to-the-login-service-crate.html">DEC-84</a></td><td>records the exception and its confinement; decisions index row</td></tr>
       <tr><td><code>xtask/src/package.rs</code></td><td>after the build, assert the plist is inside each <code>.app</code> (beside the codesign check), so a bundle without it fails <code>cargo xtask package</code></td></tr>
+    </table>
+
+    <h2 id="unsafe">Why a crate, and the one unsafe module</h2>
+    <table data-c="unsafe">
+      <tr><th>Fact</th><th>Consequence</th></tr>
+      <tr><td>every <code>SMAppService</code> method in objc2-service-management 0.3.2 (<code>agentServiceWithPlistName</code>, <code>registerAndReturnError</code>, <code>unregisterAndReturnError</code>, <code>status</code>) is <code>unsafe fn</code></td><td>no safe call exists in the dependency</td></tr>
+      <tr><td>the workspace sets <code>unsafe_code = "forbid"</code>, inherited by <code>trawler-ui</code>; a forbid cannot be relaxed by a module <code>allow</code></td><td>the calls cannot live in <code>trawler-ui</code> without lifting the workspace rule for everyone</td></tr>
+      <tr><td>owner's ruling (option 1)</td><td>a tiny macOS-only crate with its own <code>deny</code> and one <code>allow</code> module wrapping the four calls; the forbid stays on everything else</td></tr>
     </table>
 
     <h2 id="maps-to">Mapping</h2>
@@ -40,6 +50,7 @@
       <tr><th>Serves</th><th>How</th></tr>
       <tr><td><span class="badge id">E-BGSVC</span> · W4's login item</td><td>replaces W4's macOS plist writer; the two commands and W6's switch are unchanged</td></tr>
       <tr><td><span class="badge id">UC-BG</span> · Expected #7 · #8</td><td>the entry starts the app with <code>--background</code>, and is gone from Login Items when off</td></tr>
+      <tr><td>DEC-84</td><td>unsafe is confined to the login-service crate and its one module</td></tr>
       <tr><td>DEC-81</td><td>the plist rides in the package; <code>cargo xtask package</code> checks for it</td></tr>
     </table>
 
@@ -73,6 +84,7 @@
       <tr><td>unit</td><td><code>.app</code> detection from an exe path; the packaged plist file carries Label, BundleProgram and <code>--background</code> (<code>plutil -lint</code> on macOS)</td></tr>
       <tr><td>unit (xtask)</td><td>the plist check names the <code>.app</code> that lacks it</td></tr>
       <tr><td>integration (macOS, opt-in env var)</td><td>on a packaged <code>.app</code>: after unregister, <code>SMAppService.status</code> is notRegistered and <code>sfltool dumpbtm</code> has no <code>dev.trawler.app</code>. Never registers on its own: the registering half is a user step.</td></tr>
+      <tr><td>unit (login-service)</td><td>the pure status mapping: enabled maps to on, requires-approval, not-registered and not-found to off; the crate has exactly one <code>allow(unsafe_code)</code> (a test greps the sources)</td></tr>
       <tr><td>existing</td><td>W4 integration tests that cover the macOS LaunchAgent format are removed with it; Autostart cases stay</td></tr>
     </table>
 
