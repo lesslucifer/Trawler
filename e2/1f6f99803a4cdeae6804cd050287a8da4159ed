@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: e21f6f99803a4cdeae6804cd050287a8da4159ed
+base: 91cda7c38af82779d82ca3150ba2ce8d8fda542c
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w3-quit-asks-the-same-result.html
+report_sha256: 11408b09c637ad25e0b02ac17be437f8985c537844bca7a8af09f3adca6dd48b
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECwBAhNcka8PT0+pfwETjGIcys6e/Gjc6DI/z4BIpiYBS+Jn3Ne0I9mN7
+  TPHKHp4YhOS+vDsVj0ge8E71WvfssK
+  -----END SSH SIGNATURE-----
