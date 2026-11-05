@@ -90,7 +90,7 @@ flowchart LR
       <li>The merge into <code>main</code> pays fmt, clippy and the suite once in the main checkout, unless that checkout already proved this exact tree.</li>
       <li>The marker the merge writes is the proof the push reads, in the same checkout: a push right after a green merge runs no suite.</li>
       <li>A push of an unproven tree pays one scratch-worktree build plus the suite (measured 53 s for a real epic tip) and leaves nothing behind.</li>
-      <li>Held by <code>tests/dod_hooks.rs</code> (the hook order, refusals and the WU seam), <code>xtask/tests/suite/lint_spawn.rs</code> (the spawned environment, the refusal texts, the marker, the scratch worktree) and the unit tests in <code>xtask/src/gate0.rs</code>.</li>
+      <li>Held by <code>tests/dod_hooks.rs</code> (the hook order, refusals and the WU seam), <code>xtask/tests/suite/lint_spawn.rs</code> (the spawned environment, the refusal texts, the marker, the scratch worktree) and the unit tests in <code>xtask/src/gate0.rs</code>. End to end: <code>xtask/tests/suite/e2e_merge_proof.rs</code> — two epics green alone are refused together at the merge, and the push after a green merge reads its marker, through the real tracked hooks.</li>
     </ul>
   </main>
   <script type="module">
