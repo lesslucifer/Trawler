@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-BGSVC
+base: 54fc1233e6c9edb9a8ad2313a6029dd22db0fde8
+tip: bb2fce36db1c868f38a740eb4facc92a8f25de54
+diff_sha256: 7189e87e23af9a939bf8e8f595562f435a53879743cfe21b7e2359495ec8fb30
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-11-06
