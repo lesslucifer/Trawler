@@ -1,0 +1,40 @@
+schema: doc/v1
+epic: E-INSPWIN2
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the epic's follow-ups: keys not reaching the data window from the preview frame, find's later items, e2e port collisions and the opaque frame, the slow onboarding matrix test"
+  - path: "docs/decisions/dec-76-the-data-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 12 find as a chip bar and cross-links to DEC-78, DEC-79 and DEC-80"
+  - path: "docs/decisions/dec-78-a-long-value-is-one-line-opened-whole.html"
+    tier: T2
+    action: added
+    distills: "a long value is one line with an end ellipsis, copied whole on click and opened whole in a data window; the clamp retired"
+  - path: "docs/decisions/dec-79-the-bytes-decide-the-kind.html"
+    tier: T2
+    action: added
+    distills: "one detector decides the kind from the bytes with the label as a hint, says so when the bytes overrule the label; javascript, css and form only from a label or the picker"
+  - path: "docs/decisions/dec-80-the-html-preview-holds-no-reach.html"
+    tier: T2
+    action: added
+    distills: "the html preview holds no reach: empty sandbox, policy first, links aimed away, MathML addresses and nested content removed, the fixed-point clean, the accepted focus cost"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "rows for DEC-78, DEC-79, DEC-80 and DEC-76's rule 12"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "the second escape of wrap-not-truncate, the preview and reformat shortcut rows, ChipBox as the suggestion tenant"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-5 and UC-9 rows: one-line values, bytes-first kinds, the preview, find as a chip bar"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-5 one-line values and openers, bytes-first dispatch with the statement; UC-9 nine kinds, javascript and css, the preview, find, the epic's e2e"
