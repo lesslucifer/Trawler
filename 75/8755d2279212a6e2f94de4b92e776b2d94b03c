@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-BGSVC
+wu: E-BGSVC.W7
+branch: HEAD
+tests:
+  unit: { waived: "no unit-testable logic changes: the only code is e2e specs and an e2e-feature command that calls request_quit, whose own unit tests W3/W9 landed" }
+  integration: { waived: "the epic's contracts are held by W1-W9's integration tests; W7 is the e2e and distillation WU and adds no bounded contract" }
+  e2e: { count: 10, covers: "through the real window under a temp HOME: the first close asks once, Esc cancels storing nothing and the next close asks again, quit stores off and ends the app with its ports freed; nothing switched leaves both General switches off and close ends the app with no question; keep capturing stores on, closes only the main window, General reads on, a request through the proxy lands in GET /flows with no window and quit_app frees both ports; open at login refuses with its reason in an unbundled build and the switch stays off; a quit request with keep capturing on runs the check and ends the app" }
