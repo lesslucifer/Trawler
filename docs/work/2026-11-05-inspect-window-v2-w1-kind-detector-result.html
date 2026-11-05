@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4e9f9f34851f0dfae8b9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN2.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN2.W1 — result</h1>
+      <p>The detector and the three records landed as planned, the records numbered one higher than planned.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · branch <code>wu/inspect-window-v2/kind-detector</code> · plan:
+        <a href="2026-11-05-inspect-window-v2-w1-kind-detector-plan.html">W1 plan</a> · epic plan:
+        <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Delivered</th></tr>
+      <tr><td><code>readKind(bytes, label?)</code> over nine kinds, with what decided it</td><td>Delivered in
+        <code>ui/src/contentKind.ts</code>: <code>readKind</code> → <code>{kind, by, label}</code>, plus <code>labelKind</code>,
+        <code>normalizeLabel</code>, <code>hasHtmlSignature</code>, <code>isWellFormedXml</code>. No caller yet, as planned</td></tr>
+      <tr><td>Three decision records</td><td>Delivered as DEC-78, DEC-79, DEC-80 (see deviations), each in the decisions index;
+        DEC-76's header links DEC-80</td></tr>
+      <tr><td><code>wrap-not-truncate</code> names the new escape</td><td>Delivered: the row now has two escapes, DEC-34 and DEC-78;
+        the rulebook header cites both</td></tr>
+      <tr><td>The app unchanged</td><td>Delivered: no existing file imports the new module; <code>dataKind.ts</code> and
+        <code>body.ts</code> untouched</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan said</th><th>Shipped</th><th>Why</th></tr>
+      <tr><td>DEC-77, DEC-78, DEC-79</td><td>DEC-78 (one-line values), DEC-79 (the bytes decide the kind), DEC-80 (the HTML
+        preview)</td><td>E-BGSVC.W1 minted DEC-77 first (9a5321ca, merged into <code>epic/bg-service</code>); the plan's renumber
+        clause covers it</td></tr>
+      <tr><td>An html signature after "whitespace and comments"</td><td>Also after an XML prolog
+        (<code>&lt;?xml …?&gt;</code>)</td><td>so XHTML with a prolog and no label reads as html, not xml; an xml label still
+        keeps well-formed XHTML as xml</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>Commit</td><td><code>a4777a8d</code> — <code>contentKind.ts</code>, <code>contentKind.test.ts</code>, three records,
+        both indexes, DEC-76</td></tr>
+      <tr><td>Unit</td><td><code>ui/src/contentKind.test.ts</code>, 92 tests: every label row with parameters and case; every
+        branch crossed with agreeing, generic, wrong and absent labels; BOM, comments and a prolog before a doctype; JSON
+        scalars, empty and whitespace stay text; a 10&nbsp;MiB JSON calls <code>JSON.parse</code> once and the XML parser never;
+        plain text reaches neither parser</td></tr>
+      <tr><td>Integration · e2e</td><td>waived as planned: no caller until W5; W9's J2 walks it end to end</td></tr>
+      <tr><td>Gate 0</td><td>green at <code>a4777a8d</code>: fmt, clippy, 1217 tests</td></tr>
+      <tr><td>UI suite</td><td><code>pnpm exec vitest run</code> at <code>a4777a8d</code>: 61&nbsp;499 passed, none failed; <code>tsc --noEmit</code> and
+        eslint clean</td></tr>
+      <tr><td>Docs</td><td><code>verify-doc</code> green on the three records, both indexes, DEC-76 and this WU's plan</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">T2 written by this WU: DEC-78, DEC-79, DEC-80 and their index rows;
+      design-rules-index <code>wrap-not-truncate</code> (two escapes). UC-5 and UC-9 are unchanged here: their behaviour does not
+      move until W4–W8, and W9 distills them.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W5</td><td>Wire <code>readKind</code> into <code>BodyViewer</code> and <code>DataWindowScreen</code>; map html → xml
+        and javascript / css → text surfaces until W6 and W7 land theirs; retire <code>dataKind.detectKind</code></td></tr>
+      <tr><td>Epic close</td><td>Re-check DEC-78–80 against <code>main</code> before merging: renumber if another epic lands any of
+        them first</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
