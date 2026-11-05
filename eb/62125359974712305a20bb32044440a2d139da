@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W3
+base: 7122407312ff727713bd268585385baf9f3e4deb
+design_sha256: 22f25bdb76bd70f57f4e3c3f916053dd74069dce4bbaa46df2d036547fd11c87
+verdict: PASS
+artifacts: [docs/work/2026-11-05-data-window-kinds-design-run.html, docs/work/components/chip-box.html]
+date: 2026-11-05
