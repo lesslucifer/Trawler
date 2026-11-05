@@ -168,7 +168,18 @@ function grown(text: string, { from, to }: Span): Span {
   return { from, to };
 }
 
-function candidates(text: string, range: Span): Span[] {
+const UNICODE_ESCAPE = /^u[0-9A-Fa-f]{4}/;
+
+function escapeEnd(text: string, at: number): number {
+  let backslashes = 0;
+  while (text[at - 1 - backslashes] === "\\") backslashes++;
+  if (backslashes % 2 === 0) return at;
+  return at + (UNICODE_ESCAPE.test(text.slice(at, at + 5)) ? 5 : 1);
+}
+
+const pastEscape = (text: string, span: Span): Span => ({ from: Math.min(escapeEnd(text, span.from), span.to), to: span.to });
+
+function candidates(text: string, range: Span, json: boolean): Span[] {
   const exact = trimmed(text, range);
   const whole = grown(text, exact);
   const runs = Array.from(text.slice(whole.from, whole.to).matchAll(VALUE_RUN), (match) => ({
@@ -178,7 +189,8 @@ function candidates(text: string, range: Span): Span[] {
     .sort((a, b) => width(b) - width(a))
     .slice(0, MOST_RUNS_TRIED);
   const seen = new Set<string>();
-  return [exact, whole, ...runs].filter((span) => {
+  const spans = [exact, whole, ...runs];
+  return (json ? spans.map((span) => pastEscape(text, span)) : spans).filter((span) => {
     const id = `${span.from}:${span.to}`;
     if (width(span) === 0 || seen.has(id)) return false;
     seen.add(id);
@@ -203,12 +215,12 @@ function dateTimeAround(text: string, range: Span): Span | null {
   return null;
 }
 
-export function decodeAround(text: string, range: Span): Found | null {
+export function decodeAround(text: string, range: Span, { json = false }: { json?: boolean } = {}): Found | null {
   const dateTime = dateTimeAround(text, range);
   if (dateTime) return { range: dateTime, peeked: decode(text.slice(dateTime.from, dateTime.to)) };
   let first: Found | null = null;
   let decodes: Found | null = null;
-  for (const span of candidates(text, range)) {
+  for (const span of candidates(text, range, json)) {
     const found = { range: span, peeked: decode(text.slice(span.from, span.to)) };
     if (readsWell(found.peeked)) return found;
     first ??= found;

@@ -12,6 +12,7 @@ import {
   type Decoded,
   type Reading,
 } from "./decoders";
+import { spliceAsJson } from "./jsonTools";
 
 const b64 = (bytes: Uint8Array | string) =>
   btoa(String.fromCharCode(...(typeof bytes === "string" ? new TextEncoder().encode(bytes) : bytes)));
@@ -264,6 +265,37 @@ describe("decodeAround finds the value in a rough selection or at the cursor", (
   it("finds nothing where no value is", () => {
     expect(decodeAround(`{ "a": [] }`, { from: 1, to: 1 })).toBeNull();
     expect(decodeAround(`{ "a": [] }`, { from: 6, to: 9 })).toBeNull();
+  });
+});
+
+describe("in JSON, a value never starts on an escape's letter", () => {
+  const HELLO = b64("hello");
+  const spanOf = (text: string, part: string) => ({ from: text.indexOf(part), to: text.indexOf(part) + part.length });
+  const caretIn = (text: string, part: string) => ({ from: text.indexOf(part) + 3, to: text.indexOf(part) + 3 });
+
+  it.each([
+    ["a one-letter escape", `{"a":"\\n${HELLO}"}`],
+    ["a backspace escape", `{"a":"\\b${HELLO}"}`],
+    ["a unicode escape", `{"a":"\\u00e9${HELLO}"}`],
+  ])("skips %s before the value", (_, text) => {
+    expect(decodeAround(text, caretIn(text, HELLO), { json: true })).toMatchObject({
+      range: spanOf(text, HELLO),
+      peeked: { decoder: "base64", reading: { text: "hello" } },
+    });
+  });
+
+  it("replaces into JSON that still parses, the escape kept", () => {
+    const text = `{"a":"\\n${HELLO}"}`;
+    const found = decodeAround(text, caretIn(text, HELLO), { json: true });
+    if (found?.peeked.decoder == null) throw new Error("nothing decoded");
+    const value = replacement(decoded(found.peeked.reading));
+    expect(value).toBe("hello");
+    expect(JSON.parse(spliceAsJson(text, found.range, value ?? ""))).toEqual({ a: "\nhello" });
+  });
+
+  it("takes the letter after an escaped backslash, which is no escape", () => {
+    const text = `{"a":"\\\\${HELLO}"}`;
+    expect(decodeAround(text, caretIn(text, HELLO), { json: true })).toMatchObject({ range: spanOf(text, HELLO) });
   });
 });
 
