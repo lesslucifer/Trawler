@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec17bc9f34851f0dfae716" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W9 plan: close</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W9 — close: main synced, DEC-75</h1>
+      <p>Land the epic on today's main: the data window's decision takes a free number, and the e2e proves the merged tree.</p>
+      <div class="meta">v2 (the roadmap rows the epic owes) · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W9</span> · branch
+        <code>wu/inspect-window/close</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      Over the epic merged with <code>main</code> (E-QUERY, E-GATEPAR), the data window's decision record is DEC-75 —
+      file, title, index row and every citation of it in T2 docs, TSDoc, code comments and the window's capability —
+      while DEC-71 names only E-QUERY's record; and <code>cargo xtask ui e2e</code> is green on that tree.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · DoD-E (e2e over the full flow at the tip that goes to main) · the distillation plan's DEC-next row ·
+      UC-9 and UC-5 citations. E-GATEPAR's result: <em>DEC-71 collision between E-INSPECT and E-QUERYBAR: the later lander
+      renumbers</em>.
+    </p>
+
+    <h2 id="why">Why DEC-75</h2>
+    <table data-c="numbers">
+      <thead><tr><th>Number</th><th>Held by</th></tr></thead>
+      <tbody>
+        <tr><td>DEC-71</td><td>E-QUERY — <em>a filter is a chip, the core stays keyed</em> — on <code>main</code></td></tr>
+        <tr><td>DEC-72 · DEC-73</td><td>E-GATEPAR, on <code>main</code></td></tr>
+        <tr><td>DEC-74</td><td>E-GATEPAR2, on <code>epic/gate-parity2</code> (not landed)</td></tr>
+        <tr><td><strong>DEC-75</strong></td><td>free on every branch — the data window</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="changes">What changes</h2>
+    <table data-c="changes">
+      <thead><tr><th>Where</th><th>Change</th><th>Tier</th></tr></thead>
+      <tbody>
+        <tr><td><code>docs/decisions/dec-71-the-data-window.html</code></td><td>renamed <code>dec-75-the-data-window.html</code>;
+          title and heading DEC-75</td><td>T2</td></tr>
+        <tr><td><code>decisions-index.html</code></td><td>the data window's row: link and badge DEC-75</td><td>T2</td></tr>
+        <tr><td><code>use-cases-index.html</code> (UC-9 row) · <code>web-ui.html</code> (UC-9) ·
+          <code>design-rules-index.html</code> (lexicon: data window)</td><td>link and label DEC-75; E-QUERY's DEC-71
+          citations untouched</td><td>T2</td></tr>
+        <tr><td><code>EditSurface.tsx</code> · <code>FormTable.tsx</code> · <code>HexView.tsx</code> TSDoc ·
+          <code>dataWindow.ts</code> · <code>data_window.rs</code> · <code>capabilities/data-window.json</code></td><td>DEC-71 →
+          DEC-75 in the comment or description; nothing else</td><td>T4</td></tr>
+        <tr><td><code>docs/backlog/roadmap.html</code></td><td>E-PANELS' row <em>inspector windows reopen where they were
+          left</em> closed (DEC-75 rule 10 adopted it); rows added for what the epic left — a filter view, jq, a diff, more
+          openers — and for W7's finding that the pane's pretty JSON rewrites the body</td><td>T2</td></tr>
+        <tr><td>W1, W3, W7 result reports</td><td>the link to the renamed file and its label, so the tree has no dead link
+          until the close archives them</td><td>T3</td></tr>
+        <tr><td>the closed design run, other plans and reports</td><td>untouched: the run's blob is pinned by design/v1; their
+          text is the record of the day and they leave the tree at close</td><td>T3</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>Check</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td><code>git grep -n "DEC-71\|dec-71" -- docs/decisions docs/use-cases docs/design-rules ui src</code></td>
+          <td>only E-QUERY's record and its citations (query bar, query grammar, UC-4)</td></tr>
+        <tr><td><code>decisions-index.html</code></td><td>one DEC-71 row, one DEC-75 row (the data window)</td></tr>
+        <tr><td><code>roadmap.html</code></td><td>no open row owed to E-INSPWIN; its deferrals and W7's finding each a row</td></tr>
+        <tr><td><code>cargo xtask verify-doc</code> over <code>docs/</code></td><td>green, no dead link</td></tr>
+        <tr><td><code>cargo xtask ui e2e</code> on the W9 tip</td><td>green: the data-window spec beside the query-bar specs
+          in one run</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>Test</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> — every spec, the data window's J1–J4 and E-QUERY's query bar
+          in one run over the merged tree</td><td>the two epics' journeys hold together: the data window opens from the body
+          pane of a list filtered by chips, ⌘F reaches each window's own find or query bar</td></tr>
+        <tr><td>unit</td><td><code>xtask::verify_doc this_repo_s_own_docs_resolve_every_link_they_ship</code> (existing, in
+          gate0)</td><td>no doc links the old file name</td></tr>
+        <tr><td>integration</td><td>waived: W9 changes no contract — only a record's number, in docs and comments</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
