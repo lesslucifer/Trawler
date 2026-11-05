@@ -51,6 +51,8 @@
       <tr><td>—</td><td><code>take_quit_request</code> is no longer bounded, and a ✕ still reading when a quit request arrives yields to it</td><td>review round 2: a
         late answer from <code>bounded</code> abandoned a flag the shell had already cleared, and the ✕ handler's late <code>ending = close</code> overwrote the quit's. Each has a test that fails on the old code;
         round 2 also found the listener test passing on the old order, now fixed so it fails there</td></tr>
+      <tr><td>—</td><td>a quit request owns the window: a ✕ in flight when it arrives, at either await, or landing while its prompt is open, only prevents its own close</td><td>review round 3:
+        a ✕ whose proxy question resolved empty after the request closed the window under the quit prompt, and a ✕ during the quit prompt could downgrade the quit to a close. Both have tests that fail on the old code; a cancelled quit prompt hands the window back</td></tr>
       <tr><td>—</td><td><code>@tauri-apps/api/event</code> mocked in <code>App.test.tsx</code></td><td>the hook now listens for the quit
         request, and the App tests mock the Tauri window module already</td></tr>
     </table>
@@ -76,7 +78,7 @@
         <code>take_quit_request</code> answers true once over IPC · <code>quit_stops_core.rs</code> unchanged (the exit event still stops the core)</td></tr>
       <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> green: attached 14 of 14 spec files, owned 1 of 1. The harness reads the real config dir, where <code>keep-capturing.json</code> already read on: the first run failed in <code>sticky.spec.ts</code> because destroying the main window then leaves the app windowless. The file was moved aside for the second run and restored</td></tr>
       <tr><td>suite</td><td><code>cargo xtask gate0</code> green (1285 passed, 2 skipped) · the whole vitest suite green (99 files, 61 455) · eslint · <code>tsc -b</code></td></tr>
-      <tr><td>commits</td><td>plan <code>0ce71b86</code> · shell <code>1a8682bd</code> · window <code>ab3da4e9</code> · decisions <code>2defbd69</code> · listener-before-take fix <code>1c498c1e</code> · round 2 fixes <code>c64d35ab</code> · this report</td></tr>
+      <tr><td>commits</td><td>plan <code>0ce71b86</code> · shell <code>1a8682bd</code> · window <code>ab3da4e9</code> · decisions <code>2defbd69</code> · listener-before-take fix <code>1c498c1e</code> · round 2 fixes <code>c64d35ab</code> · round 3 fix <code>5a6ba89b</code> · this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
