@@ -1,0 +1,28 @@
+schema: cr/v5
+scope: "WU login-item-smappservice -> epic/bg-service"
+epic: E-BGSVC
+wu: E-BGSVC.W8
+branch: wu/bg-service/login-item-smappservice
+base: 550ef568d6084769aed445f30e2a74d316eab052
+head: 9dda5a037274a4a9307d9cf9532d4d76fe0106d0
+diff_sha256: 2caa11020577379069686d93efbc582953dd3e66ff5abf32aecfed15bf455259
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    finders: 17
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
