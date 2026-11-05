@@ -248,6 +248,8 @@ describe("UC-9 — work with a piece of data in its own window", () => {
     const title = `response body · raw · GET ${new URL(ports.origin).host}${LONG_JSON}`;
     expect(await windowTitle()).toBe(title);
     expect(await $("h1").getAttribute("aria-label")).toBe(title);
+    expect((await $("//h1/preceding-sibling::p").getText()).toLowerCase()).toBe("response body · raw");
+    expect(await $("h1").$("span=GET").isExisting()).toBe(true);
     await recordClipboard();
     expect(await copyOnScreen()).toBe(served);
   });
