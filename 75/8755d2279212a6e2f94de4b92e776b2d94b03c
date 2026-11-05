@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-BGSVC
+wu: E-BGSVC.W7
+branch: HEAD
+changes:
+  - path: "docs/architecture.html"
+    tier: T1
+    action: updated
+    distills: "the app-supervises-its-core row: the app no longer ends with its window; with keep capturing on and a menu-bar icon it runs windowless and a quit request ends it through DEC-64's check (DEC-77)"
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the background-capture row closed by E-BGSVC; a row owing the native hardware checks (menu-bar menu, Dock, real login, Windows/Linux trays); a row for the quit paths the shell cannot route to the check (W9's four review notes and W7's stale Settings switch)"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "the UC-BG index row"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-BG, keep capturing after the window closes: the once-question, the switch's states, quit paths, open at login, and its e2e proof; UC-ONBOARD's quit clause names the menu-bar Quit and the close that only hides the window"
+  - path: "docs/work/2026-11-05-bg-service-w7-e2e-distill-result.html"
+    tier: T3
+    action: added
+    distills: "W7's outcome per journey, deviations, what no independent review covers, evidence, distillation, follow-ups"
