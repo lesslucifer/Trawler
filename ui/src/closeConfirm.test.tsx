@@ -291,17 +291,20 @@ describe("every read a close waits on is bounded", () => {
 
 function shellDeps(
   status: "ours" | "foreign" | "none" | "unknown",
-  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean } = {},
+  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean; holdReads?: boolean } = {},
 ) {
   const f = fakeDeps(status);
   let keep: KeepCapturing = shell.keep ?? "off";
   let pending = shell.quitPending ?? false;
   let announce = () => {};
   let listening: () => void = () => {};
+  let releasing: () => void = () => {};
+  const readsReleased = new Promise<void>((resolve) => (releasing = resolve));
   const listenStands = new Promise<void>((resolve) => (listening = resolve));
   const invoke = vi.fn(async (cmd: string, args?: Record<string, unknown>) => {
     if (cmd === "keep_capturing_read" || cmd === "tray_available") {
       if (shell.unreadable) throw new Error("no shell");
+      if (shell.holdReads) await readsReleased;
       return cmd === "tray_available" ? (shell.tray ?? true) : keep;
     }
     if (cmd === "take_quit_request") {
@@ -320,8 +323,8 @@ function shellDeps(
     ...f.deps,
     invoke: invoke as never,
     listen: async (_event: string, handler: () => void) => {
-      announce = handler;
       if (shell.holdListen) await listenStands;
+      announce = handler;
       return () => {};
     },
   };
@@ -333,6 +336,7 @@ function shellDeps(
     invoke,
     proxyReads,
     ran,
+    releaseReads: () => releasing(),
     registerListener: () => act(async () => listening()),
     announce: () => act(async () => announce()),
     request: async () => {
@@ -512,6 +516,23 @@ describe("a quit request", () => {
     await f.request();
     await f.registerListener();
     await waitFor(() => expect(f.ran("quit_app")).toBe(true));
+  });
+
+  test("a quit request that arrives while a ✕ is still reading keeps the quit's ending", async () => {
+    const f = shellDeps("ours", { keep: "on", holdReads: true });
+    const { result } = shellConfirm(f);
+    const preventDefault = vi.fn();
+    const closing = Promise.resolve(f.fireClose()({ preventDefault }));
+    await f.request();
+    await waitFor(() => expect(result.current.prompt).not.toBeNull());
+    f.releaseReads();
+    await act(async () => {
+      await closing;
+    });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    await act(async () => result.current.quit(false));
+    expect(f.ran("quit_app")).toBe(true);
+    expect(f.destroy).not.toHaveBeenCalled();
   });
 
   test("a quit request while the once-question is open drops it and checks", async () => {

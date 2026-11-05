@@ -110,6 +110,7 @@ export function useProxyCloseConfirm(
   const [prompt, setPrompt] = useState<QuitPrompt | null>(null);
   const [asking, setAsking] = useState(false);
   const ending = useRef<RequestKind>("close");
+  const quitRequests = useRef(0);
   const question = useRef<() => Promise<QuitPrompt | null>>(async () => null);
 
   // A window that refuses to close is not something the user can act on from a
@@ -154,23 +155,31 @@ export function useProxyCloseConfirm(
 
     const answerQuitRequest = async () => {
       setAsking(false);
+      quitRequests.current += 1;
       ending.current = "quit";
       const asked = await firstQuestion();
       if (asked === null) await quitApp();
       else setPrompt(asked);
     };
 
+    // Not bounded: the shell has already cleared the flag when it answers, so a
+    // reading abandoned as late would be a request no window ever acts on.
     const takeQuitRequest = async () => {
-      if (await bounded(deps.invoke<boolean>("take_quit_request"), false)) await answerQuitRequest();
+      if (await deps.invoke<boolean>("take_quit_request").catch(() => false)) await answerQuitRequest();
     };
 
     deps
       .getWindow()
       .onCloseRequested(async (e) => {
+        const requestsSeen = quitRequests.current;
         const [keep, tray] = await Promise.all([
           bounded(deps.invoke<KeepCapturing>("keep_capturing_read"), "off"),
           bounded(deps.invoke<boolean>("tray_available"), false),
         ]);
+        if (quitRequests.current !== requestsSeen) {
+          e.preventDefault();
+          return;
+        }
         const decision = closeDecision("close", keep, tray === true);
         if (decision === "closes") return;
         ending.current = "close";
