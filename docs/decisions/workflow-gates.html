@@ -419,9 +419,12 @@
     <code>rev-parse HEAD</code> used to error. The blast radius is wider than the hook: every caller
     of <code>worktree_key</code> now keys on content, so the five invalidation properties
     <code>gate0_cache.rs</code> pins are the contract, joined by a content-neutral commit holding
-    the key, a tracked deletion changing it, and an executable-bit flip changing it. The hook is
+    the key, a tracked deletion changing it, and an executable-bit flip changing it. <s>The hook is
     installed by cargo-husky at build time, so the new one takes effect after this lands and a build
-    runs — until then a checkout keeps the blind pair. Because the hook no longer carries the command
+    runs — until then a checkout keeps the blind pair.</s> <em>(Superseded by
+    <a href="dec-72-git-runs-the-tracked-hooks.html">DEC-72</a>: the copy never re-installed, so this hook never ran
+    until git was pointed at the tracked hooks. The markers live in each worktree's own <code>target/</code> since
+    <a href="dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>.)</em> Because the hook no longer carries the command
     it runs, <code>xtask/tests/lint_spawn.rs</code> is now the only thing standing between a
     <code>run_lints</code> edit and a silently narrowed lint; delete it and the scoping goes unpinned again.</p>
   </main>

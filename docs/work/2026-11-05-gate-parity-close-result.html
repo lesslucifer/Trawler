@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec088b9f34851f0dfae67c" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR.W3 close result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W3 · close — result</h1>
+      <p>The epic e2e is green, and DEC-72/73, the amended DECs, the roadmap and the T1 hooks section now state what shipped.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-GATEPAR.W3</span> · <a href="2026-11-05-gate-parity-close-plan.html">WU plan</a> · <a href="2026-11-04-gate-parity-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <thead><tr><th>Planned</th><th>Shipped</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Epic e2e, four scenarios</td><td><code>xtask/tests/e2e_gate_parity.rs</code>: one flow, default suite, ~1 s</td><td>delivered</td></tr>
+        <tr><td>DEC for the hooks · DEC for the target</td><td>DEC-72 · DEC-73 + index rows</td><td>delivered</td></tr>
+        <tr><td>DEC-42 tally location · DEC-54 install consequence</td><td>amendment notes in both; DEC-42 diagram updated</td><td>delivered</td></tr>
+        <tr><td>Roadmap: shared-target row · E-GATEPAR2 row</td><td>row closed · E-GATEPAR2 row with the deferred table</td><td>delivered</td></tr>
+        <tr><td>T1: <code>workflow.html</code> § Hooks · <code>testing-strategy.html</code></td><td>commit <code>7e16383a</code>, <code>Reviewed-By: key vuluu</code></td><td>delivered</td></tr>
+        <tr><td>Sync sequence</td><td>in the epic result, where the plan put it</td><td>delivered at close</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>Plan said</th><th>Shipped</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>next DEC numbers</td><td>DEC-72, DEC-73; DEC-71 skipped</td><td>E-INSPECT and E-QUERYBAR each claim DEC-71 on their branches</td></tr>
+        <tr><td>the test pre-commit is the real one</td><td>a logger hook tracked in the temp repo; <code>post-checkout</code> is the real one, byte for byte</td><td>the real pre-commit calls <code>cargo xtask</code>, which the temp workspace does not define (the plan stated this up front)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <thead><tr><th>Kind</th><th>Pointer</th><th>What it shows</th></tr></thead>
+      <tbody>
+        <tr><td>e2e</td><td><code>xtask/tests/e2e_gate_parity.rs</code> (1)</td><td>after <code>hooks install</code>, an edited tracked hook runs on the next commit in main and in a linked worktree, each its own version · the real <code>post-checkout</code> gives a new worktree a <code>target/</code> directory with no <code>app</code> artifact or <code>incremental/</code> (third-party present on macOS) · two worktrees build <code>app</code> from different sources, one with an older mtime, and each prints its own value; the first linked build does not compile <code>vendored</code> · a symlinked <code>target</code>: <code>lint</code> exits 1 with the isolate line, then <code>isolate</code> and a real <code>lint green</code></td></tr>
+        <tr><td>mutation</td><td><code>post-checkout</code> swapped back to <code>ln -s</code></td><td>the e2e goes red at the "target is a directory" assertion</td></tr>
+        <tr><td>regression</td><td><code>cargo xtask gate0</code></td><td>fmt + clippy + whole suite green on this branch</td></tr>
+        <tr><td>commits</td><td><code>f2ea121e</code> plan · <code>0c499f20</code> e2e · <code>fa62a2de</code> T2 · <code>f479d945</code> DEC-42 diagram · <code>7e16383a</code> T1 · this report</td><td>on <code>wu/gate-parity/close</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <ul data-item="distillation">
+      <li>T2: <a href="../decisions/dec-72-git-runs-the-tracked-hooks.html">DEC-72</a>, <a href="../decisions/dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>, <a href="../decisions/dec-42-the-gate-tally-is-local-measurement.html">DEC-42</a> amended, <a href="../decisions/workflow-gates.html#dec-54">DEC-54</a> amended, <a href="../decisions/decisions-index.html">decisions index</a>, <a href="../backlog/roadmap.html">roadmap</a>.</li>
+      <li>T1: <a href="../workflow.html#hooks">workflow.html § Hooks</a> (v18), <a href="../testing-strategy.html">testing-strategy.html</a>.</li>
+    </ul>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li>E-GATEPAR2, on the roadmap.</li>
+      <li>DEC-71 is claimed twice (E-INSPECT, E-QUERYBAR); whichever lands second renumbers.</li>
+    </ul>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec08899f34851f0dfae67a" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR.W3 close plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>W3 · close — e2e, distill, sync guide</h1>
+      <p>Prove the epic end to end, move its truth into the DECs and T1 docs, and give every live worktree one sequence to sync with.</p>
+      <div class="meta">Draft v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-GATEPAR.W3</span> · epic: <a href="2026-11-04-gate-parity-plan.html#w3">E-GATEPAR plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      One e2e test drives a hermetic repo through the real tracked <code>post-checkout</code> and the real
+      <code>xtask</code> binary and passes all four scenarios of the epic's e2e plan. The T2/T1 docs then state the
+      shipped truth: DEC-72 (hooks), DEC-73 (per-worktree target), DEC-42's tally location, DEC-54's install
+      consequence, <code>workflow.html</code> § Hooks, <code>testing-strategy.html</code>, and the roadmap
+      (shared-target row closed, E-GATEPAR2 row added).
+    </p>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="e2e-flow">
+      <pre class="mermaid">
+flowchart LR
+  R["temp repo<br/>app (workspace) + vendored (out of tree)<br/>tracked: real post-checkout · test pre-commit"] --> I["xtask hooks install"]
+  I --> H1["edit tracked pre-commit → commit<br/>new version runs"]
+  I --> B["cargo build in main<br/>(+ its xtask at target/debug)"]
+  B --> W["git worktree add linked<br/>real post-checkout seeds target/"]
+  W --> S["target/ is a dir · vendored present ·<br/>app + incremental absent"]
+  W --> H2["linked edits its tracked hook → commit<br/>linked's version runs, main's unchanged"]
+  W --> D["both change app, build in turn<br/>each runs its own value"]
+  W --> L["stale worktree: target → main's target<br/>lint refused (isolate line) → isolate → lint green"]
+      </pre>
+      <div class="caption">One flow, one temp repo. The pre-commit is a logger, not the real one: the real hook calls <code>cargo xtask</code>, which the temp workspace does not define.</div>
+    </div>
+
+    <table data-c="changes">
+      <thead><tr><th>Change</th><th>Where</th><th>Tier</th></tr></thead>
+      <tbody>
+        <tr><td>Epic e2e</td><td><code>xtask/tests/e2e_gate_parity.rs</code> (new)</td><td>code</td></tr>
+        <tr><td>DEC-72 — git runs the tracked hooks from each checkout</td><td><code>docs/decisions/dec-72-…</code> (new) + index</td><td>T2</td></tr>
+        <tr><td>DEC-73 — each worktree builds into its own target</td><td><code>docs/decisions/dec-73-…</code> (new) + index</td><td>T2</td></tr>
+        <tr><td>DEC-42 tally → <code>&lt;git-common-dir&gt;/trawler-gate-tally</code> · DEC-54 "installed by cargo-husky" superseded, markers now per worktree</td><td><code>dec-42-…</code>, <code>workflow-gates.html</code>, index</td><td>T2</td></tr>
+        <tr><td>Shared-target row closed · E-GATEPAR2 row added</td><td><code>docs/backlog/roadmap.html</code></td><td>T2</td></tr>
+        <tr><td>§ Hooks: install line, gate guards, post-checkout seeds · cargo-husky sentence</td><td><code>docs/workflow.html</code>, <code>docs/testing-strategy.html</code> — via <code>mr commit</code></td><td>T1</td></tr>
+        <tr><td>Per-worktree sync sequence</td><td>epic result</td><td>T3</td></tr>
+      </tbody>
+    </table>
+    <p>DEC-71 is skipped on purpose: E-INSPECT and E-QUERYBAR each claim it on their branches.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-GATEPAR · all causes it fixes (C4, C9, C5) · the epic plan's e2e plan and distillation plan — consistent with the W3 summary block in the <a href="2026-11-04-gate-parity-plan.html#w3">epic plan</a>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected">
+      <li><code>cargo test -p xtask --test e2e_gate_parity</code> is green and is part of the default suite.</li>
+      <li>A reader of <code>decisions-index.html</code> finds DEC-72 and DEC-73, and no T2/T1 doc still says the hooks are installed by cargo-husky or that the tally lives in <code>target/</code>.</li>
+      <li>The roadmap carries E-GATEPAR2 with the deferred table, and the shared-target row reads closed.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <thead><tr><th>Level</th><th>Test</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>e2e</td><td><code>xtask/tests/e2e_gate_parity.rs</code> — real <code>xtask</code> binary, real <code>git</code> + <code>cargo</code>, the tracked <code>post-checkout</code> copied byte-for-byte from this tree, scrubbed <code>GIT_*</code>/<code>CARGO_*</code>, offline</td><td>(1) after install, an edited tracked hook runs on the next commit, in main and in a linked worktree, each its own version · (2) two worktrees build <code>app</code> from different sources (older mtime in one) and each prints its own value · (3) the new worktree's <code>target</code> is a directory with no <code>app</code> artifact and no <code>incremental/</code>; on macOS the third-party <code>vendored</code> artifacts are present and the first build does not compile it · (4) a symlinked <code>target</code>: <code>lint</code> exits 1 with <code>cargo xtask target isolate</code>; after <code>isolate</code>, <code>lint</code> is green</td></tr>
+        <tr><td>integration</td><td>—</td><td>waived: W3 adds no production code; W1/W2 own the integration contracts</td></tr>
+        <tr><td>unit</td><td>—</td><td>waived: no production code changes</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
