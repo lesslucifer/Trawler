@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W7
+base: 6401f2f4ef600b5fa97c3537b6c35671423dac04
+design_sha256: d17af4ed401e49e22952c6fcab6d8427eaee38cb467c21e52c8a3486c330b3c5
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-05-data-window-kinds-design-run.html
+    blob: b374034bbc6fcb48be6665832bba792e06906c41
+    built: [ui/src/DataWindowScreen.tsx, ui/src/components/EditSurface.tsx]
+date: 2026-11-05
