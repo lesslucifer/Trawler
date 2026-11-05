@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN
+wu: E-INSPWIN.W9
+branch: HEAD
+tests:
+  unit: { waived: "W9 adds and changes no logic: a decision number in comments, TSDoc and a capability description string; gate0 green on the merged tree (1175 tests), vitest 94 files, 2676 tests" }
+  integration: { count: 20, covers: "this_repo_s_own_docs_resolve_every_link_they_ship: no doc in the tree links the renamed dec-71-the-data-window.html, every DEC-75 link resolves" }
+  e2e: { count: 20, covers: "cargo xtask ui e2e over the epic merged with main (E-QUERY, E-GATEPAR), built at the W9 code tip 6c03ddc2: attached suite 14 of 14 spec files, owned 1 of 1, 93 cases; the data window's J1-J4 (8 cases) beside the query bar's 12 in one run" }
