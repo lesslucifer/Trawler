@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W1
+branch: HEAD
+tests:
+  unit: { count: 29, covers: "readKind picks one of nine kinds from the bytes first and the label as a hint, and says which decided it: every label row with parameters and case; every branch crossed with agreeing, generic, wrong and absent labels; a whole JSON object or array beats every text label, javascript included; an html signature after a BOM, whitespace, comments or an XML prolog; well-formed XML; javascript, css and form only from a label; an image label never overruled; binary bytes are hex; JSON scalars, empty and whitespace stay text; a 10 MiB JSON parses once and never reaches the XML parser." }
+  integration: { waived: "W1 adds no seam: contentKind.ts has no caller until W5, whose integration tests drive it through the pane and the data window." }
+  e2e: { waived: "Nothing on screen changes in W1; the epic's J2 (W9) walks the detector end to end." }
