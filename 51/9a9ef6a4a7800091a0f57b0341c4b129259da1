@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR
+wu: E-GATEPAR.W3
+branch: HEAD
+tests:
+  unit: { waived: "W3 changes no production code - only an e2e test file and docs" }
+  integration: { waived: "W3 adds no production code; the W1 and W2 integration suites (hooks_install, target_isolation, worktree_setup_hook) own the bounded contracts this e2e composes" }
+  e2e: { count: 1, covers: "one hermetic repo through the real tracked post-checkout and the real xtask binary: after hooks install an edited tracked hook runs on the next commit in main and in a linked worktree, each its own version; a new worktree's target is a seeded directory with no workspace artifact or incremental (third-party present on macOS); two worktrees build one crate from different sources, one with an older mtime, and each runs its own value without recompiling the third-party dep; a symlinked target refuses lint with the isolate line, and after isolate lint is green" }
