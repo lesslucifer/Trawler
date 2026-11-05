@@ -83,7 +83,7 @@ pub fn run() {
             if matches!(event, tauri::WindowEvent::Destroyed)
                 && lifecycle::on_window_destroyed(window.app_handle(), window.label())
             {
-                update::on_main_window_destroyed(window.app_handle());
+                update::end(window.app_handle());
             }
         })
         .setup(move |app| {

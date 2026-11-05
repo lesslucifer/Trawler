@@ -4,15 +4,25 @@ use std::path::{Path, PathBuf};
 
 use base64::Engine;
 use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
-use tauri::App;
+use tauri::{App, Manager};
 use tauri_plugin_updater::{Updater, UpdaterExt};
+use trawler_ui_lib::keep_capturing;
+use trawler_ui_lib::lifecycle::{self, Lifecycle};
+use trawler_ui_lib::settings::MAIN_WINDOW;
+use trawler_ui_lib::update;
 
 const TARGET: &str = "trawler-test";
 const ARCHIVE_PATH: &str = "/Trawler.app.tar.gz";
 const MANIFEST_PATH: &str = "/latest.json";
 const CURRENT: &[u8] = b"trawler-ui 0.1.0";
 const NEXT: &[u8] = b"trawler-ui 0.2.0, the marker the update carries";
+const SHIPPED_CONFIG: &str = include_str!("../../tauri.conf.json");
 const CA: &[u8] = b"-----BEGIN CERTIFICATE-----\nthe CA a user trusted\n";
+
+fn shipped_windows() -> serde_json::Value {
+    let config: serde_json::Value = serde_json::from_str(SHIPPED_CONFIG).unwrap();
+    config["app"]["windows"].clone()
+}
 
 fn b64(text: &str) -> String {
     base64::engine::general_purpose::STANDARD.encode(text)
@@ -113,7 +123,12 @@ fn channel(version: &str, signature: &str, archive: Vec<u8>) -> SocketAddr {
 }
 
 fn app() -> App<MockRuntime> {
+    app_with(|_| {})
+}
+
+fn app_with(adjust: impl FnOnce(&mut tauri::Context<MockRuntime>)) -> App<MockRuntime> {
     let mut context = mock_context(noop_assets());
+    adjust(&mut context);
     context.config_mut().plugins.0.insert(
         "updater".into(),
         serde_json::json!({
@@ -219,5 +234,61 @@ fn a_genuine_archive_announced_as_another_version_is_refused() {
         matches!(refused, Err(tauri_plugin_updater::Error::SignedVersionMismatch { .. })),
         "a signature for 0.2.0 cannot install as 0.3.0, got {refused:?}"
     );
+    assert_eq!(installed.binary(), CURRENT);
+}
+
+fn windowless(config_dir: &Path, windows: serde_json::Value) -> App<MockRuntime> {
+    let app = app_with(|context| {
+        context.config_mut().app.windows = serde_json::from_value(windows).unwrap();
+    });
+    app.manage(update::Pending::<update::Staged>::default());
+    keep_capturing::write_keep_capturing(config_dir, true).unwrap();
+    lifecycle::install(app.handle(), Some(config_dir.to_path_buf()));
+    app.state::<Lifecycle>().mark_tray(true);
+    lifecycle::open_at_launch(app.handle(), true).unwrap();
+    assert!(app.webview_windows().is_empty(), "the app starts windowless");
+    app
+}
+
+fn verified(app: &App<MockRuntime>, installed: &Installed) -> update::Staged {
+    let key = Key::new();
+    let origin = channel("0.2.0", &key.sign(&archive(NEXT), "0.2.0"), archive(NEXT));
+    tauri::async_runtime::block_on(async {
+        let update = updater(app, &key, origin, &installed.executable)
+            .check()
+            .await
+            .unwrap()
+            .expect("0.2.0 is offered");
+        let bytes = update.download(|_, _| {}, || {}).await.unwrap();
+        (update, bytes)
+    })
+}
+
+#[test]
+fn a_windowless_app_told_to_install_opens_its_window_to_quit_with_the_update_staged() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = windowless(dir.path(), shipped_windows());
+    let installed = Installed::new();
+    let staged = verified(&app, &installed);
+
+    update::stage_and_quit(app.handle(), staged).join().expect("the app was not exited");
+
+    assert!(app.get_webview_window(MAIN_WINDOW).is_some(), "the window opens to run the check");
+    assert!(app.state::<Lifecycle>().take_quit_request(), "and is asked to quit");
+    assert!(app.state::<update::Pending>().take().is_some(), "the update waits for that quit");
+    assert_eq!(installed.binary(), CURRENT, "nothing installs before the quit");
+}
+
+#[test]
+fn an_update_whose_quit_cannot_open_a_window_is_dropped_not_kept_for_a_later_quit() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = windowless(dir.path(), serde_json::json!([]));
+    let installed = Installed::new();
+    let staged = verified(&app, &installed);
+
+    update::stage_and_quit(app.handle(), staged).join().expect("the app was not exited");
+
+    assert!(!app.state::<Lifecycle>().take_quit_request());
+    assert!(app.state::<update::Pending>().take().is_none(), "no update waits for a later quit");
     assert_eq!(installed.binary(), CURRENT);
 }
