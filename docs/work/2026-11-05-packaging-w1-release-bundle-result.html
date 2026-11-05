@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec39609f34851f0dfae854" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PKG.W1 result: release-bundle</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PKG.W1 result — one version, a release-only bundle, <code>cargo xtask package</code></h1>
+      <p>Delivered as planned. The macOS package builds, is ad-hoc signed, verifies, and its binary captures under a
+      launcher's environment.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-PKG.W1</span> · branch
+      <code>wu/packaging/release-bundle</code> · <a href="2026-11-05-packaging-w1-release-bundle-plan.html">WU plan</a> ·
+      <a href="2026-11-05-packaging-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned expected result</th><th>Verdict</th><th>Observed</th></tr>
+      <tr><td><code>cargo xtask package</code> on this Mac → ad-hoc-signed <code>.app</code> + <code>.dmg</code>, green under
+        <code>codesign --verify --deep --strict</code></td><td><span class="badge auto">delivered</span></td>
+        <td>exit 0 after a 2&nbsp;min 30&nbsp;s release build. The run left <code>target/release/bundle/macos/Trawler.app</code> and <code>target/release/bundle/dmg/Trawler_0.1.0_aarch64.dmg</code>, and the <code>.app</code> is <code>Signature=adhoc</code>, verified by the command and again by hand</td></tr>
+      <tr><td><code>--universal</code> with only <code>aarch64-apple-darwin</code> installed</td><td><span class="badge auto">delivered</span></td>
+        <td>refused before any build: <code>rustup target add x86_64-apple-darwin</code>, exit 2</td></tr>
+      <tr><td>an e2e <code>ui/dist</code>, then <code>cargo run</code> / <code>cargo xtask package</code> → <code>release</code>,
+        no WebDriver plugin</td><td><span class="badge auto">delivered</span></td>
+        <td>both cases of <code>package_bundle</code> green: the flavour reads <code>release</code> and no asset
+        carries <code>wdioTauri</code></td></tr>
+      <tr><td>a version edited apart from <code>[workspace.package]</code> → a unit test red naming the file</td>
+        <td><span class="badge auto">delivered</span></td><td><code>each_source_that_disagrees_is_named</code>. The
+        tree itself is held by <code>the_tree_carries_one_version</code>, which reads <code>cargo metadata</code></td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>From the plan</th><th>Why</th></tr>
+      <tr><td>Tauri signs with the hardened runtime flag (<code>flags=0x10002(adhoc,runtime)</code>). Its default was
+        left on, though Q3 required no hardened runtime</td><td>Q3 does not need it, and it is not forbidden either. The
+        packaged binary spawns and captures with it on (integration case 2), so nothing called for the extra config key.
+        W3 re-reads this if the updater's relaunch disagrees</td></tr>
+      <tr><td><code>xtask/Cargo.toml</code> inherits the version too</td><td>The guard reads every workspace member
+        uniformly, so it needs no list of exceptions</td></tr>
+      <tr><td>The guard checks that every source carries one version: each member as <code>cargo metadata</code> resolves
+        it, plus <code>ui/package.json</code> and the absence of a version in <code>tauri.conf.json</code>. It no
+        longer checks that each manifest spells <code>version.workspace = true</code>. Those lines remain the
+        mechanism. The reference is the version the app crate <code>trawler-ui</code> ships</td><td>Review round 3:
+        reading manifest text reimplemented what <code>cargo metadata</code> owns, and it took two rounds to stop
+        hiding members. A member that types an equal literal is not drift, and the next bump that misses it is</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit · flavour</td><td><code>ui/src-tauri/src/bundle.rs</code>: 6 new tests (other flavour stale however
+        new, no flavour stale, wanted per feature, parse, rebuild env per flavour, a new e2e bundle goes to the build)
+        and the 3 staleness tests re-cut for the flavour argument</td></tr>
+      <tr><td>unit · package and version</td><td><code>xtask/src/package.rs</code>: 15 tests: argv per host, profile,
+        universal, the rustup refusal, refusal off macOS, flags, unknown host, artifact discovery, missing bundle dir,
+        the shipped version, one version is no drift, each disagreeing source named, a package.json without a version,
+        the tree's own guard (through <code>cargo metadata</code>), the usage line</td></tr>
+      <tr><td>integration</td><td><code>xtask/tests/package_bundle.rs</code> (feature <code>package-tests</code>), run with
+        <code>cargo test -p xtask --features package-tests --test package_bundle</code>: 2 passed in 76&nbsp;s on a
+        warm target, and again in 64&nbsp;s on <code>a3385e59</code></td></tr>
+      <tr><td>e2e</td><td>waived: the epic's <code>e2e_packaging</code> (W6) installs and drives this artifact</td></tr>
+      <tr><td>review round 1</td><td>FAIL on <code>7643bad3</code>. One important finding was verified: a <code>[workspace] members</code>
+        array laid over several lines read as empty, so the drift guard checked only the root manifest and stayed green.
+        Its regression tests were red first, then fixed in <code>b18b31c3</code>. That commit also reports a failing
+        <code>rustup</code> as itself (a nit)</td></tr>
+      <tr><td>review round 2</td><td>PASS on <code>189ec597</code>: no blocker or important was raised, and 8 nits.
+        Two nits were taken after the verdict, so a third round reviews them. A <code>#</code> comment in
+        <code>members</code> could drop a member silently, the same class as round 1's important. A release build could
+        also rewrite the lockfile, and <code>package</code> now installs <code>--frozen-lockfile</code>. Both are in
+        <code>a3385e59</code>, and the other nits are waived in the round-2 note</td></tr>
+      <tr><td>review round 3</td><td>FAIL on <code>0f9c2063</code>. One important finding was verified: the hand-rolled
+        manifest read duplicated <code>cargo metadata</code>, which <code>xtask/src/target.rs</code> already called.
+        <code>156a5f62</code> replaces it. One generic <code>cargo_metadata</code> reader in <code>target.rs</code> now
+        serves both modules, and the parser and its tests are gone</td></tr>
+      <tr><td>commits</td><td><code>8bf04ecc</code> plan · <code>103b0092</code> code + roadmap row · <code>7643bad3</code>
+        result · <code>b18b31c3</code> round-1 fix · <code>a3385e59</code> round-2 nits · <code>156a5f62</code> round-3
+        fix</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">
+      T2: <code>docs/backlog/roadmap.html</code>. The row <em>a plain cargo run after an e2e run embeds the e2e bundle</em>
+      is closed, and it names the flavour mechanism and the tests that hold it. Everything else is the epic's to distil at
+      W6, as its distillation plan says. That covers the release DEC, the <code>package</code> row in
+      <code>architecture.html</code> and the CLAUDE.md Commands line.
+    </p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>Item</th><th>Owner</th></tr>
+      <tr><td><code>--universal</code> has never run green, because this Mac lacks <code>x86_64-apple-darwin</code>.
+        The release workflow's macOS job is its first real run</td><td>W4</td></tr>
+      <tr><td>The Windows runner <code>pnpm.cmd</code> and the Linux bundle list are unit-tested argv only</td><td>W2 (dispatched CI) · W4</td></tr>
+      <tr><td>A package build costs about a minute on a warm <code>package-test</code> target. That cost decides whether the
+        epic's <code>e2e_packaging</code> can sit in the default suite or is feature-gated like
+        <code>package_bundle</code></td><td>W6</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
