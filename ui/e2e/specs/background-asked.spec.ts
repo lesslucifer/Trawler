@@ -9,7 +9,7 @@ import {
   runningCore,
   storedKeepCapturing,
   type Running,
-} from "./background.ts";
+} from "./app.ts";
 
 // UC-BG's once-question: this file starts with no stored answer and ends in a real
 // exit, so the next file is a new app process that must find "off" stored.

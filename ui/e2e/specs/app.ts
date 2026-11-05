@@ -1,5 +1,6 @@
 import { browser } from "@wdio/globals";
 import { execFileSync } from "node:child_process";
+import { request } from "node:http";
 import { createServer as createListener } from "node:net";
 import { existsSync, readFileSync, realpathSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,12 +39,12 @@ export async function invoke<T>(command: string, args: Record<string, unknown> =
   return answer.ok as T;
 }
 
-export async function runningCore(): Promise<Running> {
-  let state: { state: string } | undefined;
+export async function runningCore(otherThan: number | null = null): Promise<Running> {
+  let state: Running | { state: string } | undefined;
   await browser.waitUntil(
     async () => {
-      state = await invoke<{ state: string }>("core_status");
-      return state.state === "running";
+      state = await invoke<Running | { state: string }>("core_status");
+      return state.state === "running" && (state as Running).pid !== otherThan;
     },
     { timeout: 30_000, timeoutMsg: `the core never ran (last read ${JSON.stringify(state)})` },
   );
@@ -107,6 +108,18 @@ export const pressButton = (dialog: string, label: string) =>
     dialog,
     label,
   );
+
+export function sendThroughProxy(proxy: string, url: string): Promise<number> {
+  const [host, port] = proxy.split(":");
+  return new Promise((answered, failed) => {
+    const sent = request({ host, port: Number(port), method: "GET", path: url }, (res) => {
+      res.resume();
+      res.on("end", () => answered(res.statusCode ?? 0));
+    });
+    sent.once("error", failed);
+    sent.end();
+  });
+}
 
 export async function onWindow(label: string) {
   await browser.waitUntil(async () => (await browser.getWindowHandles()).includes(label), {

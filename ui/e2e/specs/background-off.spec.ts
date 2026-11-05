@@ -10,7 +10,7 @@ import {
   storedKeepCapturing,
   switchesRead,
   type Running,
-} from "./background.ts";
+} from "./app.ts";
 
 // The stored answer is off (the previous file answered Quit): nothing is asked and
 // ✕ ends the app. The login switch of an unbundled

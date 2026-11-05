@@ -1,6 +1,6 @@
 import { $, expect } from "@wdio/globals";
 import { theAppExits } from "./quit.ts";
-import { appOf, askToQuitTheApp, everythingStopped, runningCore, storedKeepCapturing, type Running } from "./background.ts";
+import { appOf, askToQuitTheApp, everythingStopped, runningCore, storedKeepCapturing, type Running } from "./app.ts";
 
 // W3/W9: with keep capturing on, a request to quit the app (⌘Q, the menu-bar Quit
 // reaching an open window) runs DEC-64's check and ends the app instead of only

@@ -1,5 +1,5 @@
 import { browser, $, expect } from "@wdio/globals";
-import { createServer, request, type Server } from "node:http";
+import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { theAppExits } from "./quit.ts";
 import {
@@ -12,22 +12,11 @@ import {
   onWindow,
   pressButton,
   runningCore,
+  sendThroughProxy,
   storedKeepCapturing,
   switchesRead,
   type Running,
-} from "./background.ts";
-
-function sendThroughProxy(proxy: string, url: string): Promise<number> {
-  const [host, port] = proxy.split(":");
-  return new Promise((answered, failed) => {
-    const sent = request({ host, port: Number(port), method: "GET", path: url }, (res) => {
-      res.resume();
-      res.on("end", () => answered(res.statusCode ?? 0));
-    });
-    sent.once("error", failed);
-    sent.end();
-  });
-}
+} from "./app.ts";
 
 // J1: the answer that makes the app outlive its window. Starts unanswered, ends
 // with quit_app from the Settings window, the one window left to ask from.
