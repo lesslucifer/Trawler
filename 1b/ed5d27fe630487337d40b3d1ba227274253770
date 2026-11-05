@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU updater -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W1
+branch: wu/packaging-v2/updater
+base: ad4287f321b0cc7c0e156239bfb5f09bdddbb705
+head: 1bed5d27fe630487337d40b3d1ba227274253770
+diff_sha256: c0feed0709cc0dfd11db79a6dee8c6ec57f15dc8a99cc9fd0f7a4b2bdc7fe27a
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: opus
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 7
+    nit: 7
+  stage_seconds:
+    gate0: 25
+    finders: 75
+    verifiers: 70
+  by_finder:
+    correctness: { found: 5, verified: 1 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 7, verified: 0 }
+findings: { found: 11, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-05
