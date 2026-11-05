@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec0d2c9f34851f0dfae6a5" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W7 plan: e2e and distillation</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W7 — e2e and distillation</h1>
+      <p>Prove the data window end to end through the real windows, then write its truth into T2: UC-9, UC-5's entry
+        point, DEC-71's amendments and the rulebook's keys and lexicon.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W7</span> · branch
+        <code>wu/inspect-window/e2e</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      <code>ui/e2e/specs/data-window.spec.ts</code> drives the real app through journeys J1–J4 (open and focus, work a
+      JSON document, a long form and a token, no write-back) and is green in <code>cargo xtask ui e2e</code>, and the
+      T2 docs in the distillation table below state the data window as it was built.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · DoD-E e2e · UC-9 and UC-5 records · epic expected rows 1, 2, 4, 5, 6, 8, 9, 10 through the real
+      windows · the hand-offs W1, W2, W3, W6 and W8 left to W7 in their results.
+    </p>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart LR
+  H["harness origin
+/bigjson · /bigform"] -- "/hit through the proxy" --> C["core: two captured flows"]
+  C --> M["main window
+BodyViewer · CutMarker"]
+  M -- "open in data window" --> D1["data-… window
+(wdio handle)"]
+  D1 -- "decode ↗" --> D2["second data-… window"]
+  D1 -. "no request" .-> C
+      </pre>
+      <div class="caption">The core only seeds the opener; each data window is asserted to make no request and to change no
+        captured byte.</div>
+    </div>
+
+    <table data-c="pieces">
+      <thead><tr><th>Piece</th><th>Where</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>wdio capability</td><td><code>ui/src-tauri/tauri.conf.e2e.json</code></td><td>the inline
+          <code>wdio</code> capability adds <code>data-*</code> to its windows (W1's follow-up: without it the spec
+          cannot drive a data window)</td></tr>
+        <tr><td>capability guard</td><td><code>xtask/src/ui.rs</code></td><td>a unit test: the <code>wdio</code>
+          capability covers every window family any shipped capability names, so the next window family cannot be
+          left undrivable</td></tr>
+        <tr><td>origin routes</td><td><code>ui/e2e/harness/main.rs</code></td><td><code>/bigjson</code>: an
+          <code>application/json</code> body over 128 KiB holding a find term a known number of times;
+          <code>/bigform</code>: an <code>application/x-www-form-urlencoded</code> body of about 300 KiB, a
+          <code>token</code> pair holding a JWT whose payload carries <code>"exp":1793851200</code>, and a distinct
+          last pair</td></tr>
+        <tr><td>spec</td><td><code>ui/e2e/specs/data-window.spec.ts</code></td><td>J1–J4 below</td></tr>
+        <tr><td>spec order</td><td><code>ui/e2e/wdio.conf.ts</code></td><td>the spec runs after
+          <code>layout-broken</code> and before <code>flows</code> (which must stay last); it leaves the capture
+          empty and no data window open, as the specs around it do</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="journeys">Journeys</h2>
+    <table data-c="journeys">
+      <thead><tr><th>Journey</th><th>Asserts</th><th>Epic rows</th></tr></thead>
+      <tbody>
+        <tr><td>J1 · open and focus</td><td>the <code>/bigjson</code> response shows a cut in the pane; <em>open in data
+          window</em> on the CutMarker → a second handle <code>data-…</code>, its title the opener's caption, the
+          document's last line present; <em>open in data window</em> from the pane's toolbar → still two handles</td><td>1, 2</td></tr>
+        <tr><td>J2 · work a JSON document</td><td>find reports the seeded count and steps to the next match; ⋯ → sort
+          keys, then a typed edit → <em>modified</em>; <em>copy</em> yields the edited text and ⋯ → copy original the
+          served bytes (a recording clipboard, as flows.spec does); undo twice → no <em>modified</em>; an edit, then
+          ⋯ → restore original → no <em>modified</em> and copy yields the served bytes</td><td>4, 5, 9</td></tr>
+        <tr><td>J3 · a long form and a token</td><td>the <code>/bigform</code> response opened → the last pair present
+          and whole; find on one key counts 1; right-click the <code>token</code> value → decode → <em>decoded as
+          JWT</em> with header and payload; ↗ → a third handle holding the payload JSON; right-click
+          <code>1793851200</code> there → <em>decoded as time</em>, its UTC line
+          <code>2026-11-05 04:00:00Z</code> (zone-independent)</td><td>6, 8</td></tr>
+        <tr><td>J4 · no write-back</td><td>after J2's edits the main window's pane still shows the captured body;
+          <code>GET /flows/{id}/response/body</code> returns the served bytes; no data window's resource timeline holds
+          an <code>http(s)</code> entry; each data window closed → the main window stays, nothing is asked</td><td>10, 2</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="choices">Choices this plan makes</h2>
+    <table data-c="choices">
+      <thead><tr><th>Choice</th><th>Taken</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>proving "no request"</td><td><code>performance.getEntriesByType("resource")</code> in each data window
+          holds no <code>http:</code>/<code>https:</code> URL</td><td>the timeline records every fetch since the window
+          loaded, so nothing has to be stubbed before the first script runs; the bundle itself loads over the app's
+          own scheme</td></tr>
+        <tr><td>the time asserted in J3</td><td>the UTC line, not the local one</td><td>the run's zone is the host's;
+          the local reading is W8's unit tests at a fixed zone</td></tr>
+        <tr><td>2 MB render and smooth scroll (row 3), text/XML/hex past the caps (row 7)</td><td>not in the
+          e2e</td><td>W3's integration test feeds 2 MB JSON, 300 KiB form and 1 MiB binary payloads to the screen;
+          smoothness has no deterministic assertion</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-c="distillation">
+      <thead><tr><th>Target</th><th>Tier</th><th>Absorbs</th></tr></thead>
+      <tbody>
+        <tr><td><code>use-cases/web-ui.html</code></td><td>T2</td><td>a UC-9 section (payload, original and working
+          copy, the toolsets, the decoders with time, no write-back); UC-5's entry-point line</td></tr>
+        <tr><td><code>use-cases/use-cases-index.html</code></td><td>T2</td><td>a UC-9 row; UC-5's row amended</td></tr>
+        <tr><td>DEC-71 + <code>decisions-index.html</code></td><td>T2</td><td>its view and copy/save lines amended to find
+          only (Q4) and copy/save of what is on screen; the peek's single reading in place of the decoder switch (W6)</td></tr>
+        <tr><td><code>design-rules/design-rules-index.html</code></td><td>T2</td><td>the keys the run proposed and the
+          build kept (⌘F, ⌘G, ⌘⇧D, ⌥⌘C, ⇧⌥⌘C, ⌥Z, ⌥⇧F) and the lexicon (<em>modified</em>, <em>restore original</em>,
+          <em>decoded as</em>, <em>replaced … with its decoded form</em>)</td></tr>
+        <tr><td>component TSDoc</td><td>T4</td><td>checked only: CutMarker's way out already names the data window</td></tr>
+        <tr><td><code>architecture.html</code></td><td>T1</td><td>none: it states no single window</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>State</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td><code>cargo xtask ui e2e</code></td><td>every spec file passes, <code>data-window.spec.ts</code> with its
+          four journeys among them, and <code>flows.spec.ts</code> still last and green</td></tr>
+        <tr><td>a data window under wdio</td><td>switchable by its label and driven like the main window</td></tr>
+        <tr><td>T2</td><td>UC-9 reads as the window built; the rulebook lists its keys and words; DEC-71 names no filter
+          view and no decoder switch</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>Test</th></tr></thead>
+      <tbody>
+        <tr><td>unit</td><td><code>xtask/src/ui.rs</code>: the wdio capability's windows cover every window pattern
+          a shipped capability names (red before the config change, on <code>data-*</code>)</td></tr>
+        <tr><td>integration</td><td>waived: W7 changes no app contract; the harness routes are fixtures the e2e
+          exercises, and the contract this WU owns is the journey through the real windows</td></tr>
+        <tr><td>e2e</td><td><code>ui/e2e/specs/data-window.spec.ts</code>, J1–J4, run by <code>cargo xtask ui
+          e2e</code></td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
