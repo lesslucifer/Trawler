@@ -1,0 +1,7 @@
+schema: doc/v1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 6: a second launch opens or focuses the main window unless it is itself a --background launch, since registering the login item can start the agent at once"
