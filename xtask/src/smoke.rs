@@ -241,8 +241,17 @@ fn capture_through_the_proxy(proxy: SocketAddr, api: SocketAddr) -> Result<(), S
     }
 }
 
-pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+pub fn parse(args: &[&str]) -> Result<package::Options, String> {
     let options = package::parse(args)?;
+    if options.stage == package::Stage::BuildAndBundle {
+        Ok(options)
+    } else {
+        Err(super::USAGE.to_string())
+    }
+}
+
+pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+    let options = parse(args)?;
     let os = Os::named(std::env::consts::OS)?;
     let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS, false)?;
     let artifacts = package::artifacts(&repo.join("target").join(&plan.bundle_dir))?;
@@ -292,6 +301,14 @@ mod tests {
     fn a_bundle_without_the_installer_is_refused_naming_it() {
         let refusal = pick(Os::Windows, &paths(&["b/msi/T.msi"])).unwrap_err();
         assert!(refusal.contains("-setup.exe") && refusal.contains("T.msi"), "{refusal}");
+    }
+
+    #[test]
+    fn the_smoke_takes_the_package_s_flags_but_no_stage() {
+        assert!(parse(&["--universal", "--profile", "p"]).unwrap().universal);
+        for staged in ["--build-only", "--bundle-only"] {
+            assert!(parse(&[staged]).unwrap_err().contains("cargo xtask smoke"), "{staged}");
+        }
     }
 
     #[test]

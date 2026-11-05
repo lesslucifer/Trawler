@@ -344,3 +344,26 @@ fn no_step_can_fail_without_turning_the_run_red() {
         }
     }
 }
+
+#[test]
+fn each_row_uploads_from_the_bundle_dir_its_package_args_build() {
+    use xtask::package::{self, Os};
+    let rows = job("build")["strategy"]["matrix"]["include"].as_sequence().unwrap().clone();
+    for row in rows {
+        let os = match row["os"].as_str().unwrap() {
+            runner if runner.starts_with("macos") => Os::MacOs,
+            runner if runner.starts_with("windows") => Os::Windows,
+            _ => Os::Linux,
+        };
+        let args: Vec<&str> = row["package-args"].as_str().unwrap().split_whitespace().collect();
+        let options = package::parse(&args).unwrap();
+        let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS, false).unwrap();
+        let built: Vec<String> =
+            plan.bundle_dir.iter().map(|part| part.to_string_lossy().into_owned()).collect();
+        assert_eq!(
+            row["bundle"].as_str(),
+            Some(format!("target/{}", built.join("/")).as_str()),
+            "{row:?}"
+        );
+    }
+}
