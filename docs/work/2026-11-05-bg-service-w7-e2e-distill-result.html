@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-BGSVC.W7 — result</h1>
       <p>The epic's e2e through the real window and the distillation: UC-BG, the roadmap rows and the lifecycle row land; the epic closes.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU result · branch
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 (docs/work/) · WU result · branch
         <code>wu/bg-service/e2e-distill</code> · plan: W7 in
         <a href="2026-11-05-bg-service-plan.html#w7">the epic plan</a> · after
         <a href="2026-11-05-bg-service-w9-quit-hardening-result.html">W9's result</a></div>
@@ -38,6 +38,8 @@
       <tr><th>From the plan</th><th>What happened</th><th>Why</th></tr>
       <tr><td>no Rust change</td><td><code>lifecycle::e2e_request_quit</code>, a command that exists only under the <code>e2e</code> feature and calls <code>request_quit</code></td><td>⌘Q and the menu-bar Quit are native and WebDriver cannot press them. An emitted <code>quit-requested</code> event does nothing without the shell's flag, so the only honest way to reach W3/W9's path is the function those entries call</td></tr>
       <tr><td>one <code>background.spec.ts</code></td><td>four files, <code>background-asked</code>, <code>-off</code>, <code>-keep</code>, <code>-quit</code></td><td>each ends in a real exit and the launcher relaunches the app per file; the stored answer one leaves is what the next asserts. They run after <code>one-app.spec.ts</code> in the owned suite, whose launcher already points <code>HOME</code> at a temp dir it deletes: no run touches the real <code>dev.trawler.app</code> data or login items</td></tr>
+      <tr><td>no <code>xtask</code> change</td><td><code>handler_names</code> scans <code>generate_handler!</code> bracket-aware and skips a <code>#[cfg]</code>-gated entry</td><td>Gate 0 went red: the list was cut at the first <code>]</code>, which <code>e2e_request_quit</code>'s attribute carries; a gated command is in neither build's shared list. Held by the detector unit test's new gated case</td></tr>
+      <tr><td>—</td><td><code>forgetTheAnswer</code> throws unless <code>HOME</code> resolves under the temp dir; <code>GET /flows</code> is polled for the captured flow</td><td>router's review of <code>758755d2</code> (F2, F4): run through <code>wdio.conf.ts</code> it would delete the real <code>keep-capturing.json</code>; a single read could race the recorder</td></tr>
     </table>
 
     <h2 id="not-reviewed">What no independent review covers</h2>
@@ -64,7 +66,7 @@
       <tr><td>T2</td><td>DEC-64 · DEC-69 · DEC-77 · DEC-84 · decisions index</td><td>nothing: W1–W9 amended them as they landed</td></tr>
     </table>
 
-    <h2 id="follow-ups">Follow-ups (on the roadmap)</h2>
+    <h2 id="follow-ups">Follow-ups</h2>
     <table data-item="follow-ups">
       <tr><th>Item</th><th>Source</th></tr>
       <tr><td>a quit request landing just after Destroyed leaks its flag</td><td>W9 review</td></tr>
@@ -73,6 +75,9 @@
       <tr><td>no in-flight spinner on the keep-capturing save</td><td>W9 review</td></tr>
       <tr><td>a Settings window opened before the once-question's answer keeps showing the old switch until its page is left and re-entered</td><td>found by this WU's e2e</td></tr>
       <tr><td>menu-bar, Dock, real login, Windows and Linux trays</td><td>owed on hardware</td></tr>
+      <tr><td><code>embeddedPort</code> is not set, so every app falls back to <code>:4445</code> and <code>theAppExits</code> polls it: two worktrees' e2e at once collide, worse now with five launches. Fix: a free port picked in <code>onPrepare</code> and passed as <code>embeddedPort</code>. Until then run e2e one at a time</td><td>router's review F1 (not yet on the roadmap)</td></tr>
+      <tr><td>the background specs depend on each other's leftover answer (<code>-off</code> on <code>-asked</code>'s off, <code>-quit</code> on <code>-keep</code>'s on): a failure early cascades and no file runs alone</td><td>router's review F3 and this WU's review (not yet on the roadmap)</td></tr>
+      <tr><td>Linux: the launcher overrides <code>HOME</code> but not <code>XDG_CONFIG_HOME</code>, so the owned suite is effectively macOS-only</td><td>router's review F5 (not yet on the roadmap)</td></tr>
     </table>
 
   </main>
