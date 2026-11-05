@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec20c49f34851f0dfae776" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W11 plan: the payload carries its heading</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W11 — the payload carries its heading; years below 100</h1>
+      <p>The window's header reads what the opener hands it, not a regex over its title; a time in the years 0–99 reads
+        true.</p>
+      <div class="meta">v2 (the owner's rulings: further review fixes land here, not in new WUs; main resynced) · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W11</span> · branch
+        <code>wu/inspect-window/payload-heading</code> · from the epic review's round-2 FAIL on <code>c90ec373</code> ·
+        owner's ruling 2026-11-05: structured heading · epic plan (archived)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <div class="callout" data-item="requirement" data-c="requirement">
+      <p>(1) An opener may hand the data window an optional <code>heading {what, method, host, path, query}</code> beside
+        <code>title</code>; the shell carries it unread; the window's header draws from it, and from the title alone when
+        there is none — no part of the title is parsed. (2) The time decoder reads a date or date-time in the years
+        0000–0099 on the proleptic Gregorian calendar: its zone offset is the zone's, and <code>0000-02-29</code> is a
+        day.</p>
+    </div>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · UC-9 (the window's caption; decoder rows, time) · DEC-76 rule 1 amended (the payload) · the epic
+      review's two verified importants on <code>c90ec373</code>: the caption's format held by a writer
+      (<code>bodyPayload</code>) and a regex (<code>captionParts</code>); <code>Date.UTC</code> mapping years 0–99 to
+      1900–1999.
+    </p>
+
+    <h2 id="changes">What changes</h2>
+    <table data-c="changes">
+      <thead><tr><th>Where</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src/dataWindow.ts</code></td><td><code>DataPayload.heading?: Heading</code>; the frame's caption
+          JSON carries it when present; <code>unframePayload</code> drops one that is not five strings;
+          <code>queryCount</code> moves here from <code>body.ts</code></td></tr>
+        <tr><td><code>ui/src/body.ts</code></td><td><code>bodyPayload</code> builds the heading from the flow and writes the
+          title from it; <code>captionParts</code> and its regex are deleted</td></tr>
+        <tr><td><code>ui/src/DataWindowScreen.tsx</code></td><td><code>Caption</code> takes <code>title</code> and
+          <code>heading</code>; the drawn header is unchanged</td></tr>
+        <tr><td><code>ui/src-tauri/src/data_window.rs</code></td><td><code>Caption.heading:
+          Option&lt;serde_json::Value&gt;</code>, skipped when absent — relayed, never read</td></tr>
+        <tr><td><code>ui/src/timeDecoder.ts</code></td><td>both <code>Date.UTC</code> calls become one
+          <code>setUTCFullYear</code>-based helper</td></tr>
+        <tr><td><code>ui/e2e/specs/data-window.spec.ts</code></td><td>J1 asserts the header drew the heading through the real
+          shell; <code>showResponseOf</code> retries its two radio picks, since the detail pane's re-render after a row
+          click could detach the lookup's parent (J4 failed on it twice in four runs)</td></tr>
+        <tr><td>the data window's decision record</td><td>renumbered DEC-75 → DEC-76: E-GATEPAR2 landed DEC-75 on
+          <code>main</code> first; every citation follows, as in W9</td></tr>
+        <tr><td><code>ui/src-tauri/tests/data_window.rs</code></td><td>moves into <code>tests/suite/</code> as a module of the
+          crate's one suite binary, the layout E-GATEPAR2 landed</td></tr>
+        <tr><td><code>docs/decisions/dec-76-the-data-window.html</code> + index</td><td>rule 1: the payload is
+          <code>{key, title, bytes, typeHint?, heading?}</code>; the heading is what the opener asks the header to show, the
+          title its caption — the window parses neither</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>Case</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td><code>bodyPayload</code> for POST <code>https://www.example.com/ajax/x?a=1&amp;b=%3A&amp;c</code></td>
+          <td>title as today; heading <code>{what: "request body", method: "POST", host: "www.example.com", path:
+          "/ajax/x", query: "?a=1&amp;b=%3A&amp;c"}</code>; CONNECT <code>example.com:443</code> → empty path and query</td></tr>
+        <tr><td>a payload with a heading, framed and unframed in TS and in Rust</td><td>the heading survives both relays
+          byte-for-byte; a malformed heading is dropped, the payload kept</td></tr>
+        <tr><td>a data window opened with a title that looks like a request but no heading</td><td>the plain title, one
+          line — no method label</td></tr>
+        <tr><td><code>0050-06-15T12:00:00Z</code> at UTC</td><td>local <code>0050-06-15 12:00:00 +00:00</code></td></tr>
+        <tr><td><code>0000-02-29</code></td><td>read as a date, <code>0000-02-29, Tuesday</code>, not refused</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>Test</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>unit (red first)</td><td><code>body.test.ts</code> · <code>dataWindow.test.ts</code> ·
+          <code>timeDecoder.test.ts</code> · <code>data_window.rs</code> tests</td><td>bodyPayload's heading (and CONNECT);
+          the TS frame round-trips a heading and drops a malformed one; Rust <code>unframe</code>/<code>frame</code> relay it
+          unchanged; years 0050 and 0000-02-29</td></tr>
+        <tr><td>integration (red first)</td><td><code>DataWindowScreen.test.tsx</code> ·
+          <code>ui/src-tauri/tests/data_window.rs</code></td><td>the header draws method, host, path and parameter count
+          from the heading, and the plain title without one — even a title in the request shape; the shell parks and hands
+          back a heading-bearing payload intact</td></tr>
+        <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> — J1's header through the real shell</td><td>the opened
+          window's header still shows the method and host the pane's flow has (the heading crossed the real shell)</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

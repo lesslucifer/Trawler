@@ -50,10 +50,24 @@ async function showResponseOf(path: string, mode: "raw" | "pretty") {
     { timeout: 15_000, timeoutMsg: `no flow row for ${path}` },
   );
   await row!.click();
-  await $('[data-testid="detail"] header [role="radiogroup"]').$("button=response").click();
-  const toggle = $(`${RESPONSE_PANE} [role="radiogroup"]`).$(`button=${mode}`);
-  await toggle.waitForExist({ timeout: 15_000 });
-  await toggle.click();
+  await pickWhenSettled(() => $('[data-testid="detail"] header [role="radiogroup"]').$("button=response"), "the response leg");
+  await pickWhenSettled(() => $(`${RESPONSE_PANE} [role="radiogroup"]`).$(`button=${mode}`), `the ${mode} mode`);
+}
+
+// The detail pane re-renders after a row click, so a lookup chained off it can
+// land on a detached parent; picking a radio again is harmless, so retry.
+async function pickWhenSettled(option: () => ReturnType<typeof $>, what: string) {
+  await browser.waitUntil(
+    async () => {
+      try {
+        await option().click();
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    { timeout: 15_000, timeoutMsg: `could not pick ${what}` },
+  );
 }
 
 const dataWindows = async () => (await browser.getWindowHandles()).filter((handle) => handle.startsWith("data-"));
@@ -248,6 +262,8 @@ describe("UC-9 — work with a piece of data in its own window", () => {
     const title = `response body · raw · GET ${new URL(ports.origin).host}${LONG_JSON}`;
     expect(await windowTitle()).toBe(title);
     expect(await $("h1").getAttribute("aria-label")).toBe(title);
+    expect((await $("//h1/preceding-sibling::p").getText()).toLowerCase()).toBe("response body · raw");
+    expect(await $("h1").$("span=GET").isExisting()).toBe(true);
     await recordClipboard();
     expect(await copyOnScreen()).toBe(served);
   });

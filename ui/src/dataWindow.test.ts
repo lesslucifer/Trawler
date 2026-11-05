@@ -4,6 +4,7 @@ import {
   dataWindowLabel,
   isDataWindow,
   framePayload,
+  queryCount,
   openDataWindow,
   openInBrowser,
   PAYLOAD_REGISTRY,
@@ -34,6 +35,26 @@ test("a framed payload reads back as itself, with or without a type hint", () =>
   const bare: DataPayload = { key: "k", title: "t", bytes: new Uint8Array([1, 2]) };
   expect(unframePayload(framePayload(payload("k")))).toEqual(payload("k"));
   expect(unframePayload(framePayload(bare))).toEqual(bare);
+});
+
+test("a heading rides the frame and reads back as itself", () => {
+  const heading = { what: "request body", method: "POST", host: "example.com", path: "/a", query: "?b=1" };
+  expect(unframePayload(framePayload({ ...payload("k"), heading }))).toEqual({ ...payload("k"), heading });
+});
+
+test("a heading that is not five strings is dropped, the payload kept", () => {
+  const json = new TextEncoder().encode(JSON.stringify({ key: "k", title: "t", heading: { what: "w", method: 1 } }));
+  const framed = new Uint8Array(4 + json.length + 1);
+  new DataView(framed.buffer).setUint32(0, json.length);
+  framed.set(json, 4);
+  framed.set([7], 4 + json.length);
+  expect(unframePayload(framed)).toEqual({ key: "k", title: "t", bytes: new Uint8Array([7]) });
+});
+
+test("counts the query's parameters, empty ones not", () => {
+  expect(queryCount("?a=1&b=%3A&c")).toBe(3);
+  expect(queryCount("?a=1&&")).toBe(1);
+  expect(queryCount("")).toBe(0);
 });
 
 test("the frame is a big-endian caption length, the caption as JSON, then the bytes", () => {

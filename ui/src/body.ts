@@ -1,5 +1,5 @@
 import type { BodyFetch, BodyView, FlowView, Leg } from "./api";
-import type { DataPayload } from "./dataWindow";
+import type { DataPayload, Heading } from "./dataWindow";
 
 // Content-type → renderer dispatch, the core UC-5 contract. Decoded bodies
 // dispatch on the served content type; raw bodies sniff bytes (rawKind),
@@ -351,31 +351,14 @@ function pickThroughInput(extensions: string[]): Promise<ChosenFile | null> {
 export function bodyPayload(flow: FlowView, leg: Leg, fetched: BodyFetch, pretty: boolean): DataPayload {
   const mode = pretty ? "pretty" : "raw";
   const where = flow.uri.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+  const [, host, path, query] = /^([^/?#]*)([^?#]*)(.*)$/s.exec(where)!;
+  const heading: Heading = { what: `${leg} body${pretty ? "" : " · raw"}`, method: flow.method, host, path, query };
   const payload: DataPayload = {
     key: `${flow.id}:${leg}:${mode}`,
-    title: `${leg} body${pretty ? "" : " · raw"} · ${flow.method} ${where}`,
+    title: `${heading.what} · ${flow.method} ${where}`,
+    heading,
     bytes: fetched.bytes,
   };
   if (pretty && fetched.contentType) payload.typeHint = fetched.contentType;
   return payload;
-}
-
-export interface CaptionParts {
-  what: string;
-  target?: { method: string; host: string; path: string; query: string };
-}
-
-const CAPTION_SEPARATOR = " · ";
-const CAPTION_TARGET = /^([A-Z]+) ([^/?#\s]+)([^?#\s]*)(\S*)$/;
-
-export function captionParts(caption: string): CaptionParts {
-  const at = caption.lastIndexOf(CAPTION_SEPARATOR);
-  const target = at < 0 ? null : CAPTION_TARGET.exec(caption.slice(at + CAPTION_SEPARATOR.length));
-  if (!target) return { what: caption };
-  const [, method, host, path, query] = target;
-  return { what: caption.slice(0, at), target: { method, host, path, query } };
-}
-
-export function queryCount(query: string): number {
-  return query.replace(/^\?/, "").split("&").filter(Boolean).length;
 }

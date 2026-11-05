@@ -1,4 +1,4 @@
-// The data window (DEC-75). The shell only creates or focuses the window and
+// The data window (DEC-76). The shell only creates or focuses the window and
 // relays the opener's payload to it by value; it reads nothing inside the bytes.
 
 use std::collections::HashMap;
@@ -29,6 +29,8 @@ pub struct Caption {
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub type_hint: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub heading: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -181,6 +183,7 @@ mod tests {
                 key: key.into(),
                 title: format!("title of {key}"),
                 type_hint: Some("application/json".into()),
+                heading: None,
             },
             bytes: bytes.to_vec(),
         }
@@ -219,6 +222,20 @@ mod tests {
         let framed = frame(&original);
         assert!(!String::from_utf8_lossy(&framed).contains("typeHint"));
         assert_eq!(unframe(&framed), Ok(original));
+    }
+
+    #[test]
+    fn a_heading_is_relayed_unread() {
+        let heading = r#"{"what":"request body","method":"POST","host":"example.com","path":"/a","query":"?b=1"}"#;
+        let caption = format!(r#"{{"key":"k","title":"t","heading":{heading}}}"#);
+        let mut framed = u32::try_from(caption.len()).unwrap().to_be_bytes().to_vec();
+        framed.extend_from_slice(caption.as_bytes());
+        framed.extend_from_slice(b"BODY");
+        let relayed = frame(&unframe(&framed).unwrap());
+        let length = u32::from_be_bytes(relayed[..4].try_into().unwrap()) as usize;
+        let caption: serde_json::Value = serde_json::from_slice(&relayed[4..4 + length]).unwrap();
+        assert_eq!(caption["heading"], serde_json::from_str::<serde_json::Value>(heading).unwrap());
+        assert_eq!(&relayed[4 + length..], b"BODY");
     }
 
     #[test]

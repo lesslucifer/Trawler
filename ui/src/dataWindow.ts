@@ -1,13 +1,32 @@
 import { invoke, type InvokeArgs } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-// The data window's whole input (DEC-75): what the opener holds, by value. The
-// window learns nothing else about where the data came from.
+// The data window's whole input (DEC-76): what the opener holds, by value. The
+// window learns nothing else about where the data came from, and parses neither
+// the title nor the heading - each is drawn as the opener wrote it.
+export interface Heading {
+  what: string;
+  method: string;
+  host: string;
+  path: string;
+  query: string;
+}
+
 export interface DataPayload {
   key: string;
   title: string;
   bytes: Uint8Array;
   typeHint?: string;
+  heading?: Heading;
+}
+
+const HEADING_PARTS = ["what", "method", "host", "path", "query"] as const;
+
+const isHeading = (value: unknown): value is Heading =>
+  typeof value === "object" && value !== null && HEADING_PARTS.every((part) => typeof (value as Record<string, unknown>)[part] === "string");
+
+export function queryCount(query: string): number {
+  return query.replace(/^\?/, "").split("&").filter(Boolean).length;
 }
 
 type Caption = Omit<DataPayload, "bytes">;
@@ -23,8 +42,8 @@ export function dataWindowLabel(key: string): string {
 }
 
 export function framePayload({ bytes, ...caption }: DataPayload): Uint8Array {
-  const { key, title, typeHint } = caption;
-  const json = new TextEncoder().encode(JSON.stringify(typeHint === undefined ? { key, title } : { key, title, typeHint }));
+  const { key, title, typeHint, heading } = caption;
+  const json = new TextEncoder().encode(JSON.stringify({ key, title, typeHint, heading }));
   const framed = new Uint8Array(LENGTH_BYTES + json.length + bytes.length);
   new DataView(framed.buffer).setUint32(0, json.length);
   framed.set(json, LENGTH_BYTES);
@@ -45,6 +64,10 @@ export function unframePayload(framed: Uint8Array): DataPayload | null {
   if (typeof caption?.key !== "string" || typeof caption.title !== "string") return null;
   const payload: DataPayload = { key: caption.key, title: caption.title, bytes: framed.slice(LENGTH_BYTES + length) };
   if (typeof caption.typeHint === "string") payload.typeHint = caption.typeHint;
+  if (isHeading(caption.heading)) {
+    const { what, method, host, path, query } = caption.heading;
+    payload.heading = { what, method, host, path, query };
+  }
   return payload;
 }
 
@@ -100,7 +123,7 @@ export function isDataWindow(self: Window = window): boolean {
 type Take = () => Promise<DataPayload | null>;
 const claims = new WeakMap<Take, Promise<DataPayload | null>>();
 
-// The payload is claimed exactly once (DEC-75 rule 2), and a second claim answers
+// The payload is claimed exactly once (DEC-76 rule 2), and a second claim answers
 // null — so a screen that mounts twice must share the first claim's answer.
 export function claimOnce(take: Take = takeDataPayload): Promise<DataPayload | null> {
   let claim = claims.get(take);

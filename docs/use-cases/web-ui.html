@@ -1437,8 +1437,8 @@ the client lacks the certificate"]
 
     <h2 id="uc-9">UC-9 — Work with a piece of data in its own window</h2>
     <div data-c="uc-9-contract">
-      <p>Any component holding data opens a <strong>data window</strong> with <code>{key, title, bytes, typeHint?}</code>
-      (<a href="../decisions/dec-75-the-data-window.html">DEC-75</a>, <span class="badge id">E-INSPWIN</span>). The window
+      <p>Any component holding data opens a <strong>data window</strong> with <code>{key, title, bytes, typeHint?, heading?}</code>
+      (<a href="../decisions/dec-76-the-data-window.html">DEC-76</a>, <span class="badge id">E-INSPWIN</span>). The window
       renders the data whole, with no cap, and works on a <strong>working copy</strong>: the bytes handed in are the
       <strong>original</strong> and never change. It knows nothing of flows and calls no API, and nothing it does reaches
       the opener, the capture or the core. <code>BodyViewer</code> is the first opener (<a href="#uc-5">UC-5</a>).</p>
@@ -1459,7 +1459,9 @@ flowchart LR
     <table data-c="uc-9-acts">
       <thead><tr><th>A user does</th><th>What they get</th></tr></thead>
       <tbody>
-        <tr><td>opens data</td><td>a native window titled by the opener's caption. The kind is detected from the
+        <tr><td>opens data</td><td>a native window titled by the opener's caption; its header draws the opener's heading
+          when one is handed (a body's: the leg, then method, host, path, query and its parameter count), else the caption
+          whole. The kind is detected from the
           type hint, else sniffed: JSON · form · XML · text · hex · image; <em>treat the data as</em> in the status bar
           overrides it, which says <em>detected from …</em>. Data windows share one remembered size and place, the last
           moved one's</td></tr>
