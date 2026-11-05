@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU ci-yml -> epic/ci"
+epic: E-CI
+wu: E-CI.W1
+branch: wu/ci/ci-yml
+base: 30f3eabedc1e65057a237fa2cb640eaddfb22471
+head: ca050e422f7cc9579f565238741abca952c2052f
+diff_sha256: 1e74089c9bb88d97d55175bea1d35992a2d98c2beb4e7d4e21aefc5cb726d5b6
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 7
+  stage_seconds:
+    gate0: 22
+    finders: 70
+    verifiers: 60
+  by_finder:
+    correctness: { found: 8, verified: 0 }
+    efficiency: { found: 2, verified: 1 }
+findings: { found: 10, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-05
