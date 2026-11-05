@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 619c38f1c13d4d57ea429ae2bde48e4475b200da
+base: 3425d21f44ec7fd4f0c78c22e2010c31da20fb60
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-suite-cost-result.html
+report_sha256: a24981cf0d00a8058a308ef85dd58b8facb5cf66c7eb881b5bc35189ad8fe7c0
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECTWgle4x82j6meFh40WCs+8FqjrpiIkD+omV1FjLxilgh1fQ1aYQ0w/i
+  I0jaDX1Ba3bB+dpuFlCNeEDhJVKegP
+  -----END SSH SIGNATURE-----
