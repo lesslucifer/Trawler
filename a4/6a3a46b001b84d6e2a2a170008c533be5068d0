@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU gate-parity2/launch-guard -> epic/gate-parity2"
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W3
+branch: wu/gate-parity2/launch-guard
+base: 5bf2d86bc9d31a93ebca3f4a936941d08e31a094
+head: a46a3a46b001b84d6e2a2a170008c533be5068d0
+diff_sha256: 39fcba7477485f353a648434310c44937d610c125b956cef83c494fa83f0f623
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 2
+  stage_seconds:
+    finders: 25
+    total: 93
+  by_finder:
+    correctness: { found: 3, verified: 2 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 1, verified: 1 }
+findings: { found: 4, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "a slow machine relinks the probe and waits the 2 s threshold on every marker miss"
+    waived: "deliberate and recorded in DEC-75: a slow verdict is never cached so enabling Developer Tools takes effect at once; the cost is bounded to the link plus 2 s and only while the machine stays slow"
+  - finding: "the fast verdict is per boot, not per responsible process, and the unknown-boot fallback never expires"
+    waived: "the Developer Tools grant is per terminal, but a fast verdict from one parent for the boot is the accepted granularity (DEC-75 rejects probing every run); the fallback applies only where neither /proc boot_id nor kern.boottime exists, platforms without Gatekeeper"
+verdict: FAIL
+date: 2026-11-05
