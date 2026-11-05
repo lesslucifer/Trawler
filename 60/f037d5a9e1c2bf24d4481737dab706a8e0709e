@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W7
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-inspect-window-v2-w7-html-preview-plan.html"
+    tier: T3
+    action: added
+    distills: "the W7 requirement, mapping, expected rows and test plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w7-html-preview-result.html"
+    tier: T3
+    action: added
+    distills: "the W7 outcome, deviations, evidence and follow-ups"
+t2_waived: "UC-9 html text, the shift-cmd-V rulebook row and DEC-80's built status are W9's distillation per the epic plan"
