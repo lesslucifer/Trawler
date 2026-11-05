@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 use std::io::Write;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use axum::extract::{Query, State};
 use axum::http::header;
@@ -26,6 +26,7 @@ mod front;
 
 #[derive(Clone)]
 struct Control {
+    beacon: Arc<Mutex<Vec<String>>>,
     proxy_url: String,
     origin_url: String,
     trawler_ca_pem: String,
@@ -65,8 +66,24 @@ async fn main() {
         axum_server::tls_rustls::RustlsConfig::from_pem(leaf_pem.into_bytes(), leaf_key_pem.into_bytes())
             .await
             .unwrap();
+    let beacon_hits = Arc::new(Mutex::new(Vec::new()));
+    let beacon_listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let beacon_origin = format!("http://{}", beacon_listener.local_addr().unwrap());
+    let beacon_origin_for_ports = beacon_origin.clone();
+    let recorded = Arc::clone(&beacon_hits);
+    tokio::spawn(async move {
+        let app = Router::new().fallback(move |uri: axum::http::Uri| {
+            recorded.lock().unwrap().push(uri.to_string());
+            async { "beacon" }
+        });
+        let _ = axum::serve(beacon_listener, app).await;
+    });
+
     tokio::spawn(async move {
         let app = Router::new()
+            .route("/page", get(preview_page))
+            .route("/link/{by}", get(preview_link))
+            .with_state(beacon_origin)
             .route("/", get(|| async { "hello from origin" }))
             .route("/json", get(json_body))
             .route("/br", get(brotli_json_body))
@@ -76,6 +93,12 @@ async fn main() {
             .route("/long-json", get(long_json_body))
             .route("/long-form", get(long_form_body))
             .route("/headers", get(long_headers_body))
+            .route("/wire", get(wire_body))
+            .route("/plain-json", get(plain_json_body))
+            .route("/octet-html", get(octet_html_body))
+            .route("/oops", get(oops_body))
+            .route("/app.js", get(minified_script_body))
+            .route("/find-json", get(find_json_body))
             .route("/missing", get(not_found_body))
             .route("/boom", get(server_error_body))
             .route("/echo", any(echo_headers));
@@ -109,6 +132,7 @@ async fn main() {
 
     let stop = Arc::new(Notify::new());
     let control_state = Control {
+        beacon: beacon_hits,
         proxy_url: format!("http://{}", server.proxy_addr),
         origin_url: format!("https://localhost:{origin_port}/"),
         trawler_ca_pem,
@@ -120,6 +144,8 @@ async fn main() {
     tokio::spawn(async move {
         let app = Router::new()
             .route("/hit", get(hit))
+            .route("/beacon", get(beacon_requests))
+            .route("/beacon/reset", get(beacon_reset))
             .route("/stop", get(stop_handler))
             .route("/kill", get(kill_handler))
             .route("/front", get(front_mode))
@@ -135,6 +161,7 @@ async fn main() {
         "control": format!("http://{control_addr}"),
         "closed": format!("http://127.0.0.1:{closed_port}/"),
         "front": format!("http://{front_addr}"),
+        "beacon": beacon_origin_for_ports,
     });
     println!("{ports}");
 
@@ -328,6 +355,15 @@ async fn front_reach(
     "front-ok"
 }
 
+async fn beacon_requests(State(ctrl): State<Control>) -> Json<Vec<String>> {
+    Json(ctrl.beacon.lock().unwrap().clone())
+}
+
+async fn beacon_reset(State(ctrl): State<Control>) -> &'static str {
+    ctrl.beacon.lock().unwrap().clear();
+    "beacon-reset"
+}
+
 async fn stop_handler(State(ctrl): State<Control>) -> &'static str {
     ctrl.stop.notify_one();
     "stopping"
@@ -343,4 +379,71 @@ async fn kill_handler() -> &'static str {
         std::process::exit(0);
     });
     "killing"
+}
+
+// The inspector's long-value shapes in one flow: a 4 KiB cookie on the response,
+// and (with the request's own long URI and Authorization sent by the spec) the
+// rest of what a real session carries.
+async fn wire_body() -> impl IntoResponse {
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+    headers.insert(header::SET_COOKIE, format!("session={}", "c".repeat(4090)).parse().unwrap());
+    (headers, r#"{"wire":"long values"}"#)
+}
+
+async fn plain_json_body() -> impl IntoResponse {
+    ([(header::CONTENT_TYPE, "text/plain")], r#"{"user":{"name":"trawler"},"ok":true}"#)
+}
+
+async fn octet_html_body() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/octet-stream")],
+        "<!doctype html><html><head><title>served as bytes</title></head><body><p>an html page</p></body></html>",
+    )
+}
+
+async fn oops_body() -> impl IntoResponse {
+    ([(header::CONTENT_TYPE, "text/plain")], "{oops")
+}
+
+async fn minified_script_body() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/javascript")],
+        "!function(){var needleAlpha=1,b=2;function neverUsed(e){return e+needleAlpha}console.log(neverUsed(b))}();",
+    )
+}
+
+// Every way a page can reach out, each aimed at the beacon: a script, an image, a
+// stylesheet url() and a meta refresh. None may arrive.
+async fn preview_page(State(beacon): State<String>) -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "text/html")],
+        format!(
+            r#"<!doctype html><html><head><meta http-equiv="refresh" content="1;url={beacon}/refresh"><style>.styled{{color:rgb(200,0,0);font-size:32px;background:url({beacon}/css)}}</style></head><body><p id="styled" class="styled">preview styled text</p><p id="marker">idle</p><script>document.getElementById('marker').textContent='script ran';fetch('{beacon}/script')</script><img src="{beacon}/img"></body></html>"#
+        ),
+    )
+}
+
+// One link that fills the whole frame, so a click on the frame's middle is a click
+// on it: a click that leaves the frame reaches the beacon.
+async fn preview_link(
+    State(beacon): State<String>,
+    axum::extract::Path(by): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    let fill = "display:block;position:fixed;top:0;left:0;width:100%;height:100%";
+    let link = match by.as_str() {
+        "math" => format!(r#"<math href="{beacon}/math" style="{fill}"><mtext>math link</mtext></math>"#),
+        "svg" => format!(
+            r#"<svg style="{fill}"><a xlink:href="{beacon}/svg" href="{beacon}/svg"><rect width="100%" height="100%" fill="gray"/></a></svg>"#
+        ),
+        _ => format!(r#"<a href="{beacon}/anchor" style="{fill}">anchor link</a>"#),
+    };
+    ([(header::CONTENT_TYPE, "text/html")], format!("<!doctype html><html><body>{link}</body></html>"))
+}
+
+async fn find_json_body() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        r#"{"alpha":1,"note":"user name here","user name":"x","omega":2}"#,
+    )
 }
