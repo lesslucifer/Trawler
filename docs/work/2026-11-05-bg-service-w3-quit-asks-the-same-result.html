@@ -55,6 +55,8 @@
         a ✕ whose proxy question resolved empty after the request closed the window under the quit prompt, and a ✕ during the quit prompt could downgrade the quit to a close. Both have tests that fail on the old code; a cancelled quit prompt hands the window back</td></tr>
       <tr><td>—</td><td>a quit request also wins over a once-question answer being stored; a first question that fails cannot leave ✕ locked out</td><td>review round 4: the same in-flight class on the keep-capturing dialog's two answers.
         Tests fail on the old code. Rounds 1 to 4 each found a narrower interleaving of one ✕ and one quit request in the same hook</td></tr>
+      <tr><td>—</td><td>✕ is guarded by two facts, quit answers in flight (a count) and a quit prompt shown, in place of one flag</td><td>review round 5: cancelling one quit prompt while a second
+        request was still answering handed the window back to ✕. The test fails on the old code</td></tr>
       <tr><td>—</td><td><code>@tauri-apps/api/event</code> mocked in <code>App.test.tsx</code></td><td>the hook now listens for the quit
         request, and the App tests mock the Tauri window module already</td></tr>
     </table>
@@ -80,7 +82,7 @@
         <code>take_quit_request</code> answers true once over IPC · <code>quit_stops_core.rs</code> unchanged (the exit event still stops the core)</td></tr>
       <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> green: attached 14 of 14 spec files, owned 1 of 1. The harness reads the real config dir, where <code>keep-capturing.json</code> already read on: the first run failed in <code>sticky.spec.ts</code> because destroying the main window then leaves the app windowless. The file was moved aside for the second run and restored</td></tr>
       <tr><td>suite</td><td><code>cargo xtask gate0</code> green (1285 passed, 2 skipped) · the whole vitest suite green (99 files, 61 455) · eslint · <code>tsc -b</code></td></tr>
-      <tr><td>commits</td><td>plan <code>0ce71b86</code> · shell <code>1a8682bd</code> · window <code>ab3da4e9</code> · decisions <code>2defbd69</code> · listener-before-take fix <code>1c498c1e</code> · round 2 fixes <code>c64d35ab</code> · round 3 fix <code>5a6ba89b</code> · round 4 fix <code>dc88a0c9</code> · this report</td></tr>
+      <tr><td>commits</td><td>plan <code>0ce71b86</code> · shell <code>1a8682bd</code> · window <code>ab3da4e9</code> · decisions <code>2defbd69</code> · listener-before-take fix <code>1c498c1e</code> · round 2 fixes <code>c64d35ab</code> · round 3 fix <code>5a6ba89b</code> · round 4 fix <code>dc88a0c9</code> · round 5 fix <code>b9d3e14d</code> · this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
@@ -96,6 +98,9 @@
     <table data-item="follow-ups">
       <tr><th>Owner</th><th>Item</th></tr>
       <tr><td>W7</td><td><code>background.spec.ts</code> J1 · J2 drive ✕, the once-question, ⌘Q and the menu-bar's Quit through the real window</td></tr>
+      <tr><td>—</td><td>known and not fixed (round 5, nit): a quit request that reaches the shell while the main window is being destroyed is announced to a dying window, so
+        <code>quit_requested</code> stays set and the next window opened takes it and starts a quit nobody just asked for. The window is the width of one <code>destroy()</code>; a fix belongs in the shell
+        (clear the flag when the main window is destroyed unanswered)</td></tr>
       <tr><td>W7</td><td>the e2e harness should run on its own config dir: <code>CONFIG_DIR</code> in <code>layout.ts</code> is the real one, so a machine whose switch is on fails the quit helper</td></tr>
       <tr><td>—</td><td>an e2e helper that raises the real close request (<code>quit.ts</code> destroys the window, which skips the check by design)</td></tr>
     </table>
