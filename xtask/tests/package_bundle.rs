@@ -83,6 +83,7 @@ fn a_package_is_ad_hoc_signed_and_its_binary_captures_under_a_launcher_env() {
     let verified =
         Command::new("codesign").args(["--verify", "--deep", "--strict"]).arg(&app).status();
     assert!(verified.unwrap().success(), "codesign --verify --deep --strict {}", app.display());
+    assert!(app.join("Contents/Library/LaunchAgents/dev.trawler.app.plist").is_file());
     let dmgs = std::fs::read_dir(bundle.join("dmg")).unwrap().flatten();
     assert!(dmgs.into_iter().any(|e| e.path().extension().is_some_and(|ext| ext == "dmg")));
 
@@ -97,6 +98,18 @@ fn a_package_is_ad_hoc_signed_and_its_binary_captures_under_a_launcher_env() {
     assert!(through_proxy.starts_with("HTTP/1.1 200"), "{through_proxy}");
     assert!(captured(api), "GET /flows never listed {CAPTURED_PATH}");
     core.stop();
+}
+
+// The registering half is the user's step: SMAppService answers only to the running .app.
+#[test]
+fn after_the_login_item_is_unticked_background_task_management_lists_nothing() {
+    if std::env::var_os("TRAWLER_BTM_UNTICKED").is_none() {
+        return;
+    }
+    let dump = Command::new("sfltool").arg("dumpbtm").output().unwrap();
+    assert!(dump.status.success(), "sfltool dumpbtm");
+    let dump = String::from_utf8_lossy(&dump.stdout);
+    assert!(!dump.contains("dev.trawler.app"), "sfltool dumpbtm still lists dev.trawler.app");
 }
 
 fn only_executable(app: &Path) -> PathBuf {

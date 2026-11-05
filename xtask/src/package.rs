@@ -110,6 +110,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let artifacts = artifacts(&bundle_dir)?;
     if os == Os::MacOs {
         for app in artifacts.iter().filter(|path| path.extension().is_some_and(|e| e == "app")) {
+            verify_login_agent(app)?;
             verify_signature(app)?;
         }
     }
@@ -168,6 +169,16 @@ fn is_artifact(path: &Path) -> bool {
     [".app", ".dmg", ".msi", "-setup.exe", ".deb", ".rpm", ".AppImage"]
         .iter()
         .any(|suffix| name.ends_with(suffix))
+}
+
+const LOGIN_AGENT: &str = "Contents/Library/LaunchAgents/dev.trawler.app.plist";
+
+fn verify_login_agent(app: &Path) -> Result<(), String> {
+    if app.join(LOGIN_AGENT).is_file() {
+        Ok(())
+    } else {
+        Err(format!("{} lacks {LOGIN_AGENT}, the login item SMAppService registers", app.display()))
+    }
 }
 
 fn verify_signature(app: &Path) -> Result<(), String> {
@@ -261,6 +272,18 @@ mod tests {
 
     fn argv(plan: &Plan) -> String {
         format!("{} {}", plan.program, plan.args.join(" "))
+    }
+
+    #[test]
+    fn an_app_without_the_login_agent_plist_is_named() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = dir.path().join("Trawler.app");
+        let refused = verify_login_agent(&app).unwrap_err();
+        assert!(refused.contains("Trawler.app") && refused.contains(LOGIN_AGENT), "{refused}");
+        let plist = app.join(LOGIN_AGENT);
+        std::fs::create_dir_all(plist.parent().unwrap()).unwrap();
+        std::fs::write(plist, "").unwrap();
+        assert!(verify_login_agent(&app).is_ok());
     }
 
     #[test]
