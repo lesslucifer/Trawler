@@ -1,0 +1,30 @@
+schema: doc/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W8
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-76-the-data-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 12: find is a chip bar, the live draft, the union of chips, dash a fault, refused chips, the keys per kind"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w8-find-chip-bar-plan.html"
+    tier: T3
+    action: added
+    distills: "the W8 requirement, mapping, expected rows and test plan"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w8-find-chip-bar-result.html"
+    tier: T3
+    action: added
+    distills: "the W8 outcome, deviations, evidence and follow-ups"
+  - path: "docs/work/components/chip-box.html"
+    tier: T3
+    action: archived
+    distills: "the ChipBox component design, retired into ChipBox.tsx's TSDoc (@tier @use @avoid @states @madeof) and DEC-76 rule 12 (DEC-16)"
+    distilled_to: ["docs/decisions/dec-76-the-data-window.html"]
+  - path: "docs/work/2026-11-05-data-window-kinds-design-run.html"
+    tier: T3
+    action: updated
+    distills: "the ChipBox citation no longer links the retired design file"
+  - path: "docs/work/2026-11-05-inspect-window-v2-w3-data-window-kinds-design-result.html"
+    tier: T3
+    action: updated
+    distills: "the ChipBox citation no longer links the retired design file"
