@@ -291,12 +291,14 @@ describe("every read a close waits on is bounded", () => {
 
 function shellDeps(
   status: "ours" | "foreign" | "none" | "unknown",
-  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean } = {},
+  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean } = {},
 ) {
   const f = fakeDeps(status);
   let keep: KeepCapturing = shell.keep ?? "off";
   let pending = shell.quitPending ?? false;
   let announce = () => {};
+  let listening: () => void = () => {};
+  const listenStands = new Promise<void>((resolve) => (listening = resolve));
   const invoke = vi.fn(async (cmd: string, args?: Record<string, unknown>) => {
     if (cmd === "keep_capturing_read" || cmd === "tray_available") {
       if (shell.unreadable) throw new Error("no shell");
@@ -319,6 +321,7 @@ function shellDeps(
     invoke: invoke as never,
     listen: async (_event: string, handler: () => void) => {
       announce = handler;
+      if (shell.holdListen) await listenStands;
       return () => {};
     },
   };
@@ -330,6 +333,7 @@ function shellDeps(
     invoke,
     proxyReads,
     ran,
+    registerListener: () => act(async () => listening()),
     announce: () => act(async () => announce()),
     request: async () => {
       pending = true;
@@ -498,6 +502,16 @@ describe("a quit request", () => {
     await waitFor(() => expect(f.ran("quit_app")).toBe(true));
     await f.announce();
     expect(f.invoke.mock.calls.filter(([cmd]) => cmd === "quit_app")).toHaveLength(1);
+  });
+
+  test("a request that lands before the listener stands is taken once it does", async () => {
+    const f = shellDeps("none", { keep: "on", holdListen: true });
+    shellConfirm(f);
+    await act(async () => {});
+    expect(f.ran("take_quit_request")).toBe(false);
+    await f.request();
+    await f.registerListener();
+    await waitFor(() => expect(f.ran("quit_app")).toBe(true));
   });
 
   test("a quit request while the once-question is open drops it and checks", async () => {

@@ -186,12 +186,15 @@ export function useProxyCloseConfirm(
       })
       .then((u) => (disposed ? u() : (unlisten = u)));
 
-    void takeQuitRequest();
-    deps
-      .listen?.(QUIT_REQUEST_EVENT, () => void takeQuitRequest())
-      .then((u) => (disposed ? u() : (unlistenQuit = u)))
+    // The flag is taken only once the listener stands: a request that lands in
+    // between would otherwise be set, announced to nobody, and never taken.
+    (deps.listen?.(QUIT_REQUEST_EVENT, () => void takeQuitRequest()) ?? Promise.resolve(undefined))
+      .then((u) => (disposed ? u?.() : (unlistenQuit = u)))
       .catch((err: unknown) => {
         console.error("listening for quit requests failed:", err);
+      })
+      .then(() => {
+        if (!disposed) void takeQuitRequest();
       });
 
     return () => {
