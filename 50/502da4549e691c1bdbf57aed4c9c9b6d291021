@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W2
+branch: HEAD
+tests:
+  unit: { count: 30, covers: "pre-push refspec parsing keeps heads and tags and drops deletions and notes; a tree equal to the clean HEAD's is proven by this checkout, a dirty worktree sends every tree to a scratch proof, distinct trees are proven once; a red push verdict carries the refusal and green passes through; gate0 push is a gated entrypoint" }
+  integration: { count: 35, covers: "the real pre-push hands its refspecs to gate0 push and names no blind suite, a red Gate 0 refuses the push with the bare remote empty, the range check and notes sync still run; the real xtask gate0 push spawns nothing for a proven clean HEAD, runs the checks inside target/push-proof for another tree or a dirty HEAD and leaves one worktree, refuses red with no scratch left, installs the UI packages in the scratch before fmt, and spawns nothing for a notes/deletions-only push" }
+  e2e: { waived: "the epic e2e (E-GATEPAR2.W5) pushes a green merge and an unproven sha through the real hooks and the real suite; this WU's contract is pinned at the hook seam and the spawned process" }
