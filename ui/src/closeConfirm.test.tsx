@@ -291,7 +291,7 @@ describe("every read a close waits on is bounded", () => {
 
 function shellDeps(
   status: "ours" | "foreign" | "none" | "unknown",
-  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean; holdReads?: boolean; holdStatus?: boolean; holdWrite?: boolean } = {},
+  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean; holdReads?: boolean; holdStatus?: boolean; holdWrite?: boolean; holdSecondStatus?: boolean } = {},
 ) {
   const f = fakeDeps(status);
   let keep: KeepCapturing = shell.keep ?? "off";
@@ -302,6 +302,9 @@ function shellDeps(
   let releaseStatus: () => void = () => {};
   const statusReleased = new Promise<void>((resolve) => (releaseStatus = resolve));
   let statusHeld = false;
+  let statusCalls = 0;
+  let releaseSecond: () => void = () => {};
+  const secondReleased = new Promise<void>((resolve) => (releaseSecond = resolve));
   let releaseWrite: () => void = () => {};
   const writeReleased = new Promise<void>((resolve) => (releaseWrite = resolve));
   const readsReleased = new Promise<void>((resolve) => (releasing = resolve));
@@ -312,6 +315,7 @@ function shellDeps(
       if (shell.holdReads) await readsReleased;
       return cmd === "tray_available" ? (shell.tray ?? true) : keep;
     }
+    if (cmd === "proxy_status" && shell.holdSecondStatus && ++statusCalls === 2) await secondReleased;
     if (cmd === "proxy_status" && shell.holdStatus && !statusHeld) {
       statusHeld = true;
       await statusReleased;
@@ -349,6 +353,7 @@ function shellDeps(
     ran,
     releaseReads: () => releasing(),
     releaseStatus: () => releaseStatus(),
+    releaseSecondStatus: () => releaseSecond(),
     releaseWrite: () => releaseWrite(),
     registerListener: () => act(async () => listening()),
     announce: () => act(async () => announce()),
@@ -592,6 +597,22 @@ describe("a quit request", () => {
     const preventDefault = await closeAndWait(f);
     expect(preventDefault).toHaveBeenCalledOnce();
     expect(result.current.asking).toBe(false);
+    await act(async () => result.current.quit(false));
+    expect(f.ran("quit_app")).toBe(true);
+    expect(f.destroy).not.toHaveBeenCalled();
+  });
+
+  test("cancelling one quit prompt does not hand the window back while a second request is still answering", async () => {
+    const f = shellDeps("ours", { keep: "on", holdSecondStatus: true });
+    const { result } = shellConfirm(f);
+    await f.request();
+    await waitFor(() => expect(result.current.prompt).not.toBeNull());
+    await f.request();
+    act(() => result.current.cancel());
+    expect(await closeAndWait(f)).toHaveBeenCalledOnce();
+    f.releaseSecondStatus();
+    await waitFor(() => expect(result.current.prompt).not.toBeNull());
+    expect(await closeAndWait(f)).toHaveBeenCalledOnce();
     await act(async () => result.current.quit(false));
     expect(f.ran("quit_app")).toBe(true);
     expect(f.destroy).not.toHaveBeenCalled();

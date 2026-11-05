@@ -111,7 +111,8 @@ export function useProxyCloseConfirm(
   const [asking, setAsking] = useState(false);
   const ending = useRef<RequestKind>("close");
   const quitRequests = useRef(0);
-  const quitPrompting = useRef(false);
+  const quitsAnswering = useRef(0);
+  const quitPromptShown = useRef(false);
   const question = useRef<() => Promise<QuitPrompt | null>>(async () => null);
 
   // A window that refuses to close is not something the user can act on from a
@@ -158,18 +159,17 @@ export function useProxyCloseConfirm(
       setAsking(false);
       quitRequests.current += 1;
       ending.current = "quit";
-      quitPrompting.current = true;
-      let prompting = false;
+      quitsAnswering.current += 1;
       try {
         const asked = await firstQuestion();
         if (asked === null) {
           await quitApp();
         } else {
-          prompting = true;
+          quitPromptShown.current = true;
           setPrompt(asked);
         }
       } finally {
-        if (!prompting) quitPrompting.current = false;
+        quitsAnswering.current -= 1;
       }
     };
 
@@ -183,7 +183,7 @@ export function useProxyCloseConfirm(
         // A quit request owns the window from the moment it arrives: a ✕ that
         // started before it, or lands while its prompt is open, only leaves
         // the window as it is.
-        if (quitPrompting.current) {
+        if (quitsAnswering.current > 0 || quitPromptShown.current) {
           e.preventDefault();
           return;
         }
@@ -251,7 +251,7 @@ export function useProxyCloseConfirm(
       return remembered.then(end);
     },
     cancel: () => {
-      quitPrompting.current = false;
+      quitPromptShown.current = false;
       setPrompt(null);
     },
     // The answer is the switch. A write that fails leaves the window open, as a
