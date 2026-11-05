@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-BGSVC
+wu: E-BGSVC.W3
+base: 91cda7c38af82779d82ca3150ba2ce8d8fda542c
+design_sha256: 5753b792c742329228754f4bb1c8bff068a00eec7d3e830c47d908083a62db66
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-05-bg-service-general-design-run.html
+    blob: 38a949adb67281612315b5be2448ba01ce3109cc
+    built: [ui/src/KeepCapturingDialog.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "mounts the once-question beside the existing close dialog and passes it the hook's answers; no layout or copy of its own"
+date: 2026-11-05
