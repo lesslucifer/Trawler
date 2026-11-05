@@ -466,7 +466,10 @@ describe("the once-question", () => {
     await closeAndWait(keeping);
     await act(async () => kept.result.current.keepCapturing());
     expect(keeping.destroy).not.toHaveBeenCalled();
-    expect(kept.result.current.asking).toBe(false);
+    expect(kept.result.current.asking).toBe(true);
+    expect(kept.result.current.keepRefused).toBe("permission denied");
+    act(() => kept.result.current.cancelAsk());
+    expect(kept.result.current.keepRefused).toBeNull();
 
     const quitting = shellDeps("none", { keep: "unanswered", writeFails: true });
     const quit = shellConfirm(quitting);

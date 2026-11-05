@@ -844,7 +844,7 @@ function Shell({
   const close = useProxyCloseConfirm(proxyAddr, readQuitFacts);
   const [notesShown, setNotesShown] = useNotesShown();
   const keepDialog = close.asking && (
-    <KeepCapturingDialog onKeep={close.keepCapturing} onQuit={close.quitInstead} onCancel={close.cancelAsk} />
+    <KeepCapturingDialog onKeep={close.keepCapturing} onQuit={close.quitInstead} onCancel={close.cancelAsk} refused={close.keepRefused} />
   );
   const closeDialog = close.prompt && (
     <ProxyCloseDialog

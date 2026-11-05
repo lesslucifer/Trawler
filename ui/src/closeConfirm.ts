@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { KeepCapturing } from "./generalPrefs";
+import { refusalWords, type KeepCapturing } from "./generalPrefs";
 import { splitProxyAddr } from "./setup";
 import { dismissNotice, noticeDismissed, NOTICE_KEY, type NoticeKey } from "./noticePreference";
 
@@ -109,6 +109,7 @@ export function useProxyCloseConfirm(
 ) {
   const [prompt, setPrompt] = useState<QuitPrompt | null>(null);
   const [asking, setAsking] = useState(false);
+  const [keepRefused, setKeepRefused] = useState<string | null>(null);
   const ending = useRef<RequestKind>("close");
   const quitRequests = useRef(0);
   const quitsAnswering = useRef(0);
@@ -125,6 +126,8 @@ export function useProxyCloseConfirm(
       .catch((err: unknown) => {
         console.error("window destroy failed:", err);
       });
+  // quit_app only exits the process and cannot refuse; a rejection means the
+  // bridge to the shell is gone, which no dialog here could report through.
   const quitApp = async (): Promise<void> => {
     try {
       await deps.invoke("quit_app");
@@ -236,6 +239,7 @@ export function useProxyCloseConfirm(
   return {
     prompt,
     asking,
+    keepRefused,
     // A failed unset must not quit: the dialog exists to stop the machine being
     // stranded on a dead proxy, and swallowing the error strands it silently.
     // The rejection reaches the dialog, which offers the manual route instead.
@@ -254,17 +258,20 @@ export function useProxyCloseConfirm(
       quitPromptShown.current = false;
       setPrompt(null);
     },
-    // The answer is the switch. A write that fails leaves the window open, as a
-    // cancel does: closing into a state nothing recorded would ask again blind.
+    // The answer is the switch. A write that fails leaves the window and the
+    // question open, saying why: closing into a state nothing recorded would ask
+    // again blind, and a question that vanishes reads as a cancel.
     keepCapturing: async () => {
       const requestsSeen = quitRequests.current;
-      setAsking(false);
+      setKeepRefused(null);
       try {
         await deps.invoke("keep_capturing_write", { on: true });
       } catch (err) {
         console.error("storing keep capturing failed:", err);
+        if (quitRequests.current === requestsSeen) setKeepRefused(refusalWords(err));
         return;
       }
+      setAsking(false);
       if (quitRequests.current === requestsSeen) await destroy();
     },
     // Quit is the user's answer even where it could not be stored: the next
@@ -272,6 +279,7 @@ export function useProxyCloseConfirm(
     quitInstead: async () => {
       const requestsSeen = quitRequests.current;
       setAsking(false);
+      setKeepRefused(null);
       ending.current = "close";
       await deps.invoke("keep_capturing_write", { on: false }).catch((err: unknown) => {
         console.error("storing keep capturing failed:", err);
@@ -282,6 +290,9 @@ export function useProxyCloseConfirm(
       if (asked === null) await destroy();
       else setPrompt(asked);
     },
-    cancelAsk: () => setAsking(false),
+    cancelAsk: () => {
+      setAsking(false);
+      setKeepRefused(null);
+    },
   };
 }

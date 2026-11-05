@@ -20,6 +20,7 @@ pub struct Lifecycle {
 }
 
 pub const QUIT_REQUEST_EVENT: &str = "quit-requested";
+const RETRY_AFTER: std::time::Duration = std::time::Duration::from_millis(150);
 
 impl Lifecycle {
     pub fn new(config_dir: Option<PathBuf>) -> Self {
@@ -114,7 +115,16 @@ fn lifecycle<R: Runtime>(app: &AppHandle<R>) -> Option<tauri::State<'_, Lifecycl
 /// now exit, as it always did before DEC-77.
 pub fn on_window_destroyed<R: Runtime>(app: &AppHandle<R>, label: &str) -> bool {
     let stays = lifecycle(app).is_some_and(|lifecycle| lifecycle.stays_windowless());
-    ends_the_app(label, stays)
+    let ends = ends_the_app(label, stays);
+    // A request met by a window that was already going away reached nobody who
+    // can act on it; a window only a later Open builds must not find it and quit.
+    if label == MAIN_WINDOW
+        && !ends
+        && lifecycle(app).is_some_and(|lifecycle| lifecycle.take_quit_request())
+    {
+        drop(request_quit(app));
+    }
+    ends
 }
 
 /// Tauri asks to exit once the last window is gone. A windowless app with a
@@ -194,19 +204,34 @@ pub fn request_quit<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<()> {
     std::thread::spawn(move || quit_in_window(&app))
 }
 
+// The first attempt can meet a main window that is mid-destroy; the second finds
+// it gone and builds. When even that fails the app neither exits (DEC-64's check
+// never ran, the proxy may point at this process) nor keeps the request, which a
+// window opened later for another reason would answer by quitting unasked.
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 fn quit_in_window<R: Runtime>(app: &AppHandle<R>) {
-    match reopen_main(app) {
+    match attempt_twice(|| reopen_main(app)) {
         Ok(window) => {
             if let Err(err) = window.emit(QUIT_REQUEST_EVENT, ()) {
                 eprintln!("announcing the quit request failed: {err}");
             }
         }
         Err(err) => {
-            eprintln!("opening the main window for Quit failed: {err}");
-            app.exit(0);
+            eprintln!("opening the main window for Quit failed, still running: {err}");
+            if let Some(lifecycle) = lifecycle(app) {
+                lifecycle.take_quit_request();
+            }
         }
     }
+}
+
+// Runs on the thread `request_quit` spawned, never a tokio worker.
+#[allow(clippy::disallowed_methods)]
+fn attempt_twice<T, E>(mut attempt: impl FnMut() -> Result<T, E>) -> Result<T, E> {
+    attempt().or_else(|_| {
+        std::thread::sleep(RETRY_AFTER);
+        attempt()
+    })
 }
 
 #[cfg(target_os = "macos")]
@@ -289,6 +314,31 @@ mod tests {
         lifecycle.request_quit();
         assert!(lifecycle.take_quit_request());
         assert!(!lifecycle.take_quit_request());
+    }
+
+    #[test]
+    fn an_attempt_is_retried_once_and_only_once() {
+        let mut calls = 0;
+        assert_eq!(
+            attempt_twice(|| {
+                calls += 1;
+                if calls == 1 {
+                    Err("mid-destroy")
+                } else {
+                    Ok(calls)
+                }
+            }),
+            Ok(2)
+        );
+        let mut calls = 0;
+        assert_eq!(
+            attempt_twice(|| {
+                calls += 1;
+                Err::<(), _>(calls)
+            }),
+            Err(2)
+        );
+        assert_eq!(attempt_twice(|| Ok::<_, ()>(7)), Ok(7));
     }
 
     #[test]
