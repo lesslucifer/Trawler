@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-INSPWIN2
+base: 8ee198f816bdc921f4c727ff705d78ea275938bd
+design_sha256: 983b8c5ce78d92d7400e7574b1681ea6e5d680d5e285d455b7c831a21cbbed49
+verdict: PASS
+artifacts: [docs/work/components/chip-box.html]
+implements:
+  - path: docs/work/components/chip-box.html
+    blob: 720156df86d222b176b1b0a9c6f67868b8151880
+    built: [ui/src/components/ChipBox.tsx, ui/src/components/QueryBar.tsx]
+  - path: docs/work/2026-11-05-data-window-kinds-design-run.html
+    blob: de28c5d172c6cc42e1c16c2b8c76dc12734c9ec2
+    built: [ui/src/DataWindowScreen.tsx, ui/src/components/EditSurface.tsx]
+  - path: docs/work/2026-11-05-inspector-one-line-design-run.html
+    blob: 2e99722d1e8a9aa6660d542abd3f9c17c75cc219
+    built: [ui/src/FlowDetail.tsx, ui/src/BodyViewer.tsx, ui/src/components/CopyText.tsx, ui/src/components/KeyValueRow.tsx, ui/src/components/Section.tsx]
+date: 2026-11-06
