@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -44,6 +44,23 @@ const SAVED_STATE = [
 
 function clearSavedState() {
   for (const file of SAVED_STATE) rmSync(file, { force: true });
+}
+
+// The user's keep-capturing answer would keep the app running windowless after
+// quitTheApp destroys its window, so the run holds it aside and stores off; a kept
+// copy already there is the user's own, left by a run that never completed.
+const KEEP_CAPTURING = resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app/keep-capturing.json");
+const KEEP_CAPTURING_KEPT = `${KEEP_CAPTURING}.e2e-kept`;
+
+function storeKeepCapturingOff() {
+  if (existsSync(KEEP_CAPTURING) && !existsSync(KEEP_CAPTURING_KEPT)) renameSync(KEEP_CAPTURING, KEEP_CAPTURING_KEPT);
+  mkdirSync(dirname(KEEP_CAPTURING), { recursive: true });
+  writeFileSync(KEEP_CAPTURING, JSON.stringify({ keepCapturing: false }));
+}
+
+function restoreKeepCapturing() {
+  if (existsSync(KEEP_CAPTURING_KEPT)) renameSync(KEEP_CAPTURING_KEPT, KEEP_CAPTURING);
+  else rmSync(KEEP_CAPTURING, { force: true });
 }
 
 // The shell reads the Android emulator through the first SDK that holds adb,
@@ -166,6 +183,7 @@ export const config: WebdriverIO.Config = {
 
   onPrepare: async () => {
     clearSavedState();
+    storeKeepCapturingOff();
     useFakeSdk();
     await startCore();
     await seedSentFlow();
@@ -190,5 +208,6 @@ export const config: WebdriverIO.Config = {
     rmSync(PORTS_FILE, { force: true });
     if (fakeSdk) rmSync(fakeSdk, { recursive: true, force: true });
     clearSavedState();
+    restoreKeepCapturing();
   },
 };
