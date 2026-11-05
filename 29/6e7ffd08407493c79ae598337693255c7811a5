@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-CI
+branch: HEAD
+tests:
+  unit: { waived: "the epic adds no product or tooling code, only .github/workflows/ci.yml and the suite test that reads it" }
+  integration: { count: 7, covers: "the real ci.yml parsed: triggers are exactly push on main and workflow_dispatch; contents: read; one macos-latest job with a 45 minute bound; toolchains set up first; frozen-lockfile pnpm install before clippy -D warnings before cargo test -p trawler -p trawler-ui; no step or job can fail quietly. 7 of 7 at the epic tip" }
+  e2e: { waived: "the epic's end-to-end proof is a real GitHub Actions run on main after the owner pushes it; that needs the network and an outward-facing push, so no hermetic test can stand in for it. The run is recorded in E-PKG2.W2's result" }
