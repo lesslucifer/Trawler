@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "epic E-PKG -> main"
+epic: E-PKG
+branch: epic/packaging
+base: f7b372e9f2829e870e041351116b5ea66608ebc3
+head: 1db1e0296b2b4d0ab5fa4b3916991fcd2554f45d
+diff_sha256: 13e3a5e11048adc78e2cfed0822f20136ea7c04b84781501f9aeaf835e89f905
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 2
+  stage_seconds:
+    gate0: 24
+    finders: 40
+    verifiers: 50
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "version_drift has no non-test caller, so cargo xtask package does not itself refuse a drifted working tree"
+    waived: "DEC-81 rule 1 holds the committed tree through the_tree_carries_one_version in Gate 0 at every gate; E-PKG2's release workflow adds the tag-equals-version caller (Q18)"
+  - finding: "the flavour strings are written in vite.config.ts and parsed in bundle.rs with no unit test tying the two"
+    waived: "xtask/tests/package_bundle.rs reads the file Vite writes and asserts both strings (e2e after VITE_E2E=1, release after each build), which is the tie across the two languages"
+  - finding: "VITE_E2E is removed in two places, package.rs's runner and bundle.rs's rebuild"
+    waived: "two entry points, tauri build's beforeBuildCommand and cargo's build script, each have to guarantee it themselves; package_bundle holds both outcomes"
+verdict: PASS
+date: 2026-11-05
