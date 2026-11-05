@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU inspect-window/time-decoder -> epic/inspect-window (round 1)"
+epic: E-INSPWIN
+wu: E-INSPWIN.W8
+branch: wu/inspect-window/time-decoder
+base: a5bf40a9a8368dc95b27cf963139dcf2468e4cd2
+head: 2d2a350e9dfa967e1b6af344e01566f2bc5d3c15
+diff_sha256: 8f814f5816587bcc3eb06310a86f415e0da52364d55a7510f7a19f45beb3d452
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 3
+  by_finder:
+    correctness: { found: 4, verified: 2 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 1, verified: 0 }
+findings: { found: 6, verified: 2, waived: 0 }
+verified:
+  - finding: "an ISO 8601 zone offset is never range-checked, so 2024-01-01T00:00:00+99:99 reads as a confident wrong instant"
+    severity: blocker
+  - finding: "a date-only shape off the calendar (2024-02-30) falls through to base64 and shows binary, losing the calendar reason"
+    severity: important
+waivers: []
+nits:
+  - finding: "dateTimeAround rescans the whole line around the selection on each decode gesture, so a multi-MB single-line body is scanned per decode"
+    waived: "once per explicit decode, linear in the line; W6's round-2 measurement (267 ms at 10 MiB per decode) bounds the same shape"
+  - finding: "year 0000 is mishandled by Date.UTC and Intl era years"
+    waived: "no API sends year 0; the four-digit years in use are 1000-9999"
+  - finding: "relative rounds after picking the unit, so 59.6 s reads 'in 60 seconds' and 23.6 h 'in 24 hours'"
+    waived: "unverified this round; to be fixed with the round's fixes and judged in round 2"
+verdict: FAIL
+date: 2026-11-05
