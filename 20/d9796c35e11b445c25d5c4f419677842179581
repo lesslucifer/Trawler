@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 20d9796c35e11b445c25d5c4f419677842179581
+base: 3a2361ca57b78171d3c1c627580f16848fb5023c
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-hook-sync-result.html
+report_sha256: b9c7db5f537550b93d762208b88e53b28d6f3406d6f8879c38d839255cc18cd5
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECNLI52sJ2NDN+mvkLKTeJKrGKRumskrxfmUnKgSKNfSba1j/9Ih2xL/e
+  7010Ze3fcp3suP6+0uzpA1jP52B8gC
+  -----END SSH SIGNATURE-----
