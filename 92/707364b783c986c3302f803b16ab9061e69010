@@ -1,0 +1,12 @@
+schema: design/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W4
+base: 8dd19f05d1fd7a467984631af0e3b1fb7d09bb24
+design_sha256: f093314b17b796550eb2661311da7c444c7a7bf9374e548f9046b20ec4c96b77
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-05-inspector-one-line-design-run.html
+    blob: 2e99722d1e8a9aa6660d542abd3f9c17c75cc219
+    built: [ui/src/FlowDetail.tsx, ui/src/components/CopyText.tsx, ui/src/components/KeyValueRow.tsx, ui/src/components/Section.tsx]
+date: 2026-11-05
