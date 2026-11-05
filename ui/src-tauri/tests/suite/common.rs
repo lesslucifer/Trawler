@@ -1,6 +1,8 @@
+use std::io::{Read, Write};
+use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use trawler_ui_lib::supervisor::Launch;
 
@@ -19,6 +21,15 @@ pub fn launch(ca_dir: &Path, proxy_port: u16, api_port: u16) -> Launch {
         ready_timeout: PATIENCE,
         grace: Duration::from_secs(5),
     }
+}
+
+pub fn flows_status(api: SocketAddr) -> String {
+    let mut stream = TcpStream::connect(api).expect("the API accepts");
+    write!(stream, "GET /flows HTTP/1.1\r\nHost: {api}\r\nConnection: close\r\n\r\n")
+        .expect("a request");
+    let mut response = String::new();
+    stream.read_to_string(&mut response).expect("a response");
+    response.lines().next().unwrap_or_default().to_string()
 }
 
 #[cfg(unix)]
@@ -65,3 +76,15 @@ pub const LOCAL_URL: &str = "tauri://localhost";
 
 #[cfg(windows)]
 pub const LOCAL_URL: &str = "http://tauri.localhost";
+
+pub fn eventually(what: &str, mut done: impl FnMut() -> bool) {
+    let deadline = Instant::now() + PATIENCE;
+    while !done() {
+        assert!(Instant::now() < deadline, "timed out waiting until {what}");
+        std::thread::park_timeout(Duration::from_millis(50));
+    }
+}
+
+pub fn bindable(addr: SocketAddr) -> bool {
+    TcpListener::bind(addr).is_ok()
+}

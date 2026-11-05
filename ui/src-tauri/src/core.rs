@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use tauri::{AppHandle, Emitter, Manager, Runtime, State, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 use crate::supervisor::{CoreEvent, CoreState, Launch, Logged, Observer, StartError, Supervisor};
@@ -48,7 +48,7 @@ pub enum Core {
 }
 
 impl Core {
-    fn state(&self) -> CoreState {
+    pub fn state(&self) -> CoreState {
         match self {
             Self::Owned(supervisor) => supervisor.snapshot(),
             Self::Attached(api) => CoreState::Attached { api: api.clone() },
@@ -119,7 +119,10 @@ pub fn observer<R: Runtime>(app: &AppHandle<R>) -> Observer {
     let emitter = app.clone();
     Arc::new(move |event| {
         let _ = match event {
-            CoreEvent::State(state) => emitter.emit(STATE_EVENT, state),
+            CoreEvent::State(state) => {
+                crate::tray::on_state(&emitter, &state);
+                emitter.emit(STATE_EVENT, state)
+            }
             CoreEvent::Log(logged) => emitter.emit(LOG_EVENT, logged),
         };
     })
@@ -128,6 +131,7 @@ pub fn observer<R: Runtime>(app: &AppHandle<R>) -> Observer {
 pub fn setup<R: Runtime>(
     app: &mut tauri::App<R>,
     mode: Mode,
+    background: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let handle = app.handle().clone();
     let core = match mode {
@@ -144,9 +148,8 @@ pub fn setup<R: Runtime>(
         handle.plugin(crate::core_address::init(&api))?;
     }
     app.manage(core);
-    let window =
-        app.config().app.windows.first().ok_or("tauri.conf.json declares no window")?.clone();
-    WebviewWindowBuilder::from_config(&handle, &window)?.build()?;
+    crate::tray::install(&handle);
+    crate::lifecycle::open_at_launch(&handle, background)?;
     Ok(())
 }
 
@@ -188,14 +191,6 @@ fn report(line: &str) {
     eprintln!("{line}");
 }
 
-pub fn focus_main<R: Runtime>(app: &AppHandle<R>) {
-    if let Some(window) = app.get_webview_window(crate::settings::MAIN_WINDOW) {
-        let _ = window.unminimize();
-        let _ = window.show();
-        let _ = window.set_focus();
-    }
-}
-
 #[tauri::command]
 pub fn core_status(core: State<'_, Core>) -> CoreState {
     core.state()
@@ -209,14 +204,32 @@ pub fn core_log(core: State<'_, Core>) -> Vec<Logged> {
     }
 }
 
+fn owned_supervisor(core: &Core) -> Result<Arc<Supervisor>, String> {
+    match core {
+        Core::Owned(supervisor) => Ok(Arc::clone(supervisor)),
+        Core::Attached(api) => {
+            Err(format!("the capture service at {api} is not managed by this app"))
+        }
+    }
+}
+
+pub fn restart_in_background<R: Runtime>(app: &AppHandle<R>) -> std::thread::JoinHandle<()> {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let restarted = app
+            .try_state::<Core>()
+            .ok_or_else(|| "this app has no capture service".to_string())
+            .and_then(|core| owned_supervisor(&core))
+            .and_then(|supervisor| supervisor.restart().map_err(|err| restart_refusal(&err)));
+        if let Err(why) = restarted {
+            report(&format!("restarting the capture service failed: {why}"));
+        }
+    })
+}
+
 #[tauri::command]
 pub async fn restart_core(core: State<'_, Core>) -> Result<CoreState, String> {
-    let supervisor = match core.inner() {
-        Core::Owned(supervisor) => Arc::clone(supervisor),
-        Core::Attached(api) => {
-            return Err(format!("the capture service at {api} is not managed by this app"))
-        }
-    };
+    let supervisor = owned_supervisor(core.inner())?;
     tauri::async_runtime::spawn_blocking(move || supervisor.restart())
         .await
         .map_err(|err| err.to_string())?

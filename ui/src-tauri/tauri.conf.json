@@ -46,7 +46,10 @@
     ],
     "macOS": {
       "minimumSystemVersion": "11.0",
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "files": {
+        "Library/LaunchAgents/dev.trawler.app.plist": "launch-agent/dev.trawler.app.plist"
+      }
     }
   }
 }

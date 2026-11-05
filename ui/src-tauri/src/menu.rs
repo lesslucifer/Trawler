@@ -1,8 +1,8 @@
 // The default macOS menu quits through `terminate:`, which never raises the
 // window's close request, so ⌘Q skipped the quit-time proxy check (W11's D1).
-// Trawler's own Quit asks the window to close instead, and the window's
-// listener decides. The Dock's Quit and a logout still terminate: tao offers no
-// `applicationShouldTerminate` to hold them.
+// Trawler's own Quit is a quit request: the window runs the check and exits,
+// whether or not the app was windowless. The Dock's Quit and a logout still
+// terminate: tao offers no `applicationShouldTerminate` to hold them.
 //
 // Reset Layout lives in View because the layout is the window's, not the
 // capture's. `Menu::default` builds a View submenu on macOS only, so elsewhere
@@ -27,7 +27,7 @@ const SETTINGS_ACCELERATOR: &str = "CmdOrCtrl+,";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum MenuAction {
-    CloseMainWindow,
+    RequestQuit,
     OpenSettings,
     CheckForUpdates,
     ResetLayout,
@@ -36,7 +36,7 @@ pub enum MenuAction {
 
 pub fn action_for(id: &str) -> MenuAction {
     match id {
-        QUIT_ID => MenuAction::CloseMainWindow,
+        QUIT_ID => MenuAction::RequestQuit,
         SETTINGS_ID => MenuAction::OpenSettings,
         CHECK_UPDATES_ID => MenuAction::CheckForUpdates,
         RESET_LAYOUT_ID => MenuAction::ResetLayout,
@@ -47,7 +47,7 @@ pub fn action_for(id: &str) -> MenuAction {
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     match action_for(id) {
-        MenuAction::CloseMainWindow => close_main_window(app),
+        MenuAction::RequestQuit => drop(crate::lifecycle::request_quit(app)),
         MenuAction::OpenSettings => drop(settings::open_in_background(app)),
         MenuAction::CheckForUpdates => crate::update::check(app, crate::update::Asked::ByUser),
         MenuAction::ResetLayout => {
@@ -167,8 +167,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn quit_asks_the_window_to_close_and_nothing_else_does() {
-        assert_eq!(action_for(QUIT_ID), MenuAction::CloseMainWindow);
+    fn quit_is_the_quit_request_and_nothing_else_is() {
+        assert_eq!(action_for(QUIT_ID), MenuAction::RequestQuit);
         assert_eq!(action_for("about"), MenuAction::Ignore);
         assert_eq!(action_for(""), MenuAction::Ignore);
     }

@@ -330,9 +330,22 @@ mod tests {
 
     fn handler_names(source: &str) -> BTreeSet<String> {
         let start = source.find("generate_handler![").expect("a generate_handler!") + 18;
-        let list = &source[start..start + source[start..].find(']').expect("a closing ]")];
-        list.split(',')
-            .map(|path| path.trim().rsplit("::").next().unwrap_or_default().to_string())
+        let mut depth = 1;
+        let end = source[start..]
+            .find(|c| {
+                depth += match c {
+                    '[' => 1,
+                    ']' => -1,
+                    _ => 0,
+                };
+                depth == 0
+            })
+            .expect("a closing ]");
+        source[start..start + end]
+            .split(',')
+            .map(str::trim)
+            .filter(|entry| !entry.starts_with("#["))
+            .map(|path| path.rsplit("::").next().unwrap_or_default().to_string())
             .filter(|name| !name.is_empty())
             .collect()
     }
@@ -382,7 +395,7 @@ mod tests {
     #[test]
     fn the_command_detectors_read_paths_generics_and_callees() {
         let handlers =
-            "x.invoke_handler(tauri::generate_handler![\n  a::set_proxy,\n  open_route\n]);";
+            "x.invoke_handler(tauri::generate_handler![\n  a::set_proxy,\n  #[cfg(feature = \"e2e\")]\n  b::e2e_only,\n  open_route\n]);";
         assert_eq!(
             handler_names(handlers),
             BTreeSet::from(["set_proxy".into(), "open_route".into()])

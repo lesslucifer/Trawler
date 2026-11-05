@@ -1,4 +1,4 @@
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpStream};
 use std::sync::Arc;
 
 use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
@@ -6,7 +6,7 @@ use tauri::{App, Manager, RunEvent};
 use trawler_ui_lib::core::Core;
 use trawler_ui_lib::supervisor::{CoreState, Supervisor};
 
-use crate::common::{alive, launch};
+use crate::common::{alive, bindable, launch};
 
 fn app() -> App<MockRuntime> {
     mock_builder().build(mock_context(noop_assets())).expect("a mock app")
@@ -19,10 +19,6 @@ fn supervised(ca: &tempfile::TempDir) -> (Supervisor, u32, SocketAddr, SocketAdd
         panic!("expected running, got {:?}", supervisor.snapshot());
     };
     (supervisor, pid, proxy, api)
-}
-
-fn bindable(addr: SocketAddr) -> bool {
-    TcpListener::bind(addr).is_ok()
 }
 
 #[test]

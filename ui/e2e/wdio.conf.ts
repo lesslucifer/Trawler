@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -44,6 +44,20 @@ const SAVED_STATE = [
 
 function clearSavedState() {
   for (const file of SAVED_STATE) rmSync(file, { force: true });
+}
+
+// A stored keep-capturing answer of on keeps the app running windowless after
+// quitTheApp destroys its window, so every spec that waits for the exit would
+// time out; the run refuses up front rather than change the user's answer.
+const KEEP_CAPTURING = resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app/keep-capturing.json");
+
+function refuseKeepCapturingOn() {
+  const stored = existsSync(KEEP_CAPTURING) ? readFileSync(KEEP_CAPTURING, "utf8") : "";
+  if (/"keepCapturing"\s*:\s*true/.test(stored)) {
+    throw new Error(
+      `keep capturing is on in ${KEEP_CAPTURING}: the attached e2e quits the app by closing its window, which then keeps running. Turn it off in Settings → General and run again`,
+    );
+  }
 }
 
 // The shell reads the Android emulator through the first SDK that holds adb,
@@ -100,6 +114,7 @@ const SPECS = [
   "./specs/layout-relaunched.spec.ts",
   "./specs/layout-broken.spec.ts",
   "./specs/data-window.spec.ts",
+  "./specs/inspect-window-v2.spec.ts",
   "./specs/query-bar.spec.ts",
   "./specs/query-bar-relaunched.spec.ts",
   "./specs/flows.spec.ts",
@@ -164,6 +179,7 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 60_000 },
 
   onPrepare: async () => {
+    refuseKeepCapturingOn();
     clearSavedState();
     useFakeSdk();
     await startCore();

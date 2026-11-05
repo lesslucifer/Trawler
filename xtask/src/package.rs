@@ -164,6 +164,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let built = artifacts(&bundle_dir)?;
     if os == Os::MacOs {
         for app in built.iter().filter(|path| path.extension().is_some_and(|e| e == "app")) {
+            verify_login_agent(app)?;
             verify_signature(app)?;
             archive_for_the_updater(app)?;
         }
@@ -296,6 +297,16 @@ fn is_artifact(path: &Path) -> bool {
         || !matches!(crate::release_manifest::keys_of(name), Ok(None))
 }
 
+const LOGIN_AGENT: &str = "Contents/Library/LaunchAgents/dev.trawler.app.plist";
+
+fn verify_login_agent(app: &Path) -> Result<(), String> {
+    if app.join(LOGIN_AGENT).is_file() {
+        Ok(())
+    } else {
+        Err(format!("{} lacks {LOGIN_AGENT}, the login item SMAppService registers", app.display()))
+    }
+}
+
 fn verify_signature(app: &Path) -> Result<(), String> {
     let out = Command::new("codesign")
         .args(["--verify", "--deep", "--strict"])
@@ -399,6 +410,16 @@ pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_checked_agent_path_is_the_one_the_bundle_places() {
+        let conf = std::fs::read_to_string(
+            crate::repo_root().unwrap().join("ui/src-tauri/tauri.conf.json"),
+        )
+        .unwrap();
+        let placed = LOGIN_AGENT.strip_prefix("Contents/").unwrap();
+        assert!(conf.contains(&format!("\"{placed}\":")), "{conf}");
+    }
+
     fn options(universal: bool, profile: Option<&str>) -> Options {
         Options { universal, profile: profile.map(str::to_string), stage: Stage::BuildAndBundle }
     }
@@ -409,6 +430,18 @@ mod tests {
 
     fn argv(plan: &Plan) -> String {
         format!("{} {}", plan.program, plan.args.join(" "))
+    }
+
+    #[test]
+    fn an_app_without_the_login_agent_plist_is_named() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = dir.path().join("Trawler.app");
+        let refused = verify_login_agent(&app).unwrap_err();
+        assert!(refused.contains("Trawler.app") && refused.contains(LOGIN_AGENT), "{refused}");
+        let plist = app.join(LOGIN_AGENT);
+        std::fs::create_dir_all(plist.parent().unwrap()).unwrap();
+        std::fs::write(plist, "").unwrap();
+        assert!(verify_login_agent(&app).is_ok());
     }
 
     #[test]

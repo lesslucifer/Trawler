@@ -797,8 +797,8 @@
         <tr>
           <td><a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"><code>dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html</code></a></td>
           <td><span class="badge id">DEC-64</span></td>
-          <td><strong>A quit asks only about what it leaves without internet.</strong> ⌘Q is Trawler's own Quit and
-            asks as ✕ does; the Dock's Quit and a logout cannot be held. It asks while this machine routes through
+          <td><strong>A quit asks only about what it leaves without internet.</strong> ⌘Q and the menu-bar's Quit are
+            a quit request the main window answers (opened to ask when none is); ✕ asks only when it would quit; the Dock's Quit and a logout cannot be held. It asks while this machine routes through
             Trawler (its address, localhost or its own address on Trawler's port), while its proxy could not be read,
             or while reach is armed or the chosen emulator routes here. A proxy that is not Trawler's asks nothing.
             The stake is the capture service, which a quit stops when the app owns it (rule 6, amended by
@@ -956,6 +956,48 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
+          <td><a href="dec-77-the-app-outlives-its-window.html"><code>dec-77-the-app-outlives-its-window.html</code></a></td>
+          <td><span class="badge id">DEC-77</span></td>
+          <td><strong>The app outlives its window.</strong> The main window's destruction exits unless the shell preference
+            <code>keep_capturing</code> (<code>keep-capturing.json</code>: absent = unanswered, corrupt = off) is on and a
+            menu-bar icon exists; then the process and its core run windowless, Tauri's last-window exit is held, the Dock
+            icon hides (macOS Accessory), and a second launch or Dock click rebuilds the main window through launch's
+            builder. The first ✕ that would quit asks once whether to keep capturing, and the answer is the switch. <code>--background</code> skips the launch window only with a tray. The menu-bar icon is built at every launch, its glyph and first line follow the core's state, and it offers Open, Settings…, Restart (when stopped) and Quit. Open at login is the OS's own entry Trawler writes (LaunchAgent plist · autostart .desktop · HKCU Run), starting this binary with <code>--background</code>, read back each time, last write wins, no <code>launchctl</code>. Amends DEC-69 rule 14. Rejected: a
+            core as its own service, hiding instead of destroying, windowless without a tray</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-78-a-long-value-is-one-line-opened-whole.html"><code>dec-78-a-long-value-is-one-line-opened-whole.html</code></a></td>
+          <td><span class="badge id">DEC-78</span></td>
+          <td><strong>A long value is one line, opened whole.</strong> A wire value whose whole is one named act away in a data
+            window — its own <em>open</em>, or its section's <em>open all</em> — renders on one line with an end ellipsis; click still
+            copies the whole value; the column never widens. The second escape from <code>wrap-not-truncate</code> beside DEC-34;
+            the <em>more / less</em> clamp retires. Applies to header values (via <em>open all</em>) and the URI. Rejected: the clamp,
+            an opener per header value, middle ellipsis, a tooltip</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-79-the-bytes-decide-the-kind.html"><code>dec-79-the-bytes-decide-the-kind.html</code></a></td>
+          <td><span class="badge id">DEC-79</span></td>
+          <td><strong>The bytes decide the kind.</strong> <code>readKind(bytes, label?)</code> picks one of nine kinds (json · form ·
+            xml · html · javascript · css · text · hex · image) and says whether the label or the bytes decided. A whole parse beats
+            a label, a label beats a guess: a whole JSON object or array is json under every text label; an html signature or
+            well-formed XML beats a generic or failed label; JavaScript, CSS and form come only from a label or the picker; an
+            image label is never overruled. The pane says <em>served as …</em> when bytes overrule a label. Rejected: label-first,
+            window-only sniffing, guessing JS/CSS/form, JSON scalars as json, a picker in the pane</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-80-the-html-preview-holds-no-reach.html"><code>dec-80-the-html-preview-holds-no-reach.html</code></a></td>
+          <td><span class="badge id">DEC-80</span></td>
+          <td><strong>The HTML preview holds no reach.</strong> The html kind's read-only preview renders the working copy via
+            <code>srcdoc</code> in <code>&lt;iframe sandbox=""&gt;</code>, a CSP <code>&lt;meta&gt;</code> first
+            (<code>default-src 'none'; style-src 'unsafe-inline'; img-src data:</code>), meta refresh and <code>&lt;base&gt;</code>
+            removed, links aimed away and MathML addresses dropped (form-action <code>'none'</code>): no script, no request, no navigation, no IPC; proven by a real-window journey with a beacon. A source ⇄ preview toggle. Extends DEC-76. Rejected: a sanitized
+            render in the window's DOM, a load-remote switch, a rule on DEC-76, a second window</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
           <td><a href="dec-81-one-version-a-release-only-bundle-one-package-command.html"><code>dec-81-one-version-a-release-only-bundle-one-package-command.html</code></a></td>
           <td><span class="badge id">DEC-81</span></td>
           <td><strong>One version, a release-only bundle, one package command.</strong> The version is
@@ -988,6 +1030,16 @@
             (<code>gh workflow run ci.yml --ref</code>), which needs the file on <code>main</code> first. It runs clippy and
             the core and app tests after a frozen-lockfile install; the gate suites, vitest and the WebDriver e2e stay local.
             Nothing refuses on its result, and it reads the repository only</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-84-unsafe-is-confined-to-the-login-service-crate.html"><code>dec-84-unsafe-is-confined-to-the-login-service-crate.html</code></a></td>
+          <td><span class="badge id">DEC-84</span></td>
+          <td><strong>Unsafe is confined to the login-service crate.</strong> The workspace keeps
+            <code>unsafe_code = "forbid"</code>; the macOS-only <code>login-service</code> member sets <code>deny</code> and
+            holds the one <code>#[allow(unsafe_code)]</code> module that wraps SMAppService, exposing a safe API
+            <code>trawler-ui</code> uses on macOS. A test fails on a second allow. Rejected: lowering the workspace lint,
+            <code>launchctl</code> or a plist write</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>

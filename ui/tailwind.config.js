@@ -119,9 +119,6 @@ export default {
       // collapses below its glyph.
       verb: "4.5ch",
       line: "18px",
-      // A collapsed wire value shows three lines (text-body at leading-normal)
-      // plus the room its focus ring needs inside the clipping cell.
-      "value-clamp": "60px",
       // A code a phone's camera opens from a laptop screen at arm's length: at
       // this size a certificate URL's ~33 modules each get about 4px.
       "scan-code": "128px",

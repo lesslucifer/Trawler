@@ -128,4 +128,28 @@ describe("CopyText", () => {
     expect(span.className).toContain("decoration-dotted");
     expect(span.className).not.toContain("truncate");
   });
+
+  it("oneLine cuts the value at its box's end and keeps the outcome chip whole beside it", async () => {
+    render(<CopyText value={URI} label="request URI" oneLine className="flex-1" />);
+
+    const value = screen.getByText(URI);
+    expect(value.className).toContain("truncate");
+    expect(value.className).toContain("min-w-0");
+    expect(value.className).not.toContain("break-all");
+    expect(value.parentElement!.className).toMatch(/\bflex\b.*min-w-0.*flex-1/);
+
+    fireEvent.click(value);
+    await settle();
+    expect(writeText).toHaveBeenCalledWith(URI);
+    expect(screen.getByText("copied").className).toContain("shrink-0");
+  });
+
+  it("oneLine keeps the failure chip whole too", async () => {
+    writeText.mockRejectedValue(new Error("denied"));
+    render(<CopyText value={URI} label="request URI" oneLine />);
+
+    fireEvent.click(screen.getByText(URI));
+    await settle();
+    expect(screen.getByText("copy failed").className).toContain("shrink-0");
+  });
 });

@@ -14,6 +14,7 @@ import { CA_FILES } from "./setup";
 import { TUNNEL_GRACE_MS } from "./verdicts";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => {}) }));
+vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => () => {}) }));
 // App wires a quit-time close guard; the stub window keeps the handler it was
 // given, so a test can raise a close request the way ✕ and ⌘Q do.
 type CloseRequest = (e: { preventDefault: () => void }) => unknown;

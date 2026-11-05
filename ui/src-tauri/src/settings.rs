@@ -14,12 +14,6 @@ fn page_script() -> String {
     format!("window.{PAGE_GLOBAL} = \"{SETTINGS_PAGE}\";")
 }
 
-/// The main window is the app: once it is gone the app quits, whatever
-/// secondary window is still open (Q7 — closing the last window quits).
-pub fn ends_the_app(label: &str) -> bool {
-    label == MAIN_WINDOW
-}
-
 // WebviewWindowBuilder::build deadlocks on Windows when called from an event
 // handler (Tauri's own warning, wry#583), and a menu item's handler is one.
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
@@ -43,6 +37,15 @@ pub async fn open_settings<R: Runtime>(app: AppHandle<R>) -> Result<(), String> 
 }
 
 pub fn open<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
+    crate::lifecycle::set_dock(app, crate::lifecycle::Dock::Shown);
+    let opened = show_or_build(app);
+    if opened.is_err() {
+        crate::lifecycle::on_window_gone(app);
+    }
+    opened
+}
+
+fn show_or_build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     if let Some(window) = app.get_webview_window(SETTINGS_WINDOW) {
         window.unminimize()?;
         window.show()?;
@@ -70,11 +73,5 @@ mod tests {
         assert!(page.contains(&format!("export const PAGE_GLOBAL = \"{PAGE_GLOBAL}\";")));
         assert!(page.contains(&format!("export const SETTINGS_PAGE = \"{SETTINGS_PAGE}\";")));
         assert_eq!(page_script(), r#"window.__TRAWLER_PAGE__ = "settings";"#);
-    }
-
-    #[test]
-    fn only_the_main_window_ends_the_app() {
-        assert!(ends_the_app("main"));
-        assert!(!ends_the_app(SETTINGS_WINDOW));
     }
 }

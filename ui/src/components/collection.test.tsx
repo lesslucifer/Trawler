@@ -32,6 +32,20 @@ const SPECIMENS: Record<string, ReactElement> = {
       shows="macOS 26"
     />
   ),
+  ChipBox: (
+    <collection.ChipBox
+      chips={["a"]}
+      onChange={() => {}}
+      grammar={{
+        parse: (draft) => (draft ? { chip: draft } : { empty: true }),
+        suggest: () => [],
+        label: (chip: string) => ({ text: chip, value: chip }),
+        hasOpenQuote: () => false,
+      }}
+      label="specimen"
+      placeholder="type"
+    />
+  ),
   CommandBlock: <collection.CommandBlock value="certutil -addstore -f ROOT trawler-ca.pem" label="the trust command" />,
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
@@ -73,6 +87,14 @@ const SPECIMENS: Record<string, ReactElement> = {
     />
   ),
   Section: <collection.Section title="request">body</collection.Section>,
+  PageSidebar: (
+    <collection.PageSidebar
+      pages={[{ value: "general", label: "General" }]}
+      value="general"
+      onChange={() => {}}
+      ariaLabel="pages"
+    />
+  ),
   SegmentedControl: (
     <collection.SegmentedControl
       options={[{ value: "raw", label: "raw" }]}

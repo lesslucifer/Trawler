@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec73779f34851f0dfaea50">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-84: unsafe is confined to the login-service crate</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-84 — unsafe is confined to the login-service crate</h1>
+      <p>The one exception to the workspace's <code>unsafe_code = "forbid"</code>: a tiny macOS crate that wraps SMAppService.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W8</strong> from the owner's ruling (option 1) · amends <a href="dec-77-the-app-outlives-its-window.html">DEC-77</a>'s login item on macOS · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Fact</th><th>Consequence</th></tr>
+      <tr><td>every <code>SMAppService</code> method in objc2-service-management 0.3.2 is <code>unsafe fn</code></td><td>registering a login item that Background Task Management shows at once needs unsafe code</td></tr>
+      <tr><td><code>[workspace.lints.rust] unsafe_code = "forbid"</code> reaches every member, and a forbid cannot be relaxed below it</td><td>the calls cannot live in <code>trawler-ui</code> or <code>trawler</code></td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> Unsafe is confined to the <code>login-service</code> crate and its one <code>#[allow(unsafe_code)]</code> module. The crate is macOS only, sets <code>unsafe_code = "deny"</code>, and exposes a safe API; every other member keeps the workspace's forbid.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td><code>login-service</code> is the only workspace member whose lints differ on <code>unsafe_code</code>, and it holds exactly one <code>#[allow(unsafe_code)]</code>, on the module that makes the four SMAppService calls</td><td>the exception stays one place to read</td></tr>
+      <tr><td>2</td><td>The crate's public API is safe and carries no <code>objc2</code> type; <code>trawler-ui</code> depends on it only on macOS and stays <code>forbid</code></td><td>nothing outside the crate can reach the unsafe surface</td></tr>
+      <tr><td>3</td><td>A test over the crate's sources fails when a second <code>allow(unsafe_code)</code> appears</td><td>the confinement is checked, not remembered</td></tr>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>lower the workspace lint to <code>deny</code></td><td>every member could then opt into unsafe with an allow</td></tr>
+      <tr><td>shell out to <code>launchctl</code> or write the plist</td><td>neither updates Background Task Management at once (E-BGSVC.W8's finding)</td></tr>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -1,13 +1,12 @@
-use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::io::{BufRead, BufReader, Write};
+use std::net::{SocketAddr, TcpListener};
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::{mpsc, Arc};
-use std::time::{Duration, Instant};
 
 use trawler_ui_lib::supervisor::{CoreEvent, CoreState, LogEntry, Logged, StartError, Supervisor};
 
-use crate::common::{alive, kill_hard, launch, HARD_KILLED, PATIENCE};
+use crate::common::{alive, bindable, eventually, flows_status, kill_hard, launch, HARD_KILLED};
 
 const ROLE_VAR: &str = "TRAWLER_SUPERVISOR_ROLE_CA";
 // libtest prints the test's name with no newline before the role speaks, so the
@@ -25,27 +24,6 @@ fn running(state: &CoreState) -> (u32, SocketAddr, SocketAddr) {
         CoreState::Running { pid, proxy, api, .. } => (*pid, *proxy, *api),
         other => panic!("expected running, got {other:?}"),
     }
-}
-
-fn flows_status(api: SocketAddr) -> String {
-    let mut stream = TcpStream::connect(api).expect("the API accepts");
-    write!(stream, "GET /flows HTTP/1.1\r\nHost: {api}\r\nConnection: close\r\n\r\n")
-        .expect("a request");
-    let mut response = String::new();
-    stream.read_to_string(&mut response).expect("a response");
-    response.lines().next().unwrap_or_default().to_string()
-}
-
-fn eventually(what: &str, mut done: impl FnMut() -> bool) {
-    let deadline = Instant::now() + PATIENCE;
-    while !done() {
-        assert!(Instant::now() < deadline, "timed out waiting until {what}");
-        std::thread::park_timeout(Duration::from_millis(50));
-    }
-}
-
-fn bindable(addr: SocketAddr) -> bool {
-    TcpListener::bind(addr).is_ok()
 }
 
 #[test]

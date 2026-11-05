@@ -45,6 +45,12 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
+          <td><a href="web-ui.html#uc-bg"><code>web-ui.html</code></a></td>
+          <td><span class="badge id">UC-BG</span></td>
+          <td>Keep capturing after the window closes: the first ✕ asks once and the answer is a switch in Settings → General; with it on the app and its core run windowless behind the menu-bar icon, ⌘Q and the icon's Quit always quit through DEC-64's check, and Open Trawler at login starts it with no window (DEC-77)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
           <td><a href="web-ui.html#listing-paging"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-3 · UC-4</span></td>
           <td>The shared listing contract pages on opt-in <code>limit</code> + <code>cursor</code>; unparameterised it stays the whole filtered capture. Every filter key repeats (<code>q</code> all of, the rest any of), has a <code>not_</code> form, and <code>is=pending|https</code> joins them — shared by listing, export and clear (E-QUERY.W1)</td>          <td><span class="badge auto">active</span></td>
@@ -52,7 +58,7 @@
         <tr>
           <td><a href="web-ui.html#uc-5"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-5</span></td>
-          <td>Inspect a captured flow in the native app: headers/timing/versions, type-dispatched body viewers with a raw/pretty toggle, copy-as-curl, copy/save body; the headers/body split is user-sized and every flow opens at the pane width, leg and body mode the user set, across a relaunch (DEC-70); a cut body, the toolbar and ⌘⇧O open the bytes in a data window (UC-9)</td>
+          <td>Inspect a captured flow in the native app: headers/timing/versions, type-dispatched body viewers with a raw/pretty toggle, copy-as-curl, copy/save body; the headers/body split is user-sized and every flow opens at the pane width, leg and body mode the user set, across a relaunch (DEC-70); a cut body, the toolbar and ⌘⇧O open the bytes in a data window (UC-9); header values and the URI are one line, the whole one act away in a data window (DEC-78); a body renders by what its bytes are, and the pane says when they overrule the served type (DEC-79)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -82,7 +88,7 @@
         <tr>
           <td><a href="web-ui.html#uc-9"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-9</span></td>
-          <td>Working with a piece of data in its own window: any opener hands <code>{key, title, bytes, typeHint?, heading?}</code> by value and one window per key renders it whole, uncapped. The handed-in bytes are the original and never change; a working copy takes free edits, reformats, find and decodes (base64, URL, JWT, time), each an undoable step, with <em>restore original</em> one act away. Copy and save deliver what is on screen, <em>copy original</em> the bytes handed in. Nothing reaches the opener, the capture or the core, the window makes no request, and closing it asks nothing (<a href="../decisions/dec-76-the-data-window.html">DEC-76</a>)</td>
+          <td>Working with a piece of data in its own window: any opener hands <code>{key, title, bytes, typeHint?, heading?}</code> by value and one window per key renders it whole, uncapped, as one of nine kinds the bytes decide (JSON, form, XML, HTML, JavaScript, CSS, text, hex, image). The handed-in bytes are the original and never change; a working copy takes free edits, reformats, find and decodes (base64, URL, JWT, time), each an undoable step, with <em>restore original</em> one act away. HTML also previews, read-only, in a frame that holds no reach (DEC-80), and find is a chip bar typed like the flow filter. Copy and save deliver what is on screen, <em>copy original</em> the bytes handed in. Nothing reaches the opener, the capture or the core, the window makes no request, and closing it asks nothing (<a href="../decisions/dec-76-the-data-window.html">DEC-76</a>)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
