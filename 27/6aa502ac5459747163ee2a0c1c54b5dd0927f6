@@ -1,0 +1,40 @@
+schema: cr/v5
+scope: "WU inspect-window/time-decoder -> epic/inspect-window (round 2)"
+epic: E-INSPWIN
+wu: E-INSPWIN.W8
+branch: wu/inspect-window/time-decoder
+base: a5bf40a9a8368dc95b27cf963139dcf2468e4cd2
+head: 276aa502ac5459747163ee2a0c1c54b5dd0927f6
+diff_sha256: 8a3cc4352eaf79ee95ea86e56ad00d643d3d92bc4468eb2a9504d16d27bf78ff
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 6
+  by_finder:
+    correctness: { found: 5, verified: 0 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 1, verified: 1 }
+findings: { found: 7, verified: 1, waived: 0 }
+verified:
+  - finding: "the screen holds a hand-written JSON string scanner (insideJsonString) and the quoting rule for a replaced value, reimplementing jsonTools' string lexing in the UI layer"
+    severity: important
+waivers: []
+nits:
+  - finding: "looksLikeTime compiles a RegExp per call"
+    waived: "once per decode gesture; to be hoisted with this round's fix and judged in round 3"
+  - finding: "year 0000: Date.UTC maps it to 1900 and Intl renders era years"
+    waived: "no API sends year 0; four-digit years in use are 1000-9999"
+  - finding: "Math.round(-59.5) is -59, so 59.5 minutes ago reads '59 minutes ago' while ahead reads 'in 1 hour'"
+    waived: "half a unit at the boundary either side reads correctly to the user; to be revisited with this round's fix"
+  - finding: "a 9-10/12-13/15-16/18-19 digit id is answered by time alone and no longer reads as base64"
+    waived: "deliberate (plan's choices: time wins for a timestamp's digit count); base64 of digits is binary with no signature, which never read well"
+  - finding: "more than 9 fraction digits make the shape back off before the fraction"
+    waived: "RFC 3339 and every producer stop at nanoseconds; the reading of the shorter span is still the right second"
+verdict: FAIL
+date: 2026-11-05
