@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec57f69f34851f0dfae91d" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN2.W2 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN2.W2 — design run: the inspector's one-line values</h1>
+      <p>One closed run that draws the inspector with every header value and the URI on one line, the two ways to open
+        them whole, and the pane's statement when the bytes overrule the served type.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · branch <code>wu/inspect-window-v2/inspector-design</code> off
+        <code>epic/inspect-window-v2</code> at 4edde574 · epic plan: <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      W2 delivers one design run at <code>docs/work/2026-11-05-inspector-one-line-design-run.html</code> that mounts the real
+      collection around a stateful inspector panel: header values and the URI on one line cut with an end ellipsis, <em>open
+      all</em> on the Headers section, <em>open</em> on the URI, the copy confirm on a cut value, the pane's <em>served as …</em>
+      statement, the empty-headers leg and the narrow pane. The owner reviews it, it closes in three steps (review · green ·
+      <code>data-status="archived"</code>), and a <code>design/v1</code> note on the tip names it.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN2 · the epic plan's W2 block · UC-5 one-line values, openers and the statement · epic expected rows 1–3 and 5
+      (the pane) as drawn states · rulings Q1 (open all only), Q2 (end ellipsis), Q3 (no more / less), Q4 (the pane states what
+      decided) · DEC-78 · DEC-79 rule 7 · DEC-53 (six items, three-step close).
+    </p>
+
+    <h2 id="what">What the run must decide</h2>
+    <table data-c="decides">
+      <tr><th>#</th><th>Decision</th><th>Where it lands</th></tr>
+      <tr><td>1</td><td>where <em>open all</em> sits — <code>Section</code> has no action slot today</td><td>run mockup · a <code>Section</code> delta, or a local row</td></tr>
+      <tr><td>2</td><td>where the URI's <em>open</em> sits</td><td>run mockup</td></tr>
+      <tr><td>3</td><td>the one-line contract: which component owns the cut (<code>KeyValueRow</code>, <code>CopyText</code>)</td><td>run · deltas for both</td></tr>
+      <tr><td>4</td><td>where the copy confirm goes when the value fills the line</td><td>run · the <code>CopyText</code> delta</td></tr>
+      <tr><td>5</td><td>where and how the pane says <em>served as …</em></td><td>run mockup · W5 builds it</td></tr>
+      <tr><td>6</td><td>the name column when a header name is long</td><td>run mockup</td></tr>
+      <tr><td>7</td><td>key paths for both opens</td><td>run keyboard item · rulebook vocabulary proposals</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>#</th><th>Observable at this WU's tip</th><th>Checked by</th></tr>
+      <tr><td>1</td><td>the run carries <code>data-artifact="design-run"</code>, is archived, has a minted htmldoc id, loads the bootstrap</td><td>htmldoc·id · 6·run-closed</td></tr>
+      <tr><td>2</td><td>the mockup mounts the collection from <code>window.Trawler</code>; state toggles cover request leg, copied, served-as,
+        empty headers, narrow pane, and what each open hands over</td><td>assets·specimen · mockup·state · the owner</td></tr>
+      <tr><td>3</td><td>every Given (the flow, the leg, the openers, <code>readKind</code>'s reading, the clipboard) is answered</td><td>capabilities·answered</td></tr>
+      <tr><td>4</td><td>a key path for each pointer act</td><td>keyboard-parity·path</td></tr>
+      <tr><td>5</td><td>the review item records the owner's round and declares DEC-78's escape: the constraint, the visible cut, the route</td><td>review·recorded · the owner</td></tr>
+      <tr><td>6</td><td><code>design/v1</code> on the tip names the run with an empty built set</td><td>9·design · design-scope</td></tr>
+    </table>
+
+    <h2 id="not-here">Not here</h2>
+    <table data-c="not-here">
+      <tr><th>Not here</th><th>Where</th></tr>
+      <tr><td>any file under <code>ui/src/</code></td><td>W4 (one-line values, openers), W5 (the statement)</td></tr>
+      <tr><td>the data window's new kinds and find bar</td><td>W3's run</td></tr>
+      <tr><td>UC-5, the rulebook's keyboard rows</td><td>proposed here, written at W9's distillation</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <p data-c="test-why">No code path changes. A design run is still a design-bearing diff, so it is not exempt; each layer
+      is waived with its reason.</p>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>What asserts what</th></tr>
+      <tr><td>unit</td><td>waived: "the WU adds no executable code; its artifact is a design run, and every predicate over it is a
+        verify-doc rule with its own tests in xtask"</td></tr>
+      <tr><td>integration</td><td>waived: "the contract is a green, closed, citable run; verify-doc asserts green, 6·run-closed asserts
+        closed at this merge, design-scope and 9·design assert W4 and W5 can cite it"</td></tr>
+      <tr><td>e2e</td><td>waived: "a design doc renders no surface a driver can touch; W9's J1 and J2 drive the built inspector"</td></tr>
+      <tr><td>before the merge</td><td><code>cargo xtask verify-doc</code> on the run, this plan and the result · a headless render of each
+        mockup state · <code>cargo xtask design-scope epic/inspect-window-v2 HEAD</code> · <code>cargo xtask verify-dod wu HEAD --target
+        epic/inspect-window-v2</code></td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
