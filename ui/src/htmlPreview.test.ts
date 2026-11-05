@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { previewDocument } from "./htmlPreview";
 
 const parsed = (source: string) => new DOMParser().parseFromString(previewDocument(source), "text/html");
@@ -65,6 +65,47 @@ describe("previewDocument", () => {
     expect(out).not.toContain("y.test");
   });
 
+  it("drops nested frames and plugins, whose srcdoc the walk never enters, and a link's ping and download", () => {
+    const out = previewDocument(
+      '<iframe srcdoc="&lt;meta http-equiv=refresh content=0;url=https://x.test&gt;"></iframe><object data="https://x.test"></object><embed src="https://x.test"><a href="/y" ping="https://x.test/p" download="f">go</a>',
+    );
+    expect(out).not.toMatch(/iframe|object|embed|x\.test/);
+    expect(out).not.toMatch(/ping|download/);
+  });
+
+  it("what the frame reparses is what was cleaned: no second policy, base or refresh appears", () => {
+    const payloads = [
+      '<svg><style><a title="</style><meta http-equiv=refresh content=0;url=//x.test>"></a></style></svg>',
+      '<math><mtext><table><mglyph><style><!--</style><meta http-equiv=refresh content="0;url=//x.test">--></style></mglyph></table></mtext></math>',
+      '<noscript><p title="</noscript><meta http-equiv=refresh content=0;url=//x.test><base href=//x.test>"></noscript>',
+      '<form><math><mtext></form><form><mglyph><style></math><meta http-equiv=refresh content=0;url=//x.test>',
+    ];
+    for (const source of payloads) {
+      const page = parsed(source);
+      expect(page.querySelectorAll("meta[http-equiv]")).toHaveLength(1);
+      expect(page.querySelectorAll("base[href]")).toHaveLength(0);
+      expect(page.querySelectorAll("base")).toHaveLength(1);
+      expect(page.querySelectorAll("iframe, object, embed, template, link")).toHaveLength(0);
+    }
+  });
+
+  it("a page that never settles is shown as inert text, not as markup", () => {
+    const original = DOMParser.prototype.parseFromString;
+    let pass = 0;
+    const spy = vi.spyOn(DOMParser.prototype, "parseFromString").mockImplementation(function (this: DOMParser, text, type) {
+      const page = original.call(this, text, type);
+      if (text !== "<pre></pre>") page.body.append(page.createComment(String(pass++)));
+      return page;
+    });
+    try {
+      const out = previewDocument("<img src=x onerror=boom()>");
+      expect(out).toContain("&lt;img src=x onerror=boom()&gt;");
+      expect(out).toContain("<pre>");
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("sets the only base itself, pointing every link at a new context the sandbox withholds", () => {
     const bases = parsed('<base href="https://x.test/"><p>x</p>').querySelectorAll("base");
     expect(bases).toHaveLength(1);
@@ -81,8 +122,8 @@ describe("previewDocument", () => {
   });
 
   it("keeps a doctype only when the source had one", () => {
-    expect(previewDocument("<!DOCTYPE html><p>x</p>").startsWith("<!doctype html>")).toBe(true);
-    expect(previewDocument("<p>x</p>").startsWith("<html>")).toBe(true);
+    expect(previewDocument("<!DOCTYPE html><p>x</p>").startsWith("<!doctype html><meta")).toBe(true);
+    expect(previewDocument("<p>x</p>")).not.toContain("<!doctype");
   });
 
   it("leaves the page's markup and inline styles in place", () => {
