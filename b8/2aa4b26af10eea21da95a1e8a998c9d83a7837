@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU E-INSPWIN2.W8 -> epic/inspect-window-v2"
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W8
+branch: wu/inspect-window-v2/find-chip-bar
+base: 4a71c17edbf9f4d119506d6fee111067d2f64020
+head: b82aa4b26af10eea21da95a1e8a998c9d83a7837
+diff_sha256: 386be242d9cc095753ac5cbf45a5fe0b34657e2d7af5706e132b8c47d5e4bcdf
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 8
+  verifiers: 3
+  verifier_model: sonnet-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 17
+    nit: 26
+  by_finder:
+    correctness: { found: 17, verified: 6 }
+    efficiency: { found: 13, verified: 4 }
+    altitude: { found: 13, verified: 2 }
+findings: { found: 35, verified: 12, waived: 3 }
+waivers:
+  - finding: "every draft keystroke rescans every committed chip as well as the draft (chips+1 scans of the document)"
+    reason: "linear per chip and chips are few; the previous single query rescanned on every keystroke too. Ceiling: several chips on a multi-MiB document; upgrade is caching the committed chips' ranges. Named in the result's follow-ups"
+  - finding: "a re: pattern with catastrophic backtracking freezes the window while it is the live draft"
+    reason: "the pattern is user-authored (self-inflicted) and JavaScript has no regex timeout; a worker is the upgrade. Named in the result's follow-ups"
+  - finding: "key:/value: scoping runs one slice and one scan per member of a large JSON per keystroke"
+    reason: "linear in the document, the same order as the structure walk itself; a single filtered global pass is the upgrade if a 10 MiB document with many members feels slow"
+nits:
+  - finding: "the structure memo parses the JSON again although settledJson parses the same text"
+    waived: "the two memos deliberately differ in input (live text versus the debounced settled text); the extra parse runs only while a key:/value: chip or a key: draft exists"
+  - finding: "findGrammar imports edits() from query.ts, so one grammar depends on the other's helper"
+    waived: "one definition of a generic edit distance, exported rather than copied; a shared util is a later move once a third user exists"
+earlier_rounds: "three finder rounds and one verifier stage on earlier tips. Verified and fixed, each with a named regression test: a count landing exactly on the limit did not say capped (find.ts within, formPairs.ts markPairs); form key: suggestions were URL-decoded while the text view is raw; Enter on a draft that starts a key name rewrote the draft instead of stepping; a keyed quote left open made a chip; pair scans compiled one regex per pair; a plain chip's face disagreed with its label; key:/value: missed escaped spellings of non-ASCII and slash; keysFor and refusedReason disagreed for image (refusedReason now derives from keysFor); the string-query findMatches and findInPairs were dead surface and are gone; HEX_PAIRS was declared twice; a character outside the BMP was matched per half-pair (fixed in the last commit, found by the third round's correctness finder, covered by a test, and not re-read by a further fleet round). Refuted or false positive: ChipBox dedupe by label (no collision constructible), key quoting for names holding a quote (filtered before suggesting), invalid JSON under key:/value: (the existing parse Notice shows), screen orchestration (only memo glue; every rule lives in the pure layer)."
+verdict: PASS
+date: 2026-11-05
