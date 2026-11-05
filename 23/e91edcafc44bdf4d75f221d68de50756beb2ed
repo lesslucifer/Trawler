@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-GATEPAR
+wu: E-GATEPAR.W2
+branch: wu/gate-parity/target-isolation
+changes:
+  - path: "docs/work/2026-11-04-gate-parity-plan.html"
+    tier: T3
+    action: updated
+    distills: "the tally-location decision settled: <git-common-dir>/trawler-gate-tally, prune folds the legacy file"
+  - path: "docs/work/2026-11-05-target-isolation-plan.html"
+    tier: T3
+    action: added
+    distills: "W2 requirement, shape, rollout steps and test plan"
+  - path: "docs/work/2026-11-05-target-isolation-result.html"
+    tier: T3
+    action: added
+    distills: "W2 outcome, deviations (two live worktrees isolated, multi-pass removal, clippy build-script reruns), rollout measurements, evidence and follow-ups"
+t2_waived: "the epic distillation plan puts the new DEC (per-worktree target) and the DEC-42/DEC-54 amendments at W3 (close); W2's result report lists them"
