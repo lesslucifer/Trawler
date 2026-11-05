@@ -3,6 +3,7 @@
 mod common;
 mod data_window;
 mod layout_store;
+mod outlive_window;
 mod quit_stops_core;
 mod restart_command;
 mod supervisor;
