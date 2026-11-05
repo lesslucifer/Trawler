@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "epic E-CI -> main"
+epic: E-CI
+branch: epic/ci
+base: 398f6dfebd3fec11ec0f61a0c68635c5c3ce5ce1
+head: 296e7ffd08407493c79ae598337693255c7811a5
+diff_sha256: e233e9bcef85ed35ce7009b389be6fda548daf59098958d06fadb4de83642042
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    finders: 17
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
