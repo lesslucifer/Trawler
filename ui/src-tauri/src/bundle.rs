@@ -144,6 +144,15 @@ mod tests {
     }
 
     #[test]
+    fn the_build_script_checks_the_ui_of_the_crate_it_runs_for_not_the_one_it_was_compiled_in() {
+        // Worktrees sharing one target dir reuse a build script compiled in another worktree,
+        // so a crate dir baked in at compile time checks that worktree's bundle instead.
+        let build_script = include_str!("../build.rs");
+        assert!(!build_script.contains("env!(\"CARGO_MANIFEST_DIR\")"), "{build_script}");
+        assert!(build_script.contains("var_os(\"CARGO_MANIFEST_DIR\")"), "{build_script}");
+    }
+
+    #[test]
     fn no_bundle_is_stale() {
         assert!(is_stale(None, Some(at(1)), RELEASE, Flavour::Release));
         assert!(is_stale(None, None, RELEASE, Flavour::Release));

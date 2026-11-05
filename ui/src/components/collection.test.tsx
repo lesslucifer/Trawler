@@ -36,21 +36,32 @@ const SPECIMENS: Record<string, ReactElement> = {
   CopyButton: <collection.CopyButton value="v" label="copy" />,
   CopyText: <collection.CopyText value="v" label="uri" />,
   CutMarker: <collection.CutMarker shown={10} total={99} />,
+  EditSurface: <collection.EditSurface text='{"a":1}' language="json" />,
   Disclosure: <collection.Disclosure summary="set it up manually">steps</collection.Disclosure>,
   DurationText: <collection.DurationText value={12} />,
   Field: <collection.Field value="" onChange={() => {}} aria-label="host" />,
   FormRenderer: <collection.FormRenderer text="a=1" />,
+  FormTable: (
+    <collection.FormTable
+      pairs={[{ index: 0, raw: "a=1", key: "a", value: "1", kept: false }]}
+      onEdit={() => {}}
+      onAdd={() => {}}
+      onRemove={() => {}}
+    />
+  ),
   Help: (
     <collection.Help text="On Ethernet, change Wi-Fi to Ethernet in the command.">
       In Terminal, run:
     </collection.Help>
   ),
   HexRenderer: <collection.HexRenderer bytes={new Uint8Array([1])} />,
+  HexView: <collection.HexView bytes={new Uint8Array([1])} />,
   IconButton: <collection.IconButton glyph="close" onClick={() => {}} />,
   ImageRenderer: <collection.ImageRenderer bytes={new Uint8Array([1])} contentType="image/png" />,
   JsonRenderer: <collection.JsonRenderer text='{"a":1}' />,
   KeyValueRow: <collection.KeyValueRow name="host" value="example.com" />,
   MethodLabel: <collection.MethodLabel method="GET" />,
+  Menu: <collection.Menu label="more" sections={[[{ label: "undo", keys: "⌘Z", run: () => {} }]]} at={{ x: 0, y: 0 }} onClose={() => {}} />,
   MenuPath: <collection.MenuPath path={["Trust", "When using this certificate", "Always Trust"]} />,
   QrCode: <collection.QrCode value="http://192.168.1.24:7421/ca.cer" label="the certificate URL" />,
   Notice: <collection.Notice>nothing captured yet</collection.Notice>,

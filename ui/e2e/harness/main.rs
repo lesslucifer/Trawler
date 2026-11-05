@@ -73,6 +73,8 @@ async fn main() {
             .route("/img", get(png_body))
             .route("/xml", get(xml_body))
             .route("/big", get(oversized_text_body))
+            .route("/long-json", get(long_json_body))
+            .route("/long-form", get(long_form_body))
             .route("/headers", get(long_headers_body))
             .route("/missing", get(not_found_body))
             .route("/boom", get(server_error_body))
@@ -240,6 +242,38 @@ async fn oversized_text_body() -> impl IntoResponse {
         [(header::CONTENT_TYPE, "text/plain")],
         "trawler ".repeat(25_000),
     )
+}
+
+// Past the pane's 128 KiB cap, pretty-printed so the data window has lines to
+// work on, keys out of order so sorting them is a visible change, and the word
+// "needle" in exactly 25 items for find to count.
+async fn long_json_body() -> impl IntoResponse {
+    let items: Vec<String> = (0..3000)
+        .map(|i| {
+            let tag = if i % 120 == 0 { "needle" } else { "plain" };
+            format!(
+                r#"    {{"name": "item-{i:05}", "id": {i}, "tag": "{tag}", "note": "trawler"}}"#
+            )
+        })
+        .collect();
+    (
+        [(header::CONTENT_TYPE, "application/json")],
+        format!("{{\n  \"items\": [\n{}\n  ],\n  \"count\": 3000\n}}", items.join(",\n")),
+    )
+}
+
+const LONG_FORM_TOKEN: &str =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0cmF3bGVyIiwiZXhwIjoxNzkzODUxMjAwfQ.bm90LWEtcmVhbC1zaWduYXR1cmU";
+
+// About 300 KiB of pairs: a JWT whose payload carries an `exp` sits mid-way, and
+// the last pair holds a value long enough that any clamp would show.
+async fn long_form_body() -> impl IntoResponse {
+    let mut pairs: Vec<String> = (0..4000)
+        .map(|i| format!("field{i:05}=trawler-form-value-{i:05}-{}", "x".repeat(40)))
+        .collect();
+    pairs.insert(2000, format!("token={LONG_FORM_TOKEN}"));
+    pairs.push(format!("last={}", "whole-".repeat(300)));
+    ([(header::CONTENT_TYPE, "application/x-www-form-urlencoded")], pairs.join("&"))
 }
 
 // A response whose headers dwarf its body: the shape real traffic has (session

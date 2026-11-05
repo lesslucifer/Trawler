@@ -1,4 +1,4 @@
-import { useConfirm } from "./useConfirm";
+import { useCopy } from "./useConfirm";
 
 /**
  * CopyText — a displayed value the user grabs whole; click copies it verbatim.
@@ -18,16 +18,13 @@ export function CopyText({
   label: string;
   className?: string;
 }) {
-  const { state, flash } = useConfirm(value);
+  const { state, copy: write } = useCopy(value);
   const confirming = state === "confirming";
   const failed = state === "error";
 
   const copy = () => {
     if (!window.getSelection()?.isCollapsed) return;
-    Promise.resolve(navigator.clipboard?.writeText(value)).then(
-      () => flash("confirming"),
-      () => flash("error"),
-    );
+    write(value);
   };
 
   return (

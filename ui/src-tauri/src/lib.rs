@@ -6,6 +6,7 @@
 mod bundle;
 pub mod core;
 mod core_address;
+pub mod data_window;
 pub mod layout;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
@@ -50,6 +51,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .on_window_event(window_geometry::track)
+        .on_window_event(data_window::on_window_event)
         .menu(menu::build)
         .on_menu_event(|app, event| menu::handle(app, event.id().as_ref()))
         .on_window_event(|window, event| {
@@ -64,6 +66,7 @@ pub fn run() {
             window_geometry::install(app.handle());
             Ok(())
         });
+    let builder = data_window::install(builder);
     #[cfg(not(feature = "scenario"))]
     let builder = builder.invoke_handler(tauri::generate_handler![
         setup::ca_trusted,
@@ -94,7 +97,9 @@ pub fn run() {
         core::core_status,
         core::core_log,
         core::restart_core,
-        settings::open_settings
+        settings::open_settings,
+        data_window::open_data_window,
+        data_window::take_data_payload
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);

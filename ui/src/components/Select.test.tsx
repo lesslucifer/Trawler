@@ -300,4 +300,19 @@ describe("Select", () => {
 
     expect(onChange).toHaveBeenCalledWith("android");
   });
+
+  it("opens below its trigger by default, above it when told, with the same gap", () => {
+    setup();
+    fireEvent.click(trigger());
+    const below = screen.getByRole("listbox").parentElement!;
+    expect(below.className).toContain("top-[calc(100%+theme(spacing.chrome-y))]");
+    expect(below.className).not.toContain("bottom-");
+    fireEvent.click(trigger());
+
+    setup({ label: "kind", opens: "above" });
+    fireEvent.click(screen.getByRole("button", { name: "kind" }));
+    const above = screen.getByRole("listbox").parentElement!;
+    expect(above.className).toContain("bottom-[calc(100%+theme(spacing.chrome-y))]");
+    expect(above.className).not.toContain("top-");
+  });
 });

@@ -5,7 +5,9 @@ use std::path::Path;
 
 fn main() {
     if std::env::var_os("CARGO_FEATURE_CUSTOM_PROTOCOL").is_some() {
-        let ui = Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let crate_dir = std::env::var_os("CARGO_MANIFEST_DIR")
+            .expect("cargo sets CARGO_MANIFEST_DIR for every build script run");
+        let ui = Path::new(&crate_dir).join("..");
         for input in bundle::BUNDLE_INPUTS {
             println!("cargo:rerun-if-changed={}", ui.join(input).display());
         }

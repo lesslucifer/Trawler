@@ -36,12 +36,15 @@ export function coreStub({
   };
 }
 
+const today = new Date();
+const TODAY_AT_14_10_04 = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 14, 10, 4).getTime();
+
 export const RUNNING: Extract<CoreState, { state: "running" }> = {
   state: "running",
   pid: 48213,
   proxy: "127.0.0.1:7420",
   api: "127.0.0.1:7421",
-  started_at_ms: new Date(2026, 10, 4, 14, 10, 4).getTime(),
+  started_at_ms: TODAY_AT_14_10_04,
 };
 
 export const line = (seq: number, text: string): LogEntry => ({ seq, kind: "line", text });
