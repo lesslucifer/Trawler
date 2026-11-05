@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU gate-parity2/suite-cost -> epic/gate-parity2"
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W4
+branch: wu/gate-parity2/suite-cost
+base: 3425d21f44ec7fd4f0c78c22e2010c31da20fb60
+head: 619c38f1c13d4d57ea429ae2bde48e4475b200da
+diff_sha256: 0c4c8174eded5a75cbb094324dfe42dec1409afc4facd40a351dccd555b88cf7
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 19
+    finders: 25
+    total: 62
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "the doc_examples guard scans only /// and //! lines, so an example in a /** */, /*! */ block or #[doc = ...] attribute would go unseen"
+    waived: "no Rust doc comment in any workspace lib uses the block or attribute form (git grep over src, xtask/src, ui/src-tauri/src finds only TSX fixture strings); the line form is the workspace's only doc style, and widening the scanner for a form nobody writes adds parsing with no case to test against"
+verdict: PASS
+date: 2026-11-05
