@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU gate-parity2/launch-guard -> epic/gate-parity2"
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W3
+branch: wu/gate-parity2/launch-guard
+base: 5bf2d86bc9d31a93ebca3f4a936941d08e31a094
+head: a92752a8ca0db8ee8216aa8e4b87bed7f7830efd
+diff_sha256: bb94f88ff808596e6ace96a958b2963f497c477ff8e16e870a30896be481c649
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    gate0: 21
+    finders: 26
+    total: 40
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+    altitude:    { found: 1, verified: 0 }
+findings: { found: 4, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "a slow machine relinks the probe and waits the 2 s threshold on every marker miss"
+    waived: "deliberate and recorded in DEC-75: a slow verdict is never cached so enabling Developer Tools takes effect at once; bounded to the link plus 2 s while the machine stays slow"
+  - finding: "machine() reads the boot key (a sysctl spawn on macOS) even when no cache dir is resolvable"
+    waived: "milliseconds, only on a marker miss, and only when neither HOME nor XDG_CACHE_HOME is set — an environment no gate runs in"
+  - finding: "the machine-vs-tree distinction is the in-band exit code MACHINE_REFUSED = 2, which each verdict consumer must special-case"
+    waived: "the (i32, String) verdict is the shape every xtask command returns and main.rs maps to the process exit, which the hooks read; all three consumers handle it and are pinned by tests; a typed verdict would change every gate entrypoint for one code"
+  - finding: "the unknown-boot fallback is a constant, so a fast verdict cached under it never expires"
+    waived: "it applies only where neither /proc boot_id nor kern.boottime exists — platforms without Gatekeeper, where first launch does not slow; DEC-75 accepts per-boot caching"
+verdict: PASS
+date: 2026-11-05
