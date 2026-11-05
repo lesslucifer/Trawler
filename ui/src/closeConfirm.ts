@@ -112,6 +112,7 @@ export function useProxyCloseConfirm(
   const [keepRefused, setKeepRefused] = useState<string | null>(null);
   const ending = useRef<RequestKind>("close");
   const quitRequests = useRef(0);
+  const askAnswers = useRef(0);
   const quitsAnswering = useRef(0);
   const quitPromptShown = useRef(false);
   const question = useRef<() => Promise<QuitPrompt | null>>(async () => null);
@@ -264,14 +265,18 @@ export function useProxyCloseConfirm(
     // again blind, and a question that vanishes reads as a cancel.
     keepCapturing: async () => {
       const requestsSeen = quitRequests.current;
+      const answer = ++askAnswers.current;
       setKeepRefused(null);
       try {
         await deps.invoke("keep_capturing_write", { on: true });
       } catch (err) {
         console.error("storing keep capturing failed:", err);
-        if (quitRequests.current === requestsSeen) setKeepRefused(refusalWords(err));
+        if (quitRequests.current === requestsSeen && askAnswers.current === answer) {
+          setKeepRefused(refusalWords(err));
+        }
         return;
       }
+      if (askAnswers.current !== answer) return;
       setAsking(false);
       if (quitRequests.current === requestsSeen) await destroy();
     },
@@ -279,6 +284,7 @@ export function useProxyCloseConfirm(
     // close simply asks again.
     quitInstead: async () => {
       const requestsSeen = quitRequests.current;
+      askAnswers.current += 1;
       setAsking(false);
       setKeepRefused(null);
       ending.current = "close";
@@ -292,6 +298,7 @@ export function useProxyCloseConfirm(
       else setPrompt(asked);
     },
     cancelAsk: () => {
+      askAnswers.current += 1;
       setAsking(false);
       setKeepRefused(null);
     },

@@ -605,6 +605,33 @@ describe("a quit request", () => {
     },
   );
 
+  test("a cancel while keep capturing is being stored keeps the window: the answer was withdrawn", async () => {
+    const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
+    const { result } = shellConfirm(f);
+    await closeAndWait(f);
+    const answering = Promise.resolve(result.current.keepCapturing());
+    act(() => result.current.cancelAsk());
+    f.releaseWrite();
+    await act(async () => {
+      await answering;
+    });
+    expect(f.destroy).not.toHaveBeenCalled();
+    expect(result.current.asking).toBe(false);
+  });
+
+  test("a quit chosen while keep capturing is being stored is the answer that ends the window", async () => {
+    const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
+    const { result } = shellConfirm(f);
+    await closeAndWait(f);
+    const keeping = Promise.resolve(result.current.keepCapturing());
+    const quitting = Promise.resolve(result.current.quitInstead());
+    f.releaseWrite();
+    await act(async () => {
+      await Promise.all([keeping, quitting]);
+    });
+    expect(f.destroy).toHaveBeenCalledOnce();
+  });
+
   test("a ✕ while a quit prompt is open changes nothing and the quit still ends in quit_app", async () => {
     const f = shellDeps("ours", { keep: "unanswered" });
     const { result } = shellConfirm(f);
