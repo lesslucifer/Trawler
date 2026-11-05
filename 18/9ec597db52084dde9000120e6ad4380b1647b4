@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU release-bundle -> epic/packaging"
+epic: E-PKG
+wu: E-PKG.W1
+branch: wu/packaging/release-bundle
+base: 75683030831a22484997eb5cf4fc9f1eabb37472
+head: 189ec597db52084dde9000120e6ad4380b1647b4
+diff_sha256: 365a584966f87636e2881b335734385ab494c132b2e4034fab06f315cd17af0c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 8
+  stage_seconds:
+    gate0: 19
+    finders: 50
+  by_finder:
+    correctness: { found: 5, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 8, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "a '#' comment inside [workspace] members or after a value drops a member or the version silently"
+    waived: "taken after this verdict: fixed on the next tip and re-reviewed in round 3"
+  - finding: "pnpm install without --frozen-lockfile lets a release build rewrite ui/pnpm-lock.yaml"
+    waived: "taken after this verdict: fixed on the next tip and re-reviewed in round 3"
+  - finding: "artifacts() lists leftover installers of earlier builds under the same bundle dir"
+    waived: "the listing is informational; Trawler.app is replaced by name on every build so the verified .app is this build's; W4's release jobs build on clean runners"
+  - finding: "is_artifact's suffix list will need W3's updater archives added beside bundles()"
+    waived: "W3 adds the updater artifacts and owns that list"
+  - finding: "package.rs's pnpm runner (pnpm.cmd on Windows) is a second launcher beside ui.rs's"
+    waived: "ui.rs is macOS-only gate tooling; the Windows runner is W2's bring-up to prove on a dispatched CI run"
+verdict: PASS
+date: 2026-11-05
