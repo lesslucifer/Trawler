@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 04f513747be0ab87dec90f95d273a7dc179193ea
+base: 5a9b9086daccb3e0b3adea95426e08a578cdc6e6
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-w11-payload-heading-result.html
+report_sha256: f579e6ca20cf255bc05d7758dbf1e99d9cf838dcdc5b04b51e480d6fa5edcf85
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBwsy73nOqpbE5jZbNYn2f7KinZX7m2UjNfVMM9TZ2bA9tKLn3nJP8PyB
+  8y4TDuIjxCHP5ite170pEj1dTBouEN
+  -----END SSH SIGNATURE-----
