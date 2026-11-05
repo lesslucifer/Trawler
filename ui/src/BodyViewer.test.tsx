@@ -438,3 +438,44 @@ test("the pane shows the mode it is handed and hands a pick back without taking 
   expect(onPretty).toHaveBeenCalledWith(true);
   expect(raw).toBeChecked();
 });
+
+test.each([
+  ["JSON served as text/plain", '{"user":"ada"}', "text/plain", "body-json", "JSON · served as text/plain"],
+  ["HTML served as application/octet-stream", "<!doctype html><p>hi</p>", "application/octet-stream", "body-xml", "HTML · served as application/octet-stream"],
+])("%s renders by its bytes and the toolbar says so", async (_name, body, contentType, renderer, said) => {
+  render(<Viewer api={apiWith({ bytes: text(body), contentType })} flow={flow()} leg="response" />);
+
+  await screen.findByTestId(renderer);
+  expect(screen.getByTestId("served-as")).toHaveTextContent(said);
+});
+
+test.each([
+  ["broken JSON under text/plain", "{oops", "text/plain"],
+  ["JSON under application/json", '{"a":1}', "application/json"],
+  ["plain text under text/plain", "words", "text/plain"],
+  ["JSON with no label", '{"a":1}', null],
+])("%s makes no statement", async (_name, body, contentType) => {
+  render(<Viewer api={apiWith({ bytes: text(body), contentType })} flow={flow()} leg="response" />);
+
+  await screen.findByTestId("body-pane");
+  await waitFor(() => expect(screen.queryByText("loading…")).toBeNull());
+  expect(screen.queryByTestId("served-as")).toBeNull();
+});
+
+test("a body that is not text under a text/plain label is hex, as it was", async () => {
+  render(<Viewer api={apiWith({ bytes: Uint8Array.of(0, 1, 2, 0xfe), contentType: "text/plain" })} flow={flow()} leg="response" />);
+
+  await screen.findByTestId("body-hex");
+  expect(screen.queryByTestId("served-as")).toBeNull();
+});
+
+test("raw mode keeps its own dispatch and says nothing about the served type", async () => {
+  const api = apiWith({ bytes: text('{"user":"ada"}'), contentType: "text/plain" });
+  render(<Viewer api={api} flow={flow()} leg="response" />);
+  await screen.findByTestId("served-as");
+
+  fireEvent.click(screen.getByRole("radio", { name: "raw" }));
+
+  await waitFor(() => expect(screen.queryByTestId("served-as")).toBeNull());
+  await screen.findByTestId("body-text");
+});

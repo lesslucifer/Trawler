@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { hasHtmlSignature, isWellFormedXml, labelKind, normalizeLabel, readKind } from "./contentKind";
+import { decidedBy, hasHtmlSignature, isWellFormedXml, labelKind, normalizeLabel, overruled, readKind, servedAs } from "./contentKind";
 
 const bytes = (text: string) => new TextEncoder().encode(text);
 const BOM = "﻿";
@@ -219,5 +219,33 @@ describe("each document is parsed at most once", () => {
     expect(readKind(bytes("plain words, nothing more")).kind).toBe("text");
     expect(parse).not.toHaveBeenCalled();
     expect(xml).not.toHaveBeenCalled();
+  });
+});
+
+describe("what decided the kind, said in words", () => {
+  const cases: [string, Uint8Array, string | undefined, boolean, string | null, string][] = [
+    ["agreeing label", bytes(JSON_DOC), "application/json; charset=utf-8", false, null, "from application/json"],
+    ["generic label over JSON", bytes(JSON_DOC), "text/plain", true, "JSON · served as text/plain", "read from its bytes · served as text/plain"],
+    ["wrong label over JSON", bytes(JSON_DOC), "TEXT/HTML", true, "JSON · served as text/html", "read from its bytes · served as text/html"],
+    ["octet-stream over HTML", bytes(HTML_DOC), "application/octet-stream", true, "HTML · served as application/octet-stream", "read from its bytes · served as application/octet-stream"],
+    ["image bytes under a generic label", PNG, "application/octet-stream", true, "image · served as application/octet-stream", "read from its bytes · served as application/octet-stream"],
+    ["binary under a text label", BINARY, "text/html", true, "hex · served as text/html", "read from its bytes · served as text/html"],
+    ["text under a generic label agrees", bytes("{oops"), "text/plain", false, null, "from text/plain"],
+    ["binary under a generic label agrees", BINARY, "application/octet-stream", false, null, "from application/octet-stream"],
+    ["no label over JSON", bytes(JSON_DOC), undefined, false, null, "read from its bytes"],
+    ["no label over text", bytes("words"), undefined, false, null, "read from its bytes"],
+  ];
+
+  it.each(cases)("%s", (_name, data, label, over, statement, decided) => {
+    const reading = readKind(data, label);
+    expect(overruled(reading)).toBe(over);
+    expect(servedAs(reading)).toBe(statement);
+    expect(decidedBy(reading, false)).toBe(decided);
+  });
+
+  it("a pick names the kind the bytes read and what decided it, without a prefix", () => {
+    expect(decidedBy(readKind(bytes(JSON_DOC), "text/plain"), true)).toBe("read JSON from its bytes");
+    expect(decidedBy(readKind(bytes(JSON_DOC), "application/json"), true)).toBe("read JSON from application/json");
+    expect(decidedBy(readKind(bytes("words")), true)).toBe("read text from its bytes");
   });
 });

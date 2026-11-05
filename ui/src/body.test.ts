@@ -1,5 +1,4 @@
 import {
-  bodyKind,
   bodyPayload,
   captionFilename,
   bodyNotice,
@@ -17,29 +16,6 @@ import {
   saveFilename,
 } from "./body";
 import type { FlowView } from "./api";
-
-test("bodyKind dispatches on the mime type, ignoring parameters", () => {
-  expect(bodyKind("application/json")).toBe("json");
-  expect(bodyKind("application/json; charset=utf-8")).toBe("json");
-  expect(bodyKind("application/problem+json")).toBe("json");
-  expect(bodyKind("image/png")).toBe("image");
-  expect(bodyKind("application/x-www-form-urlencoded")).toBe("form");
-  expect(bodyKind("text/plain; charset=iso-8859-1")).toBe("text");
-  expect(bodyKind("application/javascript")).toBe("text");
-  expect(bodyKind("application/octet-stream")).toBe("hex");
-  expect(bodyKind(null)).toBe("hex");
-});
-
-// Six renderers need six kinds: the flat "text" the five-kind contract returned
-// for markup left XmlRenderer's dispatch row unimplementable.
-test("bodyKind splits the markup sub-group from plain text", () => {
-  expect(bodyKind("application/xml")).toBe("xml");
-  expect(bodyKind("text/xml")).toBe("xml");
-  expect(bodyKind("text/html")).toBe("xml");
-  expect(bodyKind("application/soap+xml")).toBe("xml");
-  expect(bodyKind("text/html; charset=utf-8")).toBe("xml");
-  expect(bodyKind("text/csv")).toBe("text");
-});
 
 test("humanBytes reads at a glance: one decimal below 10, integer above", () => {
   expect(humanBytes(0)).toBe("0 B");
