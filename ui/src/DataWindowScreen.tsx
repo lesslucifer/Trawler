@@ -54,6 +54,7 @@ import {
   valueText,
   type Indent,
 } from "./jsonTools";
+import { previewDocument } from "./htmlPreview";
 import { loadBeautifier, reformatCode, REFORMAT_STEP, type Beautifier } from "./codeTools";
 import { REINDENT_STEP, reindentXml } from "./xmlTools";
 import {
@@ -109,7 +110,7 @@ const SURFACE_KIND = {
   json: "json",
   form: "form",
   xml: "xml",
-  html: "xml",
+  html: "html",
   javascript: "javascript",
   css: "css",
   text: "text",
@@ -117,7 +118,7 @@ const SURFACE_KIND = {
   image: "image",
 } as const;
 
-const SURFACE_LANGUAGE = { json: "json", xml: "xml", javascript: "javascript", css: "css", text: "plain" } as const;
+const SURFACE_LANGUAGE = { json: "json", xml: "xml", html: "html", javascript: "javascript", css: "css", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const NO_MATCHES: TextRange[] = [];
@@ -129,6 +130,11 @@ const FOLD_CHOICES = [
   { id: "all", label: "all" },
   { id: "none", label: "none" },
 ];
+const PREVIEW_CHOICES = [
+  { id: "source", label: "source" },
+  { id: "preview", label: "preview" },
+];
+const PREVIEW_STATEMENT = "scripts, forms and anything remote are not run or loaded";
 const NEEDS_JSON = "needs valid JSON";
 const REPLACED_SELECTION = "replaced the selection with its decoded form";
 const SHOWN_ENCODED = "shown encoded";
@@ -336,6 +342,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const [reveal, setReveal] = useState(0);
   const [fold, setFold] = useState<{ id: string; text: string } | null>(null);
   const [wrap, setWrap] = useState(true);
+  const [preview, setPreview] = useState(false);
+  const findAfterPreview = useRef(false);
   const [encoded, setEncoded] = useState(false);
   const [peek, setPeek] = useState<Peek | null>(null);
   const more = useRef<HTMLButtonElement>(null);
@@ -362,10 +370,11 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
   const lines = useMemo(() => lineCountOf(workingText(settled)), [settled]);
   const empty = payload.bytes.length === 0;
+  const previewing = kind === "html" && preview && !empty;
   const editableForm = kind === "form" && !lossy && !mixed;
   const asTable = editableForm && !encoded;
   const onText = !empty && kind !== "image" && kind !== "hex" && !asTable;
-  const searchable = !empty && kind !== "image";
+  const searchable = !empty && kind !== "image" && !previewing;
   const breakWith = lineBreak ?? "\n";
   const found = useMemo((): Search => {
     if (!query) return NOTHING_FOUND;
@@ -392,7 +401,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   );
   const menuJson = useMemo(() => (kind === "json" && menu ? parseJson(surfaceText(text)) : null), [kind, menu, text]);
   const parses = menuJson?.ok ?? false;
-  const codeKind = kind === "javascript" || kind === "css" ? kind : null;
+  const codeKind = kind === "javascript" || kind === "css" || kind === "html" ? kind : null;
   const [beautifier, setBeautifier] = useState<Beautifier | null>(null);
   const [formatterFailed, setFormatterFailed] = useState(false);
   useEffect(() => {
@@ -463,10 +472,14 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       setHistory((h) => {
         if (!codeKind || !beautifier) return h;
         const result = reformatCode(beautifier, codeKind, workingText(h), breakWith);
-        return result.ok ? commit(h, result.text, REFORMAT_STEP) : h;
+        return result.ok ? commit(h, result.text, codeKind === "html" ? REINDENT_STEP : REFORMAT_STEP) : h;
       }),
     [beautifier, breakWith, codeKind],
   );
+  const showPreview = useCallback((on: boolean) => {
+    setPreview(on);
+    setMenu(null);
+  }, []);
   const toggleEncoded = () => {
     setEncoded((shown) => !shown);
     setRow(null);
@@ -571,7 +584,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         } else if (event.code === "KeyF" && event.shiftKey && kind === "xml" && !readOnly) {
           event.preventDefault();
           reindent();
-        } else if (event.code === "KeyF" && event.shiftKey && codeKind && !readOnly) {
+        } else if (event.code === "KeyF" && event.shiftKey && codeKind && !readOnly && !previewing) {
           event.preventDefault();
           reformatSource();
         }
@@ -582,6 +595,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       if (key === "d" && event.shiftKey && !typing) {
         event.preventDefault();
         decodeNow();
+      } else if (key === "v" && event.shiftKey && kind === "html") {
+        event.preventDefault();
+        showPreview(!previewing);
+      } else if (key === "f" && previewing) {
+        event.preventDefault();
+        findAfterPreview.current = true;
+        showPreview(false);
       } else if (key === "f" && searchable) {
         event.preventDefault();
         const input = findBox.current?.querySelector("input");
@@ -609,7 +629,15 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [asTable, codeKind, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, readOnly, reformatSource, reindent, removeRow, row, save, searchable, stepFind]);
+  }, [asTable, codeKind, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, previewing, readOnly, reformatSource, reindent, removeRow, row, save, searchable, showPreview, stepFind]);
+
+  useEffect(() => {
+    if (previewing || !findAfterPreview.current) return;
+    findAfterPreview.current = false;
+    const input = findBox.current?.querySelector("input");
+    input?.focus();
+    input?.select();
+  }, [previewing]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -668,16 +696,28 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         wrapRow,
       ]);
     }
+    if (kind === "html") {
+      sections.push([
+        {
+          label: "show",
+          choices: PREVIEW_CHOICES,
+          value: previewing ? "preview" : "source",
+          pick: (id: string) => showPreview(id === "preview"),
+        },
+      ]);
+    }
     if (codeKind) {
       sections.push([
         ...(readOnly
           ? []
           : [
               {
-                label: "reformat",
+                label: codeKind === "html" ? "re-indent" : "reformat",
                 keys: "⌥⇧F",
-                disabled: !menuCode?.ok,
-                why: menuCode
+                disabled: previewing || !menuCode?.ok,
+                why: previewing
+                  ? "shown in preview"
+                  : menuCode
                   ? menuCode.ok
                     ? undefined
                     : menuCode.reason
@@ -687,8 +727,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
                 run: reformatSource,
               },
             ]),
-        foldRow,
-        wrapRow,
+        ...(previewing ? [] : [foldRow, wrapRow]),
       ]);
     }
     if (kind === "text" || (kind === "form" && onText)) sections.push([wrapRow]);
@@ -770,6 +809,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     setMenu({ type: "context", at: point, row: null, offset });
   };
 
+  const previewHtml = useMemo(() => (previewing ? previewDocument(text) : ""), [previewing, text]);
+
   const surface = () => {
     if (empty) {
       return (
@@ -810,6 +851,20 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
           inset={peek?.origin.type === "row" ? { afterIndex: peek.origin.index, node: peekNode() } : null}
           testId="data-surface"
         />
+      );
+    }
+    if (previewing) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <p className="border-b border-hairline px-4 py-chrome-y font-ui text-note text-ink-mute">{PREVIEW_STATEMENT}</p>
+          <iframe
+            title="html preview"
+            sandbox=""
+            srcDoc={previewHtml}
+            data-testid="data-preview"
+            className="min-h-0 flex-1 border-0"
+          />
+        </div>
       );
     }
     return (
@@ -900,6 +955,21 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         <span data-testid="detected">
           {decidedBy(reading, override !== null)}
         </span>
+        {kind === "html" && !empty && (
+          <span role="group" aria-label="show" className="flex items-center gap-chrome-tight">
+            {PREVIEW_CHOICES.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={(id === "preview") === previewing}
+                onClick={() => showPreview(id === "preview")}
+                className={`rounded-button px-chrome-x ${(id === "preview") === previewing ? "bg-wash-active text-ink" : "hover:bg-wash-hover"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </span>
+        )}
         <span>{humanBytes(shownSize)}</span>
         {!readOnly && !empty && <span>{asTable ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}
         <span className="ml-auto flex items-center gap-x-3">
