@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W1
+branch: HEAD
+tests:
+  unit: { count: 55, covers: "update.rs: a launch asks the channel at most once a day (a future or unreadable record is due), the record round-trips, only a bundled app updates itself, the offer names both versions and the cleared list, a launch check is silent unless it offers, a user check always answers, a refused update says why and that nothing changed, a staged update is taken once, a failed install is told before the app ends and the exit waits only for that notice, and the shipped config trusts only the owner's key on the public channel with signed versions. menu.rs: Check for Updates… maps to the check. closeConfirm: a cancelled quit invokes quit_cancelled, a quit that goes ahead does not. package.rs: updater artifacts are asked for exactly when TAURI_SIGNING_PRIVATE_KEY is set, and the .app.tar.gz and .sig are listed" }
+  integration: { count: 4, covers: "the real tauri-plugin-updater on a mock app against a loopback channel and keys made in the test: a channel with no newer version offers nothing and leaves the installed copy byte-identical; an update signed by another key is refused (minisign) and the copy and CA are untouched; a genuine archive announced as another version is refused (SignedVersionMismatch); a verified update replaces the bundle's binary and the CA beside it keeps its bytes" }
+  e2e: { waived: "J2 and J3 of the epic's e2e_packaging (W5) install a real signed update from a published release; no release exists before W3. The WebDriver e2e (attached 14/14, owned 1/1) and package_bundle (2/2) were re-run green on this WU's code" }
