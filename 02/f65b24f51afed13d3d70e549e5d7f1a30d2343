@@ -1,0 +1,26 @@
+schema: cr/v5
+scope: "WU E-BGSVC.W9 quit-hardening -> epic/bg-service"
+epic: E-BGSVC
+wu: E-BGSVC.W9
+branch: wu/bg-service/quit-hardening
+base: 18bf728ba3fa0de3d88a83068fd98d295516fbc0
+head: 02f65b24f51afed13d3d70e549e5d7f1a30d2343
+diff_sha256: e59353b8acefcc8df5c50d4970a64a967ccfb908c0417d47bad711fbab997950
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
