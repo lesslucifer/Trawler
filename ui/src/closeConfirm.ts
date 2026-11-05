@@ -159,15 +159,20 @@ export function useProxyCloseConfirm(
       quitRequests.current += 1;
       ending.current = "quit";
       quitPrompting.current = true;
-      const asked = await firstQuestion();
-      if (asked === null) {
-        await quitApp();
-        quitPrompting.current = false;
-      } else setPrompt(asked);
+      let prompting = false;
+      try {
+        const asked = await firstQuestion();
+        if (asked === null) {
+          await quitApp();
+        } else {
+          prompting = true;
+          setPrompt(asked);
+        }
+      } finally {
+        if (!prompting) quitPrompting.current = false;
+      }
     };
 
-    // Not bounded: the shell has already cleared the flag when it answers, so a
-    // reading abandoned as late would be a request no window ever acts on.
     const takeQuitRequest = async () => {
       if (await deps.invoke<boolean>("take_quit_request").catch(() => false)) await answerQuitRequest();
     };
@@ -252,6 +257,7 @@ export function useProxyCloseConfirm(
     // The answer is the switch. A write that fails leaves the window open, as a
     // cancel does: closing into a state nothing recorded would ask again blind.
     keepCapturing: async () => {
+      const requestsSeen = quitRequests.current;
       setAsking(false);
       try {
         await deps.invoke("keep_capturing_write", { on: true });
@@ -259,17 +265,20 @@ export function useProxyCloseConfirm(
         console.error("storing keep capturing failed:", err);
         return;
       }
-      await destroy();
+      if (quitRequests.current === requestsSeen) await destroy();
     },
     // Quit is the user's answer even where it could not be stored: the next
     // close simply asks again.
     quitInstead: async () => {
+      const requestsSeen = quitRequests.current;
       setAsking(false);
       ending.current = "close";
       await deps.invoke("keep_capturing_write", { on: false }).catch((err: unknown) => {
         console.error("storing keep capturing failed:", err);
       });
+      if (quitRequests.current !== requestsSeen) return;
       const asked = await question.current();
+      if (quitRequests.current !== requestsSeen) return;
       if (asked === null) await destroy();
       else setPrompt(asked);
     },

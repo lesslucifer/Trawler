@@ -291,7 +291,7 @@ describe("every read a close waits on is bounded", () => {
 
 function shellDeps(
   status: "ours" | "foreign" | "none" | "unknown",
-  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean; holdReads?: boolean; holdStatus?: boolean } = {},
+  shell: { keep?: KeepCapturing; tray?: boolean; quitPending?: boolean; writeFails?: boolean; unreadable?: boolean; holdListen?: boolean; holdReads?: boolean; holdStatus?: boolean; holdWrite?: boolean } = {},
 ) {
   const f = fakeDeps(status);
   let keep: KeepCapturing = shell.keep ?? "off";
@@ -302,6 +302,8 @@ function shellDeps(
   let releaseStatus: () => void = () => {};
   const statusReleased = new Promise<void>((resolve) => (releaseStatus = resolve));
   let statusHeld = false;
+  let releaseWrite: () => void = () => {};
+  const writeReleased = new Promise<void>((resolve) => (releaseWrite = resolve));
   const readsReleased = new Promise<void>((resolve) => (releasing = resolve));
   const listenStands = new Promise<void>((resolve) => (listening = resolve));
   const invoke = vi.fn(async (cmd: string, args?: Record<string, unknown>) => {
@@ -321,6 +323,7 @@ function shellDeps(
       return was;
     }
     if (cmd === "keep_capturing_write") {
+      if (shell.holdWrite) await writeReleased;
       if (shell.writeFails) throw new Error("permission denied");
       keep = args?.on ? "on" : "off";
       return undefined;
@@ -346,6 +349,7 @@ function shellDeps(
     ran,
     releaseReads: () => releasing(),
     releaseStatus: () => releaseStatus(),
+    releaseWrite: () => releaseWrite(),
     registerListener: () => act(async () => listening()),
     announce: () => act(async () => announce()),
     request: async () => {
@@ -561,6 +565,24 @@ describe("a quit request", () => {
     expect(f.ran("quit_app")).toBe(true);
     expect(f.destroy).not.toHaveBeenCalled();
   });
+
+  test.each(["keepCapturing", "quitInstead"] as const)(
+    "a quit request that lands while the once-question's %s answer is being stored wins",
+    async (answer) => {
+      const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
+      const { result } = shellConfirm(f);
+      await closeAndWait(f);
+      expect(result.current.asking).toBe(true);
+      const answering = Promise.resolve(result.current[answer]());
+      await f.request();
+      await waitFor(() => expect(f.ran("quit_app")).toBe(true));
+      f.releaseWrite();
+      await act(async () => {
+        await answering;
+      });
+      expect(f.destroy).not.toHaveBeenCalled();
+    },
+  );
 
   test("a ✕ while a quit prompt is open changes nothing and the quit still ends in quit_app", async () => {
     const f = shellDeps("ours", { keep: "unanswered" });
