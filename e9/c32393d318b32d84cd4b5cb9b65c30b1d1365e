@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU inspect-window/e2e -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W7
+branch: wu/inspect-window/e2e
+base: 33088b5a65bd3524377739d8b8ffc89a1a7025f0
+head: e9c32393d318b32d84cd4b5cb9b65c30b1d1365e
+diff_sha256: bdaba7be00b0098f29dd15a652041bbbf1cfcc866ae07236108000d31869a089
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 2
+  stage_seconds:
+    gate0: 33
+    finders: 22
+    verifiers: 0
+    total: 67
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 2, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "data-window.spec.ts's after hook clears the capture but closes no data window, so a failure before J4's close case leaves data-* windows open into flows.spec"
+    waived: "only on a run already red: xtask ui e2e fails unless every spec file passes, and flows.spec drives the main window by name, so a leaked window changes no verdict, only the noise of a run that is failing anyway"
+  - finding: "the reopen case's one-window check follows a fixed 1.5 s pause, so a second window appearing later would pass it falsely"
+    waived: "the deterministic claim (two opens with one key yield one window) is W1's integration test on the shell; this case adds the end-to-end echo, and its positive half, the same window's marker unchanged after the reopen, does not rest on the pause"
+verdict: PASS
+date: 2026-11-05
