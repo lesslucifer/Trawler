@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-BGSVC
+wu: E-BGSVC.W3
+branch: HEAD
+tests:
+  unit: { count: 60, covers: "closeDecision over request kind x keep x tray; the hook per request kind (close with the switch on never reads the proxy, unanswered asks first, keep stores on and closes, quit stores off then checks, cancel stores nothing and the next close asks again, a failed write); a quit request never asks the once-question and ends in quit_app, its dialog's quit and stop end in quit_app and cancel does not; a pending request at mount acts once; a request landing before the listener stands is taken once it does; a ✕ still reading when a quit request arrives yields to it at either await; a ✕ during a quit prompt changes nothing and a cancelled prompt hands the window back; a quit request wins over a once-question answer being stored (both answers); cancelling one quit prompt keeps ✕ guarded while a second request is still answering; unreadable switch or tray checks; the dialog's words, focus and cancels; the quit flag taken once; the menu and tray quit actions" }
+  integration: { count: 11, covers: "a quit request with no window builds the shipped main window and announces to it; with a window open it reuses it and take_quit_request answers true once over IPC" }
+  e2e: { waived: "the real-window journeys for the once-question, the quit request and the menu-bar Quit are W7's (background.spec.ts); the existing suite stays green (attached 14 of 14, owned 1 of 1)" }
