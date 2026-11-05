@@ -171,7 +171,9 @@ flowchart LR
   W5["W5 · design: Settings → General"] --> W6["W6 · build General"]
   W2 --> W6
   W4 --> W6
-  W3 --> W7["W7 · e2e + distill"]
+  W3 --> W9["W9 · quit hardening"]
+  W9 --> W7["W7 · e2e + distill"]
+  W3 --> W7
   W6 --> W7
       </pre>
       <div class="caption">W5 is a design run and depends on nothing; it can land first. W1–W4 are shell work
@@ -314,6 +316,22 @@ flowchart LR
           <tr><th>Expected outcome</th><td data-item="wu-expected">e2e green over J1–J3; T2/T1 docs carry the new
             truth; the roadmap row closed and its owed checks listed.</td></tr>
           <tr><th>Dependencies</th><td data-item="wu-deps">W3, W6</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-BGSVC.W9">
+        <h3 id="w9">E-BGSVC.W9 — quit hardening</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">Four fixes to W3's quit path from an independent read of
+            <code>ui/src-tauri/</code>. A quit that cannot open its window retries once, then neither exits (DEC-64's check
+            never ran) nor stays pending. A main window destroyed under a pending quit request hands the request over, so no
+            later window quits unasked. A once-question answer that cannot be stored says so in the dialog, which stays open.
+            A rejected <code>quit_app</code> is recorded as an accepted limit.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-ONBOARD (quit), UC-BG. Expected #5, #6. DEC-64, DEC-77.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Integration tests that fail on W3's code: a quit request with
+            no buildable window does not exit and leaves no flag; a destroyed main window with a pending request rebuilds to
+            ask. Vitest: a failed keep-capturing write keeps the question open with the reason.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W3</td></tr>
         </table>
       </div>
     </div>
