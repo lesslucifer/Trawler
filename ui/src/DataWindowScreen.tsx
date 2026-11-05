@@ -54,6 +54,7 @@ import {
   valueText,
   type Indent,
 } from "./jsonTools";
+import { loadBeautifier, reformatCode, REFORMAT_STEP, type Beautifier } from "./codeTools";
 import { REINDENT_STEP, reindentXml } from "./xmlTools";
 import {
   amend,
@@ -109,14 +110,14 @@ const SURFACE_KIND = {
   form: "form",
   xml: "xml",
   html: "xml",
-  javascript: "text",
-  css: "text",
+  javascript: "javascript",
+  css: "css",
   text: "text",
   hex: "hex",
   image: "image",
 } as const;
 
-const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
+const SURFACE_LANGUAGE = { json: "json", xml: "xml", javascript: "javascript", css: "css", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const NO_MATCHES: TextRange[] = [];
@@ -391,6 +392,24 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   );
   const menuJson = useMemo(() => (kind === "json" && menu ? parseJson(surfaceText(text)) : null), [kind, menu, text]);
   const parses = menuJson?.ok ?? false;
+  const codeKind = kind === "javascript" || kind === "css" ? kind : null;
+  const [beautifier, setBeautifier] = useState<Beautifier | null>(null);
+  const [formatterFailed, setFormatterFailed] = useState(false);
+  useEffect(() => {
+    if (!codeKind) return;
+    let live = true;
+    loadBeautifier().then(
+      (loaded) => live && setBeautifier(loaded),
+      () => live && setFormatterFailed(true),
+    );
+    return () => {
+      live = false;
+    };
+  }, [codeKind]);
+  const menuCode = useMemo(
+    () => (codeKind && !readOnly && menu && beautifier ? reformatCode(beautifier, codeKind, text, breakWith) : null),
+    [codeKind, readOnly, menu, beautifier, text, breakWith],
+  );
   const menuXml = useMemo(
     () => (kind === "xml" && !readOnly && menu ? reindentXml(text, breakWith) : null),
     [kind, readOnly, menu, text, breakWith],
@@ -438,6 +457,15 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         return result.ok ? commit(h, result.text, REINDENT_STEP) : h;
       }),
     [breakWith],
+  );
+  const reformatSource = useCallback(
+    () =>
+      setHistory((h) => {
+        if (!codeKind || !beautifier) return h;
+        const result = reformatCode(beautifier, codeKind, workingText(h), breakWith);
+        return result.ok ? commit(h, result.text, REFORMAT_STEP) : h;
+      }),
+    [beautifier, breakWith, codeKind],
   );
   const toggleEncoded = () => {
     setEncoded((shown) => !shown);
@@ -543,6 +571,9 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         } else if (event.code === "KeyF" && event.shiftKey && kind === "xml" && !readOnly) {
           event.preventDefault();
           reindent();
+        } else if (event.code === "KeyF" && event.shiftKey && codeKind && !readOnly) {
+          event.preventDefault();
+          reformatSource();
         }
         return;
       }
@@ -578,7 +609,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [asTable, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, readOnly, reindent, removeRow, row, save, searchable, stepFind]);
+  }, [asTable, codeKind, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, readOnly, reformatSource, reindent, removeRow, row, save, searchable, stepFind]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -633,6 +664,29 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
               },
             ]
           : []),
+        foldRow,
+        wrapRow,
+      ]);
+    }
+    if (codeKind) {
+      sections.push([
+        ...(readOnly
+          ? []
+          : [
+              {
+                label: "reformat",
+                keys: "⌥⇧F",
+                disabled: !menuCode?.ok,
+                why: menuCode
+                  ? menuCode.ok
+                    ? undefined
+                    : menuCode.reason
+                  : formatterFailed
+                    ? "the formatter could not be loaded"
+                    : "the formatter is loading",
+                run: reformatSource,
+              },
+            ]),
         foldRow,
         wrapRow,
       ]);
