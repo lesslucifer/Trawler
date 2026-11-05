@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: dec69ffd5adeb1df1a5b34131723cccf16e3b227
+base: a5bf40a9a8368dc95b27cf963139dcf2468e4cd2
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-w8-time-decoder-result.html
+report_sha256: 7352c7d90cc374e736654a4954c1232c859220012cbe58867057ef02f6dc6e93
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB2ARfln03Y6VOlbcszLwdHt03WcaQzpvjDm0CEVnzMdQGGu8BErpUPnE
+  RO2ITHrK7tI92HFMZUsyOGS4VqyZgJ
+  -----END SSH SIGNATURE-----
