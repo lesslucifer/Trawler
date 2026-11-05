@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec37db9f34851f0dfae838" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W1 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W1 — the app outlives its main window</h1>
+      <p>The shell half of windowless capture: a keep-capturing preference, an exit decision that reads it, a
+        main window that can be rebuilt, and a launch that can skip it.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch
+        <code>wu/bg-service/outlive-window</code> off <code>epic/bg-service</code> · epic plan:
+        <a href="2026-11-05-bg-service-plan.html#wu-summaries">E-BGSVC</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">With the shell preference <code>keep_capturing</code> on <em>and</em> a menu-bar icon
+      available, destroying the main window leaves the app and its core running with no window (Dock icon hidden on
+      macOS), and a second launch or a Dock click rebuilds the main window through the same builder launch uses;
+      in every other state, destroying the main window quits exactly as today, and <code>--background</code>
+      skips the launch window only when the app may be windowless.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to">
+      <tr><th>Serves</th><th>How</th></tr>
+      <tr><td><span class="badge id">E-BGSVC</span> · <a href="2026-11-05-bg-service-plan.html#wu-summaries">W1 summary</a></td>
+        <td>everything that summary names; W2 (tray), W3 (quit vs close) and W6 (switch) build on it</td></tr>
+      <tr><td><span class="badge id">UC-BG</span></td><td>the app keeps capturing with no window; reopening shows it again</td></tr>
+      <tr><td><span class="badge id">UC-4</span></td><td>a second launch reaches the first — and now opens a window when none is open</td></tr>
+      <tr><td>Expected #1 · #3 · #8 · #10</td><td>at shell-integration level; the visible halves arrive with W2/W6/W7</td></tr>
+      <tr><td>Q2 · Q3 · Q11 · Q13</td><td>destroy-and-rebuild · unanswered reads as off until W3 asks · Dock policy ·
+        data windows already close with main (E-INSPWIN's <code>data_window::closes_with</code>, landed first)</td></tr>
+    </table>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="decision">
+      <pre class="mermaid">
+flowchart TD
+  D["main window destroyed"] --> S{"keep_capturing = on<br/>AND tray available?"}
+  S -- no --> X["app.exit(0) — as today"]
+  S -- yes --> L["stay: core keeps running"]
+  L --> G{"run loop: no window left?"}
+  G -- yes --> A["Accessory policy (macOS) ·<br/>ExitRequested{code: None} prevented"]
+  R["second launch · Dock Reopen"] --> M{"main open?"}
+  M -- yes --> F["focus it"]
+  M -- no --> B["build_main (off the main thread) ·<br/>Regular policy · geometry restored"]
+      </pre>
+      <div class="caption">One decision, <code>stays_windowless(keep_capturing, tray)</code>, feeds both the
+        main window's destruction and Tauri's own last-window exit request.</div>
+    </div>
+
+    <table data-c="pieces">
+      <tr><th>Piece</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>preference</td><td><code>keep_capturing.rs</code></td><td><code>keep-capturing.json</code> in the
+        shell's config dir · absent = <code>unanswered</code> · <code>{"keepCapturing":bool}</code> = on/off ·
+        anything else = off · commands <code>keep_capturing_read</code> / <code>keep_capturing_write</code></td></tr>
+      <tr><td>lifecycle</td><td><code>lifecycle.rs</code></td><td>managed state: the preference dir + tray availability
+        (false until W2 creates a tray) · <code>ends_the_app</code> moves here from <code>settings.rs</code> and
+        reads both · <code>build_main</code> · <code>reopen_main</code> · Dock policy</td></tr>
+      <tr><td>launch flag</td><td><code>lib.rs</code></td><td><code>--background</code> anywhere in the arguments
+        (after <code>--core</code> is ruled out) · honoured only while the app may be windowless, else the window
+        opens (expected #9)</td></tr>
+      <tr><td>wiring</td><td><code>lib.rs</code> · <code>core.rs</code></td><td>single-instance → <code>reopen_main</code> ·
+        <code>RunEvent::Reopen</code> → <code>reopen_main</code> · <code>ExitRequested{code: None}</code> prevented
+        when staying · Settings opening sets Regular</td></tr>
+    </table>
+
+    <div class="callout warn" data-c="interim">Until W2 sets tray availability, <code>stays_windowless</code> is
+      false in every real launch — W1 changes no reachable behaviour. ⌘Q still closes the main window; with the
+      switch on it would hide instead of quit, which W3 fixes by splitting the quit request from the close (expected
+      #6). No UI writes the preference before W6.</div>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>#</th><th>Observable after W1 alone</th></tr>
+      <tr><td>1</td><td><code>cargo run</code>: closing the main window quits, the core is stopped, ports free — identical to
+        today (no tray exists yet)</td></tr>
+      <tr><td>2</td><td>MockRuntime, preference on + tray marked available: destroying main reports <em>stay</em>, the
+        owned core still answers; a reopen builds a window labelled <code>main</code> from <code>tauri.conf.json</code></td></tr>
+      <tr><td>3</td><td>a <code>keep-capturing.json</code> written by the command reads back; a corrupt one reads off; none reads unanswered</td></tr>
+      <tr><td>4</td><td>a windowless supervising process killed with <code>kill -9</code> leaves no core and frees its port (lifeline)</td></tr>
+      <tr><td>5</td><td>DEC-77 records the rules; DEC-69 rule 14 points to it</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
+      <tr><td rowspan="5">unit</td><td><code>lifecycle</code> decision table</td><td><code>ends_the_app</code> over label ×
+        {unanswered, on, off} × tray: only main, and only when not (on ∧ tray); <code>stays_windowless</code> same table</td></tr>
+      <tr><td><code>lifecycle</code> launch + Dock</td><td><code>opens_window_at_launch</code>(background, stays) — the flag
+        is honoured only when staying is allowed; Dock shown iff a window is open</td></tr>
+      <tr><td><code>keep_capturing</code> store</td><td>round trip on/off and the file's bytes · absent dir / file =
+        unanswered · corrupt bytes, wrong shapes, <code>null</code> = off · a write leaves no staged copy</td></tr>
+      <tr><td><code>lib</code> flag parse</td><td><code>--background</code> alone and among others → true · absent → false ·
+        <code>--core --background</code> → the core entry, never the flag</td></tr>
+      <tr><td><code>settings</code></td><td>the moved <code>ends_the_app</code> test removed; opening Settings stays as is</td></tr>
+      <tr><td rowspan="4">integration<br/>(<code>tests/suite/outlive_window.rs</code>, MockRuntime)</td><td>off → exits</td>
+        <td>preference off (and unanswered), tray available: destroying main decides <em>exit</em></td></tr>
+      <tr><td>on → survives</td><td>preference on, tray available, a real supervised core managed: destroying main decides
+        <em>stay</em>, the last-window exit request is prevented, the core pid is alive and <code>/flows</code> answers</td></tr>
+      <tr><td>reopen</td><td>an app with no main window (as a <code>--background</code> launch leaves it): <code>reopen_main</code>
+        builds <code>main</code> from the shipped <code>tauri.conf.json</code> window, a second reopen builds no second one;
+        the preference commands round-trip through IPC in a tempdir</td></tr>
+      <tr><td>lifeline windowless</td><td>a re-executed role holds a mock app gone windowless with its core; <code>kill -9</code>
+        on it → the core exits, its API port rebinds</td></tr>
+      <tr><td>e2e</td><td colspan="2">not this WU's layer — W7 (<code>background.spec.ts</code>). The core-address init
+        script on a rebuilt window is not observable under MockRuntime: it rides on a plugin
+        (<code>core_address::init</code>) Tauri applies to every webview built after registration, and the rebuild uses
+        launch's own <code>build_main</code> — so the integration test pins the single builder, not the script</td></tr>
+    </table>
+
+    <h2 id="docs">Docs</h2>
+    <table data-c="docs">
+      <tr><th>Tier</th><th>Doc</th><th>Change</th></tr>
+      <tr><td>T2</td><td>new <code>docs/decisions/dec-77-the-app-outlives-its-window.html</code> + index</td><td>the rules
+        above: windowless only with a tray, default unanswered/off, destroy-and-rebuild, Dock policy, <code>--background</code></td></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a></td><td>rule 14 amended: “the
+        main window's destruction exits the app” → unless DEC-77 lets it stay</td></tr>
+      <tr><td>T3</td><td>this plan + its result report</td><td>—</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
