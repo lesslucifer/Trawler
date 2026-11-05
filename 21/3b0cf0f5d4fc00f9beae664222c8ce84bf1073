@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-BGSVC
+wu: E-BGSVC.W9
+base: 18bf728ba3fa0de3d88a83068fd98d295516fbc0
+design_sha256: 0443274012731fd1866d7e0dbed0e6fd09e83010d03ccda63a5a0e8c07a65d9f
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-05-bg-service-general-design-run.html
+    blob: 38a949adb67281612315b5be2448ba01ce3109cc
+    built: [ui/src/KeepCapturingDialog.tsx]
+undesigned:
+  - path: ui/src/App.tsx
+    why: "passes the once-question one more prop, the refusal reason the hook already holds; no layout or copy of its own"
+date: 2026-11-05
