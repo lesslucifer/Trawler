@@ -11,7 +11,7 @@
       <h1>DEC-82 — an update asks, is signed, and quits through the check</h1>
       <p>How an installed Trawler takes a new version: never silently, only when the owner's key signed that exact
         version, and only through the same quit every other quit goes through.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W1</strong> from the owner's
+      <div class="meta">v2 · 2026-11-05 (rule 4: a failed install is told — W1 review round 1) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W1</strong> from the owner's
         rulings Q4, Q6, Q7 and Q20–Q22 · UC-UPDATE (written when a release exists, E-PKG2's close) · relates to
         <a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>,
         <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a>,
@@ -32,7 +32,9 @@ flowchart LR
   V -- refused --> E["told why · app untouched"]
   V -- verified --> Q["close the main window (as ⌘Q) → DEC-64"]
   Q -- cancelled --> D["update dropped"]
-  Q -- closed --> I["stop core · install · relaunch"]
+  Q -- closed --> I["stop core · install"]
+  I -- installed --> R["relaunch as the new version"]
+  I -- failed --> T["told why · then the app ends"]
       </pre>
       <div class="caption">Only one path changes the installed app, and it passes both the signature and the quit check.</div>
     </div>
@@ -55,9 +57,11 @@ flowchart LR
         CLI 2.12 writes the version into the signature</td></tr>
       <tr><td>4</td><td>Install stages the verified update and closes the main window the way ⌘Q does, so DEC-64's check
         runs. Only that window's destruction installs: the shell stops the core it owns (DEC-69), installs and relaunches.
-        A quit the user cancels drops the update, and the next check offers it again (Q21)</td><td>an update is a quit,
+        A quit the user cancels drops the update, and the next check offers it again (Q21). An install that fails
+        (a read-only app folder, a declined password prompt) is told in a native dialog, and the app holds its exit
+        until that dialog closes. The next check offers the update again</td><td>an update is a quit,
         and leaving the machine routed through a stopped proxy is what DEC-64 prevents. An update must never install on
-        some later, unrelated quit</td></tr>
+        some later, unrelated quit, and a failure must not look like a crash</td></tr>
       <tr><td>5</td><td>Every bundle type updates in place: the macOS <code>.app</code>, NSIS, MSI, AppImage, and
         <code>.deb</code>/<code>.rpm</code> through <code>pkexec</code>'s password prompt (Q20)</td><td>one flow, one
         signature check and one relaunch on every platform</td></tr>
@@ -83,7 +87,7 @@ flowchart LR
     <table data-c="held-by">
       <tr><th>Rule</th><th>Test</th></tr>
       <tr><td>1, 2, 4</td><td><code>ui/src-tauri/src/update.rs</code> unit tests: the throttle, installed only, each
-        notice, a staged update taken once; <code>menu.rs</code>: the menu item; <code>closeConfirm.test.tsx</code>: a
+        notice, a staged update taken once, a failed install told before the exit, which waits for it; <code>menu.rs</code>: the menu item; <code>closeConfirm.test.tsx</code>: a
         cancelled quit tells the shell</td></tr>
       <tr><td>3</td><td><code>ui/src-tauri/tests/suite/updater.rs</code>: no newer version changes nothing, a foreign
         key is refused, an archive announced as another version is refused, and a verified update replaces the app with

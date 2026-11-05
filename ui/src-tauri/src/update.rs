@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -109,7 +110,9 @@ pub fn not_installed(current: &str, why: &str) -> Notice {
 
 /// The update the user said Install to, verified and waiting for the quit it
 /// asked for. A cancelled quit drops it, so nothing installs on a later quit.
-pub struct Pending<T = (Update, Vec<u8>)>(Mutex<Option<T>>);
+pub type Staged = (Update, Vec<u8>);
+
+pub struct Pending<T = Staged>(Mutex<Option<T>>);
 
 impl<T> Default for Pending<T> {
     fn default() -> Self {
@@ -213,9 +216,38 @@ async fn install_on_quit<R: Runtime>(app: AppHandle<R>, update: Update) {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum Ending {
+    Relaunch,
+    TellThenExit(Notice),
+}
+
+/// How a quit that carried an update ends: as the new version, or, when the
+/// install failed, with the user told why before the app goes.
+pub fn ending(current: &str, installed: Result<(), String>) -> Ending {
+    match installed {
+        Ok(()) => Ending::Relaunch,
+        Err(why) => Ending::TellThenExit(not_installed(current, &why)),
+    }
+}
+
+/// Set while a failed install is being told: the last window is already gone,
+/// and the app must not end under the dialog that says why.
+#[derive(Default)]
+pub struct Telling(AtomicBool);
+
+/// An exit the user's last window asked for waits while a failed install is
+/// told; an exit the app asked for itself (the dialog's close) goes through.
+pub fn holds_exit(asked_by_app: bool, telling: bool) -> bool {
+    telling && !asked_by_app
+}
+
+pub fn telling<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<Telling>().is_some_and(|t| t.0.load(Ordering::SeqCst))
+}
+
 /// The main window is gone. With an update staged, the core stops, the update
 /// installs and the app opens again as the new version; otherwise the app ends.
-#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn on_main_window_destroyed<R: Runtime>(app: &AppHandle<R>) {
     let Some((update, bytes)) = app.state::<Pending>().take() else {
         app.exit(0);
@@ -224,11 +256,19 @@ pub fn on_main_window_destroyed<R: Runtime>(app: &AppHandle<R>) {
     if let Some(core) = app.try_state::<crate::core::Core>() {
         core.stop();
     }
-    match update.install(bytes) {
-        Ok(()) => app.restart(),
-        Err(err) => {
-            eprintln!("installing the update failed: {err}");
-            app.exit(0);
+    let current = app.package_info().version.to_string();
+    match ending(&current, update.install(bytes).map_err(|e| e.to_string())) {
+        Ending::Relaunch => app.restart(),
+        Ending::TellThenExit(notice) => {
+            if let Some(flag) = app.try_state::<Telling>() {
+                flag.0.store(true, Ordering::SeqCst);
+            }
+            let ended = app.clone();
+            app.dialog()
+                .message(notice.text)
+                .title(notice.title)
+                .kind(MessageDialogKind::Error)
+                .show(move |_| ended.exit(0));
         }
     }
 }
@@ -347,6 +387,22 @@ mod tests {
         assert!(String::from_utf8(decoded)
             .unwrap()
             .starts_with("untrusted comment: minisign public key: "));
+    }
+
+    #[test]
+    fn an_installed_update_relaunches_and_a_failed_one_is_told_before_the_app_ends() {
+        assert_eq!(ending("0.1.0", Ok(())), Ending::Relaunch);
+        assert_eq!(
+            ending("0.1.0", Err("the app folder is read-only".into())),
+            Ending::TellThenExit(not_installed("0.1.0", "the app folder is read-only"))
+        );
+    }
+
+    #[test]
+    fn the_app_outlives_its_last_window_only_while_a_failed_install_is_told() {
+        assert!(holds_exit(false, true), "the last window closing waits for the notice");
+        assert!(!holds_exit(true, true), "the notice's own exit goes through");
+        assert!(!holds_exit(false, false), "with nothing to tell, a close ends the app");
     }
 
     #[test]

@@ -52,7 +52,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .manage(update::Pending::<(tauri_plugin_updater::Update, Vec<u8>)>::default())
+        .manage(update::Pending::<update::Staged>::default())
+        .manage(update::Telling::default())
         .on_window_event(window_geometry::track)
         .on_window_event(data_window::on_window_event)
         .menu(menu::build)
@@ -123,6 +124,11 @@ pub fn run() {
 }
 
 pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {
+    if let tauri::RunEvent::ExitRequested { code, api, .. } = event {
+        if update::holds_exit(code.is_some(), update::telling(app)) {
+            api.prevent_exit();
+        }
+    }
     if let tauri::RunEvent::Exit = event {
         if let Some(core) = app.try_state::<core::Core>() {
             core.stop();
