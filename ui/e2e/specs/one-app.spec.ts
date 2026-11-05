@@ -146,6 +146,7 @@ describe("E-ONEAPP — one launch is the whole app", () => {
   it("J2 · the Capture service page shows the running core", async () => {
     await invoke("open_settings");
     await onWindow(SETTINGS);
+    await $("button=Capture service").click();
     await $("h1=Capture service").waitForDisplayed({ timeout: 15_000 });
     await statusReads("running");
     expect(await $('[data-wire="process id"]').getText()).toBe(String(first.pid));

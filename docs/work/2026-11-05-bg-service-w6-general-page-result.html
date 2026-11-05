@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec5d9a9f34851f0dfae9bc" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W6 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W6 — result</h1>
+      <p>Settings opens on a page sidebar with General first. Its two switches turn on windowless capture and Trawler at
+        login in the real app.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU result · branch <code>wu/bg-service/general-page</code> ·
+        plan: <a href="2026-11-05-bg-service-w6-general-page-plan.html">W6 plan</a> · design:
+        <a href="2026-11-05-bg-service-general-design-run.html">W5's run</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Plan's expected</th><th>Status</th><th>What shipped</th></tr>
+      <tr><td>1 · Settings opens on General with the sidebar; ↓ shows Capture service</td><td><span class="badge auto">delivered</span></td>
+        <td><code>Settings.tsx</code> + the new <code>PageSidebar</code> (T1); <code>main.tsx</code> renders it for the settings page</td></tr>
+      <tr><td>2 · ticking keep capturing writes the file; ✕ then leaves Trawler in the menu bar</td><td><span class="badge auto">delivered</span></td>
+        <td><code>General.tsx</code> over <code>keep_capturing_write</code>; W1 and W2 do the rest</td></tr>
+      <tr><td>3 · open at login writes and removes the plist; hover shows the program</td><td><span class="badge auto">delivered</span></td>
+        <td>over <code>login_item_read/_write</code>; the program is the box's tooltip</td></tr>
+      <tr><td>4 · a refused write shows its reason and the box shows what is stored</td><td><span class="badge auto">delivered</span></td>
+        <td><em>couldn't save — &lt;reason&gt;</em>, then a re-read</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the plan</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>e2e is W7's</td><td>two existing journeys changed: <code>one-app.spec.ts</code> J2 and
+        <code>service-attached.spec.ts</code> click <em>Capture service</em> before reading that page</td><td>Settings now opens
+        on General, so they would have waited for a heading that is no longer first</td></tr>
+      <tr><td>—</td><td>a specimen for <code>PageSidebar</code> in <code>collection.test.tsx</code></td><td>the collection test
+        holds every registry member to a specimen</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>unit (vitest)</td><td><code>PageSidebar.test.tsx</code> (6) · <code>General.test.tsx</code> (7): every reading,
+        the trayless reason, the tooltip, one write per tick, a refusal on each switch</td></tr>
+      <tr><td>integration</td><td><code>Settings.test.tsx</code> (2): opens on General, ↓/↑ and a click move pages ·
+        <code>outlive_window.rs</code> + <code>tray_available</code> over IPC</td></tr>
+      <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> green: attached suite 14 of 14 spec files, owned suite 1 of 1</td></tr>
+      <tr><td>suite</td><td><code>cargo xtask gate0</code> green (1274) · the whole vitest suite green (61 425) · eslint · <code>tsc -b</code></td></tr>
+      <tr><td>design</td><td>the specimen check renders W5's run (7 mounts); the <code>design/v1</code> note cites it for the three new surfaces</td></tr>
+      <tr><td>commits</td><td>plan <code>8afaddec</code> · code <code>ed525253</code> · e2e <code>39eca757</code> · this report</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <tr><th>Tier</th><th>Doc</th><th>Absorbed</th></tr>
+      <tr><td>T2</td><td><a href="../design-rules/design-rules-index.html">design rules</a></td><td>keyboard convention
+        <em>show another page</em>: ↑/↓ in a <code>PageSidebar</code>. The component's contract is in its TSDoc (the registry reads it)</td></tr>
+      <tr><td>T2</td><td>use cases</td><td>nothing yet: W7 writes UC-SVC's General page with UC-BG</td></tr>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <tr><th>Owner</th><th>Item</th></tr>
+      <tr><td>W3</td><td>the once-question, from W5's run, through the same <code>keep_capturing_write</code></td></tr>
+      <tr><td>W7</td><td><code>background.spec.ts</code> J1 · J3 drive this page</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -45,7 +45,8 @@ fn app_declaring(windows: Vec<WindowConfig>, config_dir: &Path, tray: bool) -> A
     let app = mock_builder()
         .invoke_handler(tauri::generate_handler![
             keep_capturing::keep_capturing_read,
-            keep_capturing::keep_capturing_write
+            keep_capturing::keep_capturing_write,
+            lifecycle::tray_available
         ])
         .build(context)
         .expect("a mock app");
@@ -169,6 +170,16 @@ fn the_preference_commands_round_trip_through_the_file() {
         !lifecycle::on_window_destroyed(app.handle(), MAIN_WINDOW),
         "the written answer decides the next close"
     );
+}
+
+#[test]
+fn the_page_reads_whether_this_host_has_a_menu_bar_icon() {
+    let dir = tempfile::tempdir().unwrap();
+    for tray in [true, false] {
+        let app = app(dir.path(), tray);
+        let main = lifecycle::build_main(app.handle()).unwrap();
+        assert_eq!(invoke(&main, "tray_available", serde_json::json!({})), tray.to_string());
+    }
 }
 
 #[test]

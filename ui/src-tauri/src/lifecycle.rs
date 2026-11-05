@@ -45,6 +45,11 @@ impl Lifecycle {
     }
 }
 
+#[tauri::command]
+pub fn tray_available(lifecycle: tauri::State<'_, Lifecycle>) -> bool {
+    lifecycle.tray_available()
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Dock {
     Shown,

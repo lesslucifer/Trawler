@@ -113,6 +113,11 @@ pub fn run() {
         core::core_log,
         core::restart_core,
         settings::open_settings,
+        keep_capturing::keep_capturing_read,
+        keep_capturing::keep_capturing_write,
+        login_item::login_item_read,
+        login_item::login_item_write,
+        lifecycle::tray_available,
         data_window::open_data_window,
         data_window::take_data_payload
     ]);

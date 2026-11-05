@@ -155,7 +155,7 @@ export function CaptureService({ bridge = tauriBridge }: { bridge?: CoreBridge }
   }
 
   return (
-    <div className="flex h-full flex-col gap-3 bg-canvas p-4 font-ui text-body text-ink">
+    <div className="flex h-full flex-col gap-3 font-ui text-body text-ink">
       <h1 className="font-serif text-title italic">Capture service</h1>
       <StatusLine status={verdict(state)} />
       <Facts state={state} lastRunning={lastRunning.current} />
