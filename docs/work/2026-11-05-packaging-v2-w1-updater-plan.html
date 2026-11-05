@@ -3,26 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trawler — E-PKG.W3 plan: updater</title>
+  <title>Trawler — E-PKG2.W1 plan: updater</title>
 </head>
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-PKG.W3 — the app asks, verifies and relaunches as the new version</h1>
+      <h1>E-PKG2.W1 — the app asks, verifies and relaunches as the new version</h1>
       <p>Self-update through <code>tauri-plugin-updater</code>, signed by the project's own key, always asked, never
       silent, and always through DEC-64's quit check.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-PKG.W3</span> · branch
-      <code>wu/packaging/updater</code> off <code>epic/packaging</code> (after W1, and after main was merged back in as
-      <code>c37fcb1b</code>) · <a href="2026-11-05-packaging-plan.html">epic plan</a> · <span class="badge approval">3 owner
-      questions open</span></div>
+      <div class="meta">v2 · 2026-11-05 · carried from E-PKG.W3 into E-PKG2 · Trawler · T3 WU plan · <span class="badge id">E-PKG2.W1</span> · branch
+      <code>wu/packaging-v2/updater</code> off <code>epic/packaging-v2</code> (main <code>398f6dfe</code>, E-PKG.W1 landed) · <a href="2026-11-05-packaging-v2-plan.html">epic plan</a> · <span class="badge approval">3 owner
+      questions open (Q20–Q22)</span></div>
     </div>
   </header>
   <main>
 
     <div class="callout warn" data-c="why-w3-now">
-      <strong>Why W3 before W2.</strong> W2 needs E-CI's <code>ci.yml</code> on <code>main</code> (Q19), and
-      <code>origin/main</code> at <code>f7b372e9</code> has no <code>.github/</code>. W3 depends only on W1, which has
-      landed.
+      <strong>Why the updater comes first.</strong> W2 needs E-CI's <code>ci.yml</code> on <code>main</code> (Q19), and it has not landed. The updater depends only on <code>cargo xtask package</code> (E-PKG.W1, on <code>main</code>).
     </div>
 
     <h2 id="requirement">Requirement</h2>
@@ -37,7 +34,7 @@
 
     <h2 id="mapping">Mapping</h2>
     <p data-item="maps-to" data-c="mapping">
-      E-PKG · UC-UPDATE · epic expected #6 · Q4 (releases on the public repo), Q6 (launch check plus a menu item, native
+      E-PKG2 · UC-UPDATE · epic expected #6 · Q4 (releases on the public repo), Q6 (launch check plus a menu item, native
       dialogs, the DEC-64 check, no design run), Q7 (the key as repository secrets) · DEC-64 rule 1 (an app quit asks
       as the window's close does) · DEC-69 (the app stops the core it owns on every exit).
     </p>
@@ -79,7 +76,7 @@ flowchart TD
       <tr><td><code>menu.rs</code></td><td><em>Check for Updates…</em> in the app menu (macOS) or the first menu
         (elsewhere), beside <em>Settings…</em></td></tr>
       <tr><td><code>ui/src/closeConfirm.ts</code></td><td>a quit the dialog cancels tells the shell
-        (<code>quit_cancelled</code>), which drops a pending update (Q-B). This is a <code>.ts</code> module, not a
+        (<code>quit_cancelled</code>), which drops a pending update (Q21). This is a <code>.ts</code> module, not a
         rendered file, so no design accounting is owed</td></tr>
       <tr><td>both shell builds</td><td><code>quit_cancelled</code> registered in <code>lib.rs</code> and
         <code>scenario.rs</code>; the plugin stays out of the scenario build</td></tr>
@@ -127,17 +124,17 @@ flowchart TD
     <h2 id="open-questions">Owner questions (proposed defaults)</h2>
     <table data-c="open-questions">
       <tr><th>#</th><th>Question</th><th>Proposed default</th></tr>
-      <tr><td>Q-A</td><td>The epic planned that a <code>.deb</code> or <code>.rpm</code> install opens the release page,
+      <tr><td>Q20</td><td>The epic planned that a <code>.deb</code> or <code>.rpm</code> install opens the release page,
         because the updater could not install those packages. <code>tauri-plugin-updater</code> 2.14 now can: it runs
         <code>dpkg -i</code> or <code>rpm -U</code> through <code>pkexec</code>, which shows the desktop's own password
         prompt. Should deb and rpm update in place too?</td><td><strong>Yes, in place.</strong> The flow, the signature
         check and the relaunch are the same on every bundle type. The release-page branch and its install-kind detection
         disappear, and the release then needs <code>.deb</code>/<code>.rpm</code> updater signatures (W4). UC-UPDATE's
         deb/rpm sentence changes at distillation</td></tr>
-      <tr><td>Q-B</td><td>The user says Install, then cancels DEC-64's quit dialog. What happens to the update?</td>
+      <tr><td>Q21</td><td>The user says Install, then cancels DEC-64's quit dialog. What happens to the update?</td>
         <td><strong>It is dropped.</strong> Nothing installs on a later, unrelated quit, and the next check offers it
         again. A pending update never outlives the quit it was asked for</td></tr>
-      <tr><td>Q-C</td><td>Who generates the updater key and stores the secrets (Q7)?</td><td>I run <code>pnpm tauri
+      <tr><td>Q22</td><td>Who generates the updater key and stores the secrets (Q7)?</td><td>I run <code>pnpm tauri
         signer generate</code> once, with a random password, writing <code>~/.tauri/trawler-updater.key</code> outside
         the repo. Only the public key is committed. The owner runs the two <code>gh secret set</code> lines
         (<code>TAURI_SIGNING_PRIVATE_KEY</code>, <code>TAURI_SIGNING_PRIVATE_KEY_PASSWORD</code>), which I stage, because
