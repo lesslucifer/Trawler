@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "epic inspect-window -> main (round 2)"
+epic: E-INSPWIN
+branch: epic/inspect-window
+base: 00cbc1500e94c43b57626097ae8568b39748cb37
+head: c90ec373e944c2ac6f8d23f1cbb207cb1e3d5235
+diff_sha256: ccbf1bab6661926c9876359cce485850a8fae8e8a39162c60b9dd676dd400d3c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 6
+  stage_seconds:
+    gate0: 42
+    finders: 192
+    verifiers: 40
+    total: 232
+  by_finder:
+    correctness: { found: 4, verified: 3 }
+    efficiency: { found: 2, verified: 2 }
+    altitude: { found: 3, verified: 3 }
+findings: { found: 9, verified: 8, waived: 0 }
+waivers: []
+blocking:
+  - finding: "ui/src/timeDecoder.ts civil and wallClock use Date.UTC, which maps years 0-99 to 1900-1999: 0050-06-15T12:00:00Z reads with offset +16655040:09 and 0000-02-29 is refused as no calendar day"
+    severity: important
+  - finding: "ui/src/body.ts captionParts re-parses bodyPayload's display title by regex to recover method, host, path and query for the data window's header: a format rule held by a writer and a regex, which a second opener must imitate"
+    severity: important
+nits: []
+verdict: FAIL
+date: 2026-11-05
