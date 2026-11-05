@@ -77,6 +77,13 @@ pub fn quit_app<R: Runtime>(app: AppHandle<R>) {
     app.exit(0);
 }
 
+// What ⌘Q and the menu-bar Quit do natively, which WebDriver cannot press.
+#[cfg(feature = "e2e")]
+#[tauri::command]
+pub fn e2e_request_quit<R: Runtime>(app: AppHandle<R>) {
+    drop(request_quit(&app));
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Dock {
     Shown,

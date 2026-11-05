@@ -120,6 +120,8 @@ pub fn run() {
         lifecycle::tray_available,
         lifecycle::take_quit_request,
         lifecycle::quit_app,
+        #[cfg(feature = "e2e")]
+        lifecycle::e2e_request_quit,
         data_window::open_data_window,
         data_window::take_data_payload
     ]);

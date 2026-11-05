@@ -10,7 +10,15 @@ const here = dirname(fileURLToPath(import.meta.url));
 // own core, which the e2e build puts on ephemeral ports. Its own spec learns them
 // from the app itself, so nothing crosses from this launcher but the environment.
 const RUN_TALLY = resolve(here, ".run-tally-one-app.json");
-const SPECS = ["./specs/one-app.spec.ts"];
+// Each background file ends by quitting the app, and the launcher launches it again
+// for the next: the stored answer one leaves is what the next asserts.
+const SPECS = [
+  "./specs/one-app.spec.ts",
+  "./specs/background-asked.spec.ts",
+  "./specs/background-off.spec.ts",
+  "./specs/background-keep.spec.ts",
+  "./specs/background-quit.spec.ts",
+];
 
 // The app keeps its CA, markers, layout and window sizes under HOME and finds
 // Android through these variables. Pointing them at a dir the run deletes keeps
