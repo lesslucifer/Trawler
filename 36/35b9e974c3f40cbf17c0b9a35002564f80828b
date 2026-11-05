@@ -1,0 +1,57 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W9
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-71-the-data-window.html"
+    tier: T2
+    action: deleted
+    distills: "renamed to dec-75-the-data-window.html: E-QUERY landed DEC-71 first"
+  - path: "docs/decisions/dec-75-the-data-window.html"
+    tier: T2
+    action: added
+    distills: "the data window's decision under its landed number, DEC-75, with the renumbering in its header"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the data window's row links DEC-75; one DEC-71 row (E-QUERY's)"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "lexicon 'data window' cites DEC-75"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-9 row cites DEC-75"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-9 cites DEC-75"
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "E-PANELS' inspector-geometry row closed by DEC-75 rule 10; rows for the data window's deferrals (filter view, jq, diff, more openers) and the pane's pretty-JSON rewrite"
+  - path: "docs/work/2026-11-03-inspect-window-plan.html"
+    tier: T3
+    action: updated
+    distills: "W9 summary block; DEC-next lands as DEC-75"
+  - path: "docs/work/2026-11-03-inspect-window-w1-payload-handoff-result.html"
+    tier: T3
+    action: updated
+    distills: "link to the renamed DEC-75 file"
+  - path: "docs/work/2026-11-04-inspect-window-w3-data-window-build-result.html"
+    tier: T3
+    action: updated
+    distills: "link to the renamed DEC-75 file"
+  - path: "docs/work/2026-11-05-inspect-window-w7-e2e-result.html"
+    tier: T3
+    action: updated
+    distills: "link to the renamed DEC-75 file"
+  - path: "docs/work/2026-11-05-inspect-window-w9-close-plan.html"
+    tier: T3
+    action: added
+    distills: "W9 plan: main synced, DEC-71 -> DEC-75, roadmap rows, e2e over the merged tree"
+  - path: "docs/work/2026-11-05-inspect-window-w9-close-result.html"
+    tier: T3
+    action: added
+    distills: "W9 result"
