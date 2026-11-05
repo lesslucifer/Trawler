@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W8
+base: a5bf40a9a8368dc95b27cf963139dcf2468e4cd2
+design_sha256: b4d160ef9180e6089662591e790b8b23eceb5ebf3e18f9b5c2f161736d595656
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/DataWindowScreen.tsx
+    why: "adds a time reading to W6's DecodePeek from members it already has - labelled blocks holding mono text, as the JWT signature uses - plus a replace label and the reason's wording; no new member, layout, state or interaction, and the peek itself was built in W6 from the closed data-window run"
+date: 2026-11-05
