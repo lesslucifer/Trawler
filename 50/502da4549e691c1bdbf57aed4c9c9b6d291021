@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W2
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-74-the-merge-proves-the-tree-it-creates.html"
+    tier: T2
+    action: updated
+    distills: "DEC-74 widened to the push: pre-push runs gate0 push, a clean-HEAD tree reads the marker, any other is proven in a scratch worktree; C3 row; rejected refusing a non-HEAD push and proving the working tree blind"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-74 row carries the push half"
+  - path: "docs/work/2026-11-05-push-reads-proof-plan.html"
+    tier: T3
+    action: added
+    distills: "the W2 plan: requirement, decision shape, test plan"
+  - path: "docs/work/2026-11-05-push-reads-proof-result.html"
+    tier: T3
+    action: added
+    distills: "the W2 result report: outcome, the UI-packages deviation found by the real probe, evidence"
