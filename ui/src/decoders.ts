@@ -125,12 +125,13 @@ function means(id: DecoderId, reading: Reading, input: string): reading is Decod
   return id !== "url" || ESCAPE.test(input);
 }
 
-// Only a timestamp reads two ways: its digits are base64 too, and the guess
-// puts time first. Otherwise base64 and a JWT refuse "%", a JWT's dots refuse
-// base64, URL means something only over an escape, and the rest refuse ":".
+// A value shaped like a time is answered by time alone: a timestamp's digits
+// and a date's dashes are base64 too. Otherwise base64 and a JWT refuse "%", a
+// JWT's dots refuse base64, and URL means something only over an escape.
 export function decode(input: string): Peeked {
   const guess = guessDecoder(input);
   const guessed = DECODERS[guess](input);
+  if (guess === "time") return guessed.kind === "unreadable" ? { decoder: null, reason: guessed.reason } : { decoder: guess, reading: guessed };
   for (const id of [guess, ...DECODER_ORDER.filter((other) => other !== guess)]) {
     const reading = id === guess ? guessed : DECODERS[id](input);
     if (means(id, reading, input)) return { decoder: id, reading };

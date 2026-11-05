@@ -172,8 +172,13 @@ describe("time among the decoders", () => {
     expect(decode("2026-01-14")).toMatchObject({ decoder: "time", reading: { readAs: "ISO 8601 date", utc: null } });
   });
 
-  it("gives time's reason for a date off the calendar", () => {
+  it("gives time's reason for a date or date-time off the calendar, never the base64 its digits and dashes also are", () => {
     expect(decode("2026-02-30T04:00:00Z")).toEqual({ decoder: null, reason: "2026-02-30 is not a day of the calendar" });
+    expect(decode("2024-02-30")).toEqual({ decoder: null, reason: "2024-02-30 is not a day of the calendar" });
+    const text = '{"day": "2024-02-30"}';
+    expect(decodeAround(text, { from: text.indexOf("2024") + 2, to: text.indexOf("2024") + 2 })).toMatchObject({
+      peeked: { decoder: null, reason: "2024-02-30 is not a day of the calendar" },
+    });
   });
 
   it("finds a whole date-time from a cursor or a rough selection, spaces and colons included", () => {

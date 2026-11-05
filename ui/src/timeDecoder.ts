@@ -30,7 +30,7 @@ const ISO_DATE_TIME = String.raw`(?<![\w-])\d{4}-\d{2}-\d{2}(?:[Tt ]\d{2}:\d{2}(
 const HTTP_DATE = String.raw`(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{1,2}[ -][A-Za-z]{3}[ -]\d{4} \d{2}:\d{2}:\d{2} (?:GMT|UTC)`;
 export const TIME_SHAPE = new RegExp(`${ISO_DATE_TIME}|${HTTP_DATE}`, "g");
 const TIMESTAMP = /^(\d+)(?:\.(\d+))?$/;
-const ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[Tt ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?(?:([Zz])|([+-])(\d{2}):?(\d{2}))?)?$/;
+const ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[Tt ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?(?:([Zz])|(([+-])(\d{2}):?(\d{2})))?)?$/;
 const HTTP = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (\d{1,2})[ -]([A-Za-z]{3})[ -](\d{4}) (\d{2}):(\d{2}):(\d{2}) (?:GMT|UTC)$/;
 
 const unreadable = (reason: string): TimeRead => ({ kind: "unreadable", reason });
@@ -70,10 +70,11 @@ function civil(year: number, month: number, day: number, hour: number, minute: n
 }
 
 function fromIso(match: RegExpExecArray): Instant | string {
-  const [, year, month, day, hour, minute, second, fraction, zulu, sign, offsetHours, offsetMinutes] = match;
+  const [, year, month, day, hour, minute, second, fraction, zulu, written, sign, offsetHours, offsetMinutes] = match;
   const seconds = civil(+year, +month, +day, +(hour ?? 0), +(minute ?? 0), +(second ?? 0));
   if (typeof seconds === "string") return seconds;
   if (hour === undefined) return { seconds, fraction: "", readAs: "ISO 8601 date", dateOnly: true };
+  if (sign && (+offsetHours > 23 || +offsetMinutes > 59)) return `“${written}” is not a zone offset`;
   const offset = sign ? (sign === "-" ? -1 : 1) * (+offsetHours * 60 + +offsetMinutes) : 0;
   const readAs = zulu || sign ? "ISO 8601" : "ISO 8601, no zone: read as UTC";
   return { seconds: seconds - offset * 60, fraction: significant(fraction ?? ""), readAs };
@@ -140,9 +141,8 @@ const DAY = 86400;
 function relative(seconds: number, now: number): string {
   let amount = seconds - now / 1000;
   for (const [unit, next] of RELATIVE_STEPS) {
-    if (Math.abs(amount) < next) {
-      return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(Math.round(amount), unit);
-    }
+    const rounded = Math.round(amount);
+    if (Math.abs(rounded) < next) return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(rounded, unit);
     amount /= next;
   }
   return "";

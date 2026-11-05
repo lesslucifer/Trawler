@@ -84,6 +84,9 @@ describe("a date-time string", () => {
     expect(reason("2026-13-01T04:00:00Z")).toBe("month 13 is not a month");
     expect(reason("2026-11-05T24:00:00Z")).toBe("24:00:00 is not a time of day");
     expect(reason("Thu, 05 Nox 2026 04:00:00 GMT")).toBe("“Nox” is not a month");
+    expect(reason("2024-01-01T00:00:00+99:99")).toBe("“+99:99” is not a zone offset");
+    expect(reason("2024-01-01T00:00:00-2400")).toBe("“-2400” is not a zone offset");
+    expect(read("2024-01-01T00:00:00-23:59").utc).toBe("2024-01-01 23:59:00Z");
     expect(reason("next tuesday")).toBe("not a Unix time, a date or a date-time");
   });
 });
@@ -106,6 +109,8 @@ describe("how long ago or ahead", () => {
     const hour = 3600;
     const at = (offsetSeconds: number) => read(String(NOW / 1000 + offsetSeconds)).relative;
     expect(at(-30)).toBe("30 seconds ago");
+    expect(at(59.5 * 60)).toBe("in 1 hour");
+    expect(at(23.6 * hour)).toBe("tomorrow");
     expect(at(5 * 60)).toBe("in 5 minutes");
     expect(at(-3 * hour)).toBe("3 hours ago");
     expect(at(-3 * 24 * hour)).toBe("3 days ago");
