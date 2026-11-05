@@ -1,8 +1,9 @@
 import { browser } from "@wdio/globals";
 import { execFileSync } from "node:child_process";
 import { createServer as createListener } from "node:net";
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync, realpathSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { resolve, sep } from "node:path";
 
 export type Running = { state: "running"; pid: number; proxy: string; api: string };
 
@@ -13,6 +14,10 @@ export const storedKeepCapturing = () =>
   existsSync(KEEP_FILE) ? (JSON.parse(readFileSync(KEEP_FILE, "utf8")) as { keepCapturing: boolean }).keepCapturing : null;
 
 export const forgetTheAnswer = () => {
+  const home = realpathSync(process.env.HOME ?? "");
+  if (!home.startsWith(realpathSync(tmpdir()) + sep)) {
+    throw new Error(`refusing to forget the answer under HOME=${home}: run through one-app.conf.ts, whose HOME is a temp dir`);
+  }
   if (existsSync(KEEP_FILE)) unlinkSync(KEEP_FILE);
 };
 

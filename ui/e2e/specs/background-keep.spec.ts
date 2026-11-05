@@ -79,8 +79,13 @@ describe("UC-BG — keep capturing with no window", () => {
     const { port } = origin.address() as AddressInfo;
     const url = `http://127.0.0.1:${port}/background`;
     expect(await sendThroughProxy(core.proxy, url)).toBe(200);
-    const flows = (await (await fetch(`http://${core.api}/flows`)).json()) as { uri: string }[];
-    expect(flows.some((flow) => flow.uri === url)).toBe(true);
+    await browser.waitUntil(
+      async () => {
+        const flows = (await (await fetch(`http://${core.api}/flows`)).json()) as { uri: string }[];
+        return flows.some((flow) => flow.uri === url);
+      },
+      { timeout: 15_000, timeoutMsg: `${url} never reached GET /flows` },
+    );
   });
 
   it("quit_app ends the app and frees both ports", async () => {
