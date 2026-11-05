@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="bf89254875e140d5e2c0a7ff" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W3 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W3 — every quit Trawler can hold asks the same</h1>
+      <p>The close request and the quit request come apart: ✕ may keep capturing, ⌘Q and the menu-bar's Quit always run
+        DEC-64's check, and the first ✕ that would quit asks once.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch
+        <code>wu/bg-service/quit-asks-the-same</code> off <code>epic/bg-service</code> · epic plan:
+        <a href="2026-11-05-bg-service-plan.html#w3">E-BGSVC.W3</a> · design:
+        <a href="2026-11-05-bg-service-general-design-run.html">W5's run</a> (blob <code>38a949ad</code>)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">A quit request (⌘Q, the menu-bar's Quit Trawler) always brings the main window up and runs
+      DEC-64's check there, then exits — never merely hides the window, never exits unchecked. A close request (✕) closes
+      at once and reads no proxy when keep capturing is on and a menu-bar icon exists; asks the once-question first when
+      the switch is unanswered and a menu-bar icon exists; and otherwise runs DEC-64's check before it quits. The
+      once-question stores its answer as the switch; ✕ or Esc on it cancels and stores nothing.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to">
+      <tr><th>Serves</th><th>How</th></tr>
+      <tr><td><span class="badge id">E-BGSVC</span> · <a href="2026-11-05-bg-service-plan.html#w3">W3 summary</a></td>
+        <td>closes the two gaps W1 and W2 reported: ⌘Q with keep capturing on only hid the window; the tray's Quit with no
+          window exited without the proxy check</td></tr>
+      <tr><td><span class="badge id">UC-ONBOARD</span> (quit) · <span class="badge id">UC-BG</span></td>
+        <td>DEC-64's check on every quit Trawler can hold; the first ✕ asks once (Q3); Quit with no window opens it to ask (Q9)</td></tr>
+      <tr><td>Expected #1 · #5 · #6 · #11</td><td>fresh ✕ → Quit · tray Quit with and without the proxy routed here · ⌘Q with the
+        switch on · fresh ✕ → Keep capturing</td></tr>
+      <tr><td><a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a> ·
+        <a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a></td>
+        <td>DEC-64 rules 1 and 6 amended (the quit request; ✕ in background mode asks nothing); DEC-77 gains the once-question as the
+          writer of the switch</td></tr>
+    </table>
+
+    <h2 id="shape">Shape</h2>
+    <table data-c="decision">
+      <tr><th>Request</th><th>keep capturing</th><th>menu-bar icon</th><th>Decision</th></tr>
+      <tr><td>✕</td><td>on</td><td>yes</td><td><b>closes</b> — no proxy read; the shell leaves the app windowless (DEC-77)</td></tr>
+      <tr><td>✕</td><td>unanswered</td><td>yes</td><td><b>asks once</b> — Keep capturing: stores on, closes. Quit: stores off, then runs the check.
+        ✕ / Esc: cancels, stores nothing, window stays</td></tr>
+      <tr><td>✕</td><td>off · unanswered or on without an icon</td><td>—</td><td><b>checks</b> — DEC-64 as today, then closes (the shell exits)</td></tr>
+      <tr><td>quit request</td><td>any</td><td>any</td><td><b>checks</b> — never the once-question; then <code>quit_app</code>. Cancel leaves the window open</td></tr>
+    </table>
+    <table data-c="pieces">
+      <tr><th>Piece</th><th>Where</th><th>Contract</th></tr>
+      <tr><td>decision</td><td><code>ui/src/closeConfirm.ts</code></td><td><code>closeDecision(kind, keepCapturing, tray)</code> pure, the table above. The hook
+        gains the request kind, the once-question state (<code>ask</code>, <code>keep()</code>, <code>quitInstead()</code>, <code>cancelAsk()</code>) and
+        a quit-request listener; unreadable keep/tray readings fall to <em>checks</em> (bounded)</td></tr>
+      <tr><td>once-question (new surface)</td><td><code>ui/src/KeepCapturingDialog.tsx</code></td><td>W5's dialog on <code>ModalShell</code>: W5's title,
+        sentence and two answers; focus lands on <em>keep capturing</em>; ✕ and Esc cancel</td></tr>
+      <tr><td>window wiring</td><td><code>ui/src/App.tsx</code></td><td>renders the once-question beside the existing close dialog</td></tr>
+      <tr><td>quit request</td><td><code>lifecycle.rs</code></td><td><code>request_quit</code> sets a pending flag, then (off the event loop) focuses or rebuilds the main window and
+        emits <code>quit-requested</code> to it. <code>take_quit_request</code> returns and clears the flag — a window built for the request reads it on mount, a
+        live one on the event, so exactly one of them acts. <code>quit_app</code> exits the app</td></tr>
+      <tr><td>entry points</td><td><code>menu.rs</code> · <code>tray.rs</code></td><td>⌘Q and the tray's Quit both call <code>request_quit</code>; the
+        Dock's terminate stays the unasked path and still stops the core on exit</td></tr>
+      <tr><td>commands</td><td><code>lib.rs</code> · <code>scenario.rs</code></td><td><code>take_quit_request</code> and <code>quit_app</code> registered in both handlers</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>#</th><th>Observable</th></tr>
+      <tr><td>1</td><td>fresh app (<code>cargo run</code>): ✕ shows <em>keep capturing after the window closes?</em>; ✕ or Esc on it leaves the window and stores nothing; the next ✕ asks again; <em>quit</em> then runs DEC-64's check and exits, ports free</td></tr>
+      <tr><td>2</td><td>fresh app: ✕, <em>keep capturing</em> — no DEC-64 dialog, the window and Dock icon go, the menu-bar icon stays, Settings → General shows the switch on</td></tr>
+      <tr><td>3</td><td>keep capturing on, window open: ⌘Q runs the check and exits — the app is gone, not hidden; no once-question</td></tr>
+      <tr><td>4</td><td>windowless: Quit Trawler opens the window on DEC-64's dialog while this machine routes through Trawler, and exits at once while nothing does</td></tr>
+      <tr><td>5</td><td>keep capturing on: ✕ with this machine routed through Trawler closes without a dialog</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
+      <tr><td rowspan="3">unit (vitest)</td><td><code>closeConfirm.test.tsx</code></td><td><code>closeDecision</code> over request kind × keep (unanswered/on/off) × tray ·
+        the hook: ✕ with on+tray never reads the proxy and is not prevented · unanswered+tray prevents and asks · Keep writes on and destroys with no proxy read ·
+        Quit writes off then runs the check (dialog while routed here, destroy when not) · cancel stores nothing, destroys nothing, and the next ✕ asks again ·
+        a failed write leaves the window open · a quit request runs the check, never the once-question, and ends in <code>quit_app</code> · its dialog's quit and stop
+        both end in <code>quit_app</code>, cancel does not · a request pending at mount runs once and not again on the event · unreadable keep/tray readings check</td></tr>
+      <tr><td><code>KeepCapturingDialog.test.tsx</code></td><td>W5's title, sentence and answers verbatim · focus on keep capturing · each answer reports once · ✕ and Esc cancel</td></tr>
+      <tr><td><code>lifecycle.rs</code> · <code>menu.rs</code> · <code>tray.rs</code> unit</td><td>the quit flag is taken once · ⌘Q and the tray's Quit map to the quit request</td></tr>
+      <tr><td>integration</td><td><code>tests/suite/outlive_window.rs</code></td><td>a quit request with no window builds the shipped one and emits to it; with one open it reuses it; <code>take_quit_request</code> answers true once over IPC
+        and <code>quit_app</code> ends the app; the Dock's terminate path (<code>RunEvent::Exit</code>) still stops the core (<code>quit_stops_core.rs</code>, unchanged)</td></tr>
+      <tr><td>e2e</td><td colspan="2">W7 (<code>background.spec.ts</code> J1 · J2 through the real window)</td></tr>
+    </table>
+
+    <h2 id="docs">Docs</h2>
+    <table data-c="docs">
+      <tr><th>Tier</th><th>Doc</th><th>Change</th></tr>
+      <tr><td>T2</td><td>DEC-64 · DEC-77</td><td>DEC-64 rules 1 and 6 amended; DEC-77 names the once-question as the switch's first writer; the index row follows</td></tr>
+      <tr><td>design</td><td><code>design/v1</code></td><td><code>implements</code> W5's run (blob <code>38a949ad</code>) for <code>KeepCapturingDialog.tsx</code>; <code>App.tsx</code> undesigned (the dialog is mounted beside the existing one)</td></tr>
+      <tr><td>review</td><td><code>ui/src-tauri/</code></td><td>the cr gate does not cover the shell crate; the quit-exit path is read independently by the router before sign-off</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
