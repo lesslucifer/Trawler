@@ -1,0 +1,23 @@
+schema: cr/v5
+scope: "standalone commit 6607b3bd on epic/bg-service (judged inside epic round 6 on it)"
+base: 83c00b8a55517a12dfcb038fcff4ca65555ebf81
+head: 6607b3bdb9f1b3366c1958a68ae621d6d606a43b
+diff_sha256: fda100795de525d16968eb84e05b6ad4eb7d68e18f3d8bb045df72336ab42eac
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 7, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-06
