@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU query-bar-e2e -> epic/query-bar"
+epic: E-QUERY
+wu: E-QUERY.W4
+branch: wu/query-bar/query-bar-e2e
+base: 2913e91dddbfeb72fcc87555d0890ee694902be0
+head: 0762260cb571f65bb2a6d746222b26ba9d7f0fb1
+diff_sha256: 83c3846836b9752f995cf6c914e490e724ff8c97f2b485261fcbb48d4c255836
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 5
+  stage_seconds:
+    gate0: 422
+    total: 461
+  by_finder:
+    correctness: { found: 4, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "noListingWhile pauses a fixed 750ms after the act (query.ts)"
+    waived: "a negative assertion needs a window; 750ms is five times the 150ms listing debounce, and the suite calls it twice"
+  - finding: "chips() reads each chip with its own WebDriver round trips (query.ts)"
+    waived: "a bar holds at most four chips in these specs; the round trips cost milliseconds against a run dominated by the release build"
+  - finding: "the status chip case cannot see a second listing that arrives after the first (query-bar.spec.ts)"
+    waived: "a duplicate listing is not a contract the bar makes; the case asserts that the first listing after typing is the chip's query, and that no listing came while typing"
+  - finding: "the misspelt-key case's rows-unchanged check is weak beside its listing check (query-bar.spec.ts)"
+    waived: "the listing recorder is the proof the case relies on; the rows check is a second reading of the same fact"
+  - finding: "noListingWhile could count an SSE-triggered refresh, and its window is a fixed pause (query.ts)"
+    waived: "the seed's import and hits settle before the recorder is installed (rowsAre in before), so no event is in flight during typing; a stray refresh would fail the case rather than pass it"
+verdict: PASS
+date: 2026-11-05
