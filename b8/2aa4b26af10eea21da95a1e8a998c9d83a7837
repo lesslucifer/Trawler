@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: b82aa4b26af10eea21da95a1e8a998c9d83a7837
+base: 4a71c17edbf9f4d119506d6fee111067d2f64020
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-v2-w8-find-chip-bar-result.html
+report_sha256: 243cfd885045049453de7f701bed50ba1487280b4a72112095b9ddb5649b885a
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECjJNVd4NG76ccoGHtyujXX5DdAX0OKOe21uPXD1pLU7rhEkfSzGV/0et
+  ZUtXwkIhRz7a86XU21cczQ9e+bKeMA
+  -----END SSH SIGNATURE-----
