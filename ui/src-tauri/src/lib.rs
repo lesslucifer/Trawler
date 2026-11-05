@@ -49,13 +49,19 @@ pub fn background_launch(mut args: impl Iterator<Item = std::ffi::OsString>) -> 
 
 use tauri::Manager;
 
+fn second_launch_opens_window(argv: Vec<String>) -> bool {
+    !background_launch(argv.into_iter().map(std::ffi::OsString::from))
+}
+
 pub fn run() {
     let background = background_launch(std::env::args_os().skip(1));
     let mode = core::mode(std::env::var(core::ATTACH_VAR).ok().as_deref());
     let builder = tauri::Builder::default();
     let builder = if core::hands_over(&mode, core::launch_ports(EPHEMERAL_PORTS)) {
-        builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            drop(lifecycle::reopen_main_in_background(app));
+        builder.plugin(tauri_plugin_single_instance::init(|app, argv, _| {
+            if second_launch_opens_window(argv) {
+                drop(lifecycle::reopen_main_in_background(app));
+            }
         }))
     } else {
         builder
@@ -164,7 +170,7 @@ pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri:
 
 #[cfg(test)]
 mod tests {
-    use super::{background_launch, core_args};
+    use super::{background_launch, core_args, second_launch_opens_window};
     use std::ffi::OsString;
 
     fn os(args: &[&str]) -> std::vec::IntoIter<OsString> {
@@ -194,6 +200,18 @@ mod tests {
         assert!(background_launch(os(&["-psn_0_1", "--background"])));
         assert!(!background_launch(os(&[])));
         assert!(!background_launch(os(&["--backgrounds"])));
+    }
+
+    #[test]
+    fn a_second_launch_opens_the_window_unless_the_login_item_started_it() {
+        let argv = |args: &[&str]| args.iter().map(ToString::to_string).collect::<Vec<_>>();
+        assert!(second_launch_opens_window(argv(&[
+            "/Applications/Trawler.app/Contents/MacOS/trawler-ui"
+        ])));
+        assert!(!second_launch_opens_window(argv(&[
+            "/Applications/Trawler.app/Contents/MacOS/trawler-ui",
+            "--background"
+        ])));
     }
 
     #[test]

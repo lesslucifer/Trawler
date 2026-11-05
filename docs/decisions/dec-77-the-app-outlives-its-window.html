@@ -63,7 +63,9 @@ flowchart LR
       <tr><td>5</td><td>macOS: Accessory activation policy (no Dock icon) while no Trawler window is open, Regular from
         the first one built</td><td>Q11: the menu-bar convention</td></tr>
       <tr><td>6</td><td><code>--background</code> skips the launch window, only while a tray exists; else the window opens.
-        A second launch always opens or focuses it</td><td>Q6: the login item launches with no window (expected #8, #9)</td></tr>
+        A second launch opens or focuses it, unless it is itself a <code>--background</code> launch (amended at
+        E-BGSVC's close)</td><td>Q6: the login item launches with no window (expected #8, #9); registering the
+        login item while the app runs can start the agent at once, and ticking a switch must not open the window</td></tr>
       <tr><td>7</td><td>Data windows close with the main window in either case</td><td>Q13, DEC-76 rule 6</td></tr>
       <tr><td>8</td><td>The menu-bar icon is built at every launch, after the core and before the launch window is
         decided; built = the host's tray availability (rule 1). A template glyph (ring + disc running, ring alone

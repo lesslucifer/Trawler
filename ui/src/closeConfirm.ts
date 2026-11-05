@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { refusalWords, type KeepCapturing } from "./generalPrefs";
+import { readKeepCapturing, readTrayAvailable, refusalWords, writeKeepCapturing, type KeepCapturing } from "./generalPrefs";
 import { splitProxyAddr } from "./setup";
 import { dismissNotice, noticeDismissed, NOTICE_KEY, type NoticeKey } from "./noticePreference";
 
@@ -193,8 +193,8 @@ export function useProxyCloseConfirm(
         }
         const requestsSeen = quitRequests.current;
         const [keep, tray] = await Promise.all([
-          bounded<KeepCapturing | null>(deps.invoke<KeepCapturing>("keep_capturing_read"), null),
-          bounded<boolean | null>(deps.invoke<boolean>("tray_available"), null),
+          bounded<KeepCapturing | null>(readKeepCapturing(deps.invoke), null),
+          bounded<boolean | null>(readTrayAvailable(deps.invoke), null),
         ]);
         if (quitRequests.current !== requestsSeen) {
           e.preventDefault();
@@ -279,7 +279,7 @@ export function useProxyCloseConfirm(
       setKeepRefused(null);
       let refusal: string | null = null;
       try {
-        await deps.invoke("keep_capturing_write", { on: true });
+        await writeKeepCapturing(true, deps.invoke);
       } catch (err) {
         console.error("storing keep capturing failed:", err);
         refusal = refusalWords(err);
@@ -302,7 +302,7 @@ export function useProxyCloseConfirm(
       setAsking(false);
       setKeepRefused(null);
       ending.current = "close";
-      await deps.invoke("keep_capturing_write", { on: false }).catch((err: unknown) => {
+      await writeKeepCapturing(false, deps.invoke).catch((err: unknown) => {
         console.error("storing keep capturing failed:", err);
       });
       if (quitRequests.current !== requestsSeen) return;
