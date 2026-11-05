@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W7
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-71-the-data-window.html"
+    tier: T2
+    action: updated
+    distills: "v3 as built: find marks in place of views, the filter view rejected as deferred (Q4), copy/save of what is on screen and of the original, rule 11 decode reads a value one way"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-71's row names find marks, copy/save of what is on screen and one-way decode"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "the design run's lexicon (data window, original, working copy, modified, restore original, re-indent, minified, decoded as) and keyboard vocabulary (find, undo/redo, save, decode, open in data window, copy a JSON node, act on a row, wrap and re-indent)"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "a UC-9 row; UC-5's row names the data window as the way out"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "a UC-9 section (payload, original and working copy, each act's result, decoders with time, copy/save, close, provenance with the e2e); UC-5's cut line and entry points"
+  - path: "docs/work/2026-11-03-inspect-window-plan.html"
+    tier: T3
+    action: updated
+    distills: "W7's block links its plan and names the wdio capability change"
+  - path: "docs/work/2026-11-05-inspect-window-w7-e2e-plan.html"
+    tier: T3
+    action: added
+    distills: "W7's requirement, pieces, journeys J1-J4, choices, distillation table, expected result and test plan"
+  - path: "docs/work/2026-11-05-inspect-window-w7-e2e-result.html"
+    tier: T3
+    action: added
+    distills: "W7's outcome, deviations (raw mode for J1-J2 because pretty sorts keys, the reopen's marker, typing and right-click helpers, the web-ui snapshot refused), evidence, distillation and follow-ups"
