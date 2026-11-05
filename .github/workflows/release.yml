@@ -1,0 +1,152 @@
+# A v<version> tag builds every installer and leaves a draft release for the
+# owner to publish (DEC-86). Publishing the draft is the release.
+name: Release
+
+"on":
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Tag equals the workspace version
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.0
+
+      - env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name == "trawler-ui") | .version')
+          if [ "v$version" != "$TAG" ]; then
+            echo "tag $TAG differs from the workspace version v$version"
+            exit 1
+          fi
+
+  build:
+    name: Build · ${{ matrix.name }}
+    needs: version
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: macos-universal
+            os: macos-latest
+            targets: aarch64-apple-darwin,x86_64-apple-darwin
+            package-args: --universal
+            bundle: target/universal-apple-darwin/release/bundle
+            wrap: ""
+          - name: windows-x64
+            os: windows-latest
+            targets: ""
+            package-args: ""
+            bundle: target/release/bundle
+            wrap: ""
+          - name: windows-arm64
+            os: windows-11-arm
+            targets: ""
+            package-args: ""
+            bundle: target/release/bundle
+            wrap: ""
+          - name: linux-x64
+            os: ubuntu-22.04
+            targets: ""
+            package-args: ""
+            bundle: target/release/bundle
+            wrap: xvfb-run
+          - name: linux-arm64
+            os: ubuntu-22.04-arm
+            targets: ""
+            package-args: ""
+            bundle: target/release/bundle
+            wrap: xvfb-run
+    steps:
+      - uses: actions/checkout@v4
+
+      - if: startsWith(matrix.os, 'ubuntu')
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
+          librsvg2-dev libssl-dev libxdo-dev patchelf xvfb
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.0
+          targets: ${{ matrix.targets }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo xtask package ${{ matrix.package-args }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          APPIMAGE_EXTRACT_AND_RUN: 1
+
+      - run: ${{ matrix.wrap }} cargo xtask smoke ${{ matrix.package-args }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            ${{ matrix.bundle }}/*/*.dmg
+            ${{ matrix.bundle }}/*/*.app.tar.gz
+            ${{ matrix.bundle }}/*/*.msi
+            ${{ matrix.bundle }}/*/*-setup.exe
+            ${{ matrix.bundle }}/*/*.deb
+            ${{ matrix.bundle }}/*/*.rpm
+            ${{ matrix.bundle }}/*/*.AppImage
+            ${{ matrix.bundle }}/*/*.sig
+
+  release:
+    name: Draft release
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.99.0
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - env:
+          TAG: ${{ github.ref_name }}
+        run: >-
+          cargo xtask release-manifest dist --tag "$TAG"
+          --repo "$GITHUB_REPOSITORY"
+          --pub-date "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mv dist/notes.md notes.md
+          gh release create "$TAG" dist/* --draft --title "Trawler ${TAG#v}" --notes-file notes.md
