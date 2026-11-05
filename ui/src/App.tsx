@@ -59,6 +59,7 @@ import { FlowList } from "./FlowList";
 import { FlowDetail } from "./FlowDetail";
 import { Composer } from "./Composer";
 import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
+import { KeepCapturingDialog } from "./KeepCapturingDialog";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
 import { CaptureControls } from "./CaptureControls";
 import {
@@ -842,6 +843,9 @@ function Shell({
   }, [client, proxyAddr]);
   const close = useProxyCloseConfirm(proxyAddr, readQuitFacts);
   const [notesShown, setNotesShown] = useNotesShown();
+  const keepDialog = close.asking && (
+    <KeepCapturingDialog onKeep={close.keepCapturing} onQuit={close.quitInstead} onCancel={close.cancelAsk} />
+  );
   const closeDialog = close.prompt && (
     <ProxyCloseDialog
       prompt={close.prompt}
@@ -1009,6 +1013,7 @@ function Shell({
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
+        {keepDialog}
         {launchUnanswered && (
           <div
             data-testid="empty"
@@ -1032,6 +1037,7 @@ function Shell({
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
+        {keepDialog}
         <div
           data-testid="empty"
           className="flex h-full flex-col items-center justify-center gap-6 p-12"
@@ -1054,6 +1060,7 @@ function Shell({
     return (
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
+        {keepDialog}
         <Onboarding
           state={state}
           dispatch={go}
@@ -1176,6 +1183,7 @@ function Shell({
       }
     >
       {closeDialog}
+      {keepDialog}
       <FlowList
         split={split}
         flows={flows}
