@@ -8,6 +8,7 @@ import {
   parseJson,
   pathText,
   reformatJson,
+  spliceAsJson,
   valueText,
   type JsonNode,
 } from "./jsonTools";
@@ -203,5 +204,30 @@ describe("the node at an offset", () => {
   it("a string's escapes are decoded in its value", () => {
     const escaped = '{"a": "\\u00e9\\n"}';
     expect(valueText(escaped, nodeAt(rootOf(escaped), 8).node)).toBe("é\n");
+  });
+});
+
+describe("spliceAsJson", () => {
+  const spanOf = (text: string, part: string) => ({ from: text.indexOf(part), to: text.indexOf(part) + part.length });
+
+  it("writes a value inside a string as its escaped content", () => {
+    const text = '{"t": "a b c"}';
+    expect(spliceAsJson(text, spanOf(text, "b"), 'say "hi"')).toBe('{"t": "a say \\"hi\\" c"}');
+  });
+
+  it("writes a value over a bare number or literal as a quoted string", () => {
+    const text = '{"exp": 1793851200, "ok": true}';
+    expect(spliceAsJson(text, spanOf(text, "1793851200"), "2026-11-05 11:00:00 +07:00")).toBe(
+      '{"exp": "2026-11-05 11:00:00 +07:00", "ok": true}',
+    );
+    expect(spliceAsJson(text, spanOf(text, "true"), "yes")).toBe('{"exp": 1793851200, "ok": "yes"}');
+  });
+
+  it("writes escaped content over part of a number, a key, or a working copy that does not parse", () => {
+    const text = '{"exp": 1793851200}';
+    expect(spliceAsJson(text, spanOf(text, "17938"), "x")).toBe('{"exp": x51200}');
+    expect(spliceAsJson(text, spanOf(text, "exp"), 'a"b')).toBe('{"a\\"b": 1793851200}');
+    const broken = '{"exp": 1793851200,';
+    expect(spliceAsJson(broken, spanOf(broken, "1793851200"), "x")).toBe('{"exp": x,');
   });
 });

@@ -45,6 +45,7 @@ import {
   INDENTS,
   nodeAt,
   parseJson,
+  spliceAsJson,
   pathText,
   reformatJson,
   SORT_STEP,
@@ -123,15 +124,6 @@ const REPLACE_LABEL: Record<DecoderId, string> = {
   base64: "replace with decoded",
   url: "replace with decoded",
 };
-
-function insideJsonString(text: string, at: number): boolean {
-  let inside = false;
-  for (let index = text.lastIndexOf("\n", at - 1) + 1; index < at; index++) {
-    if (text[index] === "\\" && inside) index++;
-    else if (text[index] === '"') inside = !inside;
-  }
-  return inside;
-}
 
 interface Search {
   ranges: TextRange[];
@@ -489,10 +481,9 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       return;
     }
     const surface = surfaceText(text);
-    const quoted = JSON.stringify(value);
-    const insert =
-      kind === "json" ? (insideJsonString(surface, origin.range.from) ? quoted.slice(1, -1) : quoted) : surfaceText(value);
-    const spliced = surface.slice(0, origin.range.from) + insert + surface.slice(origin.range.to);
+    const { from, to } = origin.range;
+    const spliced =
+      kind === "json" ? spliceAsJson(surface, origin.range, value) : surface.slice(0, from) + surfaceText(value) + surface.slice(to);
     step(spliced.replace(/\n/g, breakWith), REPLACED_SELECTION);
   };
   const openDecoded = (decoder: DecoderId, reading: Decoded) => {

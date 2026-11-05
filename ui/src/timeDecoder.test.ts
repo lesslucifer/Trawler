@@ -110,6 +110,7 @@ describe("how long ago or ahead", () => {
     const at = (offsetSeconds: number) => read(String(NOW / 1000 + offsetSeconds)).relative;
     expect(at(-30)).toBe("30 seconds ago");
     expect(at(59.5 * 60)).toBe("in 1 hour");
+    expect(at(-59.5 * 60)).toBe("1 hour ago");
     expect(at(23.6 * hour)).toBe("tomorrow");
     expect(at(5 * 60)).toBe("in 5 minutes");
     expect(at(-3 * hour)).toBe("3 hours ago");

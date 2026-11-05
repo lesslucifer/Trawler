@@ -37,11 +37,13 @@ const unreadable = (reason: string): TimeRead => ({ kind: "unreadable", reason }
 const pad = (n: number, width = 2) => String(n).padStart(width, "0");
 const significant = (fraction: string) => fraction.replace(/0+$/, "");
 
+const WHOLE_TIME_SHAPE = new RegExp(`^(?:${ISO_DATE_TIME}|${HTTP_DATE})$`);
+
 export const looksLikeTime = (input: string) => {
   const trimmed = input.trim();
   const stamp = TIMESTAMP.exec(trimmed);
   if (stamp) return UNITS.some((unit) => unit.digits.includes(stamp[1].length) && (!stamp[2] || unit.scale === 0));
-  return new RegExp(`^(?:${ISO_DATE_TIME}|${HTTP_DATE})$`).test(trimmed);
+  return WHOLE_TIME_SHAPE.test(trimmed);
 };
 
 function fromTimestamp(whole: string, fraction: string | undefined): Instant | string {
@@ -141,7 +143,7 @@ const DAY = 86400;
 function relative(seconds: number, now: number): string {
   let amount = seconds - now / 1000;
   for (const [unit, next] of RELATIVE_STEPS) {
-    const rounded = Math.round(amount);
+    const rounded = Math.sign(amount) * Math.round(Math.abs(amount));
     if (Math.abs(rounded) < next) return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(rounded, unit);
     amount /= next;
   }

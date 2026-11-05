@@ -312,6 +312,14 @@ export function nodeAt(root: JsonNode, offset: number): NodeAt {
   return { path, node };
 }
 
+export function spliceAsJson(text: string, range: TextRange, value: string): string {
+  const parsed = parseJson(text);
+  const node = parsed.ok ? nodeAt(parsed.root, range.from).node : null;
+  const bare = node !== null && (node.type === "number" || node.type === "literal") && node.from === range.from && node.to === range.to;
+  const quoted = JSON.stringify(value);
+  return text.slice(0, range.from) + (bare ? quoted : quoted.slice(1, -1)) + text.slice(range.to);
+}
+
 export function pathText(path: PathSegment[]): string {
   return path.reduce<string>((text, segment) => {
     if (typeof segment === "number") return `${text}[${segment}]`;
