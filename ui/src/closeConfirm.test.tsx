@@ -213,7 +213,8 @@ test("a revert that fails does not quit — it surfaces, and quit stays a click 
   const f = fakeDeps("ours");
   f.invoke.mockImplementation(async (cmd: string) => {
     if (cmd === "proxy_status") return { status: "ours", address: null };
-    throw new Error("elevation declined");
+    if (cmd === "unset_proxy") throw new Error("elevation declined");
+    return undefined;
   });
   const { result } = confirmFor(f);
   await closeAndWait(f);
@@ -692,4 +693,25 @@ test("a shell that cannot read the switch or the icon checks, as a quit always d
   expect(preventDefault).toHaveBeenCalledOnce();
   await waitFor(() => expect(result.current.prompt).toEqual({ mode: "ours", answering: true }));
   expect(result.current.asking).toBe(false);
+});
+
+describe("a close decided on a reading that fell back ends the app itself", () => {
+  test("its quit ends in quit_app, never a destroy the shell could keep running behind", async () => {
+    const f = shellDeps("ours", { keep: "on", unreadable: true });
+    const { result } = shellConfirm(f);
+    await closeAndWait(f);
+    await waitFor(() => expect(result.current.prompt).toEqual({ mode: "ours", answering: true }));
+    await act(async () => result.current.quit(false));
+    expect(f.ran("quit_app")).toBe(true);
+    expect(f.destroy).not.toHaveBeenCalled();
+  });
+
+  test("with nothing to ask it holds the window and ends in quit_app", async () => {
+    const f = shellDeps("none", { keep: "on", unreadable: true });
+    shellConfirm(f);
+    const preventDefault = await closeAndWait(f);
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(f.ran("quit_app")).toBe(true);
+    expect(f.destroy).not.toHaveBeenCalled();
+  });
 });

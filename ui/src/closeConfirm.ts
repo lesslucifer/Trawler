@@ -193,16 +193,18 @@ export function useProxyCloseConfirm(
         }
         const requestsSeen = quitRequests.current;
         const [keep, tray] = await Promise.all([
-          bounded(deps.invoke<KeepCapturing>("keep_capturing_read"), "off"),
-          bounded(deps.invoke<boolean>("tray_available"), false),
+          bounded<KeepCapturing | null>(deps.invoke<KeepCapturing>("keep_capturing_read"), null),
+          bounded<boolean | null>(deps.invoke<boolean>("tray_available"), null),
         ]);
         if (quitRequests.current !== requestsSeen) {
           e.preventDefault();
           return;
         }
-        const decision = closeDecision("close", keep, tray === true);
+        const decision = closeDecision("close", keep ?? "off", tray === true);
         if (decision === "closes") return;
-        ending.current = "close";
+        // The shell re-reads both at Destroyed: a close decided on a fallback
+        // could be kept running behind the user's quit, so it ends the app itself.
+        ending.current = keep === null || tray === null ? "quit" : "close";
         if (decision === "asks-keep") {
           e.preventDefault();
           setKeepRefused(null);
@@ -214,9 +216,10 @@ export function useProxyCloseConfirm(
           e.preventDefault();
           return;
         }
-        if (asked === null) return;
+        if (asked === null && ending.current === "close") return;
         e.preventDefault();
-        setPrompt(asked);
+        if (asked === null) await quitApp();
+        else setPrompt(asked);
       })
       .then((u) => (disposed ? u() : (unlisten = u)));
 
