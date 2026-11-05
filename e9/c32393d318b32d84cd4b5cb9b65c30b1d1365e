@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN
+wu: E-INSPWIN.W7
+branch: HEAD
+tests:
+  unit: { count: 30, covers: "the wdio capability in tauri.conf.e2e.json names every window pattern a shipped capability names, so a window family the app opens cannot be left undrivable by the e2e (red on data-* before the config change)" }
+  integration: { waived: "W7 changes no app contract: its code is the e2e spec, its fixtures (two harness origin routes) and the e2e-only wdio capability; the contract it owns is the journey through the real windows, asserted at the e2e level" }
+  e2e: { count: 34, covers: "J1 the cut line's open in data window opens a data-* window titled by the opener with the whole captured body, and a second open of the same key focuses it with its edit intact; J2 find counts 1 of 25 and steps by next and Enter, sort keys and a typed edit mark modified, copy yields the edited text and copy original the captured body, undo twice and restore original clear the marker; J3 a 302 KiB form shows its last pair whole, a JWT value decodes with its signature, its payload opens in a third window whose exp decodes as time to 2026-11-05 04:00:00Z; J4 the captured body is unchanged, no data window records an http(s) request, the pane still shows the body, and each data window closes asking nothing with the main window left; flows.spec's cut case asserts the cut line and its open in data window" }
