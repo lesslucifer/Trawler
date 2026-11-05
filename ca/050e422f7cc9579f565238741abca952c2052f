@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-CI
+wu: E-CI.W1
+branch: HEAD
+tests:
+  unit: { waived: "the WU adds no product or tooling code, only .github/workflows/ci.yml and the suite test that reads it" }
+  integration: { count: 4, covers: "the real ci.yml parsed: triggers are exactly push on main and workflow_dispatch with no other push filter; permissions are contents: read; one job on macos-latest; pnpm install --frozen-lockfile runs in ui before clippy (-D warnings over the workspace, all targets and features) and before cargo test -p trawler -p trawler-ui. All four were red before the file existed" }
