@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG
+wu: E-PKG.W1
+branch: HEAD
+tests:
+  unit: { count: 37, covers: "bundle.rs: a bundle of the other flavour, or one recording none, is stale however new; the e2e feature wants e2e; the rebuild sets VITE_E2E=1 for e2e and removes it for release. package.rs: the package plan's argv per host, profile and universal; refusals for --universal off macOS, a missing Mac target (named in the rustup line), unknown flags and hosts; artifact discovery; the shipped version and the drift guard naming each source that disagrees (members as cargo metadata resolves them, ui/package.json, a version in tauri.conf.json), plus the tree's own guard; target.rs: the shared cargo_metadata reader under its existing Workspace tests" }
+  integration: { count: 2, covers: "feature package-tests, macOS: after an e2e-flavoured ui/dist, cargo build -p trawler-ui leaves a release bundle with no WebDriver plugin; xtask package --profile package-test with VITE_E2E=1 in its env still builds a release bundle, an .app green under codesign --verify --deep --strict and a .dmg, and the .app's binary run as --core under env_clear, launchd's PATH, a temp HOME and cwd / prints its ready line and captures a proxied request to a local origin into GET /flows" }
+  e2e: { waived: "the epic's e2e_packaging (W6) installs and drives this artifact; W1 is its build step" }
