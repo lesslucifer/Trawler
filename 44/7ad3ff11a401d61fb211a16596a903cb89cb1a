@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W5
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the E-GATEPAR2 row closed with what shipped and the measured push cost"
+  - path: "docs/decisions/dec-74-the-merge-proves-the-tree-it-creates.html"
+    tier: T2
+    action: updated
+    distills: "names the epic e2e that holds the merge and push proof end to end"
+  - path: "docs/decisions/dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html"
+    tier: T2
+    action: updated
+    distills: "names the epic e2e that holds the slow-launch refusal and the per-boot cache"
+  - path: "docs/testing-strategy.html"
+    tier: T1
+    action: updated
+    distills: "tests/suite layout (one binary per crate), the no-doc-test rule and its guard, nextest a required runner"
+  - path: "docs/work/2026-11-05-gate-parity2-close-plan.html"
+    tier: T3
+    action: added
+    distills: "W5 plan: the e2e through the real hooks, the before/after re-run, the T1/T2 distillation"
+  - path: "docs/work/2026-11-05-gate-parity2-close-result.html"
+    tier: T3
+    action: added
+    distills: "W5 result: the e2e, before/after timings on one machine, the distillation done"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "Hooks rows (pre-commit, pre-push, pre-merge-commit), machine prerequisites row, DoD-C suite and DoD-E merge rows, gate0 merge/push commands"
