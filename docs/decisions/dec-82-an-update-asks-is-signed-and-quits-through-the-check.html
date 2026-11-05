@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec624e9f34851f0dfae9db">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-82: an update asks, is signed, and quits through the check</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-82 — an update asks, is signed, and quits through the check</h1>
+      <p>How an installed Trawler takes a new version: never silently, only when the owner's key signed that exact
+        version, and only through the same quit every other quit goes through.</p>
+      <div class="meta">v2 · 2026-11-05 (rule 4: a failed install is told — W1 review round 1) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W1</strong> from the owner's
+        rulings Q4, Q6, Q7 and Q20–Q22 · UC-UPDATE (written when a release exists, E-PKG2's close) · relates to
+        <a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>,
+        <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a>,
+        <a href="dec-81-one-version-a-release-only-bundle-one-package-command.html">DEC-81</a> ·
+        <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  C["check: launch (≤ 1/day, installed only) · Check for Updates…"] --> N{"newer?"}
+  N -- "no · failed" --> S["launch: silent · user: told"]
+  N -- yes --> A["ask: both versions, the list is cleared"]
+  A -- Later --> X["nothing"]
+  A -- Install --> V["download + verify: owner's key AND signed version"]
+  V -- refused --> E["told why · app untouched"]
+  V -- verified --> Q["close the main window (as ⌘Q) → DEC-64"]
+  Q -- cancelled --> D["update dropped"]
+  Q -- closed --> I["stop core · install"]
+  I -- installed --> R["relaunch as the new version"]
+  I -- failed --> T["told why · then the app ends"]
+      </pre>
+      <div class="caption">Only one path changes the installed app, and it passes both the signature and the quit check.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The channel is <code>github.com/lesslucifer/Trawler/releases/latest/download/latest.json</code>.
+        A launch checks it at most once a day (the time is recorded in the app data dir), and only in an app installed from
+        a bundle. <em>Check for Updates…</em> checks it at any time</td><td>a release is what the owner publishes (Q4, Q5).
+        A binary run from <code>target/</code> has no bundle to replace</td></tr>
+      <tr><td>2</td><td>An update always asks. The dialog names the running and the offered version, and says that
+        installing quits, clears the captured list and keeps the certificate and settings. A launch check says nothing
+        unless it offers. A check the user asked for always answers: up to date, or why it could not check</td><td>never
+        silent, forced or delta (Q6). A launch that fails offline is not news</td></tr>
+      <tr><td>3</td><td>An update installs only if it verifies against the public key in <code>tauri.conf.json</code> and
+        its signature names the version the channel announced (<code>requireSignedVersion</code>). The owner generated the
+        key and holds both halves. The private half exists only as repository secrets, and no agent ever sees it
+        (Q7, Q22)</td><td>a channel that serves an old, genuine archive as a new version cannot downgrade anyone. Tauri
+        CLI 2.12 writes the version into the signature</td></tr>
+      <tr><td>4</td><td>Install stages the verified update and closes the main window the way ⌘Q does, so DEC-64's check
+        runs. Only that window's destruction installs: the shell stops the core it owns (DEC-69), installs and relaunches.
+        A quit the user cancels drops the update, and the next check offers it again (Q21). An install that fails
+        (a read-only app folder, a declined password prompt) is told in a native dialog, and the app holds its exit
+        until that dialog closes. The next check offers the update again</td><td>an update is a quit,
+        and leaving the machine routed through a stopped proxy is what DEC-64 prevents. An update must never install on
+        some later, unrelated quit, and a failure must not look like a crash</td></tr>
+      <tr><td>5</td><td>Every bundle type updates in place: the macOS <code>.app</code>, NSIS, MSI, AppImage, and
+        <code>.deb</code>/<code>.rpm</code> through <code>pkexec</code>'s password prompt (Q20)</td><td>one flow, one
+        signature check and one relaunch on every platform</td></tr>
+      <tr><td>6</td><td>Updater artifacts are built only where <code>TAURI_SIGNING_PRIVATE_KEY</code> is set, which is the
+        release workflow. <code>cargo xtask package</code> without it builds the installers and says the updater
+        artifacts were skipped</td><td>the key never leaves the owner's hands, so a local package cannot sign an
+        update</td></tr>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>open the release page for <code>.deb</code>/<code>.rpm</code></td><td>the updater installs them now; one
+        flow beats two (Q20)</td></tr>
+      <tr><td>keep a cancelled update pending until the next quit</td><td>it would install on a quit the user never tied
+        to it (Q21)</td></tr>
+      <tr><td>signatures without a version</td><td>they allow a downgrade by an unsigned manifest</td></tr>
+      <tr><td>a webview dialog for the offer</td><td>native dialogs need no design run and work with no window shown
+        (Q6)</td></tr>
+    </table>
+
+    <h2 id="held-by">Held by</h2>
+    <table data-c="held-by">
+      <tr><th>Rule</th><th>Test</th></tr>
+      <tr><td>1, 2, 4</td><td><code>ui/src-tauri/src/update.rs</code> unit tests: the throttle, installed only, each
+        notice, a staged update taken once, a failed install told before the exit, which waits for it; <code>menu.rs</code>: the menu item; <code>closeConfirm.test.tsx</code>: a
+        cancelled quit tells the shell</td></tr>
+      <tr><td>3</td><td><code>ui/src-tauri/tests/suite/updater.rs</code>: no newer version changes nothing, a foreign
+        key is refused, an archive announced as another version is refused, and a verified update replaces the app with
+        the CA unchanged. <code>update.rs</code> also guards the shipped config: the public channel, the owner's key and
+        signed versions</td></tr>
+      <tr><td>6</td><td><code>xtask/src/package.rs</code>: updater artifacts are asked for exactly when the key is
+        set</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

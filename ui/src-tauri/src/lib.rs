@@ -17,6 +17,7 @@ pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 pub mod supervisor;
+pub mod update;
 pub mod view_prefs;
 pub mod window_geometry;
 
@@ -50,6 +51,9 @@ pub fn run() {
     let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::Pending::<update::Staged>::default())
+        .manage(update::Telling::default())
         .on_window_event(window_geometry::track)
         .on_window_event(data_window::on_window_event)
         .menu(menu::build)
@@ -58,12 +62,13 @@ pub fn run() {
             if matches!(event, tauri::WindowEvent::Destroyed)
                 && settings::ends_the_app(window.label())
             {
-                window.app_handle().exit(0);
+                update::on_main_window_destroyed(window.app_handle());
             }
         })
         .setup(move |app| {
             core::setup(app, mode)?;
             window_geometry::install(app.handle());
+            update::check_at_launch(app.handle());
             Ok(())
         });
     let builder = data_window::install(builder);
@@ -99,7 +104,8 @@ pub fn run() {
         core::restart_core,
         settings::open_settings,
         data_window::open_data_window,
-        data_window::take_data_payload
+        data_window::take_data_payload,
+        update::quit_cancelled
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);
@@ -118,6 +124,11 @@ pub fn run() {
 }
 
 pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {
+    if let tauri::RunEvent::ExitRequested { code, api, .. } = event {
+        if update::holds_exit(code.is_some(), update::telling(app)) {
+            api.prevent_exit();
+        }
+    }
     if let tauri::RunEvent::Exit = event {
         if let Some(core) = app.try_state::<core::Core>() {
             core.stop();
