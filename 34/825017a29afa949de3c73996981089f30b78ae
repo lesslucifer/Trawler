@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 34825017a29afa949de3c73996981089f30b78ae
+base: 4d1c1942707e767f0bf6af6c5183e7163c478a91
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-05-gate-parity-epic-result.html
+report_sha256: c7b3ff673f297a8859ce33135410f4268e7a7cb253dde41d391b572b25c8d85e
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBI0gU+tmvnYdamvKsVrNmD+auZ/BIkETOvcQlc3XkBxENnLi579PQHiB
+  SbqtxcUuqafrwrfXdIfISJGmCfSicP
+  -----END SSH SIGNATURE-----
