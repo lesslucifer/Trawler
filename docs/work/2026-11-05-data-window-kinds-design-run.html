@@ -23,7 +23,7 @@
       <h1>Design run: the data window's new kinds and find</h1>
       <p>The data window reads a kind from its bytes and says what decided it; html, javascript and css become kinds of their
         own; html gains a preview that runs nothing and loads nothing; find is typed the way the flow list's filter is.</p>
-      <div class="meta">Design run · open for the owner's round 1 · Trawler · T3 (docs/work/) · <strong>E-INSPWIN2.W3</strong> ·
+      <div class="meta">Design run · closed 2026-11-05 after the owner's round 1 (accept all, one wording comment on E1) · Trawler · T3 (docs/work/) · <strong>E-INSPWIN2.W3</strong> ·
         branch <code>wu/inspect-window-v2/data-window-kinds-design</code> · epic <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a> ·
         <a href="2026-11-05-inspect-window-v2-w3-data-window-kinds-design-plan.html">WU plan</a> · component:
         <a href="components/chip-box.html">ChipBox</a> · within
@@ -32,7 +32,7 @@
         <a href="../decisions/dec-76-the-data-window.html">DEC-76</a></div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="ready">
+  <main data-artifact="design-run" data-status="archived">
 
     <h2 id="mockup">Mockup</h2>
     <p class="kd">Live. Pick a payload with the buttons under the frame. In find, type <code>ke</code> to see the suggestions,
@@ -365,7 +365,7 @@
           const served = servedLabel(s);
           const by = byOf(s);
           const decided = picked
-            ? `your choice · read ${labelOf(p.detected)} from ${by === "bytes" ? "its bytes" : served}`
+            ? `read ${labelOf(p.detected)} from ${by === "bytes" ? "its bytes" : served}`
             : by === "bytes" ? `read from its bytes · served as ${served}` : `from ${served}`;
           const modified = p === PAYLOADS.js && (s.reformatted ?? s.flags.has("reformatted"));
           const text = textOf(s);
@@ -454,7 +454,7 @@
     <table data-c="calls">
       <tr><th>#</th><th>The run drew</th><th>The alternatives</th></tr>
       <tr><td>E1</td><td>the status bar says what decided the kind: <em>from text/html</em> (the label) · <em>read from its bytes · served as
-        text/plain</em> (bytes over a label) · <em>read from its bytes</em> (no label) · <em>your choice · read JSON from its bytes</em> (a pick)</td>
+        text/plain</em> (bytes over a label) · <em>read from its bytes</em> (no label) · <em>read JSON from its bytes</em> (a pick: the picker shows the chosen kind, the bar names what the bytes read)</td>
         <td>(b) a ⚠ before the kind when the bytes overrule the label; (c) only the kind, nothing about why</td></tr>
       <tr><td>E2</td><td>html's <em>source · preview</em> is a two-choice switch in the status bar beside the kind, also a choice row in ⋯,
         key ⇧⌘V</td><td>(b) in ⋯ only, keeping the bar to state; (c) a button in the header beside ⋯</td></tr>
@@ -490,7 +490,7 @@
       <tr><td>the payload <code>{key, title, heading, bytes, typeHint?}</code> (DEC-76)</td><td>used</td><td>header title, the surface, the status bar's size</td></tr>
       <tr><td><code>readKind(bytes, typeHint)</code> → <code>{kind, by, label}</code> (DEC-79)</td><td>used</td><td>the status bar's words (E1) and the picker's start</td></tr>
       <tr><td>the nine kinds</td><td>used</td><td>the kind picker (E6); each kind's ⋯ rows and find keys</td></tr>
-      <tr><td>the kind override</td><td>used</td><td>the picker; <em>your choice · …</em></td></tr>
+      <tr><td>the kind override</td><td>used</td><td>the picker; the bar then names the kind it read (<em>read JSON from its bytes</em>)</td></tr>
       <tr><td>the preview's reach (DEC-80)</td><td>used</td><td>a real <code>sandbox=""</code> frame over <code>srcdoc</code>, the CSP meta first, refresh and base removed (E2–E4)</td></tr>
       <tr><td>the working copy, undo, restore (DEC-76)</td><td>used</td><td><em>reformat</em> is one undoable step; ⋯ undo and restore original</td></tr>
       <tr><td>the find grammar (Q12–Q15)</td><td>used</td><td>the find bar's chips, suggestions, faults and refused chips (E7, E8)</td></tr>
@@ -527,7 +527,7 @@
     <h2 id="blocked-on">Blocked-on</h2>
     <table data-item="blocked-on" data-c="blocked-table">
       <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
-      <tr><td>the owner's round 1 on E1–E9</td><td>the owner</td><td>drew the recommended option of each; the alternatives are under the calls</td></tr>
+      <tr><td>nothing: the owner's round 1 settled E1–E9, the one open call</td><td>the owner (ruled 2026-11-05)</td><td>drew the recommended option of each; all held, E1's pick wording trimmed</td></tr>
     </table>
 
     <h2 id="review">Review</h2>
@@ -537,6 +537,11 @@
         <tr><td>Start: the epic plan's W3 block, its find-bar section and rulings Q6, Q7, Q10, Q12–Q15</td><td>capabilities · mockup · keyboard ·
           proposals: the status bar's words, the nine-row picker, ⋯ for javascript, css and html, the sandboxed preview, the find chip box</td>
           <td><code>DEC-79</code> · <code>DEC-80</code> · <code>DEC-76</code> · <code>DEC-71</code></td></tr>
+        <tr><td>Round 1, the owner (2026-11-05, relayed by the router): E1–E9 accepted as drawn and the ChipBox design confirmed, with one
+          comment on E1's pick leg, <em>your choice ·</em>: "no need this"</td><td>mockup · calls · capabilities: after a pick the status bar
+          drops the <em>your choice ·</em> prefix and says <em>read JSON from its bytes</em>, because the picker already shows the kind the user
+          chose. E2–E9 and the rest of E1 stand as drawn; the proposals and the ChipBox design stand as written</td><td>taste · <code>DEC-79</code>
+          rule 7 · <code>Select</code> · ChipBox @anatomy</td></tr>
       </tbody>
     </table>
 
