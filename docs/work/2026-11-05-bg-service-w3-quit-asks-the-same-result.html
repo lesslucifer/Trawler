@@ -45,6 +45,9 @@
       <tr><td>an integration test that <code>quit_app</code> ends the app</td><td>not written</td><td>Tauri's mock runtime does not
         implement <code>exit</code> (<code>mock_runtime.rs</code> panics <em>not implemented</em>); <code>quit_app</code> is one line over
         <code>app.exit(0)</code>, the same call <code>on_window_destroyed</code>'s path makes, and W7's e2e drives it through the real app</td></tr>
+      <tr><td>—</td><td>the quit flag is taken after the listener is registered, not at mount</td><td>review round 1's correctness finder:
+        a request landing between the mount-time take and the listener's registration was set, announced to nobody and never taken. A test holds the registration open and
+        sends the request in between</td></tr>
       <tr><td>—</td><td><code>@tauri-apps/api/event</code> mocked in <code>App.test.tsx</code></td><td>the hook now listens for the quit
         request, and the App tests mock the Tauri window module already</td></tr>
     </table>
@@ -70,7 +73,7 @@
         <code>take_quit_request</code> answers true once over IPC · <code>quit_stops_core.rs</code> unchanged (the exit event still stops the core)</td></tr>
       <tr><td>e2e</td><td><code>cargo xtask ui e2e</code> green: attached 14 of 14 spec files, owned 1 of 1. The harness reads the real config dir, where <code>keep-capturing.json</code> already read on: the first run failed in <code>sticky.spec.ts</code> because destroying the main window then leaves the app windowless. The file was moved aside for the second run and restored</td></tr>
       <tr><td>suite</td><td><code>cargo xtask gate0</code> green (1285 passed, 2 skipped) · the whole vitest suite green (99 files, 61 455) · eslint · <code>tsc -b</code></td></tr>
-      <tr><td>commits</td><td>plan <code>0ce71b86</code> · shell <code>1a8682bd</code> · window <code>ab3da4e9</code> · decisions <code>2defbd69</code> · this report</td></tr>
+      <tr><td>commits</td><td>plan <code>0ce71b86</code> · shell <code>1a8682bd</code> · window <code>ab3da4e9</code> · decisions <code>2defbd69</code> · listener-before-take fix <code>1c498c1e</code> · this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
