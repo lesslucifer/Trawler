@@ -1,0 +1,26 @@
+schema: cr/v5
+scope: "standalone commit 83c00b8a on epic/bg-service"
+base: 8237b0adaf0eb402ad8cd39809dd24b5c5743536
+head: 83c00b8a55517a12dfcb038fcff4ca65555ebf81
+diff_sha256: 6372e90c456e6878a44c1a3889e2f57d57a3a6e8b2a939056edfcaa2968d51fe
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 1
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+findings: { found: 3, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "restoreKeepCapturing ran last in onComplete, so an earlier throw skipped it"
+    waived: "self-heals on the next run; fixed in 6607b3bd, which restores first"
+  - finding: "with HOME unset the set-aside resolves against the cwd"
+    waived: "the SAVED_STATE list beside it uses the same path; a developer shell always sets HOME"
+verdict: FAIL
+date: 2026-11-06
