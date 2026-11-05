@@ -1,4 +1,5 @@
-import { findMatches, MATCH_LIMIT } from "./find";
+import { mergeRanges, MATCH_LIMIT, scanOf, type Scan } from "./find";
+import type { FindChip } from "./findGrammar";
 import type { TextRange } from "./components/index";
 
 export interface FormPair {
@@ -117,17 +118,38 @@ export interface PairsFound {
   capped: boolean;
 }
 
-export function findInPairs(pairs: FormPair[], query: string, limit = MATCH_LIMIT): PairsFound {
+const PART_KEYS: Record<PairPart, readonly FindChip["key"][]> = {
+  key: ["plain", "re", "case", "key"],
+  value: ["plain", "re", "case", "value"],
+};
+
+function markPart(text: string, scans: readonly Scan[], limit: number) {
+  return mergeRanges(
+    scans.map((scan) => scan(text, limit)),
+    limit,
+  );
+}
+
+function scansFor(part: PairPart, chips: readonly FindChip[]): Scan[] {
+  return chips.flatMap((chip) => {
+    const scan = PART_KEYS[part].includes(chip.key) ? scanOf(chip) : null;
+    return scan ? [scan] : [];
+  });
+}
+
+export function markPairs(pairs: FormPair[], chips: readonly FindChip[], limit = MATCH_LIMIT): PairsFound {
   const byPair = new Map<number, PairMatches>();
   let total = 0;
-  if (!query) return { byPair, total, capped: false };
+  if (chips.length === 0) return { byPair, total, capped: false };
+  const keyScans = scansFor("key", chips);
+  const valueScans = scansFor("value", chips);
   for (const pair of pairs) {
-    const key = findMatches(pair.key, query, limit - total);
-    const value = key.capped ? { ranges: [], capped: true } : findMatches(pair.value, query, limit - total - key.ranges.length);
+    const key = markPart(pair.key, keyScans, limit - total);
+    const value = markPart(pair.value, valueScans, limit - total - key.ranges.length);
     const found = key.ranges.length + value.ranges.length;
     if (found) byPair.set(pair.index, { first: total, key: key.ranges, value: value.ranges });
     total += found;
-    if (key.capped || value.capped) return { byPair, total, capped: true };
+    if (key.capped || value.capped) return { byPair, total, capped: key.capped || value.capped };
   }
   return { byPair, total, capped: false };
 }

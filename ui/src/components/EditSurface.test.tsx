@@ -42,6 +42,31 @@ describe("the document", () => {
     expect(classes.has("text-syn-key")).toBe(true);
   });
 
+  it("colours html and folds its elements", () => {
+    const palette = ["text-syn-key", "text-syn-str", "text-syn-num", "text-ink-mute"];
+    const { container } = render(<EditSurface text={'<div class="a">\n  <p>hi</p>\n</div>'} language="html" />);
+    const classes = [...container.querySelectorAll(".cm-content span[class]")].map((span) => span.className);
+    expect(classes.length).toBeGreaterThan(0);
+    expect(classes.every((name) => palette.includes(name))).toBe(true);
+    expect(container.querySelector(".cm-foldGutter span[title]")).not.toBeNull();
+  });
+
+  it("colours javascript and css with the same syntax classes and folds their blocks", () => {
+    const palette = ["text-syn-key", "text-syn-str", "text-syn-num", "text-ink-mute"];
+    const sources = [
+      { language: "javascript", text: 'function f(a) {\n  return "x" + 42 + a;\n}' },
+      { language: "css", text: 'a {\n  color: red;\n  margin: 0 4px;\n  content: "x";\n}' },
+    ] as const;
+    for (const { language, text } of sources) {
+      const { container, unmount } = render(<EditSurface text={text} language={language} />);
+      const classes = [...container.querySelectorAll(".cm-content span[class]")].map((span) => span.className);
+      expect(classes.length).toBeGreaterThan(0);
+      expect(classes.every((name) => palette.includes(name))).toBe(true);
+      expect(container.querySelector(".cm-foldGutter span[title]")).not.toBeNull();
+      unmount();
+    }
+  });
+
   it("read-only refuses changes but keeps the cursor", () => {
     const { container } = render(<EditSurface text="abc" language="plain" readOnly />);
     expect(viewIn(container).state.readOnly).toBe(true);

@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
   type ReactNode,
   type RefObject,
@@ -24,12 +23,22 @@ import {
   type Peeked,
   type Span,
 } from "./decoders";
-import { DATA_KINDS, detectKind, kindLabel, READ_ONLY_KINDS, type DataKind } from "./dataKind";
-import { findBytes, findMatches, readHexQuery, type HexQueryMode } from "./find";
+import { decidedBy, readKind } from "./contentKind";
+import { DATA_KINDS, READ_ONLY_KINDS, type DataKind } from "./dataKind";
+import { formStructure, jsonStructure, markBytes, markText, structureNames, type HexQueryMode, type Structure } from "./find";
+import {
+  findLabel,
+  hasOpenQuote,
+  keysFor,
+  parseFind,
+  refusedReason,
+  suggestFind,
+  type FindChip,
+} from "./findGrammar";
 import {
   addPairAfter,
   editPair,
-  findInPairs,
+  markPairs,
   pairsAsJson,
   parsePairs,
   removePair,
@@ -53,6 +62,8 @@ import {
   valueText,
   type Indent,
 } from "./jsonTools";
+import { previewDocument } from "./htmlPreview";
+import { loadBeautifier, reformatCode, REFORMAT_STEP, type Beautifier } from "./codeTools";
 import { REINDENT_STEP, reindentXml } from "./xmlTools";
 import {
   amend,
@@ -73,9 +84,9 @@ import {
   type History,
 } from "./workingCopy";
 import {
+  ChipBox,
   CopyButton,
   EditSurface,
-  Field,
   FormTable,
   HexView,
   IconButton,
@@ -85,6 +96,8 @@ import {
   Notice,
   Select,
   useCopy,
+  type ChipFace,
+  type ChipGrammar,
   type EditSurfaceHandle,
   type FoldDepth,
   type MenuItem,
@@ -103,10 +116,23 @@ interface Peek {
 type NodePart = "path" | "value";
 type ImageSize = "fit" | "actual";
 
-const SURFACE_LANGUAGE = { json: "json", xml: "xml", text: "plain" } as const;
+const SURFACE_KIND = {
+  json: "json",
+  form: "form",
+  xml: "xml",
+  html: "html",
+  javascript: "javascript",
+  css: "css",
+  text: "text",
+  hex: "hex",
+  image: "image",
+} as const;
+
+const SURFACE_LANGUAGE = { json: "json", xml: "xml", html: "html", javascript: "javascript", css: "css", text: "plain" } as const;
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const NO_MATCHES: TextRange[] = [];
+const NO_NAMES: string[] = [];
 const NO_PAIR_MATCHES = new Map<number, PairMatches>();
 const FOLD_CHOICES = [
   { id: "1", label: "1" },
@@ -115,6 +141,11 @@ const FOLD_CHOICES = [
   { id: "all", label: "all" },
   { id: "none", label: "none" },
 ];
+const PREVIEW_CHOICES = [
+  { id: "source", label: "source" },
+  { id: "preview", label: "preview" },
+];
+const PREVIEW_STATEMENT = "scripts, forms and anything remote are not run or loaded";
 const NEEDS_JSON = "needs valid JSON";
 const REPLACED_SELECTION = "replaced the selection with its decoded form";
 const SHOWN_ENCODED = "shown encoded";
@@ -135,41 +166,68 @@ interface Search {
 
 const NOTHING_FOUND: Search = { ranges: NO_MATCHES, byPair: NO_PAIR_MATCHES, total: 0, capped: false, as: null };
 
-function findCount(query: string, found: Search, current: number): string {
-  if (!query) return "";
+function findCount(hasQuery: boolean, found: Search, current: number): string {
+  if (!hasQuery) return "";
   const count = found.total ? `${current + 1} of ${found.total}${found.capped ? "+" : ""}` : "no match";
   return found.as ? `${count} · as ${found.as}` : count;
 }
 
+const faceOf = (chip: FindChip): ChipFace => ({
+  text: findLabel(chip),
+  key: chip.key === "plain" ? undefined : chip.key,
+  value: chip.key === "plain" ? findLabel(chip) : chip.value,
+});
+
 function FindBar({
-  query,
-  onQuery,
+  chips,
+  onChips,
+  initialDraft,
+  onDraft,
+  kind,
+  names,
   count,
   total,
   onStep,
   onDismiss,
   box,
 }: {
-  query: string;
-  onQuery: (query: string) => void;
+  chips: readonly FindChip[];
+  onChips: (chips: FindChip[]) => void;
+  initialDraft: string;
+  onDraft: (draft: string) => void;
+  kind: DataKind;
+  names: readonly string[];
   count: string;
   total: number;
   onStep: (by: number) => void;
   onDismiss: () => void;
   box: RefObject<HTMLDivElement>;
 }) {
-  const onKeyDown = (event: ReactKeyboardEvent) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      onStep(event.shiftKey ? -1 : 1);
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      onDismiss();
-    }
-  };
+  const grammar = useMemo<ChipGrammar<FindChip>>(
+    () => ({
+      parse: parseFind,
+      suggest: (draft) => suggestFind(draft, kind, names),
+      label: faceOf,
+      hasOpenQuote,
+    }),
+    [kind, names],
+  );
   return (
-    <div ref={box} onKeyDown={onKeyDown} className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y">
-      <Field value={query} onChange={(event) => onQuery(event.target.value)} aria-label="find" placeholder="find" verbatim className="min-w-0 flex-1" />
+    <div ref={box} className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y">
+      <ChipBox
+        chips={chips}
+        onChange={onChips}
+        grammar={grammar}
+        refused={(chip) => refusedReason(chip, kind)}
+        label="find"
+        placeholder={`find — ${keysFor(kind).map((key) => `${key}:`).join(" ")} or any text`}
+        chippedPlaceholder="add to find"
+        initialDraft={initialDraft}
+        onDraft={onDraft}
+        onEnter={(shift) => onStep(shift ? -1 : 1)}
+        onEscape={onDismiss}
+        className="min-w-0 flex-1"
+      />
       <span data-testid="find-count" className="whitespace-nowrap font-ui text-chrome text-ink-mute">
         {count}
       </span>
@@ -308,7 +366,7 @@ function useSettled<T>(value: T): T {
 }
 
 function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
-  const detected = useMemo(() => detectKind(payload.typeHint, payload.bytes), [payload]);
+  const reading = useMemo(() => readKind(payload.bytes, payload.typeHint), [payload]);
   const decoded = useMemo(() => decodeBody(payload.bytes, { keepBom: true }), [payload]);
   const original = decoded.text;
   const [history, setHistory] = useState<History>(() => startHistory(original));
@@ -317,11 +375,14 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const [selection, setSelection] = useState("");
   const [row, setRow] = useState<number | null>(null);
   const [size, setSize] = useState<ImageSize>("fit");
-  const [query, setQuery] = useState("");
+  const [chips, setChips] = useState<FindChip[]>([]);
+  const [draft, setDraft] = useState("");
   const [at, setAt] = useState(0);
   const [reveal, setReveal] = useState(0);
   const [fold, setFold] = useState<{ id: string; text: string } | null>(null);
   const [wrap, setWrap] = useState(true);
+  const [preview, setPreview] = useState(false);
+  const findAfterPreview = useRef(false);
   const [encoded, setEncoded] = useState(false);
   const [peek, setPeek] = useState<Peek | null>(null);
   const more = useRef<HTMLButtonElement>(null);
@@ -330,7 +391,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const { state: copied, copy } = useCopy(payload);
   const settled = useSettled(history);
 
-  const kind = override ?? detected.kind;
+  const picked = override ?? reading.kind;
+  const kind = SURFACE_KIND[picked];
   const lineBreak = useMemo(() => lineBreakOf(original), [original]);
   const lossy = !decoded.whole && !READ_ONLY_KINDS.has(kind);
   const mixed = lineBreak === null && !READ_ONLY_KINDS.has(kind);
@@ -347,28 +409,44 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
   const lines = useMemo(() => lineCountOf(workingText(settled)), [settled]);
   const empty = payload.bytes.length === 0;
+  const previewing = kind === "html" && preview && !empty;
   const editableForm = kind === "form" && !lossy && !mixed;
   const asTable = editableForm && !encoded;
   const onText = !empty && kind !== "image" && kind !== "hex" && !asTable;
-  const searchable = !empty && kind !== "image";
+  const searchable = !empty && kind !== "image" && !previewing;
   const breakWith = lineBreak ?? "\n";
+  const flat = useMemo(() => surfaceText(text), [text]);
+  const drafted = useMemo(() => parseFind(draft), [draft]);
+  const marking = useMemo(
+    () => [...chips, ...("chip" in drafted ? [drafted.chip] : [])].filter((chip) => refusedReason(chip, kind) === null),
+    [chips, drafted, kind],
+  );
+  const hasQuery = chips.length > 0 || "chip" in drafted;
+  const wantsNames = /^key:/i.test(draft.trim());
+  const scoped = marking.some((chip) => chip.key === "key" || chip.key === "value");
+  const structure = useMemo((): Structure | null => {
+    if (!(scoped || wantsNames) || (kind !== "json" && kind !== "form")) return null;
+    if (kind === "form") return formStructure(flat);
+    const parsed = parseJson(flat);
+    return parsed.ok ? jsonStructure(parsed.root) : null;
+  }, [scoped, wantsNames, kind, flat]);
+  const names = useMemo(() => (wantsNames && structure ? structureNames(structure, flat, asTable) : NO_NAMES), [wantsNames, structure, flat, asTable]);
   const found = useMemo((): Search => {
-    if (!query) return NOTHING_FOUND;
+    if (!hasQuery) return NOTHING_FOUND;
     if (onText) {
-      const { ranges, capped } = findMatches(surfaceText(text), query);
+      const { ranges, capped } = markText(flat, marking, structure);
       return { ...NOTHING_FOUND, ranges, total: ranges.length, capped };
     }
     if (asTable) {
-      const { byPair, total: count, capped } = findInPairs(pairs, query);
+      const { byPair, total: count, capped } = markPairs(pairs, marking);
       return { ...NOTHING_FOUND, byPair, total: count, capped };
     }
     if (kind === "hex" && shownBytes) {
-      const hexQuery = readHexQuery(query);
-      const { ranges, capped } = findBytes(shownBytes, hexQuery);
-      return { ...NOTHING_FOUND, ranges, total: ranges.length, capped, as: hexQuery.mode };
+      const { ranges, capped, as } = markBytes(shownBytes, marking);
+      return { ...NOTHING_FOUND, ranges, total: ranges.length, capped, as };
     }
     return NOTHING_FOUND;
-  }, [asTable, kind, onText, pairs, query, shownBytes, text]);
+  }, [asTable, hasQuery, kind, marking, onText, pairs, shownBytes, structure, flat]);
   const total = found.total;
   const current = total ? at % total : -1;
   const settledJson = useMemo(
@@ -377,6 +455,24 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   );
   const menuJson = useMemo(() => (kind === "json" && menu ? parseJson(surfaceText(text)) : null), [kind, menu, text]);
   const parses = menuJson?.ok ?? false;
+  const codeKind = kind === "javascript" || kind === "css" || kind === "html" ? kind : null;
+  const [beautifier, setBeautifier] = useState<Beautifier | null>(null);
+  const [formatterFailed, setFormatterFailed] = useState(false);
+  useEffect(() => {
+    if (!codeKind) return;
+    let live = true;
+    loadBeautifier().then(
+      (loaded) => live && setBeautifier(loaded),
+      () => live && setFormatterFailed(true),
+    );
+    return () => {
+      live = false;
+    };
+  }, [codeKind]);
+  const menuCode = useMemo(
+    () => (codeKind && !readOnly && !previewing && menu && beautifier ? reformatCode(beautifier, codeKind, text, breakWith) : null),
+    [codeKind, readOnly, previewing, menu, beautifier, text, breakWith],
+  );
   const menuXml = useMemo(
     () => (kind === "xml" && !readOnly && menu ? reindentXml(text, breakWith) : null),
     [kind, readOnly, menu, text, breakWith],
@@ -393,13 +489,21 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     },
     [current, total],
   );
-  const search = (next: string) => {
-    setQuery(next);
+  const restartFind = () => {
     setAt(0);
     setReveal((n) => n + 1);
   };
+  const changeChips = (next: FindChip[]) => {
+    setChips(next);
+    restartFind();
+  };
+  const changeDraft = (next: string) => {
+    setDraft(next);
+    restartFind();
+  };
   const dismissFind = () => {
-    search("");
+    changeChips([]);
+    setDraft("");
     if (surfaceHandle.current) surfaceHandle.current.focus();
     else findBox.current?.querySelector("input")?.blur();
   };
@@ -425,6 +529,22 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       }),
     [breakWith],
   );
+  const reformatSource = useCallback(
+    () =>
+      setHistory((h) => {
+        if (!codeKind || !beautifier) return h;
+        const result = reformatCode(beautifier, codeKind, workingText(h), breakWith);
+        return result.ok ? commit(h, result.text, codeKind === "html" ? REINDENT_STEP : REFORMAT_STEP) : h;
+      }),
+    [beautifier, breakWith, codeKind],
+  );
+  useEffect(() => {
+    if (kind !== "html") setPreview(false);
+  }, [kind]);
+  const showPreview = useCallback((on: boolean) => {
+    setPreview(on);
+    setMenu(null);
+  }, []);
   const toggleEncoded = () => {
     setEncoded((shown) => !shown);
     setRow(null);
@@ -523,12 +643,15 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         return;
       }
       if (!command && event.altKey && !typing) {
-        if (event.code === "KeyZ" && !event.shiftKey && onText) {
+        if (event.code === "KeyZ" && !event.shiftKey && onText && !previewing) {
           event.preventDefault();
           setWrap((on) => !on);
         } else if (event.code === "KeyF" && event.shiftKey && kind === "xml" && !readOnly) {
           event.preventDefault();
           reindent();
+        } else if (event.code === "KeyF" && event.shiftKey && codeKind && !readOnly && !previewing) {
+          event.preventDefault();
+          reformatSource();
         }
         return;
       }
@@ -537,6 +660,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       if (key === "d" && event.shiftKey && !typing) {
         event.preventDefault();
         decodeNow();
+      } else if (key === "v" && event.shiftKey && kind === "html" && !typing) {
+        event.preventDefault();
+        showPreview(!previewing);
+      } else if (key === "f" && previewing) {
+        event.preventDefault();
+        findAfterPreview.current = true;
+        showPreview(false);
       } else if (key === "f" && searchable) {
         event.preventDefault();
         const input = findBox.current?.querySelector("input");
@@ -564,7 +694,15 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [asTable, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, readOnly, reindent, removeRow, row, save, searchable, stepFind]);
+  }, [asTable, codeKind, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, previewing, readOnly, reformatSource, reindent, removeRow, row, save, searchable, showPreview, stepFind]);
+
+  useEffect(() => {
+    if (previewing || !findAfterPreview.current) return;
+    findAfterPreview.current = false;
+    const input = findBox.current?.querySelector("input");
+    input?.focus();
+    input?.select();
+  }, [previewing]);
 
   const moreSections = (): MenuItem[][] => {
     const sections: MenuItem[][] = [];
@@ -621,6 +759,40 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
           : []),
         foldRow,
         wrapRow,
+      ]);
+    }
+    if (kind === "html") {
+      sections.push([
+        {
+          label: "show",
+          choices: PREVIEW_CHOICES,
+          value: previewing ? "preview" : "source",
+          pick: (id: string) => showPreview(id === "preview"),
+        },
+      ]);
+    }
+    if (codeKind) {
+      sections.push([
+        ...(readOnly
+          ? []
+          : [
+              {
+                label: codeKind === "html" ? "re-indent" : "reformat",
+                keys: "⌥⇧F",
+                disabled: previewing || !menuCode?.ok,
+                why: previewing
+                  ? "shown in preview"
+                  : menuCode
+                  ? menuCode.ok
+                    ? undefined
+                    : menuCode.reason
+                  : formatterFailed
+                    ? "the formatter could not be loaded"
+                    : "the formatter is loading",
+                run: reformatSource,
+              },
+            ]),
+        ...(previewing ? [] : [foldRow, wrapRow]),
       ]);
     }
     if (kind === "text" || (kind === "form" && onText)) sections.push([wrapRow]);
@@ -702,6 +874,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     setMenu({ type: "context", at: point, row: null, offset });
   };
 
+  const previewHtml = useMemo(() => (previewing ? previewDocument(text) : ""), [previewing, text]);
+
   const surface = () => {
     if (empty) {
       return (
@@ -742,6 +916,20 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
           inset={peek?.origin.type === "row" ? { afterIndex: peek.origin.index, node: peekNode() } : null}
           testId="data-surface"
         />
+      );
+    }
+    if (previewing) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <p className="border-b border-hairline px-4 py-chrome-y font-ui text-note text-ink-mute">{PREVIEW_STATEMENT}</p>
+          <iframe
+            title="html preview"
+            sandbox=""
+            srcDoc={previewHtml}
+            data-testid="data-preview"
+            className="min-h-0 flex-1 border-0"
+          />
+        </div>
       );
     }
     return (
@@ -805,9 +993,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
 
       {searchable && (
         <FindBar
-          query={query}
-          onQuery={search}
-          count={findCount(query, found, current)}
+          chips={chips}
+          onChips={changeChips}
+          initialDraft={draft}
+          onDraft={changeDraft}
+          kind={kind}
+          names={names}
+          count={findCount(hasQuery, found, current)}
           total={total}
           onStep={stepFind}
           onDismiss={dismissFind}
@@ -820,9 +1012,9 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       <footer className="flex flex-wrap items-center gap-x-3 gap-y-chrome-tight border-t border-hairline px-4 py-chrome-y font-ui text-chrome text-ink-mute">
         <Select
           options={DATA_KINDS}
-          value={kind}
+          value={picked}
           onChange={(id) => {
-            setOverride(id === detected.kind ? null : (id as DataKind));
+            setOverride(id === reading.kind ? null : (id as DataKind));
             setMenu(null);
           }}
           label="treat the data as"
@@ -830,8 +1022,23 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
           opens="above"
         />
         <span data-testid="detected">
-          {override ? `your choice · detected ${kindLabel(detected.kind)} from ${detected.from}` : `detected from ${detected.from}`}
+          {decidedBy(reading, override !== null)}
         </span>
+        {kind === "html" && !empty && (
+          <span role="group" aria-label="show" className="flex items-center gap-chrome-tight">
+            {PREVIEW_CHOICES.map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={(id === "preview") === previewing}
+                onClick={() => showPreview(id === "preview")}
+                className={`rounded-button px-chrome-x ${(id === "preview") === previewing ? "bg-wash-active text-ink" : "hover:bg-wash-hover"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </span>
+        )}
         <span>{humanBytes(shownSize)}</span>
         {!readOnly && !empty && <span>{asTable ? plural(pairs.length, "pair") : plural(lines, "line")}</span>}
         <span className="ml-auto flex items-center gap-x-3">

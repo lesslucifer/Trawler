@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4b869f34851f0dfae876">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-78: a long value is one line, opened whole</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-78 — a long value is one line, opened whole</h1>
+      <p>A value whose whole is one named act away in a data window may be cut to one line with an ellipsis. This is the
+        second escape from <code>wrap-not-truncate</code>.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-INSPWIN2.W1</strong> from the owner's rulings
+        on the epic plan's Q1–Q3 · UC-5 · <strong>active</strong> · planned as DEC-77; DEC-78 because E-BGSVC.W1 minted DEC-77 first</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Today</th><th>The limit</th></tr>
+      <tr><td>A header value over three lines is clamped with <em>more / less</em>; the URI wraps whole</td>
+        <td>a few cookies or tokens bury the panel, and every value is read by expanding it in place</td></tr>
+      <tr><td><code>wrap-not-truncate</code>: no ellipsis on a payload element, the one escape a fixed-height row
+        (<a href="dec-34-fixed-height-rows-truncate.html">DEC-34</a>)</td>
+        <td>the data window (<a href="dec-76-the-data-window.html">DEC-76</a>) now shows any value whole, but the rule gives that
+          route no standing</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> A wire value whose whole is reachable by one named act that opens it in a data window —
+        its own <em>open</em>, or its section's <em>open all</em> — renders on one line, cut at the end with an ellipsis when it is
+        wider than its column. The <em>more / less</em> clamp is retired with it.</p>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The route is named on screen: an <em>open</em> on the value, or an <em>open all</em> on the section that holds
+        it, which hands every value of the section whole</td><td>a cut is honest only when the way to the rest is in sight</td></tr>
+      <tr><td>2</td><td>The cut is visible: an end ellipsis, never a silent clip</td><td>the reader must know there is more</td></tr>
+      <tr><td>3</td><td>Clicking a cut value still copies the whole value (<code>CopyText</code>)</td><td>copy delivers the evidence, not what fits</td></tr>
+      <tr><td>4</td><td>The column never widens and the panel never scrolls sideways for a long value</td><td>the escape exists to keep the panel's shape</td></tr>
+      <tr><td>5</td><td>Only values with such a route gain the escape; everything else wraps, and list rows keep DEC-34</td><td>the escape is earned per value, never a style</td></tr>
+    </table>
+
+    <h2 id="applies">Where it applies (E-INSPWIN2)</h2>
+    <table data-c="applies">
+      <tr><th>Value</th><th>Route</th></tr>
+      <tr><td>Each header value of the shown leg</td><td>the Headers section's <em>open all</em> (owner, Q1: no opener per value)</td></tr>
+      <tr><td>The URI</td><td>its own <em>open</em></td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Keep the three-line clamp with <em>more / less</em></td><td>owner, Q3: the data window is the way to the whole value</td></tr>
+      <tr><td>An opener on every header value</td><td>owner, Q1: <em>open all</em> only</td></tr>
+      <tr><td>Middle ellipsis, keeping the tail visible</td><td>needs measuring per value; end ellipsis is pure CSS (Q2). A later refinement</td></tr>
+      <tr><td>A tooltip with the whole value</td><td>a tooltip cannot hold a 4&nbsp;KiB cookie readably; the window can</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
