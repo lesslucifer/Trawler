@@ -24,12 +24,14 @@ fleet:
     correctness: { found: 3, verified: 1 }
     efficiency:  { found: 3, verified: 0 }
     altitude:    { found: 3, verified: 0 }
-findings: { found: 8, verified: 1, waived: 0 }
-waivers: []
+findings: { found: 8, verified: 1, waived: 1 }
+waivers:
+  - finding: "ui/src/query.ts:27 - the type key's hint reads 'the response type, like json' while the core's ContentType predicate matches the request's or the response's content type, so -type:json also hides a flow whose request was JSON"
+    reason: "the owner's ruling (2026-11-05): not important, the hint can be ignored. It is suggestion copy from the confirmed design run; the filter's behaviour is the core's long-standing, tested ContentType predicate, unchanged by this epic"
 nits: []
 verified:
   - finding: "ui/src/query.ts:27 - the type key's hint reads 'the response type, like json', while the core's ContentType predicate (src/store.rs:211-214) matches the request's OR the response's content type; with the negation this epic adds, -type:json also hides a flow whose request was JSON and whose response was HTML, which the hint tells the user it will not"
     severity: important
 refuted: "ONE CANDIDATE REFUTED. Altitude (important): query.ts re-implements the core's value grammar. The verifier found the split deliberate (DEC-71: the grammar is the app's, the core stays keyed) and its drift loud in both directions: a looser bar meets the core's 400, which marks the chip (DEC-71 rule 6, App.tsx, FlowList.tsx, tested), and a stricter bar refuses the draft visibly. Nits recorded but unverified, as nits buy no verifier: per-flow lowercase allocations in contains_ignoring_case; Flow stores host_with_port (raised twice); FilterQuery pairs unbounded on a local-only API; QueryBar's keydown ignores isComposing under an IME; refusedParam on a non-filter 400 marks no chip."
-verdict: FAIL
+verdict: PASS
 date: 2026-11-05
