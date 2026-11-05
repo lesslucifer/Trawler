@@ -35,6 +35,23 @@
       <tr><td><code>xtask/src/package.rs</code></td><td>after the build, assert the plist is inside each <code>.app</code> (beside the codesign check), so a bundle without it fails <code>cargo xtask package</code></td></tr>
     </table>
 
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to">
+      <tr><th>Serves</th><th>How</th></tr>
+      <tr><td><span class="badge id">E-BGSVC</span> · W4's login item</td><td>replaces W4's macOS plist writer; the two commands and W6's switch are unchanged</td></tr>
+      <tr><td><span class="badge id">UC-BG</span> · Expected #7 · #8</td><td>the entry starts the app with <code>--background</code>, and is gone from Login Items when off</td></tr>
+      <tr><td>DEC-81</td><td>the plist rides in the package; <code>cargo xtask package</code> checks for it</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>#</th><th>Observable after W8</th></tr>
+      <tr><td>1</td><td>over a fake registry: on registers, off unregisters, a refusal reads “couldn't save — …”, status maps to on only when enabled</td></tr>
+      <tr><td>2</td><td>the packaged <code>.app</code> carries <code>Contents/Library/LaunchAgents/dev.trawler.app.plist</code>, and <code>cargo xtask package</code> fails for one that lacks it</td></tr>
+      <tr><td>3</td><td>on a packaged app, after unregister <code>SMAppService.status</code> is notRegistered and <code>sfltool dumpbtm</code> lists no <code>dev.trawler.app</code></td></tr>
+      <tr><td>4</td><td>from a binary with no bundle the item reads unavailable and says so</td></tr>
+    </table>
+
     <h2 id="decisions">Decisions for the router</h2>
     <table data-c="decisions">
       <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
@@ -49,8 +66,8 @@
         <td><b>(b)</b>: it will not start at login, and the box must not claim it will; tick then calls register again, which re-prompts.</td></tr>
     </table>
 
-    <h2 id="tests">Test plan</h2>
-    <table data-c="tests">
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
       <tr><th>Level</th><th>Test</th></tr>
       <tr><td>unit</td><td>over a fake <code>LoginRegistry</code>: off calls unregister, on calls register, neither calls the other; a register or unregister error becomes the text the box shows after “couldn't save — ”; status maps enabled to on, requires-approval and the rest to off</td></tr>
       <tr><td>unit</td><td><code>.app</code> detection from an exe path; the packaged plist file carries Label, BundleProgram and <code>--background</code> (<code>plutil -lint</code> on macOS)</td></tr>
