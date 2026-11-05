@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU E-PKG2.W4 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: wu/packaging-v2/release-workflow
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+head: 3807690793d034ed3880f62868e9f906b41fa685
+diff_sha256: ed8d8c52bab5f7222d0c919264586e234eb593db559ec3308eb1e0297be4e713
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 1
+  stage_seconds:
+    gate0: 26
+    finders: 75
+    verifiers: 12
+    total: 119
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "package reads its signed and listed installer kinds off release_manifest::keys_of, a dependency from build to publish"
+    waived: "deliberate: round 4's cr finding made keys_of the single owner of the installer kinds; package_s unit tests pin the signed set and the artifact set to it"
+  - finding: "smoke::pick restates installer suffixes beside Os::bundles and keys_of (verifier: important refuted to nit)"
+    waived: "pick chooses the one launchable artifact per OS (.app, not the manifest's .app.tar.gz), a different rule; a missing kind fails loudly with the build left no ... to smoke-test"
+verdict: PASS
+date: 2026-11-06
