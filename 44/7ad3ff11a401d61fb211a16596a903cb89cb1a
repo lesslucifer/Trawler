@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 447ad3ff11a401d61fb211a16596a903cb89cb1a
+base: c3b8a6bb94dab59461f8878a359300505545ef5a
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-gate-parity2-close-result.html
+report_sha256: fc8a6dc18831a37829660a68b742a03cecbf07831bbc8008fd17fbd83f07977a
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBr6TOWzh1Muqax+N/F6ZrLgZL8RsbI+DM53wLAGkW3G8/aD9nvrB/ebZ
+  KmKaiiOCpbWCBt6UG9NrXeTY4xm90J
+  -----END SSH SIGNATURE-----
