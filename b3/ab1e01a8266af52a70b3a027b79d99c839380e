@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: b3ab1e01a8
+tests:
+  unit: { waived: "a renumber of the decision id DEC-69 to DEC-70 in links, file names and comment citations; no behaviour changed, so nothing new to test" }
