@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: HEAD
+tests:
+  unit: { waived: "the change is the attached e2e launcher's onPrepare/onComplete in wdio.conf.ts, which only a wdio run executes; it is syntax-checked with esbuild, and its proof is the attached suite run on a machine whose keep-capturing.json reads on, owed to the owner because two checkouts' e2e collide on :4445" }
