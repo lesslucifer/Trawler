@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-QUERY
+base: 4d1c1942707e767f0bf6af6c5183e7163c478a91
+design_sha256: 1ed0d377b7277edb7d82b44614a40d17aac38c752e2d9df218e23711d774f30b
+verdict: PASS
+artifacts: [docs/work/components/query-bar.html]
+implements:
+  - path: docs/work/components/query-bar.html
+    blob: 107c31548e47fd560e83d39cb32940a5e952d18c
+    built: [ui/src/components/QueryBar.tsx]
+  - path: docs/work/2026-11-04-query-bar-design-run.html
+    blob: fce494fa5b14784d63daa781b9c2b479db3fa6d3
+    built: [ui/src/App.tsx, ui/src/FlowList.tsx, ui/src/components/Field.tsx, ui/src/components/Select.tsx]
+accounting: "THE EPIC'S HAND-OFF, END TO END. W2 closed the design run and the QueryBar component design after the owner's round (C1 changed, C2 answered). W3 built QueryBar from that component design, retiring it into QueryBar's TSDoc (DEC-16, DEC-28; the blob cited is its last state, at 96e3e313), and built the header swap in App.tsx, FlowList's two notices (C10) and Field's and Select's TSDoc tenants from the run. No file under ui/src/ changed after W3 (4128871a); W4 touched only e2e specs and docs, and the close commit only retires the T3 docs."
+date: 2026-11-05
