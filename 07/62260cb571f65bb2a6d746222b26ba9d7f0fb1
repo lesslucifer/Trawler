@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-QUERY
+wu: E-QUERY.W4
+branch: HEAD
+tests:
+  unit: { waived: "no code outside ui/e2e changes; the grammar and the bar's behaviour table are W3's query.test.ts and QueryBar.test.tsx" }
+  integration: { waived: "the WU adds and changes only e2e specs and docs; the bar's bounded contracts are W3's App.test.tsx and W1's listing tests, unchanged here" }
+  e2e: { count: 50, covers: "in the real window over the harness core: Cmd-F focuses the bar; status:4xx built from suggestions alone with no listing while typing and exactly ?status=4xx at the chip; host: offers every host seen including localhost:<port>, and that chip lists its flows; repeated, negated and combined keys; two text chips match all of them; a misspelt key stays a draft that says why with no listing; Backspace removes the last chip; the window's query equals the hand-written listing and its export; a clear through its ask removes only the listed flows and keeps the chips; chips saved as made and restored after a real quit; the header holds one bar and no retired control; a method or status value outside the grammar stays a draft; setup's re-entry under a chip reads unfiltered and the chip outlives the visit. cargo xtask ui e2e: 13 of 13 attached spec files and 1 of 1 owned at 0d38ebc1; at this tip the query-bar pair and flows green in two runs, with sticky-relaunched, sticky-broken and layout-relaunched red on window-geometry restore. Those specs, their helpers and the app are unchanged since the green run, and the owner chose to continue with it recorded in the WU result" }
