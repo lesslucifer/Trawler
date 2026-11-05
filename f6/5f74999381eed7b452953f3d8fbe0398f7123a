@@ -17,6 +17,8 @@ fleet:
     nit: 4
   stage_seconds:
     gate0: 0
+    finders: 30
+    total: 60
   by_finder:
     correctness: { found: 2, verified: 2 }
     efficiency:  { found: 1, verified: 1 }
