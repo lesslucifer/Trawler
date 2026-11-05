@@ -1,6 +1,6 @@
 [package]
 name = "trawler-ui"
-version = "0.1.0"
+version.workspace = true
 description = "Trawler — native UI shell (thin Tauri window over the control API)"
 edition = "2021"
 rust-version = "1.77"

@@ -1,6 +1,6 @@
 [package]
 name = "xtask"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 description = "Repo tooling: the verify-dod done-gate over git-note evidence"
 publish = false
@@ -13,6 +13,7 @@ hook-tests = []
 debug-tests = []
 design-e2e = []
 codex-e2e = []
+package-tests = []
 
 [[test]]
 name = "dod_gate"
@@ -25,6 +26,10 @@ required-features = ["design-e2e"]
 [[test]]
 name = "e2e_codex_harness"
 required-features = ["codex-e2e"]
+
+[[test]]
+name = "package_bundle"
+required-features = ["package-tests"]
 
 [[test]]
 name = "debug_serve"
