@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: HEAD
+tests:
+  unit: { count: 37, covers: "package's keyless --build-only and keyed --bundle-only argv per host and universal, the flags, smoke refusing a stage flag, the MSI version rule (numeric pre-release, never rc.1) as version drift; manifest keys, signatures, refusals and notes per platform and kind; smoke's installer selection, argv, ready-line parsing and executable discovery" }
+  integration: { count: 21, covers: "release.yml's trigger, permissions, concurrency, matrix with each row's rustc host check and its upload dir tied to package::plan, version check, compile-bundle-smoke-upload order, the key only in the bundle step and its presence check first, every action SHA-pinned, no cache, no persisted credentials, every job on the pinned toolchain with no continue-on-error, per-artifact download flattened with mv -n and red on a clash, a re-run replacing only its own draft, draft-only release; the real macOS bundle passes xtask smoke" }
+  e2e: { waived: "the run needs GitHub, the signing secrets and a public repository; the first rc tag (W6) is the proof, and e2e_packaging is W6's" }
