@@ -10,6 +10,7 @@ pub mod data_window;
 pub mod keep_capturing;
 pub mod layout;
 pub mod lifecycle;
+pub mod login_item;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
@@ -75,6 +76,7 @@ pub fn run() {
         })
         .setup(move |app| {
             lifecycle::install(app.handle(), setup::config_dir(app.handle()).ok());
+            login_item::install(app.handle());
             core::setup(app, mode, background)?;
             window_geometry::install(app.handle());
             Ok(())
