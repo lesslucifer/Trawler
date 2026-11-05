@@ -1510,6 +1510,7 @@ fn a_bare_note_is_authorised_by_a_listing_and_unlisted_without_one() {
 /// The full WU-gate notes on `tip`: `test/v2`, `doc/v1` and a `cr/v3`-era
 /// `cr/v2` PASS bound to this range. The e2e merge below is judged by every
 /// check, not only check 8, so the stubs `settle` writes are not enough.
+#[cfg(unix)]
 fn settle_for_a_gated_merge(repo: &Repo, tip: &str) {
     let base = repo.git(&["rev-parse", "epic/x"]);
     let hash = xtask::git::diff_sha256(repo.p(), &base, tip).unwrap();
@@ -1648,6 +1649,7 @@ fn e2e_a_merge_judged_from_a_worktree_without_the_signers_key_says_so_and_lands_
 }
 
 /// A leaf's name, for a panic message that says which one was reached.
+#[cfg(unix)]
 fn leaf_name(a: &mr::Authorisation) -> &'static str {
     match a {
         mr::Authorisation::Authorised => "authorised",
