@@ -40,12 +40,13 @@ fn position(runs: &[(String, String)], wanted: &str) -> usize {
         .unwrap_or_else(|| panic!("no step runs {wanted:?}: {runs:?}"))
 }
 
-// The workflow quotes `on`: a YAML 1.1 reader takes the bare word for true.
 #[test]
 fn ci_runs_on_a_push_to_main_and_by_hand_and_on_nothing_else() {
     let workflow = workflow();
     let on = &workflow["on"];
-    assert_eq!(keys(on), ["push", "workflow_dispatch"]);
+    let mut triggers = keys(on);
+    triggers.sort();
+    assert_eq!(triggers, ["push", "workflow_dispatch"]);
     assert_eq!(on["push"]["branches"], serde_yaml::from_str::<Value>("[main]").unwrap());
     assert_eq!(keys(&on["push"]), ["branches"], "no paths or tags filter on the push");
 }
@@ -64,6 +65,44 @@ fn the_one_job_runs_on_macos() {
 }
 
 #[test]
+fn a_hung_run_is_cut_off_well_before_the_runners_six_hours() {
+    let minutes = job()["timeout-minutes"].as_u64().expect("the job sets timeout-minutes");
+    assert!((15..=60).contains(&minutes), "timeout-minutes is {minutes}");
+}
+
+#[test]
+fn no_step_can_fail_without_turning_the_run_red() {
+    let job = job();
+    assert!(job.get("continue-on-error").is_none(), "the job continues on error");
+    for step in job["steps"].as_sequence().expect("steps") {
+        assert!(step.get("continue-on-error").is_none(), "{step:?} continues on error");
+        assert!(step.get("if").is_none(), "{step:?} can be skipped");
+    }
+}
+
+#[test]
+fn the_toolchains_are_set_up_before_anything_runs() {
+    let job = job();
+    let uses: Vec<&str> = job["steps"]
+        .as_sequence()
+        .expect("steps")
+        .iter()
+        .filter_map(|step| step["uses"].as_str())
+        .map(|action| action.split('@').next().unwrap_or(action))
+        .collect();
+    for action in ["dtolnay/rust-toolchain", "pnpm/action-setup", "actions/setup-node"] {
+        assert!(uses.contains(&action), "{action} is not set up: {uses:?}");
+    }
+    let order: Vec<&&str> =
+        uses.iter().filter(|a| ["pnpm/action-setup", "actions/setup-node"].contains(a)).collect();
+    assert_eq!(
+        order,
+        [&"pnpm/action-setup", &"actions/setup-node"],
+        "setup-node's pnpm cache needs pnpm first"
+    );
+}
+
+#[test]
 fn the_job_installs_the_ui_from_its_lockfile_then_lints_and_tests_the_core_and_the_app() {
     let runs = runs(&job());
     let install = position(&runs, "pnpm install --frozen-lockfile");
@@ -72,4 +111,5 @@ fn the_job_installs_the_ui_from_its_lockfile_then_lints_and_tests_the_core_and_t
         position(&runs, "cargo clippy --workspace --all-targets --all-features -- -D warnings");
     let tests = position(&runs, "cargo test -p trawler -p trawler-ui");
     assert!(install < clippy && install < tests, "the app's build script needs ui/node_modules");
+    assert!(clippy < tests, "a lint failure is reported before the slow suite runs");
 }

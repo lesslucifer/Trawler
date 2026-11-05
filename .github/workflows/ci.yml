@@ -18,6 +18,7 @@ jobs:
   macos:
     name: macOS · clippy + core and app tests
     runs-on: macos-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
