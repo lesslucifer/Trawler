@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU release-bundle -> epic/packaging"
+epic: E-PKG
+wu: E-PKG.W1
+branch: wu/packaging/release-bundle
+base: 75683030831a22484997eb5cf4fc9f1eabb37472
+head: 7643bad36a3d8e0b4ac787a04a1c8e490a5216b8
+diff_sha256: 70ac76ec09e929a930265320884fcd805609b7c44e69de0226dfd783f269f745
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 8
+  stage_seconds:
+    gate0: 30
+    finders: 45
+    verifiers: 60
+  by_finder:
+    correctness: { found: 6, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 9, verified: 1, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-05
