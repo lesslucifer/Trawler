@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-INSPWIN2
+branch: HEAD
+tests:
+  unit: { count: 170, covers: "the kind detector deciding nine kinds from the bytes with the label as a hint and its statement; javascript, css and html reformat keeping every token; the preview document's policy first, refresh and base removed, links aimed away, MathML href removed, nested content dropped, the fixed-point clean and inert fallback; the find grammar, its chips, the bytes example as one quoted sequence chip, keys per kind, faults and the union of marks; flow payload and form pairs under the bytes-first dispatch" }
+  integration: { count: 267, covers: "the inspector's one-line values with copy on click and open all / open on the URI, the clamp gone; pane and window dispatch by the bytes with served as …; javascript and css surfaces with one-step undoable reformat; the html source, re-indent and the sandboxed preview with its switch, menu row and shortcut; ChipBox under the flow filter and the data window's find; the whole UI vitest suite green at the epic tip: 101 of 101 files, 61629 tests, plus the close's bytes-example test in findGrammar.test.ts (findGrammar, DataWindowScreen and ChipBox suites re-run green after it)" }
+  e2e: { count: 53, covers: "J1-J5 over the real windows: long values on one line and whole in the window; the bytes decide in pane and window; javascript found, reformatted, undone; a page reaching a local beacon unguarded and never from the preview; find typed like the filter with the flow list's filter still narrowing. Green on W9's tip (15 of 15 attached spec files, 1 of 1 owned); the epic close adds no code since" }
