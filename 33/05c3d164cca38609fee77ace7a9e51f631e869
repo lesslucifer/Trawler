@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 3305c3d164cca38609fee77ace7a9e51f631e869
+base: 4d79f316b497d8d4692a3e438d5a31d975911259
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-v2-w9-e2e-distillation-result.html
+report_sha256: 159d3f822cbcc9540e98778cf2735d6b9cd23fd128be09b51128401ac2c21051
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAUPuRZ6XVdCq+RZkK5Y5tFnj9N8eFaBZ+XLOCHGjMiqCaq9j0eK0b+li
+  vs0c9YyMyCJzTKRRigxhx11a92WCMK
+  -----END SSH SIGNATURE-----
