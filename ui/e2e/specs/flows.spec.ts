@@ -468,11 +468,12 @@ describe("UC-5 — inspect a captured flow in the native app", () => {
     expect(after.client).toBeGreaterThan(before.client);
   });
 
-  it("states its truncation on a body past the render cap, rather than silently cutting", async () => {
+  it("states its truncation on a body past the render cap, and offers the whole in a data window", async () => {
     await openResponseOf("/big");
     await inResponsePane('[data-testid="body-text"]').waitForExist({ timeout: 15_000 });
     const shown = await inResponsePane('[data-testid="body-text"]').getText();
-    expect(shown).toMatch(/showing .+ of .+ — save to see all/);
+    expect(shown).toMatch(/⚠ showing .+ of .+/);
+    expect(await inResponsePane('[data-testid="body-text"]').$("button=open in data window").isExisting()).toBe(true);
   });
 });
 
