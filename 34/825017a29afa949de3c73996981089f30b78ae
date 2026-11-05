@@ -1,0 +1,36 @@
+schema: doc/v1
+epic: E-GATEPAR
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "shared-target row closed (DEC-73); E-GATEPAR2 row carries the deferred merge/push/suite-cost work"
+  - path: "docs/decisions/dec-42-the-gate-tally-is-local-measurement.html"
+    tier: T2
+    action: updated
+    distills: "the tally lives at <git-common-dir>/trawler-gate-tally since DEC-73"
+  - path: "docs/decisions/dec-72-git-runs-the-tracked-hooks.html"
+    tier: T2
+    action: added
+    distills: "git runs the tracked hooks from each checkout via relative core.hooksPath; gate and install refusals; cargo-husky retired"
+  - path: "docs/decisions/dec-73-each-worktree-builds-into-its-own-target.html"
+    tier: T2
+    action: added
+    distills: "per-worktree target, third-party-only APFS seed, isolate/prune, symlinked target refused, markers per worktree, tally in the common dir"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-72/73 rows; DEC-42 tally path; DEC-54 install consequence superseded"
+  - path: "docs/decisions/workflow-gates.html"
+    tier: T2
+    action: updated
+    distills: "DEC-54's cargo-husky install consequence superseded by DEC-72; markers per worktree (DEC-73)"
+  - path: "docs/testing-strategy.html"
+    tier: T1
+    action: updated
+    distills: "local git hooks run from each checkout's tracked hooks (DEC-72)"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "§ Hooks v18: post-checkout seeds own target; per-checkout requirements and their gate refusals"
