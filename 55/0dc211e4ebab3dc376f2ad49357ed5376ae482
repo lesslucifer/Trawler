@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-BGSVC
+wu: E-BGSVC.W5
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-bg-service-general-design-run.html"
+    tier: T3
+    action: added
+    distills: "the closed design run for Settings → General (a page sidebar, two Checkbox switches) and the once-question, on the owner's calls"
+  - path: "docs/work/2026-11-05-bg-service-w5-general-design-plan.html"
+    tier: T3
+    action: added
+    distills: "W5's requirement and its exempt test plan"
+  - path: "docs/work/2026-11-05-bg-service-w5-general-design-result.html"
+    tier: T3
+    action: added
+    distills: "W5's outcome, two rounds and follow-ups for W3 and W6"
+t2_waived: "a design run is T3 until it is built: its proposal and words reach the design rules and lexicon when W6 ships them, at W7's distillation"
