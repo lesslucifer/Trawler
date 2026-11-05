@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 6cb1beaa42eb71ae1df6b7064130d6ddf3a1a6f1
+base: 36d5d839abbc9d1b0e94beaf1152f58ce28070a6
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-05-inspect-window-epic-result.html
+report_sha256: 5c0a59c431450badd8a4fb1148a634c3f1a281a31f684d175b632087d04676b1
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAaRTyMypMEQ7Y1Fmut8r/fNeF0IRwR9YtSVU0Hya+sEVX1S34c7LTnDv
+  wBOXzedM3DoW8Y4ewGjazoWmRZUOcM
+  -----END SSH SIGNATURE-----
