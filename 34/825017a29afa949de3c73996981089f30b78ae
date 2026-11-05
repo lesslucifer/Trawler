@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "epic gate-parity -> main"
+epic: E-GATEPAR
+branch: epic/gate-parity
+base: 4d1c1942707e767f0bf6af6c5183e7163c478a91
+head: 34825017a29afa949de3c73996981089f30b78ae
+diff_sha256: 964c9158f4fb73858e0536eea77d168f963a35bf509c8ac58c5f68d95433f805
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 5
+  stage_seconds:
+    gate0: 20
+    total: 146
+  by_finder:
+    correctness: { found: 4, verified: 4 }
+    efficiency: { found: 1, verified: 1 }
+    altitude: { found: 3, verified: 2 }
+findings: { found: 6, verified: 5, waived: 0 }
+waivers: []
+nits:
+  - finding: "tally bound() and fold_legacy are unlocked read-modify-write cycles on a file now shared by every worktree, so a sibling's record appended between the read and the write is lost"
+    waived: "bound() is unchanged from main and already raced within one checkout; the window opens only past 2048 records or once per manual prune; DEC-42 makes the tally a reading, never evidence, so one lost record changes no verdict"
+  - finding: "the tally summary headers still say 'local measurement on this checkout' although the file is now per clone, and two summary tests feed a synthetic target/ path"
+    waived: "wording only - the printed path beside it is the real one, and path() is tested separately against the common dir; the tests check only that the given path is echoed back"
+  - finding: "hooks refusal treats every regular file in .cargo-husky/hooks/ as a hook, so a future non-executable helper file there would refuse every gate"
+    waived: "the directory holds only the five hooks; a helper added later would be refused with a printed chmod line, which fails loudly"
+  - finding: "isolate removes the symlink before seeding, so a seed that then fails leaves the checkout with no target and exit 1"
+    waived: "the result is a missing target, which the next cargo build recreates; nothing is corrupted, and Workspace::of, the likely failure, is checked before the remove"
+  - finding: "prune_dir walks each doomed tree once to size it and again to remove it"
+    waived: "the size is the before/after measure DEC-73 asks prune to print; prune is a manual, occasional command"
+verdict: PASS
+date: 2026-11-05
