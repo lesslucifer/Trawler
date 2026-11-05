@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU inspect-window-v2/kind-detector -> epic/inspect-window-v2"
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W1
+branch: wu/inspect-window-v2/kind-detector
+base: c94214064c55177bc4f3b5e6cc02d7a3c7012e5c
+head: 72bd07a196913fedb22ccb105e882c37ac53d219
+diff_sha256: aa1e9d72ce5d5fcb201070bdf1a7ffe544d34405b6cf4157e8ff6a05cb50e2ca
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 2
+  stage_seconds:
+    gate0: 16
+    total: 57
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "decideKind decodes the body twice (rawKind's fatal decode and control-byte scan, then a second decode) with no prefix limit"
+    waived: "once per opened payload, never per keystroke, on bodies capped at 10 MiB by the core; folding rawKind's decode into contentKind would duplicate body.ts's control-byte rule, which the pane's raw mode still owns; W5 measures it when it wires the detector"
+  - finding: "isJsonDocument runs JSON.parse even when the label says javascript, css or form"
+    waived: "deliberate: DEC-79 rule 2 (owner's Q5 ruling) makes a whole JSON object or array beat every text label, so the parse must run before the label is honoured; it runs only on text that starts with { or ["
+verdict: PASS
+date: 2026-11-05
