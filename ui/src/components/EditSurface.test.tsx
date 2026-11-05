@@ -42,6 +42,15 @@ describe("the document", () => {
     expect(classes.has("text-syn-key")).toBe(true);
   });
 
+  it("colours html and folds its elements", () => {
+    const palette = ["text-syn-key", "text-syn-str", "text-syn-num", "text-ink-mute"];
+    const { container } = render(<EditSurface text={'<div class="a">\n  <p>hi</p>\n</div>'} language="html" />);
+    const classes = [...container.querySelectorAll(".cm-content span[class]")].map((span) => span.className);
+    expect(classes.length).toBeGreaterThan(0);
+    expect(classes.every((name) => palette.includes(name))).toBe(true);
+    expect(container.querySelector(".cm-foldGutter span[title]")).not.toBeNull();
+  });
+
   it("colours javascript and css with the same syntax classes and folds their blocks", () => {
     const palette = ["text-syn-key", "text-syn-str", "text-syn-num", "text-ink-mute"];
     const sources = [

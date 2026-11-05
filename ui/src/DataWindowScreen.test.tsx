@@ -947,6 +947,130 @@ describe("javascript and css", () => {
   });
 });
 
+describe("html source and preview", () => {
+  const page =
+    '<!doctype html><html><head><meta http-equiv="refresh" content="0;url=https://x.test"><style>p{color:red}</style></head><body><p>hello</p><script>fetch("https://x.test/b")</script><img src="https://x.test/p.gif"></body></html>';
+
+  async function openPage(text = page, typeHint = "text/html") {
+    await open(payload({ text, typeHint }));
+    await act(async () => {
+      await loadBeautifier();
+    });
+  }
+
+  const frame = () => screen.getByTestId("data-preview") as HTMLIFrameElement;
+  const showing = (name: "source" | "preview") => screen.getByRole("button", { name }).getAttribute("aria-pressed") === "true";
+
+  it("opens as HTML in its own highlighted surface, and find marks as on text", async () => {
+    await openPage();
+    expect(screen.getByRole("button", { name: "treat the data as" })).toHaveTextContent("HTML");
+    expect(screen.getByTestId("data-surface").querySelector(".cm-line [class]")).not.toBeNull();
+    findFor("hello");
+    expect(findCount()).toHaveTextContent("1");
+    expect(showing("source")).toBe(true);
+    expect(screen.queryByTestId("data-preview")).toBeNull();
+  });
+
+  it("re-indent is a named step from ⋯ and from ⌥⇧F; undo and restore return the bytes", async () => {
+    await openPage();
+    fireEvent.click(moreItem(/^re-indent/));
+    expect(doc().split("\n").length).toBeGreaterThan(8);
+    expect(doc().replace(/\s/g, "")).toBe(page.replace(/\s/g, ""));
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    key("z");
+    expect(doc()).toBe(page);
+    fireEvent.keyDown(document.body, { key: "Ï", code: "KeyF", altKey: true, shiftKey: true });
+    expect(doc().split("\n").length).toBeGreaterThan(8);
+    fireEvent.click(moreItem(/^restore original/));
+    expect(doc()).toBe(page);
+  });
+
+  it("is never offered on a read-only text", async () => {
+    await openPage("<p>a</p>\r\n<p>b</p>\n");
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.queryByRole("menuitem", { name: /^re-indent/ })).toBeNull();
+  });
+
+  it("the preview is a frame with an empty sandbox over the working copy, and the page's scripts and remote loads are not in play", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    expect(frame().getAttribute("sandbox")).toBe("");
+    const built = frame().getAttribute("srcdoc")!;
+    expect(built).toContain("<p>hello</p>");
+    expect(built).toContain("<style>p{color:red}</style>");
+    expect(built.indexOf("Content-Security-Policy")).toBeLessThan(built.indexOf("<style>p{color:red}"));
+    expect(built).toContain("default-src 'none'");
+    expect(built.toLowerCase()).not.toContain("refresh");
+    expect(screen.getByText("scripts, forms and anything remote are not run or loaded")).toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("the preview follows the working copy: an edit made in source shows on return", async () => {
+    await openPage("<p>hello</p>");
+    typeInto(0, "<h1>new</h1>");
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    expect(frame().getAttribute("srcdoc")).toContain("<h1>new</h1>");
+    fireEvent.click(screen.getByRole("button", { name: "source" }));
+    expect(doc()).toBe("<h1>new</h1><p>hello</p>");
+  });
+
+  it("the preview is read-only: no editor, no find bar, re-indent disabled with its reason", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    expect(screen.queryByTestId("data-surface")).toBeNull();
+    expect(screen.queryByRole("textbox", { name: /find/i })).toBeNull();
+    const item = moreItem(/^re-indent/);
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveTextContent("shown in preview");
+  });
+
+  it("⇧⌘V, the ⋯ choice and the switch agree", async () => {
+    await openPage();
+    key("v", { shiftKey: true });
+    expect(showing("preview")).toBe(true);
+    key("v", { shiftKey: true });
+    expect(showing("source")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    fireEvent.click(within(screen.getByRole("menu", { name: "more" })).getByRole("menuitemradio", { name: "preview" }));
+    expect(showing("preview")).toBe(true);
+    expect(frame()).toBeInTheDocument();
+  });
+
+  it("⌘F leaves the preview for the source and focuses find", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    key("f");
+    expect(showing("source")).toBe(true);
+    expect(screen.getByTestId("data-surface")).toBeInTheDocument();
+    expect(document.activeElement).toBe(findBox());
+  });
+
+  it("coming back to html after another kind opens the source, not the preview", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    pickKind("text");
+    pickKind("HTML");
+    expect(showing("source")).toBe(true);
+    expect(screen.getByTestId("data-surface")).toBeInTheDocument();
+  });
+
+  it("⇧⌘V typed in the find box is left to the box", async () => {
+    await openPage();
+    fireEvent.keyDown(findBox(), { key: "v", metaKey: true, shiftKey: true });
+    expect(showing("source")).toBe(true);
+  });
+
+  it("choosing another kind in the picker leaves the preview; other kinds have no switch", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    pickKind("text");
+    expect(screen.queryByTestId("data-preview")).toBeNull();
+    expect(screen.queryByRole("button", { name: "preview" })).toBeNull();
+    key("v", { shiftKey: true });
+    expect(screen.queryByTestId("data-preview")).toBeNull();
+  });
+});
+
 describe("decode", () => {
   const b64url = (text: string) => btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const TOKEN = `${b64url('{"alg":"RS256"}')}.${b64url('{"sub":"8812"}')}.c2ln`;
