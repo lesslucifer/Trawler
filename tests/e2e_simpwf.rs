@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! E-SIMPWF epic e2e — the whole flow the epic changed, over one hermetic temp
 //! repo driven through the real `xtask` binary, the real merge hook and real
 //! git (no shims): an epic of three Working Units lands on `main`, every note

@@ -990,6 +990,16 @@
             Nothing refuses on its result, and it reads the repository only</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-85-the-rust-toolchain-is-pinned-and-windows-has-its-own-rules.html"><code>dec-85-the-rust-toolchain-is-pinned-and-windows-has-its-own-rules.html</code></a></td>
+          <td><span class="badge id">DEC-85</span></td>
+          <td><strong>The Rust toolchain is pinned, and Windows has its own rules.</strong> <code>rust-toolchain.toml</code>
+            and every CI job name one exact version (1.99.0); a bump is one commit changing both, held by
+            <code>ci_workflow</code>. Windows: the wdio plugin locked at 1.5.1 (one webview2-com), <code>pnpm.cmd</code>,
+            the Common Controls v6 manifest on test executables, <code>cfg(unix)</code> dead code, the local app origin in
+            mock-runtime tests, <code>eol=lf</code></td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

@@ -17,6 +17,8 @@ pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 pub mod supervisor;
+#[cfg(test)]
+mod test_manifest;
 pub mod update;
 pub mod view_prefs;
 pub mod window_geometry;

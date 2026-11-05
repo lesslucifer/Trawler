@@ -434,6 +434,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn on_linux_an_opener_is_done_when_it_exits_though_what_it_started_runs_on() {
         let started = std::time::Instant::now();
@@ -441,6 +442,7 @@ mod tests {
         assert!(started.elapsed() < std::time::Duration::from_secs(3));
     }
 
+    #[cfg(unix)]
     #[test]
     fn on_linux_an_opener_that_fails_is_an_error() {
         assert!(run(&argv(&["sh", "-c", "exit 3"]), "linux").is_err());
@@ -555,11 +557,16 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn a_started_emulator_is_left_running() {
         let begun = std::time::Instant::now();
         assert!(started(&argv(&["sh", "-c", "sleep 5"])).is_ok());
         assert!(begun.elapsed() < std::time::Duration::from_secs(3));
+    }
+
+    #[test]
+    fn an_emulator_that_cannot_start_is_an_error() {
         assert!(started(&argv(&["/no/such/emulator"])).is_err());
     }
 

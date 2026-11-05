@@ -161,3 +161,69 @@ fn ubuntu_installs_the_tauri_libraries_and_xvfb_before_any_cargo_step() {
         assert!(runs[apt].1.contains(package), "apt does not install {package}");
     }
 }
+
+fn pinned_channel() -> String {
+    let repo = xtask::repo_root().unwrap();
+    let text = std::fs::read_to_string(repo.join("rust-toolchain.toml"))
+        .expect("rust-toolchain.toml exists");
+    let line = text
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("channel"))
+        .expect("rust-toolchain.toml names a channel");
+    line.trim_start_matches([' ', '=']).trim().trim_matches('"').to_string()
+}
+
+#[test]
+fn the_rust_toolchain_is_one_exact_version_everywhere() {
+    let channel = pinned_channel();
+    assert!(
+        channel.split('.').count() == 3 && channel.split('.').all(|n| n.parse::<u32>().is_ok()),
+        "rust-toolchain.toml pins an exact version, not {channel:?}"
+    );
+    for os in OSES {
+        let job = job_on(os);
+        let setups: Vec<&Value> = steps(&job)
+            .iter()
+            .filter(|step| {
+                step["uses"].as_str().is_some_and(|u| u.starts_with("dtolnay/rust-toolchain"))
+            })
+            .collect();
+        assert_eq!(setups.len(), 1, "{os}: one toolchain step");
+        assert_eq!(
+            setups[0]["with"]["toolchain"].as_str(),
+            Some(channel.as_str()),
+            "{os}: the toolchain step disagrees with rust-toolchain.toml"
+        );
+    }
+}
+
+#[test]
+fn the_pinned_toolchain_carries_clippy_and_rustfmt() {
+    let repo = xtask::repo_root().unwrap();
+    let text = std::fs::read_to_string(repo.join("rust-toolchain.toml")).unwrap();
+    assert!(text.contains("\"clippy\"") && text.contains("\"rustfmt\""), "{text}");
+}
+
+#[test]
+fn the_lockfile_links_one_webview2_binding_so_the_windows_build_has_one_set_of_types() {
+    let repo = xtask::repo_root().unwrap();
+    let lock = std::fs::read_to_string(repo.join("Cargo.lock")).expect("Cargo.lock exists");
+    let versions = |name: &str| -> Vec<String> {
+        lock.split("[[package]]")
+            .filter(|block| block.lines().any(|l| l == format!("name = \"{name}\"")))
+            .filter_map(|block| block.lines().find_map(|l| l.strip_prefix("version = ")))
+            .map(str::to_string)
+            .collect()
+    };
+    for name in ["webview2-com", "windows"] {
+        let found = versions(name);
+        assert_eq!(found.len(), 1, "{name} resolves to more than one version: {found:?}");
+    }
+}
+
+#[test]
+fn the_checkout_keeps_lf_line_endings_so_windows_sees_the_bytes_the_tests_expect() {
+    let repo = xtask::repo_root().unwrap();
+    let attributes = std::fs::read_to_string(repo.join(".gitattributes")).unwrap_or_default();
+    assert!(attributes.lines().any(|l| l.trim() == "* text=auto eol=lf"), "{attributes}");
+}

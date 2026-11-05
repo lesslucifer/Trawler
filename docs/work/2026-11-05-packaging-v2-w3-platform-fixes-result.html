@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="4ce5b76a62722afe03c9fbc8" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PKG2.W3 result: platform fixes</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PKG2.W3 result — a dispatched three-OS run is green</h1>
+      <p>Run 42050165698 on the WU tip 4bfc7053: macOS, Ubuntu and Windows all succeed, after five rounds of Windows fixes.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-PKG2.W3</span> · branch
+      <code>wu/packaging-v2/platform-fixes</code> · <a href="2026-11-05-packaging-v2-w3-platform-fixes-plan.html">WU plan</a> ·
+      <a href="2026-11-05-packaging-v2-plan.html">epic plan</a> ·
+      <a href="../decisions/dec-85-the-rust-toolchain-is-pinned-and-windows-has-its-own-rules.html">DEC-85</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned expected result</th><th>Verdict</th><th>Observed</th></tr>
+      <tr><td>a dispatched CI run on the WU tip is green on three OSes</td><td><span class="badge auto">delivered</span></td><td>run <code>42050165698</code> (workflow_dispatch, tip <code>4bfc7053</code>): macOS, Ubuntu and Windows succeed. Windows clippy and <code>cargo test -p trawler -p trawler-ui</code> both pass</td></tr>
+      <tr><td>every fix carries its unit test; the supervisor's integration tests pass on Windows and Linux</td><td><span class="badge auto">delivered</span></td><td>the suite ran green on both in that run. Toolchain, lock and line-ending rules are pinned by <code>ci_workflow</code></td></tr>
+      <tr><td><em>This machine</em> setup walked once per OS in the VMs</td><td><span class="badge approval">waived · not done</span></td><td>needs a CI-built package installed in the two ARM VMs and an elevation prompt, so no test can be hermetic. Not run in this WU; it moves to W6's hand checks</td></tr>
+    </table>
+
+    <h2 id="timeline">The five rounds</h2>
+    <div class="diagram" data-c="timeline">
+      <pre class="mermaid">
+flowchart LR
+  R0["run 42031669674 · b62541e9
+Windows: wdio plugin does not compile"] --> R1["round 1 · 35c486f8
+run 42035730619 · Windows red"]
+  R1 --> R2["round 2 · c62fa75b
+run 42038467190 · Windows red"]
+  R2 --> R3["round 3 · d8167499
+run 42041663420 · Windows red"]
+  R3 --> R4["round 4 · d7c20d1a
+run 42044730588 · Windows red"]
+  R4 --> R5["round 5 · 4bfc7053
+run 42050165698 · GREEN"]
+      </pre>
+    </div>
+    <table data-c="rounds">
+      <tr><th>Round</th><th>What the run showed</th><th>Fix</th></tr>
+      <tr><td>1</td><td>Windows clippy stopped inside a third-party crate: <code>tauri-plugin-wdio-webdriver</code> against two <code>windows</code> versions</td><td>toolchain pinned to 1.99.0 in <code>rust-toolchain.toml</code> and every CI job; plugin locked at 1.5.1 so one <code>webview2-com</code> links; tests no longer assume Unix (hook tests Unix-only, liveness and hard kill per platform, <code>sh</code> stand-ins gated)</td></tr>
+      <tr><td>2</td><td>the app build script could not spawn <code>pnpm</code>; fixtures differed by line endings</td><td><code>pnpm.cmd</code> on Windows; <code>.gitattributes</code> <code>* text=auto eol=lf</code></td></tr>
+      <tr><td>3</td><td>Windows clippy <code>-D warnings</code>: dead code and an unused import</td><td>helpers used only by Unix tests are <code>cfg(unix)</code>; <code>Stdio</code> imported where used</td></tr>
+      <tr><td>4</td><td>integration test executables died at start with <code>0xc0000139</code></td><td>the Common Controls v6 manifest is embedded into test executables on MSVC, because tauri-build passes the link argument to binaries only</td></tr>
+      <tr><td>5</td><td>mock-runtime invoke tests: tauri refused the app commands as remote</td><td>the helpers send the platform's local origin, <code>http://tauri.localhost</code> on Windows</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>From the plan</th><th>Why</th></tr>
+      <tr><td>five dispatched runs, not one or two</td><td>cargo and the test runner stop at the first failing layer, so each Windows layer showed only after the one above it was fixed</td></tr>
+      <tr><td>no epic-plan status edit</td><td>the epic plan carries no per-WU status field. The W3 block's expected result is met as written, apart from the VM hand check above</td></tr>
+    </table>
+
+    <h2 id="limits">Accepted limits</h2>
+    <table data-c="limits">
+      <tr><th>Limit</th><th>State</th></tr>
+      <tr><td>a macOS job showed <em>cancelled</em> once</td><td>in run 42038467190 only, beside a failing Windows job. <code>ci.yml</code> has <code>concurrency: ci-&lt;ref&gt;, cancel-in-progress: true</code>. It did not recur in the next three runs. Its cause is <strong>unproven</strong>: nothing was changed for it</td></tr>
+      <tr><td>nothing here was tried in the real app</td><td>CI proves build, clippy and tests on three OSes, not a launched window</td></tr>
+      <tr><td>Linux/Windows ARM targets and the package build on Windows and Linux</td><td>not exercised here: W4 and W6</td></tr>
+      <tr><td><code>ui/src-tauri/</code> is outside the cr gate</td><td>its changes (<code>build.rs</code>, <code>test_manifest.rs</code>, <code>bundle.rs</code>, <code>route.rs</code>, <code>lib.rs</code>, the suite helpers) had no independent review; their proof is the green three-OS run</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>unit</td><td><code>xtask/tests/suite/ci_workflow.rs</code>: toolchain agreement and exactness, clippy and rustfmt components, one <code>webview2-com</code> and <code>windows</code> in the lock, LF attributes</td></tr>
+      <tr><td>integration</td><td><code>ui/src-tauri/tests/suite/</code> (common, supervisor, quit_stops_core, restart_command, data_window) running on Windows and Linux</td></tr>
+      <tr><td>e2e</td><td>waived: platform fixes to existing tests and build config; the three-OS dispatch is the proof</td></tr>
+      <tr><td>review</td><td>cr/v5 PASS on the code diff (xtask and tests; two finders, no blocker or important, two nits waived with reasons)</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">DEC-85 carries the toolchain pin, how to bump it, and the Windows rules; its index row is added.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>Item</th><th>Owner</th></tr>
+      <tr><td>install a CI-built package in the Windows and Ubuntu VMs and walk <em>This machine</em> setup</td><td>W6 hand checks</td></tr>
+      <tr><td>watch for a repeat of the cancelled macOS job</td><td>whoever reads the next three-OS run</td></tr>
+      <tr><td>an independent review of <code>ui/src-tauri/</code> changes if the router wants one</td><td>the router</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
