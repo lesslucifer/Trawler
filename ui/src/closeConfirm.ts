@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { KeepCapturing } from "./generalPrefs";
+import { refusalWords, type KeepCapturing } from "./generalPrefs";
 import { splitProxyAddr } from "./setup";
 import { dismissNotice, noticeDismissed, NOTICE_KEY, type NoticeKey } from "./noticePreference";
 
@@ -109,8 +109,10 @@ export function useProxyCloseConfirm(
 ) {
   const [prompt, setPrompt] = useState<QuitPrompt | null>(null);
   const [asking, setAsking] = useState(false);
+  const [keepRefused, setKeepRefused] = useState<string | null>(null);
   const ending = useRef<RequestKind>("close");
   const quitRequests = useRef(0);
+  const storingKeep = useRef(false);
   const quitsAnswering = useRef(0);
   const quitPromptShown = useRef(false);
   const question = useRef<() => Promise<QuitPrompt | null>>(async () => null);
@@ -125,6 +127,8 @@ export function useProxyCloseConfirm(
       .catch((err: unknown) => {
         console.error("window destroy failed:", err);
       });
+  // quit_app only exits the process and cannot refuse; a rejection means the
+  // bridge to the shell is gone, which no dialog here could report through.
   const quitApp = async (): Promise<void> => {
     try {
       await deps.invoke("quit_app");
@@ -201,6 +205,7 @@ export function useProxyCloseConfirm(
         ending.current = "close";
         if (decision === "asks-keep") {
           e.preventDefault();
+          setKeepRefused(null);
           setAsking(true);
           return;
         }
@@ -236,6 +241,7 @@ export function useProxyCloseConfirm(
   return {
     prompt,
     asking,
+    keepRefused,
     // A failed unset must not quit: the dialog exists to stop the machine being
     // stranded on a dead proxy, and swallowing the error strands it silently.
     // The rejection reaches the dialog, which offers the manual route instead.
@@ -254,24 +260,45 @@ export function useProxyCloseConfirm(
       quitPromptShown.current = false;
       setPrompt(null);
     },
-    // The answer is the switch. A write that fails leaves the window open, as a
-    // cancel does: closing into a state nothing recorded would ask again blind.
+    // While the answer is being stored the question's other answers wait: a
+    // cancel or a quit racing the write would leave the stored switch and the
+    // window disagreeing about what the user chose. The write is a small file
+    // behind one command and is not bounded: a timeout would release the wait
+    // while the write could still land, which is the same disagreement. A
+    // request to quit the app is not held by it, so a write that never settles
+    // never makes the window unquittable.
+    // The answer is the switch. A write that fails leaves the window and the
+    // question open, saying why: closing into a state nothing recorded would ask
+    // again blind, and a question that vanishes reads as a cancel.
     keepCapturing: async () => {
+      if (storingKeep.current) return;
       const requestsSeen = quitRequests.current;
-      setAsking(false);
+      storingKeep.current = true;
+      setKeepRefused(null);
+      let refusal: string | null = null;
       try {
         await deps.invoke("keep_capturing_write", { on: true });
       } catch (err) {
         console.error("storing keep capturing failed:", err);
+        refusal = refusalWords(err);
+      } finally {
+        storingKeep.current = false;
+      }
+      if (quitRequests.current !== requestsSeen) return;
+      if (refusal !== null) {
+        setKeepRefused(refusal);
         return;
       }
-      if (quitRequests.current === requestsSeen) await destroy();
+      setAsking(false);
+      await destroy();
     },
     // Quit is the user's answer even where it could not be stored: the next
     // close simply asks again.
     quitInstead: async () => {
+      if (storingKeep.current) return;
       const requestsSeen = quitRequests.current;
       setAsking(false);
+      setKeepRefused(null);
       ending.current = "close";
       await deps.invoke("keep_capturing_write", { on: false }).catch((err: unknown) => {
         console.error("storing keep capturing failed:", err);
@@ -282,6 +309,10 @@ export function useProxyCloseConfirm(
       if (asked === null) await destroy();
       else setPrompt(asked);
     },
-    cancelAsk: () => setAsking(false),
+    cancelAsk: () => {
+      if (storingKeep.current) return;
+      setAsking(false);
+      setKeepRefused(null);
+    },
   };
 }

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="5d02b8c7e1f34a96a0c3d718" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W9 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W9 — result</h1>
+      <p>A quit that cannot open its window no longer exits unchecked or stays pending; a destroyed main window hands over a pending request;
+        a refused once-question save is said.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU result · branch
+        <code>wu/bg-service/quit-hardening</code> · plan:
+        <a href="2026-11-05-bg-service-w9-quit-hardening-plan.html">W9 plan</a> · after
+        <a href="2026-11-05-bg-service-w3-quit-asks-the-same-result.html">W3's result</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <tr><th>Plan's expected</th><th>Status</th><th>What shipped</th></tr>
+      <tr><td>1 · no buildable window: no exit, no pending request</td><td><span class="badge auto">delivered</span></td>
+        <td><code>quit_in_window</code> retries <code>reopen_main</code> once after 150 ms (<code>attempt_twice</code>); a second failure logs, does not exit, and takes the flag</td></tr>
+      <tr><td>2 · pending request at a destroyed main window opens a window that asks; nothing pending opens nothing</td><td><span class="badge auto">delivered</span></td>
+        <td><code>on_window_destroyed</code> takes the flag and, when the app stays, re-issues <code>request_quit</code></td></tr>
+      <tr><td>3 · a refused keep-capturing save is said, the question stays</td><td><span class="badge auto">delivered</span></td>
+        <td>the hook's <code>keepRefused</code> (W6's <code>refusalWords</code>) renders in <code>KeepCapturingDialog</code> as <em>couldn't save — …</em>; cancel clears it</td></tr>
+      <tr><td>rejected <code>quit_app</code> (finding 3)</td><td><span class="badge">accepted limit</span></td>
+        <td>recorded in a comment on <code>quitApp</code>: the command cannot refuse, a rejection means the shell bridge is gone</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <tr><th>From the brief</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>finding 1: keep the flag after a failed build</td><td>the flag is cleared</td><td>a kept flag makes the next Open quit unasked, which is finding 2</td></tr>
+      <tr><td>finding 2: clear the flag when the main window is destroyed</td><td>the flag is taken and the request re-issued when the app stays</td><td>plain clearing drops a request whose new window was built before the old Destroyed event ran (the generation hole the brief hints at); re-issuing answers it once</td></tr>
+      <tr><td>integration test that fails on the old code, finding 2</td><td>the mock runtime emits no Destroyed event and keeps a destroyed window listed, so the test calls <code>on_window_destroyed</code> on an app with no window and a pending flag</td><td>that is the state the handler meets; the old handler builds nothing and the test times out waiting for the window</td></tr>
+      <tr><td>—</td><td>the refusal notice is cleared when the question is asked again</td><td>review round 1's correctness finder: a quit request closing the question left the notice set, and the next ✕ showed it before any save. A test fails on the old code</td></tr>
+      <tr><td>—</td><td>while keep capturing is being stored, the question's other answers (cancel, quit) wait</td><td>review rounds 2 and 3's correctness finder: the question now stays open during the save, so a click in that window was newly possible, and a withdrawn answer or a quit racing the write left the stored switch and the window disagreeing. Waiting removes the class instead of guarding each interleaving. Two tests fail on the old code</td></tr>
+      <tr><td>—</td><td>the keep-capturing write is not bounded; a quit request landing during it owns the window</td><td>review rounds 4 and 5: bounding it (round 4's finding) let the wait end while the write could still land, the disagreement the wait prevents. It is one small file write; a quit request is never held by it, so a write that never settles cannot make the window unquittable. Accepted limit: such a write holds the question's cancel and quit until it settles. A test holds the write and sends a quit request</td></tr>
+    </table>
+
+    <h2 id="not-reviewed">What no independent review covers</h2>
+    <table data-c="not-reviewed">
+      <tr><th>Part</th><th>Why</th></tr>
+      <tr><td><code>ui/src-tauri/src/lifecycle.rs</code></td><td>outside the cr gate. Process-exit logic changed: <code>quit_in_window</code> no longer calls <code>app.exit</code>, and <code>on_window_destroyed</code> now spawns a window-building thread from the Destroyed handler. No <code>unsafe</code>. The router is asked for an independent read-only review</td></tr>
+      <tr><td>the real app</td><td>the race (✕ in flight, tray Quit) was not driven live; the evidence is mock-runtime integration tests</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>unit (cargo)</td><td><code>lifecycle.rs</code>: <code>an_attempt_is_retried_once_and_only_once</code></td></tr>
+      <tr><td>integration</td><td><code>outlive_window.rs</code> (+3): no buildable window · pending request at a destroyed main window · nothing pending</td></tr>
+      <tr><td>unit (vitest)</td><td><code>closeConfirm.test.tsx</code> (failed write keeps the question, names the reason, cancel clears it) · <code>KeepCapturingDialog.test.tsx</code> (+1)</td></tr>
+      <tr><td>commits</td><td>plan <code>2af9ba5d</code> · code <code>2c566124</code> · round 1 fix <code>93fce20a</code> · round 2 fix <code>f378e0b7</code> · round 3 fix <code>1671ffca</code> · round 4 fix <code>58e8c460</code> · round 5 fix <code>bd8fa791</code> · this report</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation">
+      <tr><th>Tier</th><th>Doc</th><th>Absorbed</th></tr>
+      <tr><td>T2</td><td>DEC-64 · DEC-77</td><td>nothing: both hold as written. W7 may cite the retry-then-stay rule when it distills</td></tr>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups">
+      <tr><th>Owner</th><th>Item</th></tr>
+      <tr><td>W7</td><td>drive <code>quit_app</code> through the real app: Tauri's mock runtime panics on <code>exit</code>, so no integration test can</td></tr>
+      <tr><td>router</td><td>independent read-only review of <code>lifecycle.rs</code>'s process-exit change</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

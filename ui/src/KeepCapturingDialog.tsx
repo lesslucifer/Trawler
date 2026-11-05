@@ -1,4 +1,4 @@
-import { Button } from "./components/index";
+import { Button, Notice } from "./components/index";
 import { ModalShell } from "./ModalShell";
 
 export const KEEP_COPY = {
@@ -12,14 +12,21 @@ export function KeepCapturingDialog({
   onKeep,
   onQuit,
   onCancel,
+  refused = null,
 }: {
   onKeep: () => void;
   onQuit: () => void;
   onCancel: () => void;
+  refused?: string | null;
 }) {
   return (
     <ModalShell title={KEEP_COPY.title} onCancel={onCancel} testId="keep-capturing">
       <p className="mb-3 font-ui text-body text-ink-mute">{KEEP_COPY.stays}</p>
+      {refused !== null && (
+        <div className="mb-3">
+          <Notice tone="warn">{`couldn't save — ${refused}`}</Notice>
+        </div>
+      )}
       <div className="flex justify-end gap-chrome-gap">
         <Button onClick={onQuit} frame="bare" tone="mute">
           {KEEP_COPY.quit}

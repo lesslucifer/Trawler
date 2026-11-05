@@ -221,6 +221,39 @@ fn a_quit_request_with_the_window_open_reuses_it() {
 }
 
 #[test]
+fn a_quit_request_that_cannot_open_a_window_does_not_exit_and_is_not_left_pending() {
+    let dir = tempfile::tempdir().unwrap();
+    let app = app_declaring(Vec::new(), dir.path(), true);
+
+    lifecycle::request_quit(app.handle()).join().expect("the app was not exited");
+
+    assert!(!app.state::<Lifecycle>().take_quit_request(), "no flag waits for a later window");
+}
+
+#[test]
+fn a_main_window_destroyed_under_a_pending_quit_request_is_rebuilt_to_ask() {
+    let dir = tempfile::tempdir().unwrap();
+    write_keep_capturing(dir.path(), true).unwrap();
+    let app = app(dir.path(), true);
+    app.state::<Lifecycle>().request_quit();
+
+    assert!(!lifecycle::on_window_destroyed(app.handle(), MAIN_WINDOW), "the app stays");
+
+    eventually("the window opens to ask", || app.get_webview_window(MAIN_WINDOW).is_some());
+    assert!(app.state::<Lifecycle>().take_quit_request(), "and the new window finds the request");
+}
+
+#[test]
+fn a_main_window_destroyed_with_nothing_pending_is_not_rebuilt() {
+    let dir = tempfile::tempdir().unwrap();
+    write_keep_capturing(dir.path(), true).unwrap();
+    let app = app(dir.path(), true);
+    assert!(!lifecycle::on_window_destroyed(app.handle(), MAIN_WINDOW));
+    assert!(app.webview_windows().is_empty());
+    assert!(!app.state::<Lifecycle>().take_quit_request());
+}
+
+#[test]
 fn a_killed_windowless_app_leaves_no_core_behind() {
     let dir = tempfile::tempdir().unwrap();
     let mut role = Role(

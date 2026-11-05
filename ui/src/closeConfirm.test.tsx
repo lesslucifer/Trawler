@@ -460,13 +460,29 @@ describe("the once-question", () => {
     expect(result.current.asking).toBe(true);
   });
 
+  test("a refusal does not outlive its question: a quit request closes it, and the next ✕ asks clean", async () => {
+    const f = shellDeps("none", { keep: "unanswered", writeFails: true });
+    const { result } = shellConfirm(f);
+    await closeAndWait(f);
+    await act(async () => result.current.keepCapturing());
+    expect(result.current.keepRefused).toBe("permission denied");
+    await f.request();
+    expect(result.current.asking).toBe(false);
+    await closeAndWait(f);
+    expect(result.current.asking).toBe(true);
+    expect(result.current.keepRefused).toBeNull();
+  });
+
   test("an answer that cannot be stored leaves the window open when keeping, and still quits when quitting", async () => {
     const keeping = shellDeps("none", { keep: "unanswered", writeFails: true });
     const kept = shellConfirm(keeping);
     await closeAndWait(keeping);
     await act(async () => kept.result.current.keepCapturing());
     expect(keeping.destroy).not.toHaveBeenCalled();
-    expect(kept.result.current.asking).toBe(false);
+    expect(kept.result.current.asking).toBe(true);
+    expect(kept.result.current.keepRefused).toBe("permission denied");
+    act(() => kept.result.current.cancelAsk());
+    expect(kept.result.current.keepRefused).toBeNull();
 
     const quitting = shellDeps("none", { keep: "unanswered", writeFails: true });
     const quit = shellConfirm(quitting);
@@ -586,6 +602,36 @@ describe("a quit request", () => {
         await answering;
       });
       expect(f.destroy).not.toHaveBeenCalled();
+    },
+  );
+
+  test("a keep write that never settles does not hold a quit request", async () => {
+    const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
+    const { result } = shellConfirm(f);
+    await closeAndWait(f);
+    void result.current.keepCapturing();
+    await f.request();
+    await waitFor(() => expect(f.ran("quit_app")).toBe(true));
+    expect(result.current.asking).toBe(false);
+  });
+
+  test.each(["cancelAsk", "quitInstead"] as const)(
+    "%s while keep capturing is being stored waits: the stored switch and the window agree",
+    async (other) => {
+      const f = shellDeps("none", { keep: "unanswered", holdWrite: true });
+      const { result } = shellConfirm(f);
+      await closeAndWait(f);
+      const keeping = Promise.resolve(result.current.keepCapturing());
+      await act(async () => {
+        await result.current[other]();
+      });
+      expect(f.invoke).not.toHaveBeenCalledWith("keep_capturing_write", { on: false });
+      expect(result.current.asking).toBe(true);
+      f.releaseWrite();
+      await act(async () => {
+        await keeping;
+      });
+      expect(f.destroy).toHaveBeenCalledOnce();
     },
   );
 

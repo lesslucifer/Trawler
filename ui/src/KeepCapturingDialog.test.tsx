@@ -40,3 +40,12 @@ describe("the once-question", () => {
     expect(answers.onQuit).not.toHaveBeenCalled();
   });
 });
+
+describe("the once-question when its answer could not be stored", () => {
+  test("names the refusal beside the answers, and says nothing otherwise", () => {
+    const { rerender } = render(<KeepCapturingDialog onKeep={vi.fn()} onQuit={vi.fn()} onCancel={vi.fn()} />);
+    expect(screen.queryByText(/couldn't save/)).toBeNull();
+    rerender(<KeepCapturingDialog onKeep={vi.fn()} onQuit={vi.fn()} onCancel={vi.fn()} refused="permission denied" />);
+    expect(screen.getByText("couldn't save — permission denied")).toBeInTheDocument();
+  });
+});
