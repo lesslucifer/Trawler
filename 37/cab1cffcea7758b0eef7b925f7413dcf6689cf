@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU E-INSPWIN2.W6 -> epic/inspect-window-v2"
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W6
+branch: wu/inspect-window-v2/javascript-css
+base: a44c3fac7e94212dcec8561b232fbf3369d8270f
+head: 37cab1cffcea7758b0eef7b925f7413dcf6689cf
+diff_sha256: f2aecb0b13f1d5f18b09766945a0300711558e10db40135a6ceff482b66821d5
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: sonnet-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "menu-open beautify runs once per open and again on click, same pattern as menuXml and menuJson"
+    waived: "matches the component's established preview-then-redo pattern; about 0.2 s per MiB, one-shot per user gesture"
+  - finding: "reformatCode makes two whitespace-stripped full-size copies"
+    waived: "4 to 12 percent of the beautify cost; the guard needs both"
+  - finding: "reformatSource and the key branch mirror reindent"
+    waived: "the two results differ in error shape; a shared abstraction is not yet earned"
+  - finding: "formatter load lifecycle lives in Workbench rather than a hook"
+    waived: "one lazy tool today; a hook is for the second"
+  - finding: "alt-shift-F before the formatter loads is silent"
+    waived: "the menu row names the reason; the load is local and sub-second"
+  - finding: "reformatting already-formatted code adds a no-op undo step"
+    waived: "the step is named and undoable, as re-indent is on xml"
+verdict: PASS
+date: 2026-11-05
