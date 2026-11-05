@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findLabel, keysFor, parseFind, refusedReason, suggestFind, type FindChip } from "./findGrammar";
+import { BYTES_EXAMPLE, findLabel, hasOpenQuote, keysFor, parseFind, refusedReason, suggestFind, type FindChip } from "./findGrammar";
 
 const chip = (key: FindChip["key"], value: string): FindChip => ({ key, value });
 
@@ -27,6 +27,12 @@ describe("parseFind", () => {
     expect(parseFind("bites:a")).toMatchObject({ fault: expect.stringContaining("did you mean bytes:") });
   });
 
+  it("the bytes example the hint and the fault show is one sequence chip, and stays one draft past its spaces", () => {
+    const typed = `bytes:${BYTES_EXAMPLE}`;
+    expect(parseFind(typed)).toEqual({ chip: chip("bytes", "89 50 4e") });
+    for (let end = typed.indexOf('"') + 1; end < typed.length; end++) expect(hasOpenQuote(typed.slice(0, end))).toBe(true);
+  });
+
   it("says why a draft makes no chip", () => {
     expect(parseFind("-x")).toMatchObject({ fault: expect.stringContaining("nothing to exclude") });
     expect(parseFind("-")).toEqual({ chip: chip("plain", "-") });
@@ -35,8 +41,8 @@ describe("parseFind", () => {
     expect(parseFind('key:"a b')).toEqual({ fault: "a quote is opened and never closed" });
     expect(parseFind("key:")).toMatchObject({ fault: expect.stringContaining("key: needs something to find") });
     expect(parseFind("re:(")).toMatchObject({ fault: expect.stringContaining("not a regular expression") });
-    expect(parseFind("bytes:8")).toEqual({ fault: "bytes: takes hex pairs, like 89 50 4e" });
-    expect(parseFind("bytes:zz zz")).toEqual({ fault: "bytes: takes hex pairs, like 89 50 4e" });
+    expect(parseFind("bytes:8")).toEqual({ fault: 'bytes: takes hex pairs, a sequence quoted, like bytes:"89 50 4e"' });
+    expect(parseFind("bytes:zz zz")).toEqual({ fault: 'bytes: takes hex pairs, a sequence quoted, like bytes:"89 50 4e"' });
   });
 
   it("a chip's label reads back as the same chip", () => {

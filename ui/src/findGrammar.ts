@@ -1,6 +1,8 @@
 import type { DataKind } from "./dataKind";
 import { edits } from "./query";
 
+export { hasOpenQuote } from "./query";
+
 export type FindKey = "plain" | "key" | "value" | "re" | "case" | "bytes" | "text";
 
 export interface FindChip {
@@ -18,12 +20,14 @@ export interface FindSuggestion {
 
 type Keyed = Exclude<FindKey, "plain">;
 
+export const BYTES_EXAMPLE = '"89 50 4e"';
+
 const HINTS: Record<Keyed, string> = {
   key: "only inside keys",
   value: "only inside values",
   re: "a regular expression",
   case: "match case",
-  bytes: "hex pairs, like 89 50 4e",
+  bytes: `hex pairs, a sequence quoted, like ${BYTES_EXAMPLE}`,
   text: "ASCII",
 };
 
@@ -47,10 +51,6 @@ const isKeyed = (word: string): word is Keyed => (NAMED as string[]).includes(wo
 const unquote = (value: string) => (value.length >= 2 && value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value);
 
 const quoted = (value: string) => (/\s/.test(value) ? `"${value}"` : value);
-
-export function hasOpenQuote(draft: string): boolean {
-  return (draft.match(/"/g) ?? []).length % 2 === 1;
-}
 
 function closest(word: string): Keyed | undefined {
   const ranked = NAMED.map((key) => ({ key, away: edits(word, key) })).sort((a, b) => a.away - b.away);
@@ -81,7 +81,7 @@ export function parseFind(draft: string): FoundDraft {
           return { fault: `not a regular expression: ${(error as Error).message.replace(/^Invalid regular expression: /, "")}` };
         }
       }
-      if (key === "bytes" && !HEX_PAIRS.test(value)) return { fault: "bytes: takes hex pairs, like 89 50 4e" };
+      if (key === "bytes" && !HEX_PAIRS.test(value)) return { fault: `bytes: takes hex pairs, a sequence quoted, like bytes:${BYTES_EXAMPLE}` };
       return { chip: { key, value } };
     }
     const near = key.length >= 2 && closest(key);
