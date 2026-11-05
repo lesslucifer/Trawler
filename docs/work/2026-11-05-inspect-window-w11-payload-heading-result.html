@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec22359f34851f0dfae780" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W11 result: the payload carries its heading</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W11 — result</h1>
+      <p>The window's header draws the heading its opener hands it; a time in the years 0–99 reads true; the epic stands on
+        today's main with its decision as DEC-76.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-INSPWIN.W11</span> · branch
+        <code>wu/inspect-window/payload-heading</code> ·
+        <a href="2026-11-05-inspect-window-w11-payload-heading-plan.html">W11 plan</a> (v2)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <thead><tr><th>Expected (W11 plan)</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td><code>bodyPayload</code> hands a heading; the title as before</td><td>delivered: <code>{what, method, host,
+          path, query}</code> from the flow, CONNECT with an empty path and query; the title is written from the same
+          parts</td></tr>
+        <tr><td>the heading survives both relays; a malformed one is dropped</td><td>delivered — and the Rust shell had
+          been dropping it: serde ignored the unknown field until <code>Caption.heading</code> carried it as an opaque
+          value</td></tr>
+        <tr><td>no heading → the title whole, even in the request shape</td><td>delivered; <code>captionParts</code> and its
+          regex are gone</td></tr>
+        <tr><td><code>0050-06-15T12:00:00Z</code> and <code>0000-02-29</code></td><td>delivered: <code>0050-06-15 12:00:00
+          +00:00</code>; <code>0000-02-29, Tuesday</code> — the wall clock also reads the era, since <code>Intl</code> names
+          year 0 as 1 BC</td></tr>
+        <tr><td>J1's header through the real shell</td><td>delivered: the <em>what</em> line and the GET label are
+          asserted</td></tr>
+        <tr><td>J4's lookup race</td><td>delivered: the two radio picks retry until they land</td></tr>
+        <tr><td>DEC-76; the suite layout</td><td>delivered: main resynced (E-GATEPAR2) into the epic, then the epic into
+          W11; the data window's record renumbered DEC-75 → DEC-76 everywhere it is cited; its shell tests are a module of
+          <code>tests/suite</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <thead><tr><th>Plan v1</th><th>Shipped</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>two fixes</td><td>also the J4 race, the DEC-76 renumber and the suite move (plan v2)</td><td>owner's ruling:
+          further fixes land in this WU, not new ones; main took E-GATEPAR2 mid-WU, which claimed DEC-75 and moved
+          integration tests into one suite binary per crate</td></tr>
+        <tr><td>the year fix in <code>civil</code> and <code>wallClock</code>'s offset</td><td>also the era in the wall
+          clock's shown date</td><td>the first fix left <code>0001-02-29</code> on screen for year 0</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <thead><tr><th>Kind</th><th>Pointer</th></tr></thead>
+      <tbody>
+        <tr><td>unit</td><td><code>body.test.ts</code> (heading, CONNECT) · <code>dataWindow.test.ts</code> (heading round
+          trip, malformed dropped, <code>queryCount</code>) · <code>timeDecoder.test.ts</code> (years below 100) ·
+          <code>data_window.rs</code> <code>a_heading_is_relayed_unread</code> — each red before its fix</td></tr>
+        <tr><td>integration</td><td><code>DataWindowScreen.test.tsx</code> (the header from a heading; the title whole
+          without one) · <code>BodyViewer.test.tsx</code> (the payload the pane hands) ·
+          <code>ui/src-tauri/tests/suite/data_window.rs</code>
+          <code>the_opener_s_heading_reaches_the_data_window_as_it_was_framed</code></td></tr>
+        <tr><td>suite</td><td>gate0 green on the resynced tree, 1217 tests; vitest 94 files, 2685 tests</td></tr>
+        <tr><td>e2e</td><td id="e2e"><code>cargo xtask ui e2e</code>: at <code>2db49fec</code> J4 failed again on the lookup race (its second time in four runs) — fixed in <code>08ea6cf4</code>; green there, and green on the resynced tip <code>0faaca05</code>: attached suite 14 of 14 spec files, owned 1 of 1</td></tr>
+        <tr><td>origin</td><td>the epic review's round-2 FAIL note on <code>c90ec373</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <thead><tr><th>Doc</th><th>Now carries</th></tr></thead>
+      <tbody>
+        <tr><td><a href="../decisions/dec-76-the-data-window.html">DEC-76</a> v4 + <a href="../decisions/decisions-index.html">index</a></td>
+          <td>rule 1: the payload is <code>{key, title, bytes, typeHint?, heading?}</code>, neither title nor heading parsed;
+          rejected: reading the header out of the title; the renumbering in its header</td></tr>
+        <tr><td><a href="../use-cases/web-ui.html">UC-9</a> · <a href="../use-cases/use-cases-index.html">index</a></td>
+          <td>the payload's shape; the header draws the heading or the caption whole</td></tr>
+        <tr><td><a href="../design-rules/design-rules-index.html">design-rules-index</a> ·
+          <a href="../backlog/roadmap.html">roadmap</a></td><td>cite DEC-76</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <p data-item="follow-ups" data-c="follow-ups">none</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
