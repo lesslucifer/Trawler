@@ -1,4 +1,6 @@
 import type { TextRange } from "./components/index";
+import type { FindChip } from "./findGrammar";
+import type { JsonNode } from "./jsonTools";
 
 export const MATCH_LIMIT = 10_000;
 
@@ -56,4 +58,156 @@ export function findBytes(bytes: Uint8Array, query: HexQuery, limit = MATCH_LIMI
     at += wanted.length - 1;
   }
   return { ranges, capped: false };
+}
+
+export type Scan = (text: string, limit: number) => Found;
+
+const literal = (value: string) => value.replace(SPECIAL, "\\$&");
+
+function scanFor(source: string, flags: string): Scan {
+  return (text, limit) => {
+    let pattern: RegExp;
+    try {
+      pattern = new RegExp(source, flags);
+    } catch {
+      return { ranges: [], capped: false };
+    }
+    const ranges: TextRange[] = [];
+    for (let found = pattern.exec(text); found; found = pattern.exec(text)) {
+      if (found[0] === "") {
+        pattern.lastIndex += 1;
+        continue;
+      }
+      if (ranges.length === limit) return { ranges, capped: true };
+      ranges.push({ from: found.index, to: found.index + found[0].length });
+    }
+    return { ranges, capped: false };
+  };
+}
+
+export function scanOf(chip: FindChip, jsonEscaped = false): Scan | null {
+  const needle = jsonEscaped ? JSON.stringify(chip.value).slice(1, -1) : chip.value;
+  switch (chip.key) {
+    case "re":
+      return scanFor(chip.value, "gi");
+    case "case":
+      return scanFor(literal(needle), "g");
+    case "plain":
+    case "key":
+    case "value":
+      return scanFor(literal(needle), "gi");
+    default:
+      return null;
+  }
+}
+
+export function mergeRanges(lists: readonly Found[], limit = MATCH_LIMIT): Found {
+  const sorted = lists.flatMap((list) => list.ranges).sort((a, b) => a.from - b.from || b.to - a.to);
+  const merged: TextRange[] = [];
+  for (const range of sorted) {
+    const last = merged[merged.length - 1];
+    if (last && range.from < last.to) last.to = Math.max(last.to, range.to);
+    else merged.push({ ...range });
+  }
+  const over = merged.length > limit;
+  return { ranges: over ? merged.slice(0, limit) : merged, capped: over || lists.some((list) => list.capped) };
+}
+
+export interface Structure {
+  keys: TextRange[];
+  values: TextRange[];
+  jsonEscaped: boolean;
+}
+
+export function jsonStructure(root: JsonNode): Structure {
+  const keys: TextRange[] = [];
+  const values: TextRange[] = [];
+  const walk = (node: JsonNode) => {
+    if (node.type === "object") {
+      for (const member of node.members) {
+        keys.push({ from: member.from + 1, to: member.from + member.keyRaw.length - 1 });
+        walk(member.node);
+      }
+    } else if (node.type === "array") node.items.forEach(walk);
+    else if (node.type === "string") values.push({ from: node.from + 1, to: node.to - 1 });
+    else values.push({ from: node.from, to: node.to });
+  };
+  walk(root);
+  return { keys, values, jsonEscaped: true };
+}
+
+export function formStructure(text: string): Structure {
+  const keys: TextRange[] = [];
+  const values: TextRange[] = [];
+  let at = 0;
+  for (const raw of text === "" ? [] : text.split("&")) {
+    const eq = raw.indexOf("=");
+    keys.push({ from: at, to: at + (eq < 0 ? raw.length : eq) });
+    values.push({ from: eq < 0 ? at + raw.length : at + eq + 1, to: at + raw.length });
+    at += raw.length + 1;
+  }
+  return { keys, values, jsonEscaped: false };
+}
+
+export function structureNames(structure: Structure, text: string, limit = 500): string[] {
+  const names = new Set<string>();
+  for (const { from, to } of structure.keys) {
+    const raw = text.slice(from, to);
+    try {
+      names.add(structure.jsonEscaped ? (JSON.parse(`"${raw}"`) as string) : decodeURIComponent(raw.replace(/\+/g, " ")));
+    } catch {
+      names.add(raw);
+    }
+    if (names.size >= limit) break;
+  }
+  return [...names];
+}
+
+function within(scan: Scan, text: string, parts: readonly TextRange[], limit: number): Found {
+  const ranges: TextRange[] = [];
+  for (const part of parts) {
+    const found = scan(text.slice(part.from, part.to), limit - ranges.length);
+    for (const range of found.ranges) ranges.push({ from: part.from + range.from, to: part.from + range.to });
+    if (found.capped || ranges.length >= limit) return { ranges, capped: found.capped || ranges.length > limit };
+  }
+  return { ranges, capped: false };
+}
+
+export function markText(text: string, chips: readonly FindChip[], structure: Structure | null, limit = MATCH_LIMIT): Found {
+  const lists: Found[] = [];
+  for (const chip of chips) {
+    if (chip.key === "key" || chip.key === "value") {
+      const scan = structure && scanOf(chip, structure.jsonEscaped);
+      if (scan && structure) lists.push(within(scan, text, chip.key === "key" ? structure.keys : structure.values, limit));
+    } else {
+      const scan = scanOf(chip);
+      if (scan) lists.push(scan(text, limit));
+    }
+  }
+  return mergeRanges(lists, limit);
+}
+
+export function hexQueryOf(chip: FindChip): HexQuery | null {
+  switch (chip.key) {
+    case "bytes":
+      return HEX_PAIRS.test(chip.value) ? readHexQuery(chip.value) : null;
+    case "text":
+      return { mode: "text", needle: new TextEncoder().encode(chip.value) };
+    case "plain":
+      return readHexQuery(chip.value);
+    default:
+      return null;
+  }
+}
+
+export function markBytes(bytes: Uint8Array, chips: readonly FindChip[], limit = MATCH_LIMIT): Found & { as: HexQueryMode | null } {
+  const lists: Found[] = [];
+  let as: HexQueryMode | null = null;
+  for (const chip of chips) {
+    const query = hexQueryOf(chip);
+    if (!query) continue;
+    if (chip.key === "plain") as = query.mode;
+    lists.push(findBytes(bytes, query, limit));
+  }
+  return { ...mergeRanges(lists, limit), as };
 }

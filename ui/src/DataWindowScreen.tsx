@@ -4,7 +4,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent,
   type ReactNode,
   type RefObject,
@@ -26,11 +25,20 @@ import {
 } from "./decoders";
 import { decidedBy, readKind } from "./contentKind";
 import { DATA_KINDS, READ_ONLY_KINDS, type DataKind } from "./dataKind";
-import { findBytes, findMatches, readHexQuery, type HexQueryMode } from "./find";
+import { formStructure, jsonStructure, markBytes, markText, structureNames, type HexQueryMode, type Structure } from "./find";
+import {
+  findLabel,
+  hasOpenQuote,
+  keysFor,
+  parseFind,
+  refusedReason,
+  suggestFind,
+  type FindChip,
+} from "./findGrammar";
 import {
   addPairAfter,
   editPair,
-  findInPairs,
+  markPairs,
   pairsAsJson,
   parsePairs,
   removePair,
@@ -76,9 +84,9 @@ import {
   type History,
 } from "./workingCopy";
 import {
+  ChipBox,
   CopyButton,
   EditSurface,
-  Field,
   FormTable,
   HexView,
   IconButton,
@@ -88,6 +96,8 @@ import {
   Notice,
   Select,
   useCopy,
+  type ChipFace,
+  type ChipGrammar,
   type EditSurfaceHandle,
   type FoldDepth,
   type MenuItem,
@@ -122,6 +132,7 @@ const SURFACE_LANGUAGE = { json: "json", xml: "xml", html: "html", javascript: "
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const NO_MATCHES: TextRange[] = [];
+const NO_NAMES: string[] = [];
 const NO_PAIR_MATCHES = new Map<number, PairMatches>();
 const FOLD_CHOICES = [
   { id: "1", label: "1" },
@@ -155,41 +166,68 @@ interface Search {
 
 const NOTHING_FOUND: Search = { ranges: NO_MATCHES, byPair: NO_PAIR_MATCHES, total: 0, capped: false, as: null };
 
-function findCount(query: string, found: Search, current: number): string {
-  if (!query) return "";
+function findCount(hasQuery: boolean, found: Search, current: number): string {
+  if (!hasQuery) return "";
   const count = found.total ? `${current + 1} of ${found.total}${found.capped ? "+" : ""}` : "no match";
   return found.as ? `${count} · as ${found.as}` : count;
 }
 
+const faceOf = (chip: FindChip): ChipFace => ({
+  text: findLabel(chip),
+  key: chip.key === "plain" ? undefined : chip.key,
+  value: chip.key === "plain" && /\s/.test(chip.value) ? `"${chip.value}"` : chip.value,
+});
+
 function FindBar({
-  query,
-  onQuery,
+  chips,
+  onChips,
+  initialDraft,
+  onDraft,
+  kind,
+  names,
   count,
   total,
   onStep,
   onDismiss,
   box,
 }: {
-  query: string;
-  onQuery: (query: string) => void;
+  chips: readonly FindChip[];
+  onChips: (chips: FindChip[]) => void;
+  initialDraft: string;
+  onDraft: (draft: string) => void;
+  kind: DataKind;
+  names: readonly string[];
   count: string;
   total: number;
   onStep: (by: number) => void;
   onDismiss: () => void;
   box: RefObject<HTMLDivElement>;
 }) {
-  const onKeyDown = (event: ReactKeyboardEvent) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      onStep(event.shiftKey ? -1 : 1);
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      onDismiss();
-    }
-  };
+  const grammar = useMemo<ChipGrammar<FindChip>>(
+    () => ({
+      parse: parseFind,
+      suggest: (draft) => suggestFind(draft, kind, names),
+      label: faceOf,
+      hasOpenQuote,
+    }),
+    [kind, names],
+  );
   return (
-    <div ref={box} onKeyDown={onKeyDown} className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y">
-      <Field value={query} onChange={(event) => onQuery(event.target.value)} aria-label="find" placeholder="find" verbatim className="min-w-0 flex-1" />
+    <div ref={box} className="flex items-center gap-chrome-gap border-b border-hairline px-4 py-chrome-y">
+      <ChipBox
+        chips={chips}
+        onChange={onChips}
+        grammar={grammar}
+        refused={(chip) => refusedReason(chip, kind)}
+        label="find"
+        placeholder={`find — ${keysFor(kind).map((key) => `${key}:`).join(" ")} or any text`}
+        chippedPlaceholder="add to find"
+        initialDraft={initialDraft}
+        onDraft={onDraft}
+        onEnter={(shift) => onStep(shift ? -1 : 1)}
+        onEscape={onDismiss}
+        className="min-w-0 flex-1"
+      />
       <span data-testid="find-count" className="whitespace-nowrap font-ui text-chrome text-ink-mute">
         {count}
       </span>
@@ -337,7 +375,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const [selection, setSelection] = useState("");
   const [row, setRow] = useState<number | null>(null);
   const [size, setSize] = useState<ImageSize>("fit");
-  const [query, setQuery] = useState("");
+  const [chips, setChips] = useState<FindChip[]>([]);
+  const [draft, setDraft] = useState("");
   const [at, setAt] = useState(0);
   const [reveal, setReveal] = useState(0);
   const [fold, setFold] = useState<{ id: string; text: string } | null>(null);
@@ -376,23 +415,38 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const onText = !empty && kind !== "image" && kind !== "hex" && !asTable;
   const searchable = !empty && kind !== "image" && !previewing;
   const breakWith = lineBreak ?? "\n";
+  const flat = useMemo(() => surfaceText(text), [text]);
+  const drafted = useMemo(() => parseFind(draft), [draft]);
+  const marking = useMemo(
+    () => [...chips, ...("chip" in drafted ? [drafted.chip] : [])].filter((chip) => refusedReason(chip, kind) === null),
+    [chips, drafted, kind],
+  );
+  const hasQuery = chips.length > 0 || draft.trim() !== "";
+  const wantsNames = /^key:/i.test(draft.trim());
+  const scoped = marking.some((chip) => chip.key === "key" || chip.key === "value");
+  const structure = useMemo((): Structure | null => {
+    if (!(scoped || wantsNames) || (kind !== "json" && kind !== "form")) return null;
+    if (kind === "form") return formStructure(flat);
+    const parsed = parseJson(flat);
+    return parsed.ok ? jsonStructure(parsed.root) : null;
+  }, [scoped, wantsNames, kind, flat]);
+  const names = useMemo(() => (wantsNames && structure ? structureNames(structure, flat) : NO_NAMES), [wantsNames, structure, flat]);
   const found = useMemo((): Search => {
-    if (!query) return NOTHING_FOUND;
+    if (!hasQuery) return NOTHING_FOUND;
     if (onText) {
-      const { ranges, capped } = findMatches(surfaceText(text), query);
+      const { ranges, capped } = markText(flat, marking, structure);
       return { ...NOTHING_FOUND, ranges, total: ranges.length, capped };
     }
     if (asTable) {
-      const { byPair, total: count, capped } = findInPairs(pairs, query);
+      const { byPair, total: count, capped } = markPairs(pairs, marking);
       return { ...NOTHING_FOUND, byPair, total: count, capped };
     }
     if (kind === "hex" && shownBytes) {
-      const hexQuery = readHexQuery(query);
-      const { ranges, capped } = findBytes(shownBytes, hexQuery);
-      return { ...NOTHING_FOUND, ranges, total: ranges.length, capped, as: hexQuery.mode };
+      const { ranges, capped, as } = markBytes(shownBytes, marking);
+      return { ...NOTHING_FOUND, ranges, total: ranges.length, capped, as };
     }
     return NOTHING_FOUND;
-  }, [asTable, kind, onText, pairs, query, shownBytes, text]);
+  }, [asTable, hasQuery, kind, marking, onText, pairs, shownBytes, structure, flat]);
   const total = found.total;
   const current = total ? at % total : -1;
   const settledJson = useMemo(
@@ -435,13 +489,21 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     },
     [current, total],
   );
-  const search = (next: string) => {
-    setQuery(next);
+  const restartFind = () => {
     setAt(0);
     setReveal((n) => n + 1);
   };
+  const changeChips = (next: FindChip[]) => {
+    setChips(next);
+    restartFind();
+  };
+  const changeDraft = (next: string) => {
+    setDraft(next);
+    restartFind();
+  };
   const dismissFind = () => {
-    search("");
+    changeChips([]);
+    setDraft("");
     if (surfaceHandle.current) surfaceHandle.current.focus();
     else findBox.current?.querySelector("input")?.blur();
   };
@@ -931,9 +993,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
 
       {searchable && (
         <FindBar
-          query={query}
-          onQuery={search}
-          count={findCount(query, found, current)}
+          chips={chips}
+          onChips={changeChips}
+          initialDraft={draft}
+          onDraft={changeDraft}
+          kind={kind}
+          names={names}
+          count={findCount(hasQuery, found, current)}
           total={total}
           onStep={stepFind}
           onDismiss={dismissFind}

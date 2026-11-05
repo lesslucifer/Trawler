@@ -434,7 +434,7 @@ describe("the right-click menu on a text surface", () => {
   });
 });
 
-const findBox = () => screen.getByRole("textbox", { name: "find" });
+const findBox = () => screen.getByRole("combobox", { name: "find" });
 const findCount = () => screen.getByTestId("find-count");
 const doc = () => view().state.doc.toString();
 
@@ -509,7 +509,7 @@ describe("find over a 2 MB JSON document", () => {
 
   it("finds in a CRLF document at the surface's own positions", async () => {
     await open(payload({ text: '{\r\n  "a": "x",\r\n  "b": "x"\r\n}' }));
-    findFor('"x"');
+    findFor(String.raw`re:\x22x\x22`);
     expect(findCount()).toHaveTextContent("1 of 2");
     const marked = [...screen.getByTestId("data-surface").querySelectorAll(".cm-content .bg-wash-select, .cm-content .bg-wash-active")];
     expect(marked.map((m) => m.textContent)).toEqual(['"x"', '"x"']);
@@ -517,7 +517,7 @@ describe("find over a 2 MB JSON document", () => {
 
   it("is offered on every kind but an image", async () => {
     await open(payload({ bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), typeHint: "image/png", text: undefined }));
-    expect(screen.queryByRole("textbox", { name: "find" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "find" })).toBeNull();
   });
 });
 
@@ -1394,5 +1394,167 @@ describe("decode", () => {
     fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
     fireEvent.click(screen.getByRole("option", { name: "text" }));
     expect(screen.queryByTestId("decode-peek")).toBeNull();
+  });
+});
+
+describe("the find bar's chips", () => {
+  const JSON_DOC = JSON.stringify({ id: 1, user: { id: 2, name: "the user" }, tags: ["user", "id"] }, null, 2);
+  const chipsShown = () => screen.queryAllByTestId("chip");
+  const chipTexts = () => chipsShown().map((c) => c.textContent?.replace("×", ""));
+  const type = (text: string) => fireEvent.change(findBox(), { target: { value: text } });
+  const press = (k: string, init: object = {}) => fireEvent.keyDown(findBox(), { key: k, ...init });
+  const marked = () => [...screen.getByTestId("data-surface").querySelectorAll(".cm-content .bg-wash-select, .cm-content .bg-wash-active")].map((m) => m.textContent);
+  const active = () => screen.getByTestId("data-surface").querySelector(".cm-content .bg-wash-active");
+
+  it("types like the flow list's filter: Space makes a chip, Backspace removes the last, a repeat is not added", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("key:id");
+    press(" ");
+    type('"the user"');
+    press(" ");
+    expect(chipTexts()).toEqual(["key:id", '"the user"']);
+    expect(findBox()).toHaveValue("");
+    expect(findBox()).toHaveAttribute("placeholder", "add to find");
+    press("Backspace");
+    expect(chipTexts()).toEqual(["key:id"]);
+    type("key:id");
+    press(" ");
+    expect(chipTexts()).toEqual(["key:id"]);
+  });
+
+  it("the placeholder and the suggestions follow the kind's keys; key: offers the document's keys", async () => {
+    await open(payload({ text: JSON_DOC }));
+    expect(findBox()).toHaveAttribute("placeholder", "find — key: value: re: case: or any text");
+    type("v");
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["value:only inside values↵ enter"]);
+    type("key:");
+    expect(screen.getAllByRole("option").map((o) => o.textContent?.replace("↵ enter", ""))).toEqual([
+      "key:ida key in this document",
+      "key:usera key in this document",
+      "key:namea key in this document",
+      "key:tagsa key in this document",
+    ]);
+    press("Enter");
+    expect(findBox()).toHaveValue("");
+    expect(chipTexts()).toEqual(["key:id"]);
+  });
+
+  it("a draft that does not parse says why and makes no chip; a near-miss key too", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("re:(");
+    press(" ");
+    expect(screen.getByText(/not a regular expression/)).toBeInTheDocument();
+    expect(chipsShown()).toHaveLength(0);
+    type("kay:id");
+    press(" ");
+    expect(screen.getByText(/did you mean key:\?/)).toBeInTheDocument();
+    type("-id");
+    press(" ");
+    expect(screen.getByText(/nothing to exclude/)).toBeInTheDocument();
+    expect(chipsShown()).toHaveLength(0);
+  });
+
+  it("every chip and the live draft mark; the count is the sum and Enter steps in document order", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("key:id");
+    press(" ");
+    type('"user"');
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 5");
+    expect(marked()).toEqual(["id", "user", "id", "user", "user"]);
+    const order: (string | null | undefined)[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      order.push(active()?.textContent);
+      press("Enter");
+    }
+    expect(order).toEqual(["id", "user", "id", "user", "user"]);
+    expect(findCount()).toHaveTextContent("1 of 5");
+    type("tags");
+    expect(findCount()).toHaveTextContent("1 of 6");
+    press("Enter", { shiftKey: true });
+    expect(findCount()).toHaveTextContent("6 of 6");
+  });
+
+  it("switching to text refuses key: with its reason, drops its marks and keeps the other chip counting", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("key:id");
+    press(" ");
+    type("user");
+    press(" ");
+    expect(findCount()).toHaveTextContent("of 5");
+    pickKind("text");
+    const [refused, fine] = chipsShown();
+    expect(refused).toHaveAttribute("aria-invalid", "true");
+    expect(refused).toHaveAttribute("title", "key: needs JSON or form; this is text");
+    expect(fine).not.toHaveAttribute("aria-invalid");
+    expect(findCount()).toHaveTextContent("of 3");
+    pickKind("JSON");
+    expect(chipsShown()[0]).not.toHaveAttribute("aria-invalid");
+    expect(findCount()).toHaveTextContent("of 5");
+  });
+
+  it("re: and case: run on text kinds; a regex that matches empty marks nothing", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("re:i[dm]");
+    press(" ");
+    expect(findCount()).toHaveTextContent("of 3");
+    type("case:User");
+    press(" ");
+    expect(findCount()).toHaveTextContent("of 3");
+    press("Backspace");
+    press("Backspace");
+    type("re:x*");
+    expect(findCount()).toHaveTextContent("no match");
+  });
+
+  it("Esc closes the suggestions, then clears every chip and the draft", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("user");
+    press(" ");
+    type("k");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    press("Escape");
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(chipsShown()).toHaveLength(1);
+    press("Escape");
+    expect(chipsShown()).toHaveLength(0);
+    expect(findBox()).toHaveValue("");
+    expect(findCount()).toHaveTextContent("");
+  });
+
+  it("form: key: and value: mark the table's key and value cells; encoded text marks the raw parts", async () => {
+    await open(payload({ text: "scope=read&scope=write&id=scope", typeHint: FORM_HINT }));
+    type("key:scope");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 2");
+    type("value:scope");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 3");
+    expect(findBox()).toHaveAttribute("placeholder", "add to find");
+    type("key:");
+    expect(screen.getAllByRole("option").map((o) => o.textContent?.replace("↵ enter", ""))).toEqual([
+      "key:scopea key in this document",
+      "key:ida key in this document",
+    ]);
+  });
+
+  it("hex: bytes: and text: run, a plain chip keeps the guess, key: is refused", async () => {
+    const bytes = new Uint8Array(64);
+    bytes.set([0xde, 0xad], 15);
+    bytes.set(new TextEncoder().encode("GET /"), 40);
+    await open(payload({ bytes, typeHint: "application/octet-stream", text: undefined }));
+    expect(findBox()).toHaveAttribute("placeholder", "find — bytes: text: or any text");
+    type("bytes:de ad");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 1");
+    type("text:get");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 2");
+    type("zz");
+    expect(findCount()).toHaveTextContent("of 2");
+    type("key:id");
+    press(" ");
+    expect(chipsShown()[2]).toHaveAttribute("aria-invalid", "true");
+    expect(findCount()).toHaveTextContent("of 2");
   });
 });

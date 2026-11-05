@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPairAfter, editPair, findInPairs, pairsAsJson, parsePairs, removePair, repeats, sortByKey } from "./formPairs";
+import { addPairAfter, editPair, findInPairs, markPairs, pairsAsJson, parsePairs, removePair, repeats, sortByKey } from "./formPairs";
 
 const FORM = "grant_type=urn%3Aietf&scope=accounts&scope=sessions%20devices&state=&note=50%ZZ+off&flag";
 
@@ -123,5 +123,40 @@ describe("find in pairs", () => {
   it("stops at the limit and says so; an empty query finds nothing", () => {
     expect(findInPairs(pairs, "scope", 3)).toMatchObject({ total: 3, capped: true });
     expect(findInPairs(pairs, "")).toEqual({ byPair: new Map(), total: 0, capped: false });
+  });
+});
+
+describe("marking pairs with chips", () => {
+  const pairs = parsePairs("scope=read&scope=write&id=scope&Id=7");
+
+  it("key: marks keys only, value: values only, duplicate keys each count", () => {
+    const keys = markPairs(pairs, [{ key: "key", value: "scope" }]);
+    expect(keys.total).toBe(2);
+    expect([...keys.byPair.keys()]).toEqual([0, 1]);
+    const values = markPairs(pairs, [{ key: "value", value: "scope" }]);
+    expect(values.total).toBe(1);
+    expect(values.byPair.get(2)).toEqual({ first: 0, key: [], value: [{ from: 0, to: 5 }] });
+  });
+
+  it("a plain chip marks both parts; re and case run on each part", () => {
+    expect(markPairs(pairs, [{ key: "plain", value: "id" }]).total).toBe(2);
+    expect(markPairs(pairs, [{ key: "case", value: "Id" }]).total).toBe(1);
+    expect(markPairs(pairs, [{ key: "re", value: "^s" }]).total).toBe(3);
+  });
+
+  it("chips that name another kind's key mark nothing", () => {
+    expect(markPairs(pairs, [{ key: "bytes", value: "00" }, { key: "text", value: "id" }]).total).toBe(0);
+  });
+
+  it("two chips on one part merge once and number each pair's first across the union", () => {
+    const found = markPairs(pairs, [{ key: "plain", value: "scope" }, { key: "key", value: "sco" }, { key: "value", value: "write" }]);
+    expect(found.total).toBe(4);
+    expect(found.byPair.get(1)).toEqual({ first: 1, key: [{ from: 0, to: 5 }], value: [{ from: 0, to: 5 }] });
+    expect(found.byPair.get(2)?.first).toBe(3);
+  });
+
+  it("caps across chips", () => {
+    expect(markPairs(pairs, [{ key: "plain", value: "s" }, { key: "plain", value: "e" }], 4)).toMatchObject({ total: 4, capped: true });
+    expect(markPairs(pairs, [])).toEqual({ byPair: new Map(), total: 0, capped: false });
   });
 });

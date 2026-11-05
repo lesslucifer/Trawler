@@ -70,7 +70,7 @@ function hintOf(key: KeyedKey): string {
   return KEYS.find((k) => k.key === key)?.hint ?? "";
 }
 
-function edits(a: string, b: string): number {
+export function edits(a: string, b: string): number {
   let previous = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
     const row = [i];
