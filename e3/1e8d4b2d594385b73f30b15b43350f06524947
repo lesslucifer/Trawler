@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "epic inspect-window -> main"
+epic: E-INSPWIN
+branch: epic/inspect-window
+base: 00cbc1500e94c43b57626097ae8568b39748cb37
+head: e31e8d4b2d594385b73f30b15b43350f06524947
+diff_sha256: a80be8f263d2958917584149278e0e9678e66c0b65a3a586d2f367fbfcf64820
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 11
+  stage_seconds:
+    gate0: 32
+    finders: 128
+    verifiers: 103
+    total: 231
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency: { found: 4, verified: 4 }
+    altitude: { found: 7, verified: 5 }
+findings: { found: 14, verified: 12, waived: 0 }
+waivers: []
+blocking:
+  - finding: "ui/src/jsonTools.ts spliceAsJson / ui/src/decoders.ts decodeAround: inside a JSON string a decode run can begin at the letter of an escape (VALUE_CHAR excludes the backslash), so replace with decoded leaves a dangling backslash - {\"a\":\"\\bGVsbG8=\"} becomes {\"a\":\"\\lello\"}, invalid JSON"
+    severity: important
+nits: []
+verdict: FAIL
+date: 2026-11-05
