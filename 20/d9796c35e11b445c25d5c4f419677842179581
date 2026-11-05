@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU hook-sync -> epic/gate-parity"
+epic: E-GATEPAR
+wu: E-GATEPAR.W1
+branch: wu/gate-parity/hook-sync
+base: 3a2361ca57b78171d3c1c627580f16848fb5023c
+head: 20d9796c35e11b445c25d5c4f419677842179581
+diff_sha256: bf2c7bc8b423ef08cb62e75de9183e2e61f3b68f1fa8b38ad47482518aaae8b8
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 2
+  stage_seconds:
+    gate0: 99
+    total: 153
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 4, verified: 0, waived: 2 }
+waivers: []
+nits:
+  - finding: "hooks.rs: the relative-path rationale is a // comment above refusal's /// doc comment, so it is not part of the rustdoc"
+    waived: "cosmetic; the rationale sits directly over the function that enforces it and nothing observable changes"
+  - finding: "hooks.rs non_executable: DirEntry::metadata does not follow symlinks, so a symlinked hook to a non-executable target is not flagged"
+    waived: "every tracked hook on every branch is a regular file (git ls-tree); no symlinked hook exists to miss"
+verdict: PASS
+date: 2026-11-05
