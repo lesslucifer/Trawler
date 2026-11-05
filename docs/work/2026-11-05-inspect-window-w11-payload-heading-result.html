@@ -51,6 +51,10 @@
           integration tests into one suite binary per crate</td></tr>
         <tr><td>the year fix in <code>civil</code> and <code>wallClock</code>'s offset</td><td>also the era in the wall
           clock's shown date</td><td>the first fix left <code>0001-02-29</code> on screen for year 0</td></tr>
+        <tr><td>—</td><td>a negative local year written <code>-0001</code></td><td>review round 3 (W11's own review and the epic-scope
+          review over the same code, run before asking for the sign-off): a year-0 instant shown in a zone behind UTC is year -1,
+          which the era fix made reachable and <code>pad</code> wrote <code>00-1</code>; its other three importants were
+          refuted (the screen's size, a second URI split, re-indent inside <code>&lt;pre&gt;</code>)</td></tr>
       </tbody>
     </table>
 
@@ -59,14 +63,14 @@
       <thead><tr><th>Kind</th><th>Pointer</th></tr></thead>
       <tbody>
         <tr><td>unit</td><td><code>body.test.ts</code> (heading, CONNECT) · <code>dataWindow.test.ts</code> (heading round
-          trip, malformed dropped, <code>queryCount</code>) · <code>timeDecoder.test.ts</code> (years below 100) ·
+          trip, malformed dropped, <code>queryCount</code>) · <code>timeDecoder.test.ts</code> (years below 100, a year-0 instant in New York reads <code>-0001-12-31 19:03:58 -04:56</code>) ·
           <code>data_window.rs</code> <code>a_heading_is_relayed_unread</code> — each red before its fix</td></tr>
         <tr><td>integration</td><td><code>DataWindowScreen.test.tsx</code> (the header from a heading; the title whole
           without one) · <code>BodyViewer.test.tsx</code> (the payload the pane hands) ·
           <code>ui/src-tauri/tests/suite/data_window.rs</code>
           <code>the_opener_s_heading_reaches_the_data_window_as_it_was_framed</code></td></tr>
-        <tr><td>suite</td><td>gate0 green on the resynced tree, 1217 tests; vitest 94 files, 2685 tests</td></tr>
-        <tr><td>e2e</td><td id="e2e"><code>cargo xtask ui e2e</code>: at <code>2db49fec</code> J4 failed again on the lookup race (its second time in four runs) — fixed in <code>08ea6cf4</code>; green there, and green on the resynced tip <code>0faaca05</code>: attached suite 14 of 14 spec files, owned 1 of 1</td></tr>
+        <tr><td>suite</td><td>gate0 green on the resynced tree, 1217 tests; vitest 94 files, 2686 tests at the final code</td></tr>
+        <tr><td>e2e</td><td id="e2e"><code>cargo xtask ui e2e</code>: at <code>2db49fec</code> J4 failed again on the lookup race (its second time in four runs) — fixed in <code>08ea6cf4</code>; green there, green on the resynced tip <code>0faaca05</code>, and green on the final code <code>cd27aa15</code>: attached suite 14 of 14 spec files, owned 1 of 1</td></tr>
         <tr><td>origin</td><td>the epic review's round-2 FAIL note on <code>c90ec373</code></td></tr>
       </tbody>
     </table>
