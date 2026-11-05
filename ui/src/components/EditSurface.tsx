@@ -11,6 +11,8 @@ import {
   unfoldAll,
   unfoldEffect,
 } from "@codemirror/language";
+import { css } from "@codemirror/lang-css";
+import { javascript } from "@codemirror/lang-javascript";
 import { json } from "@codemirror/lang-json";
 import { xml } from "@codemirror/lang-xml";
 import { standardKeymap } from "@codemirror/commands";
@@ -27,7 +29,7 @@ import {
 import { Decoration, EditorView, keymap, lineNumbers, WidgetType, type DecorationSet } from "@codemirror/view";
 import { warpHighlight, warpTheme } from "./warpTheme";
 
-export type SurfaceLanguage = "json" | "xml" | "plain";
+export type SurfaceLanguage = "json" | "xml" | "javascript" | "css" | "plain";
 export type FoldDepth = number | "all" | "none";
 
 export interface TextRange {
@@ -137,6 +139,8 @@ const surfaceTheme = EditorView.theme({
 function language(choice: SurfaceLanguage): Extension {
   if (choice === "json") return json();
   if (choice === "xml") return xml();
+  if (choice === "javascript") return javascript();
+  if (choice === "css") return css();
   return [];
 }
 

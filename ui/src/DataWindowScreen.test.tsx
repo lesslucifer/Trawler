@@ -6,6 +6,7 @@ import * as files from "./body";
 import { DataWindowScreen } from "./DataWindowScreen";
 import type { DataPayload } from "./dataWindow";
 import type { FlowView } from "./api";
+import { loadBeautifier } from "./codeTools";
 import { headersPayload } from "./flowPayload";
 import { systemZone, time, type TimeReading } from "./timeDecoder";
 
@@ -865,6 +866,72 @@ describe("XML re-indent", () => {
   });
 });
 
+
+describe("javascript and css", () => {
+  const js = "function f(a){if(a){return a/2}return 1}\nlet total=f(4)";
+  const css = "@media (min-width:1px){a{color:red}b{margin:0}}";
+
+  async function openCode(text: string, typeHint: string) {
+    await open(payload({ text, typeHint }));
+    await act(async () => {
+      await loadBeautifier();
+    });
+  }
+
+  it("opens each under its own kind, highlighted, and find marks as on text", async () => {
+    await openCode(js, "application/javascript");
+    expect(screen.getByRole("button", { name: "treat the data as" })).toHaveTextContent("JavaScript");
+    expect(screen.getByTestId("data-surface").querySelector(".cm-line [class]")).not.toBeNull();
+    findFor("total");
+    expect(findCount()).toHaveTextContent("1");
+    cleanup();
+    await openCode(css, "text/css");
+    expect(screen.getByRole("button", { name: "treat the data as" })).toHaveTextContent("CSS");
+  });
+
+  it("reformat is a named step from ⋯ and from ⌥⇧F; undo walks it; restore returns the bytes", async () => {
+    await openCode(js, "application/javascript");
+    fireEvent.click(moreItem(/^reformat/));
+    expect(doc().split("\n").length).toBeGreaterThan(5);
+    expect(doc().replace(/\s/g, "")).toBe(js.replace(/\s/g, ""));
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    key("z");
+    expect(doc()).toBe(js);
+    fireEvent.keyDown(document.body, { key: "Ï", code: "KeyF", altKey: true, shiftKey: true });
+    expect(doc().split("\n").length).toBeGreaterThan(5);
+    fireEvent.click(moreItem(/^restore original/));
+    expect(doc()).toBe(js);
+  });
+
+  it("reformats css the same way and keeps CRLF", async () => {
+    await openCode("a{color:red}\r\nb{margin:0}", "text/css");
+    fireEvent.click(moreItem(/^reformat/));
+    expect(doc()).toContain("a {\n");
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringMatching(/^a \{\r\n {2}color: red\r\n\}/));
+  });
+
+  it("is never offered on a read-only text", async () => {
+    await openCode("a=1;\r\nb=2;\n", "application/javascript");
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.queryByRole("menuitem", { name: /^reformat/ })).toBeNull();
+    expect(screen.getByRole("group", { name: "fold to" })).toBeInTheDocument();
+  });
+
+  it("a text under a javascript label that is only whitespace has nothing to reformat", async () => {
+    await openCode("  \n ", "application/javascript");
+    const item = moreItem(/^reformat/);
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveTextContent("there is nothing to reformat");
+  });
+
+  it("opens and reformats a 1 MiB minified bundle", async () => {
+    const bundle = "function f(a){return a+1}".repeat(40_000);
+    await openCode(bundle, "application/javascript");
+    fireEvent.click(moreItem(/^reformat/));
+    expect(view().state.doc.length).toBeGreaterThan(bundle.length);
+  });
+});
 
 describe("decode", () => {
   const b64url = (text: string) => btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
