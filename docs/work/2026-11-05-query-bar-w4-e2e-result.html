@@ -67,13 +67,25 @@
       <tr><th>Layer</th><th>Where</th></tr>
       <tr><td>e2e</td><td><code>ui/e2e/specs/query-bar.spec.ts</code> (10 cases) ·
         <code>query-bar-relaunched.spec.ts</code> (2) · ported <code>flows.spec.ts</code> (26) and
-        <code>onboarding.spec.ts</code> (12). <code>cargo xtask ui e2e</code>: attached suite 13 of 13 spec files,
-        owned suite 1 of 1</td></tr>
+        <code>onboarding.spec.ts</code> (12). <code>cargo xtask ui e2e</code> at <code>0d38ebc1</code>: attached
+        suite 13 of 13 spec files, owned suite 1 of 1. At the fixed tip: the query-bar pair and the flows spec green
+        in two runs; 10 of 13 spec files, with the three red ones outside this WU (below)</td></tr>
       <tr><td>integration</td><td>waived: the WU changes only e2e specs and docs. The bar's bounded contracts are
         W3's <code>App.test.tsx</code> and W1's listing tests</td></tr>
       <tr><td>unit</td><td>waived: no code outside <code>ui/e2e</code> changes</td></tr>
       <tr><td>runs</td><td>run 1: the clear case expected the wrong empty copy, and the save case typed quotes the
         driver drops. Run 2: only the quotes remained. Run 3 green</td></tr>
+      <tr><td>review round 1</td><td><code>cr/v5</code> FAIL on <code>0d38ebc1</code>: one verified important.
+        The export case could read <code>?status=5xx</code> before the two-chip listing was sent, because both
+        queries list the same rows. Fixed in <code>c9b47cef</code>: the case now waits for the window's last listing
+        to be the two-chip query. The host and exact-code cases in <code>flows.spec.ts</code> now wait for their own
+        listing</td></tr>
+      <tr><td>runs 4–5 (fixed tip)</td><td>red, and reproducible, in <code>sticky-relaunched</code>,
+        <code>sticky-broken</code> and <code>layout-relaunched</code>. The Settings window and the main window reopen
+        at their default rects, not the saved ones. The other two failures cascade from that (the quit after it times
+        out, so the corrupt prefs are never written). Those specs, their helpers and the app binary are byte-identical
+        to green run 3, and only one display was online at runs 4–5. The owner chose to continue with this recorded
+        rather than block the WU on it</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
@@ -89,7 +101,8 @@
 
     <h2 id="follow-ups">Follow-ups</h2>
     <p data-item="follow-ups" data-c="follow-ups">
-      The epic close: the epic result report, the epic-scope review against <code>main</code>, and archiving the
+      Rerun <code>cargo xtask ui e2e</code> with the usual display setup before the epic gate. If the three geometry
+      specs stay red, the window-restore monitor check is the place to look. The epic close: the epic result report, the epic-scope review against <code>main</code>, and archiving the
       epic's T3 docs. Roadmap: header and body search, duration and size, <code>type:</code> from types seen, and
       saved queries on the chips.
     </p>
