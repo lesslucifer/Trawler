@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aebfcf39f34851f0dfae655" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN.W8 plan: time decoder</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN.W8 — time decoder</h1>
+      <p>Decode a timestamp or a date-time string the same way W6 decodes a token: the peek under it shows the instant
+        in the user's local time, beside UTC and how long ago or ahead it is.</p>
+      <div class="meta">v2 (owner's try-out: zone-less and date-only read) · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W8</span> · branch
+        <code>wu/inspect-window/time-decoder</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a> ·
+        extends <a href="2026-11-04-inspect-window-w6-decoders-plan.html">W6</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      In the data window, <em>decode</em> (right-click or ⌘⇧D) on a Unix timestamp or a date-time string with a zone
+      reads it as <em>time</em>: the peek shows the instant in the user's local time and zone, in UTC, and how long ago or
+      ahead it is, and says what it was read as; a date-time that names no zone or a date off the calendar says why; ⇄
+      replaces the value with the local time as one undoable step and ↗ opens it as text.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-INSPWIN · UC-9 decoder rows · epic expected row 8 (time) · Q13 · extends W6's <code>decoders.ts</code>, the
+      DecodePeek and <code>decodeAround</code>; no new component, no new menu row or key.
+    </p>
+
+    <h2 id="inputs">What reads as a time</h2>
+    <table data-c="inputs">
+      <thead><tr><th>Input</th><th>Example</th><th>Read as</th></tr></thead>
+      <tbody>
+        <tr><td>9–10 digits, optional <code>.fraction</code></td><td><code>1793851200</code>,
+          <code>1793851200.25</code></td><td>Unix time, seconds</td></tr>
+        <tr><td>12–13 digits</td><td><code>1793851200250</code></td><td>Unix time, milliseconds</td></tr>
+        <tr><td>15–16 digits</td><td><code>1793851200250000</code></td><td>Unix time, microseconds</td></tr>
+        <tr><td>18–19 digits</td><td><code>1793851200250000000</code></td><td>Unix time, nanoseconds</td></tr>
+        <tr><td>ISO 8601 / RFC 3339 with <code>Z</code> or an offset; <code>T</code> or a space; seconds and a fraction
+          optional</td><td><code>2026-11-05T04:00:00.25Z</code>, <code>2026-11-05 11:00+07:00</code></td><td>ISO 8601</td></tr>
+        <tr><td>HTTP date (RFC 9110) and the cookie form with dashes</td><td><code>Thu, 05 Nov 2026 04:00:00 GMT</code>,
+          <code>Thu, 05-Nov-2026 04:00:00 GMT</code></td><td>HTTP date</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shape">What it builds</h2>
+    <div class="diagram" data-c="shape-diagram">
+      <pre class="mermaid">
+flowchart LR
+  P["right-click · ⌘⇧D"] --> A["decodeAround: a date-time spanning the pointer comes first"]
+  A --> G["guessDecoder: digits of a unit's length or a date-time shape → time"]
+  G --> T["time(input, zone, now): a reading or a reason"]
+  T --> K["DecodePeek: local · UTC · read as · relative"]
+  K -- "⇄" --> R["the local time, one step (a bare JSON number becomes a quoted string)"]
+  K -- "↗" --> O["text/plain data window"]
+      </pre>
+      <div class="caption">The zone and now are parameters (the system's by default), so every reading is testable at a
+        fixed zone and instant.</div>
+    </div>
+
+    <table data-c="pieces">
+      <thead><tr><th>Piece</th><th>Where</th><th>Contract</th></tr></thead>
+      <tbody>
+        <tr><td>logic</td><td><code>timeDecoder.ts</code> (new)</td><td><code>time(input, zone?, now?)</code>: the inputs
+          above and a date alone to <code>{kind: "time", local, zone, utc, readAs, relative, text, bytes}</code> or a reason; the fraction
+          kept to its significant digits; a date off the calendar, an hour past 23, a zone-less date-time each with its reason;
+          <code>TIME_SHAPE</code> finds a date-time inside a line (it holds spaces, colons and commas, which split W6's
+          value runs)</td></tr>
+        <tr><td>decoders</td><td><code>decoders.ts</code></td><td><code>time</code> joins the decoders (label
+          <em>time</em>); the guess picks it for a timestamp's digit count or a date-time shape; <code>decodeAround</code>
+          tries a date-time spanning the range first and keeps its answer, a reason included, instead of reading its
+          digits as base64; ⇄ gives the local time, ↗ opens it as <code>text/plain</code></td></tr>
+        <tr><td>screen</td><td><code>DataWindowScreen.tsx</code></td><td>DecodePeek's time body: <em>local ·
+          &lt;zone&gt;</em>, <em>UTC</em>, <em>read as &lt;what&gt; · &lt;relative&gt;</em> as labelled mono lines; ⇄ is
+          <em>replace with local time</em>; the reason notice names time among the decoders; in JSON a value outside a
+          string is replaced as a quoted string, one inside a string as its content</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="choices">Choices this plan makes</h2>
+    <table data-c="choices">
+      <thead><tr><th>Choice</th><th>Taken</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>a date-time that names no zone</td><td>read as UTC: <em>ISO 8601, no zone: read as UTC</em></td><td>owner's
+          try-out, 2026-11-05: the refusal first planned left API timestamps unread; the read-as line says the zone was
+          assumed</td></tr>
+        <tr><td>a date with no time (<code>2026-01-14</code>)</td><td>read as the calendar day:
+          <em>2026-01-14, Wednesday</em>, <em>ISO 8601 date · 10 months ago</em>, no local or UTC line</td><td>owner's
+          try-out: it read its year as base64; a date is a day, not an instant, so moving it across zones would shift it
+          by one</td></tr>
+        <tr><td>a run of digits that is a timestamp and valid base64</td><td>time wins, no switch</td><td>base64 of ten
+          digits is binary with no signature, which never reads well (W6's rule); W6 dropped the switch</td></tr>
+        <tr><td>timestamps before 1973 or past 2286 in seconds</td><td>not read as time (their digit counts are not a
+          unit's)</td><td>the digit count is the only unit signal; a short number is far likelier an id than a date</td></tr>
+        <tr><td>local time format</td><td><code>2026-11-05 11:00:00.25 +07:00</code></td><td>sortable, the offset
+          explicit, the zone name beside it in the label</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <thead><tr><th>State</th><th>Expected</th></tr></thead>
+      <tbody>
+        <tr><td>right-click on <code>1793851200</code> in <code>{"exp": 1793851200}</code></td><td>the number selected; a
+          peek <em>decoded as time</em>: <em>local · &lt;zone&gt;</em> the local time, <em>UTC</em>
+          <code>2026-11-05 04:00:00Z</code>, <em>read as Unix time, seconds · now</em></td></tr>
+        <tr><td>⇄ on it</td><td><code>{"exp": "2026-11-05 11:00:00 +07:00"}</code> (at +07:00) as one step
+          <em>replaced the selection with its decoded form</em>; undo restores the number</td></tr>
+        <tr><td>right-click inside <code>"2026-11-05T04:00:00Z"</code>, nothing selected</td><td>the whole date-time
+          selected (not the run around the pointer) and read as ISO 8601</td></tr>
+        <tr><td>a form row <code>expires=Thu, 05 Nov 2026 04:00:00 GMT</code>, ⌘⇧D</td><td>read as HTTP date; ⇄ writes the
+          local time into the value</td></tr>
+        <tr><td><code>2026-11-05T04:00:00</code></td><td>read as UTC: <em>read as ISO 8601, no zone: read as UTC</em></td></tr>
+        <tr><td><code>"2026-01-14"</code>, right-click on it</td><td>the date selected; <em>date</em>
+          <code>2026-01-14, Wednesday</code>, <em>read as ISO 8601 date · 10 months ago</em></td></tr>
+        <tr><td><code>2026-02-30T04:00:00Z</code></td><td>the reason: <em>2026-02-30 is not a day of the calendar</em></td></tr>
+        <tr><td>a JWT, base64 or URL value</td><td>reads exactly as in W6</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <thead><tr><th>Level</th><th>Test</th></tr></thead>
+      <tbody>
+        <tr><td>unit (TS)</td><td><code>timeDecoder.test.ts</code>, every case at a fixed zone and now: each unit by digit
+          count with its fraction kept; 11 and 14 digits not a time; ISO with Z, ±HH:MM, ±HHMM, a space, no seconds, a
+          fraction past ms; HTTP and cookie dates; a zone-less date-time, Feb 30, hour 24, an unknown month — each with
+          its reason; local across a DST edge (America/New_York); relative ago and ahead; <code>TIME_SHAPE</code> over a
+          line. <code>decoders.test.ts</code>: the guess for each shape; <code>decode</code> prefers time over base64
+          for a timestamp; <code>decodeAround</code> finds a date-time from a pointer in its middle and keeps a
+          zone-less reason; ⇄ and ↗ give the local time as text; W6's cases unchanged</td></tr>
+        <tr><td>integration</td><td><code>DataWindowScreen.test.tsx</code>: a JSON number decodes as time from the
+          right-click, its peek shows local, UTC and read-as, ⇄ quotes it as one step and undo restores it; a date-time
+          string replaced inside its quotes; a form row's HTTP date decodes by ⌘⇧D; a zone-less date-time shows its
+          reason and changes nothing</td></tr>
+        <tr><td>e2e</td><td>waived: W7's J3 decodes the decoded payload's <code>exp</code> through the real windows</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -11,7 +11,7 @@
       <h1>E-INSPWIN — epic plan</h1>
       <p>A data window: hand it a piece of data and it gives the user room and tools to read, find in,
         reformat, decode and freely edit a working copy — the original always one click away.</p>
-      <div class="meta">v5, owner rulings recorded; Q4 re-ruled 2026-11-04 (filter deferred); Q11 re-ruled 2026-11-04 (one shared record) · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
+      <div class="meta">v6, owner rulings recorded; Q4 re-ruled 2026-11-04 (filter deferred); Q11 re-ruled 2026-11-04 (one shared record); W8 added 2026-11-05 (time decoder, Q13) · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
         · WU branches <code>wu/inspect-window/&lt;slug&gt;</code></div>
     </div>
   </header>
@@ -81,7 +81,7 @@ flowchart LR
       <tr><td>Image</td><td>Actual size / fit, zoom</td><td>—</td><td>—</td><td>—</td><td>Save</td></tr>
       <tr><td><em>any text kind</em></td><td colspan="5"><strong>Decoders</strong> on a selection or a JSON/form value: base64
         (standard and URL-safe, padding optional), URL-encoding, JWT (header + payload as JSON, signature shown, never
-        verified). Result shown in a peek under the selection, the decoder guessed and switchable; <em>replace with decoded</em> applies it to the working copy;
+        verified), and a time — a Unix timestamp or a date-time string read in local time (W8). Result shown in a peek under the selection, the decoder guessed and switchable; <em>replace with decoded</em> applies it to the working copy;
         <em>open in data window</em> hands the decoded bytes to a new window. An undecodable input says why.</td></tr>
     </table>
 
@@ -116,7 +116,7 @@ flowchart LR
           raise the <em>modified</em> marker; <em>restore original</em> returns the exact original bytes.</td></tr>
         <tr><td>6</td><td>A form payload over 128&nbsp;KiB shows every pair whole; find, sort, edit and copy as JSON work.</td></tr>
         <tr><td>7</td><td>Text, XML and hex payloads past the pane's caps render whole with find.</td></tr>
-        <tr><td>8</td><td>A JWT, base64 or URL-encoded selection decodes beside it; replace and open-in-window both work; a
+        <tr><td>8</td><td>A JWT, base64 or URL-encoded selection, or a timestamp / date-time read in local time, decodes beside it; replace and open-in-window both work; a
           malformed input says why in the user's words.</td></tr>
         <tr><td>9</td><td>Copy/save <em>original</em> yields the handed-in bytes regardless of any edit; copy and save yield
           exactly what is on screen.</td></tr>
@@ -176,6 +176,8 @@ flowchart LR
   W4 --> W7["W7 · e2e + distillation"]
   W5 --> W7
   W6 --> W7
+  W6 --> W8["W8 · build: time decoder"]
+  W8 --> W7
       </pre>
       <div class="caption">W4–W6 are independent once W3's working-copy model and surfaces exist; W1 touches no rendered file, so it cites no design.</div>
     </div>
@@ -283,6 +285,22 @@ flowchart LR
         </table>
       </div>
 
+      <div data-wu="E-INSPWIN.W8">
+        <h3 id="w8">E-INSPWIN.W8 — build: time decoder</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A fourth decoder, <em>time</em>, on W6's peek: a Unix
+            timestamp (seconds, ms, µs or ns, told apart by digit count) or a date-time string with a zone (ISO 8601 /
+            RFC 3339, HTTP and cookie dates) read as the instant in the user's local time, beside UTC and how long ago or
+            ahead; a date-time with no zone says why it cannot move. ⇄ replaces with the local time, ↗ opens it as text.
+            Plan: <a href="2026-11-05-inspect-window-w8-time-decoder-plan.html">W8 plan</a>.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-9 decoder rows; expected row 8 (time)</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Row 8 (time) holds. Unit: each input form over valid,
+            out-of-calendar and zone-less inputs, the unit by digit count, fractions kept to their digits, a fixed zone
+            and a fixed now; a time found around the pointer inside a date-time string.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W6</td></tr>
+        </table>
+      </div>
+
       <div data-wu="E-INSPWIN.W7">
         <h3 id="w7">E-INSPWIN.W7 — e2e and distillation</h3>
         <table>
@@ -290,7 +308,7 @@ flowchart LR
             windows (journeys below), added to the launcher's spec list; the T2 updates below.</td></tr>
           <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E; UC-9, UC-5 records</td></tr>
           <tr><th>Expected outcome</th><td data-item="wu-expected">e2e green over all journeys; T2 current; plan ready to archive.</td></tr>
-          <tr><th>Dependencies</th><td data-item="wu-deps">W4, W5, W6</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W4, W5, W6, W8</td></tr>
         </table>
       </div>
 
@@ -308,7 +326,8 @@ flowchart LR
         <tr><td>J2 · work a JSON document</td><td>Find reports the seeded count and steps; sorted keys + a hand edit →
           <em>modified</em>; copy = edited text, copy <em>original</em> = seeded bytes; undo twice → unmodified; edit again → <em>restore original</em>.</td></tr>
         <tr><td>J3 · a long form and a token</td><td>Seeded 300&nbsp;KiB form: last pair present and whole; find one key;
-          right-click its JWT value → decode → header + payload JSON; open the decoded payload in a new data window.</td></tr>
+          right-click its JWT value → decode → header + payload JSON; open the decoded payload in a new data window; right-click
+          the decoded payload's <code>exp</code> in that window → decode → the local time.</td></tr>
         <tr><td>J4 · no write-back</td><td>After edits, the pane still shows the captured body, <code>GET
           /flows/{id}/response/body</code> is unchanged; close the data window → main window open, nothing asked.</td></tr>
       </table>
@@ -343,6 +362,7 @@ flowchart LR
         <tr><td>Q10</td><td>E-ONEAPP and the core address?</td><td>decided</td><td>Moot: pure front end, the window never talks to the core.</td></tr>
         <tr><td>Q11</td><td>Remember window size and position?</td><td>decided</td><td>Re-ruled by the owner on 2026-11-04 (W3): yes, through E-PANELS' <code>windows.json</code>, as one record shared by every data window — whichever data window moved or resized last writes it, and a new data window opens there. It was a record per window, deferred until E-PANELS landed.</td></tr>
         <tr><td>Q12</td><td>Do edits survive closing the window?</td><td>decided</td><td>No — the working copy lives as long as its window; closing a modified window asks nothing (scratch by definition).</td></tr>
+        <tr><td>Q13</td><td>Decode timestamps and date-time strings to local time?</td><td>decided</td><td>Yes, added by the owner on 2026-11-05 as W8, on W6's peek. A date-time that names no zone reads as UTC and says so; a date alone reads as its calendar day (owner's try-out).</td></tr>
       </table>
     </div>
 

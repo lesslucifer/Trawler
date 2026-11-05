@@ -45,6 +45,7 @@ import {
   INDENTS,
   nodeAt,
   parseJson,
+  spliceAsJson,
   pathText,
   reformatJson,
   SORT_STEP,
@@ -117,6 +118,12 @@ const FOLD_CHOICES = [
 const NEEDS_JSON = "needs valid JSON";
 const REPLACED_SELECTION = "replaced the selection with its decoded form";
 const SHOWN_ENCODED = "shown encoded";
+const REPLACE_LABEL: Record<DecoderId, string> = {
+  jwt: "replace with the payload",
+  time: "replace with local time",
+  base64: "replace with decoded",
+  url: "replace with decoded",
+};
 
 interface Search {
   ranges: TextRange[];
@@ -198,7 +205,7 @@ function DecodePeek({
     if (peeked.decoder === null) {
       return (
         <Notice tone="warn" detail={`the ${from} is left as it was`}>
-          {`not base64, URL-encoded or a JWT: ${peeked.reason}`}
+          {`not base64, URL-encoded, a JWT or a time: ${peeked.reason}`}
         </Notice>
       );
     }
@@ -217,6 +224,26 @@ function DecodePeek({
         </div>
       );
     }
+    if (reading.kind === "time") {
+      const line = (text: string, testId: string) => (
+        <span data-testid={testId} className="break-all font-mono text-body text-ink-body">
+          {text}
+        </span>
+      );
+      return (
+        <div className="flex flex-col gap-2">
+          {reading.utc === null ? (
+            block("date", line(reading.local, "local-time"))
+          ) : (
+            <>
+              {block(`local · ${reading.zone}`, line(reading.local, "local-time"))}
+              {block("UTC", line(reading.utc, "utc-time"))}
+            </>
+          )}
+          {block("read as", line(`${reading.readAs} · ${reading.relative}`, "read-as"))}
+        </div>
+      );
+    }
     if (reading.kind === "binary") {
       return (
         <Notice detail="binary cannot replace text in place; ↗ opens it as data of its own">
@@ -232,13 +259,7 @@ function DecodePeek({
         <span className="text-label uppercase tracking-label text-ink-mute">{peeked.decoder ? "decoded as" : "decode"}</span>
         {peeked.decoder && <span className="text-control text-ink">{DECODER_LABEL[peeked.decoder]}</span>}
         <span className="ml-auto flex items-center gap-chrome-gap">
-          {onReplace && (
-            <IconButton
-              glyph="replace"
-              label={peeked.decoder === "jwt" ? "replace with the payload" : "replace with decoded"}
-              onClick={onReplace}
-            />
-          )}
+          {onReplace && peeked.decoder && <IconButton glyph="replace" label={REPLACE_LABEL[peeked.decoder]} onClick={onReplace} />}
           {peeked.decoder && (
             <IconButton glyph="window" label="open in data window" onClick={() => onOpen(peeked.decoder, peeked.reading)} />
           )}
@@ -460,8 +481,9 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       return;
     }
     const surface = surfaceText(text);
-    const insert = kind === "json" ? JSON.stringify(value).slice(1, -1) : surfaceText(value);
-    const spliced = surface.slice(0, origin.range.from) + insert + surface.slice(origin.range.to);
+    const { from, to } = origin.range;
+    const spliced =
+      kind === "json" ? spliceAsJson(surface, origin.range, value) : surface.slice(0, from) + surfaceText(value) + surface.slice(to);
     step(spliced.replace(/\n/g, breakWith), REPLACED_SELECTION);
   };
   const openDecoded = (decoder: DecoderId, reading: Decoded) => {
