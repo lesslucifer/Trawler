@@ -1,0 +1,24 @@
+schema: cr/v5
+scope: "standalone commit 0cbb927f on epic/inspect-window-v2 (the epic review's fix)"
+branch: epic/inspect-window-v2
+base: 0b8a8ebf9176403ec5ba7fe7756f1d7963c1767d
+head: 0cbb927fb21bc4cd282a0cfc9695addb55c178e9
+diff_sha256: a905d0ff5fc74aaf1605e9c40e9eb0469e4de6ed872ff13d72c3dc61f8cf67a1
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
