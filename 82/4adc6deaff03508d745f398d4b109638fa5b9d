@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: HEAD
+tests:
+  unit: { count: 46, covers: "a close decided on a fallback reading with nothing to ask closes and leaves the stored switch to the shell (no quit_app; fails on 72472a37), while a quit answered in DEC-64's dialog after a fallback still ends in quit_app, never a destroy. 61 of 61" }
