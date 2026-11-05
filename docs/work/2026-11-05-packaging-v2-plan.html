@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PKG2 — Trawler ships on macOS, Windows and Linux, and updates itself</h1>
       <p>A <code>v*</code> tag builds every platform's installer in GitHub Actions. A user installs one, and later gets each new version from inside the app.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T3 epic plan · <span class="badge id">E-PKG2</span> · branch <code>epic/packaging-v2</code> off <code>main</code> <code>398f6dfe</code> · WU branches <code>wu/packaging-v2/&lt;slug&gt;</code> · carried from E-PKG's plan v4 (archived) with every owner ruling · lands after E-BGSVC · <span class="badge approval">Q20–Q22 open</span></div>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 epic plan · <span class="badge id">E-PKG2</span> · branch <code>epic/packaging-v2</code> off <code>main</code> <code>398f6dfe</code> · WU branches <code>wu/packaging-v2/&lt;slug&gt;</code> · carried from E-PKG's plan v4 (archived) with every owner ruling · lands after E-BGSVC · Q20–Q22 ruled 2026-11-05</div>
     </div>
   </header>
   <main>
@@ -63,7 +63,7 @@ flowchart LR
       <tbody>
         <tr><td>macOS 11+</td><td><code>universal-apple-darwin</code></td><td><code>.dmg</code> · <code>.app.tar.gz</code></td><td>ad-hoc signed · Gatekeeper prompt → <em>Privacy &amp; Security → Open Anyway</em></td><td>yes</td><td>this Mac</td></tr>
         <tr><td>Windows 10/11</td><td><code>x86_64</code> · <code>aarch64-pc-windows-msvc</code></td><td><code>.msi</code> · <code>-setup.exe</code></td><td>SmartScreen → <em>More info → Run anyway</em></td><td>yes (NSIS · msi)</td><td>Windows 11 ARM VM</td></tr>
-        <tr><td>Linux (glibc, WebKitGTK 4.1)</td><td><code>x86_64</code> · <code>aarch64-unknown-linux-gnu</code></td><td><code>.deb</code> · <code>.rpm</code> · <code>.AppImage</code></td><td>none</td><td>AppImage only. deb/rpm open the release page.</td><td>Ubuntu 26.04 arm64 VM</td></tr>
+        <tr><td>Linux (glibc, WebKitGTK 4.1)</td><td><code>x86_64</code> · <code>aarch64-unknown-linux-gnu</code></td><td><code>.deb</code> · <code>.rpm</code> · <code>.AppImage</code></td><td>none</td><td>yes (AppImage · deb · rpm, Q20).</td><td>Ubuntu 26.04 arm64 VM</td></tr>
       </tbody>
     </table>
 
@@ -73,7 +73,7 @@ flowchart LR
         <thead><tr><th>UC</th><th>Change</th><th>Contract after this epic</th></tr></thead>
         <tbody>
           <tr><td><span class="badge id">UC-INSTALL</span></td><td>new</td><td>A user installs Trawler from the published release with their OS's own artifact. The first open shows that OS's prompt for an unsigned app, and the release notes name the one way past it. From then on the app behaves as <code>cargo run</code> does under <span class="badge id">UC-4</span>: one launch, an owned core, and the CA in the platform's app data directory (<code>dev.trawler.app</code>).</td></tr>
-          <tr><td><span class="badge id">UC-UPDATE</span></td><td>new</td><td>The app checks the release channel at launch (at most once a day) and on <em>Check for Updates…</em>. For a newer version, a native dialog names the old and new versions and asks first. It never installs silently. Installing verifies the update's signature, goes through the <a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a> quit check, says that the captured list is cleared, replaces the app and relaunches. The CA and settings survive. On a deb or rpm install the dialog opens the release page instead. A bad signature or an unreachable channel changes nothing, and the app says why only when the user asked to check.</td></tr>
+          <tr><td><span class="badge id">UC-UPDATE</span></td><td>new</td><td>The app checks the release channel at launch (at most once a day) and on <em>Check for Updates…</em>. For a newer version, a native dialog names the old and new versions and asks first. It never installs silently. Installing verifies the update's signature, goes through the <a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a> quit check, says that the captured list is cleared, replaces the app and relaunches. The CA and settings survive. A deb or rpm install updates in place through the desktop's password prompt (Q20). A bad signature or an unreachable channel changes nothing, and the app says why only when the user asked to check.</td></tr>
           <tr><td><span class="badge id">UC-4</span></td><td>unchanged in contract · now true on Windows and Linux</td><td>One launch, a supervised core, attach mode and single instance, as DEC-69 states, on each platform.</td></tr>
           <tr><td><span class="badge id">UC-ONBOARD</span></td><td>unchanged in contract</td><td>The quit check gains a caller (the update restart). The existing Windows and Linux branches of <em>This machine</em> setup are run for real for the first time (W2).</td></tr>
           <tr><td>E-BGSVC's UCs</td><td>packaged</td><td>Whatever E-BGSVC adds (a core with no window, launch at login, a menu-bar or tray icon) works from the installed app on each platform and survives an update (W4).</td></tr>
@@ -91,7 +91,7 @@ flowchart LR
           <tr><td>3</td><td>The CI workflow on a push to <code>main</code>, or dispatched on a branch</td><td>The core and app tests and clippy are green on macOS, Ubuntu and Windows.</td></tr>
           <tr><td>4</td><td>A pushed tag <code>v0.1.0-rc.1</code> whose workspace version is <code>0.1.0-rc.1</code></td><td>The five matrix jobs are green, each with its e2e smoke. A draft release holds every artifact in the matrix, a <code>.sig</code> per updater archive and a <code>latest.json</code>. A tag that differs from the version fails before any build.</td></tr>
           <tr><td>5</td><td>That draft's artifacts installed in this Mac, the Windows 11 VM and the Ubuntu VM</td><td>After the OS prompt the release notes name, the window opens on a live list on each. <code>curl -x http://127.0.0.1:7420 http://example.com/</code> appears, and <em>This machine</em> setup trusts the CA and routes the proxy.</td></tr>
-          <tr><td>6</td><td>An installed rc, then a newer published rc, then <em>Check for Updates…</em></td><td>The dialog names both versions. On yes the DEC-64 check runs if routed, and the app relaunches as the new version with the CA's SHA-256 unchanged. This happens on macOS, on Windows and with the AppImage. The deb opens the release page.</td></tr>
+          <tr><td>6</td><td>An installed rc, then a newer published rc, then <em>Check for Updates…</em></td><td>The dialog names both versions. On yes the DEC-64 check runs if routed, and the app relaunches as the new version with the CA's SHA-256 unchanged. This happens on macOS, on Windows and with the AppImage. The deb updates in place too (Q20).</td></tr>
           <tr><td>7</td><td>After E-BGSVC lands: an installed app with its background mode on, then an update</td><td>The windowless core is stopped and restarted by the update, and launch at login still points at the installed app.</td></tr>
         </tbody>
       </table>
@@ -136,7 +136,7 @@ flowchart LR
           password are repository secrets (Q7). The endpoint is
           <code>github.com/lesslucifer/Trawler/releases/latest/download/latest.json</code>. The app checks at launch (throttled to once a day, last check in
           app data) and from <em>Check for Updates…</em>, and native dialogs ask. Install runs the DEC-64 check, stops the core through the
-          supervisor, installs and relaunches. A deb or rpm install offers the release page, unless Q20 rules in-place updates. There is no webview surface, so no design run is needed (Q6).
+          supervisor, installs and relaunches. Every bundle type, deb and rpm included, updates in place (Q20). There is no webview surface, so no design run is needed (Q6).
         </p>
         <p data-item="wu-maps-to">E-PKG2 · UC-UPDATE · expected #6 · Q4, Q6, Q7, Q20–Q22. Plan written on E-PKG, carried to <code>wu/packaging-v2/updater</code>.</p>
         <p data-item="wu-expected">
@@ -271,29 +271,22 @@ flowchart LR
           <tr><td>Q20</td><td>The plan has a deb or rpm install open the release page, because the updater could not
             install those packages. <code>tauri-plugin-updater</code> 2.14 now can: it runs <code>dpkg -i</code> or
             <code>rpm -U</code> through <code>pkexec</code>, which shows the desktop's own password prompt. Should deb and
-            rpm update in place?</td><td><span class="badge approval">open</span> proposed: <strong>yes, in place</strong>.
+            rpm update in place?</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(a) yes, in place</strong>.
             Every bundle type then has one flow, one signature check and one relaunch. W3 publishes deb and rpm updater
             signatures, and UC-UPDATE's deb/rpm sentence, the platform matrix's Linux cell and its install-kind
             detection change to match</td></tr>
           <tr><td>Q21</td><td>A user says Install, then cancels DEC-64's quit dialog. What happens to the update?</td>
-            <td><span class="badge approval">open</span> proposed: <strong>it is dropped</strong>. Nothing installs on a
+            <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(a) it is dropped</strong>. Nothing installs on a
             later, unrelated quit, and the next check offers it again. The webview's cancel tells the shell
             (<code>quit_cancelled</code>)</td></tr>
           <tr><td>Q22</td><td>Q7 ruled that a key is generated once, with the private half and its password as repository
             secrets and the public half in <code>tauri.conf.json</code>. Who generates it, and who stores the secrets?
             Whoever holds it must keep a backup: <strong>a lost private key means every installed copy can never update
-            again</strong>, because the public key is compiled into each one.</td><td><span class="badge approval">open</span>
-            options:<br>
-            <strong>A (proposed)</strong> · I run <code>pnpm tauri signer generate -w ~/.tauri/trawler-updater.key</code>
-            with a random password, outside the repo, and commit only the public key. The owner backs up the key file and
-            password (a password manager), then runs <code>gh secret set TAURI_SIGNING_PRIVATE_KEY &lt;
-            ~/.tauri/trawler-updater.key</code> and <code>gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD</code>, which I stage.<br>
-            <strong>B</strong> · The owner runs the generate command, keeps both halves, sets the secrets and gives me only
-            the public key. No agent ever sees the private key.<br>
-            <strong>C</strong> · As A, but I also run the two <code>gh secret set</code> lines once the owner OKs that
-            exact step. This is outward-facing, so it needs that explicit OK.<br>
-            Each option can drop the password, leaving one secret instead of two. The key file then protects
-            itself only by where it is stored.</td></tr>
+            again</strong>, because the public key is compiled into each one.</td><td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(b) the owner generates the
+            key</strong>, keeps both halves, sets <code>TAURI_SIGNING_PRIVATE_KEY</code> (and the password secret, if one
+            was set) and sends back only the public key. No agent ever sees the private key, so updater artifacts are built
+            only where the key is in the environment: the release workflow (W3). E-CI stays parked, and W2 and W3 wait for
+            it</td></tr>
         </tbody>
       </table>
     </div>
