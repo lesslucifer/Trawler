@@ -278,9 +278,8 @@ pub struct LoginItemPlace(pub Option<Place>);
 #[cfg(target_os = "macos")]
 fn this_hosts_place<R: Runtime>(_app: &AppHandle<R>) -> Option<Place> {
     std::env::current_exe().ok().filter(|exe| is_app_bundle_binary(exe))?;
-    Some(Place::Service(Arc::new(BundledAgent(trawler_login_service::AgentService::new(
-        &format!("{LABEL}.plist"),
-    )))))
+    let agent = trawler_login_service::AgentService::new(&format!("{LABEL}.plist"))?;
+    Some(Place::Service(Arc::new(BundledAgent(agent))))
 }
 
 #[cfg(windows)]
@@ -316,7 +315,16 @@ pub fn login_item_write(
     on: bool,
 ) -> Result<LoginItem, String> {
     let exe = std::env::current_exe().map_err(|err| err.to_string())?;
-    place(&login_item)?.write(on, &exe)
+    let appimage = if cfg!(target_os = "linux") { std::env::var_os(APPIMAGE_VAR) } else { None };
+    place(&login_item)?.write(on, &program_at_login(exe, appimage))
+}
+
+pub const APPIMAGE_VAR: &str = "APPIMAGE";
+
+// An AppImage runs from a mount that is gone once it quits; the file a login can
+// start again is the one its runtime names.
+pub fn program_at_login(exe: PathBuf, appimage: Option<std::ffi::OsString>) -> PathBuf {
+    appimage.map(PathBuf::from).filter(|image| image.is_absolute()).unwrap_or(exe)
 }
 
 #[cfg(test)]
@@ -338,6 +346,15 @@ mod tests {
             )),
             "{conf}"
         );
+    }
+
+    #[test]
+    fn an_appimage_is_started_at_login_from_its_file_not_its_mount() {
+        let mount = PathBuf::from("/tmp/.mount_TrawlXYZ/usr/bin/trawler-ui");
+        let image = "/home/u/Apps/Trawler_0.1.0_amd64.AppImage";
+        assert_eq!(program_at_login(mount.clone(), Some(image.into())), Path::new(image));
+        assert_eq!(program_at_login(mount.clone(), None), mount);
+        assert_eq!(program_at_login(mount.clone(), Some("relative.AppImage".into())), mount);
     }
 
     #[test]
