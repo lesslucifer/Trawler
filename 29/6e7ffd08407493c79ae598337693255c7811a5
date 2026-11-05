@@ -1,0 +1,16 @@
+schema: doc/v1
+epic: E-CI
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the packaging row records that E-CI unblocked E-PKG2's platform work: ci.yml on main (DEC-83), first run after the owner's push"
+  - path: "docs/decisions/dec-83-ci-is-a-signal-on-main-not-a-gate.html"
+    tier: T2
+    action: added
+    distills: "CI on main is a signal: triggers, dispatch by hand, what runs and what stays local, nothing refuses on its result, read-only, a 45 minute bound"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-83 row"
