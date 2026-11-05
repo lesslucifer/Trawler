@@ -362,7 +362,7 @@ flowchart LR
         <tr><td>Q10</td><td>E-ONEAPP and the core address?</td><td>decided</td><td>Moot: pure front end, the window never talks to the core.</td></tr>
         <tr><td>Q11</td><td>Remember window size and position?</td><td>decided</td><td>Re-ruled by the owner on 2026-11-04 (W3): yes, through E-PANELS' <code>windows.json</code>, as one record shared by every data window — whichever data window moved or resized last writes it, and a new data window opens there. It was a record per window, deferred until E-PANELS landed.</td></tr>
         <tr><td>Q12</td><td>Do edits survive closing the window?</td><td>decided</td><td>No — the working copy lives as long as its window; closing a modified window asks nothing (scratch by definition).</td></tr>
-        <tr><td>Q13</td><td>Decode timestamps and date-time strings to local time?</td><td>decided</td><td>Yes, added by the owner on 2026-11-05 as W8, on W6's peek. A date-time that names no zone is not guessed (see the W8 plan's open choice).</td></tr>
+        <tr><td>Q13</td><td>Decode timestamps and date-time strings to local time?</td><td>decided</td><td>Yes, added by the owner on 2026-11-05 as W8, on W6's peek. A date-time that names no zone reads as UTC and says so; a date alone reads as its calendar day (owner's try-out).</td></tr>
       </table>
     </div>
 

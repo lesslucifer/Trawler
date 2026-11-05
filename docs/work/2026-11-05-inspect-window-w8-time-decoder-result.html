@@ -31,9 +31,13 @@
         or a rough selection is taken whole — spaces, colons and commas included — before W6's value runs</td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>a form row's HTTP date by ⌘⇧D</td><td><em>read as HTTP date</em>; the cookie form with dashes too; ⇄ writes
         the local time into the value</td><td><span class="badge auto">delivered</span></td></tr>
-      <tr><td>a zone-less date-time or a date off the calendar says why</td><td><em>not base64, URL-encoded, a JWT or a
-        time: it names no zone, so it cannot be moved to local time</em>; <em>2026-02-30 is not a day of the
-        calendar</em>, an hour past 23, an unknown month, a digit count that names no unit — no ⇄, nothing changes</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a zone-less date-time and a date alone read (owner's try-out)</td><td><code>2026-06-01T14:27:22</code> read
+        as UTC, <em>read as ISO 8601, no zone: read as UTC</em>; <code>2026-01-14</code> found whole and shown as
+        <em>date</em> <code>2026-01-14, Wednesday</code>, counted in days from today in the user's zone, no local or UTC
+        line; a date or date-time counts only standing alone (<code>2026-01-14-report</code> is not one)</td><td><span class="badge auto">delivered</span></td></tr>
+      <tr><td>a date off the calendar says why</td><td><em>not base64, URL-encoded, a JWT or a time: 2026-02-30 is not a
+        day of the calendar</em>, an hour past 23, an unknown month, a digit count that names no unit — no ⇄, nothing
+        changes</td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>↗ opens the local time</td><td>as <code>text/plain</code>, titled <em>&lt;title&gt; · decoded time</em></td><td><span class="badge auto">delivered</span></td></tr>
       <tr><td>JWT, base64 and URL read as in W6</td><td>W6's decoder and screen tests pass unchanged but for the reason's
         wording, which now names time</td><td><span class="badge auto">delivered</span></td></tr>
@@ -42,6 +46,9 @@
     <h2 id="deviations">Deviations</h2>
     <table data-item="deviations" data-c="deviations">
       <tr><th>Plan said</th><th>What happened</th><th>Why</th></tr>
+      <tr><td>a zone-less date-time refused with a reason; a date alone not a time</td><td>both read: the zone-less one
+        as UTC, saying so; the date as its calendar day (plan v2)</td><td>owner's try-out: <code>"2026-01-14"</code> read
+        its year as 3 B of base64 and <code>"2026-06-01T14:27:22"</code> was refused</td></tr>
       <tr><td>—</td><td>a bare JSON value replaced by ⇄ is now quoted for every decoder, not only time</td><td>the rule
         sits in the screen's splice, where W6's review waived the same nit (a bare token replaced as string content);
         base64 and JWT values are always inside strings, so their behaviour is unchanged</td></tr>
@@ -52,19 +59,22 @@
       <tr><th>Kind</th><th>Pointer</th></tr>
       <tr><td>commits</td><td><code>ba6ec94a</code> plan (and the epic plan's W8) · <code>75ccfe28</code> the time
         decoder, its place among the decoders and in <code>decodeAround</code>, the peek's time body, the JSON
-        quoting</td></tr>
-      <tr><td>unit</td><td><code>timeDecoder</code> (10, at Asia/Ho_Chi_Minh and a fixed now: each unit by digit count
+        quoting · <code>47b78ddb</code> the try-out's zone-less and date-only readings</td></tr>
+      <tr><td>unit</td><td><code>timeDecoder</code> (12, at Asia/Ho_Chi_Minh and a fixed now: each unit by digit count
         with its fraction; 11 and 14 digits and a fraction past seconds refused; ISO with Z, ±HH:MM, ±HHMM, a space, no
         seconds, lower case, nine fraction digits, a comma; HTTP and cookie dates; zone-less, Feb 30, month 13, hour 24,
-        an unknown month, free text — each reason; America/New_York across the November DST edge; relative ago and
+        an unknown month, free text — each reason; zone-less read as UTC; a date as its weekday, the same in UTC−11,
+        today / yesterday / tomorrow / in 7 days / 10 months ago; America/New_York across the November DST edge; relative ago and
         ahead in seconds, minutes, hours, days, months, years; <code>looksLikeTime</code>; <code>TIME_SHAPE</code> over a
-        line) · <code>decoders</code> (7 new: the guess, time over base64 for a timestamp, the zone-less reason, a
-        date-time found whole from a cursor and from a rough selection, the zone-less reason kept around the pointer, a
+        line, a date standing alone and not inside <code>2026-11-05-r</code>) · <code>decoders</code> (9 new: the guess, time over base64 for a timestamp, zone-less and date-only read, a calendar reason, a
+        date-time found whole from a cursor and from a rough selection, a date found whole instead of its year as base64, a calendar reason kept around the pointer, a
         bare timestamp found as a value, what time replaces and opens with)</td></tr>
-      <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (4 new: a JSON number from the
+      <tr><td>integration</td><td><code>ui/src/DataWindowScreen.test.tsx</code> (5 new: a JSON number from the
         right-click showing local, UTC and read-as, ⇄ quoting it and ⌘Z; a date-time string found whole and replaced inside
-        its quotes; a form row's HTTP date by ⌘⇧D and ⇄; a zone-less date-time's reason with nothing changed)</td></tr>
-      <tr><td>suites</td><td>vitest 61 286 in 93 files green; eslint and <code>tsc</code> clean; the pre-commit fmt and
+        its quotes; a form row's HTTP date by ⌘⇧D and ⇄; a zone-less date-time read as UTC; a date as its day with no
+        UTC line; a date off the calendar's reason with nothing changed)</td></tr>
+      <tr><td>suites</td><td>vitest 61 286 in 93 files green on <code>75ccfe28</code>; after the try-out fix the three
+        suites that reach the decoders (125) green; eslint and <code>tsc</code> clean; the pre-commit fmt and
         clippy green</td></tr>
       <tr><td>e2e</td><td>waived: W7's J3 decodes the decoded payload's <code>exp</code> through the real windows</td></tr>
     </table>
@@ -76,8 +86,6 @@
     <h2 id="follow-ups">Follow-ups</h2>
     <table data-item="follow-ups" data-c="follow-ups">
       <tr><th>For</th><th>What</th></tr>
-      <tr><td>owner try-out</td><td>the zone-less refusal (plan's choices): keep it, or read such a date-time as UTC and
-        say so</td></tr>
       <tr><td>W7</td><td>J3's <code>exp</code> step; UC-9 lists time among the decoders</td></tr>
     </table>
 

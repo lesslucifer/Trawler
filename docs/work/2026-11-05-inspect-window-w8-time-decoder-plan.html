@@ -11,7 +11,7 @@
       <h1>E-INSPWIN.W8 — time decoder</h1>
       <p>Decode a timestamp or a date-time string the same way W6 decodes a token: the peek under it shows the instant
         in the user's local time, beside UTC and how long ago or ahead it is.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W8</span> · branch
+      <div class="meta">v2 (owner's try-out: zone-less and date-only read) · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-INSPWIN.W8</span> · branch
         <code>wu/inspect-window/time-decoder</code> · <a href="2026-11-03-inspect-window-plan.html">epic plan</a> ·
         extends <a href="2026-11-04-inspect-window-w6-decoders-plan.html">W6</a></div>
     </div>
@@ -67,7 +67,7 @@ flowchart LR
       <thead><tr><th>Piece</th><th>Where</th><th>Contract</th></tr></thead>
       <tbody>
         <tr><td>logic</td><td><code>timeDecoder.ts</code> (new)</td><td><code>time(input, zone?, now?)</code>: the inputs
-          above to <code>{kind: "time", local, zone, utc, readAs, relative, text, bytes}</code> or a reason; the fraction
+          above and a date alone to <code>{kind: "time", local, zone, utc, readAs, relative, text, bytes}</code> or a reason; the fraction
           kept to its significant digits; a date off the calendar, an hour past 23, a zone-less date-time each with its reason;
           <code>TIME_SHAPE</code> finds a date-time inside a line (it holds spaces, colons and commas, which split W6's
           value runs)</td></tr>
@@ -86,9 +86,13 @@ flowchart LR
     <table data-c="choices">
       <thead><tr><th>Choice</th><th>Taken</th><th>Why</th></tr></thead>
       <tbody>
-        <tr><td>a date-time that names no zone</td><td>refused: <em>it names no zone, so it cannot be moved to local
-          time</em></td><td>guessing UTC or local would show a wrong instant without saying so; flag for the owner's
-          try-out</td></tr>
+        <tr><td>a date-time that names no zone</td><td>read as UTC: <em>ISO 8601, no zone: read as UTC</em></td><td>owner's
+          try-out, 2026-11-05: the refusal first planned left API timestamps unread; the read-as line says the zone was
+          assumed</td></tr>
+        <tr><td>a date with no time (<code>2026-01-14</code>)</td><td>read as the calendar day:
+          <em>2026-01-14, Wednesday</em>, <em>ISO 8601 date · 10 months ago</em>, no local or UTC line</td><td>owner's
+          try-out: it read its year as base64; a date is a day, not an instant, so moving it across zones would shift it
+          by one</td></tr>
         <tr><td>a run of digits that is a timestamp and valid base64</td><td>time wins, no switch</td><td>base64 of ten
           digits is binary with no signature, which never reads well (W6's rule); W6 dropped the switch</td></tr>
         <tr><td>timestamps before 1973 or past 2286 in seconds</td><td>not read as time (their digit counts are not a
@@ -111,8 +115,9 @@ flowchart LR
           selected (not the run around the pointer) and read as ISO 8601</td></tr>
         <tr><td>a form row <code>expires=Thu, 05 Nov 2026 04:00:00 GMT</code>, ⌘⇧D</td><td>read as HTTP date; ⇄ writes the
           local time into the value</td></tr>
-        <tr><td><code>2026-11-05T04:00:00</code></td><td><em>not base64, URL-encoded, a JWT or a time: it names no zone,
-          so it cannot be moved to local time</em>; nothing changes</td></tr>
+        <tr><td><code>2026-11-05T04:00:00</code></td><td>read as UTC: <em>read as ISO 8601, no zone: read as UTC</em></td></tr>
+        <tr><td><code>"2026-01-14"</code>, right-click on it</td><td>the date selected; <em>date</em>
+          <code>2026-01-14, Wednesday</code>, <em>read as ISO 8601 date · 10 months ago</em></td></tr>
         <tr><td><code>2026-02-30T04:00:00Z</code></td><td>the reason: <em>2026-02-30 is not a day of the calendar</em></td></tr>
         <tr><td>a JWT, base64 or URL value</td><td>reads exactly as in W6</td></tr>
       </tbody>
