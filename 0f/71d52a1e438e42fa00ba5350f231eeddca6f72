@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN
+wu: E-INSPWIN.W10
+branch: HEAD
+tests:
+  unit: { count: 38, covers: "in JSON, a value never starts on an escape's letter: after \n, \u0008 and é the found range is the base64 value and reads hello; the decoded value spliced back parses with the escape kept; after an escaped backslash the value starts at its letter. Four of the five red before the fix" }
+  integration: { count: 79, covers: "through the real screen: Cmd-Shift-D at a caret in the value after \n selects aGVsbG8=, reads hello, and replace with decoded leaves {\"a\": \"\\nhello\"}, valid JSON, one undoable step; red before the fix (naGVsbG8= selected)" }
+  e2e: { count: 8, covers: "cargo xtask ui e2e at 7789e2ad: first run red on one J4 case on a WebDriver element-lookup exception after a window switch (no assertion reached, J3's decode green); rerun unchanged green, 14 of 14 attached spec files, owned 1 of 1" }
