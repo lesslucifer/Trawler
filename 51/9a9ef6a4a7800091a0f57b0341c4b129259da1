@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU gate-parity-close -> epic/gate-parity"
+epic: E-GATEPAR
+wu: E-GATEPAR.W3
+branch: wu/gate-parity/close
+base: c4a60650ae62ca728b8a2e7018ef67e8aa1cbe67
+head: 519a9ef6a4a7800091a0f57b0341c4b129259da1
+diff_sha256: 148857cf83451013376c28d421ab5c1b4750b0e75b2f4872ea52c28e68b496b2
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 2
+  stage_seconds:
+    gate0: 18
+    verifiers: 0
+    total: 67
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 2, verified: 2 }
+findings: { found: 2, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "the e2e repeats the seeded-worktree compile and the two-worktrees-one-crate build that xtask/tests/target_isolation.rs already asserts, adding a few small cargo invocations to the default suite"
+    waived: "the epic e2e plan requires the full flow through the real tracked post-checkout, which the W2 integration tests bypass by calling target seed directly; the repeated builds are one tiny crate and the whole test runs in about 1 s"
+  - finding: "the closing xtask lint runs real cargo fmt + clippy in a temp workspace inside the default suite"
+    waived: "a symlinked checkout is refused, then runs once isolated - the e2e plan's fourth scenario - and only a real lint proves the gate runs; it is bounded to one crate and costs under a second"
+verdict: PASS
+date: 2026-11-05
