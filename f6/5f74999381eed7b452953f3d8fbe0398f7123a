@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W1
+base: bd49c25e7400372885c39a2e14454c374d339ac6
+tip: f65f74999381eed7b452953f3d8fbe0398f7123a
+diff_sha256: f6f503e2649177c26362fed192020b2fcd4846e95ab1ea98937e334384465e4c
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-05
