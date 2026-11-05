@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4f3c9f34851f0dfae8c1" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W4 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W4 — Trawler at login</h1>
+      <p>One login entry per OS, written by Trawler itself, starting this binary with <code>--background</code>, and read
+        back from the OS every time.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch <code>wu/bg-service/login-item</code>
+        off <code>epic/bg-service</code> · epic plan: <a href="2026-11-05-bg-service-plan.html#wu-summaries">E-BGSVC</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">Writing the login item on creates (or replaces, whichever binary it named) the OS's own
+      login entry starting this binary with <code>--background</code>; writing it off removes it. Reading it reports on
+      whenever such an entry exists, with the program the entry starts. Every entry lives under a root the caller passes,
+      so a test never touches the real login items.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to">
+      <tr><th>Serves</th><th>How</th></tr>
+      <tr><td><span class="badge id">E-BGSVC</span> · <a href="2026-11-05-bg-service-plan.html#wu-summaries">W4 summary</a></td>
+        <td>the <code>login_item</code> module and its two commands; W6 puts the switch on them</td></tr>
+      <tr><td><span class="badge id">UC-BG</span></td><td>“With open at login on, Trawler starts at login with no window”</td></tr>
+      <tr><td>Expected #7 · #8</td><td>the plist exists naming this binary with <code>--background</code>, and is gone when off ·
+        the flag W1 honours</td></tr>
+      <tr><td>Q6 · Q7(a) · Q8</td><td>no window at login · we write the entry ourselves · the last write wins, the path is shown on hover</td></tr>
+    </table>
+
+    <h2 id="shape">Shape</h2>
+    <table data-c="formats">
+      <tr><th>OS</th><th>Entry (under the root)</th><th>Starts</th><th>Root in the app</th></tr>
+      <tr><td>macOS</td><td><code>Library/LaunchAgents/dev.trawler.app.plist</code>: <code>Label</code>,
+        <code>ProgramArguments = [exe, --background]</code>, <code>RunAtLoad = true</code>, XML-escaped</td>
+        <td>the first <code>ProgramArguments</code> string</td><td><code>$HOME</code></td></tr>
+      <tr><td>Linux</td><td><code>autostart/dev.trawler.app.desktop</code>: <code>Type=Application</code>,
+        <code>Name=Trawler</code>, <code>Exec="&lt;exe&gt;" --background</code> quoted per the Desktop Entry spec
+        (<code>" ` $ \</code> escaped, <code>%</code> doubled), <code>X-GNOME-Autostart-enabled=true</code></td>
+        <td>the <code>Exec</code> line's first argument, unquoted</td><td><code>$XDG_CONFIG_HOME</code>, else <code>$HOME/.config</code></td></tr>
+      <tr><td>Windows</td><td><code>HKCU\Software\Microsoft\Windows\CurrentVersion\Run</code> value <code>Trawler</code> =
+        <code>"&lt;exe&gt;" --background</code>, through <code>reg.exe</code></td><td>the value's quoted program</td>
+        <td>the registry (no root)</td></tr>
+    </table>
+
+    <table data-c="pieces">
+      <tr><th>Piece</th><th>Contract</th></tr>
+      <tr><td><code>login_item.rs</code></td><td><code>Format::{LaunchAgent, Autostart}</code>, each with its file under a
+        root, its rendering and its reading back · <code>read(format, root)</code> / <code>write(format, root, on, exe)</code>
+        → <code>LoginItem { on, starts }</code> · the Windows value's rendering and parse, pure · a managed
+        <code>LoginItemRoot</code> (the real root in the app, a tempdir in tests)</td></tr>
+      <tr><td>commands</td><td><code>login_item_read</code> · <code>login_item_write { on }</code> (answers the new reading).
+        Defined and IPC-tested, registered in the handlers by W6 with its first <code>invoke</code> — xtask's registry test
+        refuses a command nothing invokes (W1's lesson)</td></tr>
+      <tr><td>no <code>launchctl</code></td><td>the entry takes effect at the next login, as macOS login items do</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>#</th><th>Observable after W4 alone</th></tr>
+      <tr><td>1</td><td>in a tempdir root: on writes a plist <code>plutil -lint</code> accepts, naming the given binary then
+        <code>--background</code>; read reports on with that binary; off removes it and read reports off</td></tr>
+      <tr><td>2</td><td>an entry naming another binary reads on with that binary; writing on points it at this one</td></tr>
+      <tr><td>3</td><td>a desktop entry's <code>Exec</code> line is exact for a path with spaces and quotes, and reads back to the same path</td></tr>
+      <tr><td>4</td><td>the two commands round-trip through IPC against a managed tempdir root; nothing reachable in the app yet</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>Test</th><th>Asserts</th></tr>
+      <tr><td rowspan="3">unit (<code>login_item.rs</code>)</td><td>plist</td><td>exact rendering; <code>&amp; &lt; &gt;</code>
+        in a path escaped and read back; a plist with no program reads on with none</td></tr>
+      <tr><td>desktop entry</td><td>exact rendering; spaces, <code>" ` $ \ %</code> quoted and read back</td></tr>
+      <tr><td>Windows value</td><td><code>"C:\Program Files\Trawler\trawler-ui.exe" --background</code>, and its program read back from a <code>reg query</code> line</td></tr>
+      <tr><td rowspan="4">integration<br/>(<code>tests/suite/login_item.rs</code>, tempdirs)</td><td>launch agent on/off</td>
+        <td>expected #1, with <code>plutil -lint</code> on macOS</td></tr>
+      <tr><td>last write wins</td><td>expected #2, for both formats</td></tr>
+      <tr><td>autostart</td><td>expected #3 through the file, and off removes it</td></tr>
+      <tr><td>commands</td><td>expected #4: read off → write on → read on, starting the test's own binary → write off</td></tr>
+      <tr><td>owed</td><td colspan="2">the Windows writer is not compiled on this machine (no Windows target), so its real check
+        is owed, as the epic plan rules. A real logout/login is W7's owed hardware check</td></tr>
+    </table>
+
+    <h2 id="docs">Docs</h2>
+    <table data-c="docs">
+      <tr><th>Tier</th><th>Doc</th><th>Change</th></tr>
+      <tr><td>T2</td><td><a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a></td><td>rule 9: the login entry per OS, written by Trawler, read back each time, last write wins, no launchctl</td></tr>
+      <tr><td>T3</td><td>this plan + its result report</td><td>—</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
