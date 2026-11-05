@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec6cc09f34851f0dfaea0c" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-INSPWIN2.W3 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-INSPWIN2.W3 — result</h1>
+      <p>The data window's kinds and find design run closed in one round: the owner held E1–E9, trimmed E1's pick wording, and
+        confirmed the ChipBox design.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · branch <code>wu/inspect-window-v2/data-window-kinds-design</code> · plan:
+        <a href="2026-11-05-inspect-window-v2-w3-data-window-kinds-design-plan.html">W3 plan</a> · run:
+        <a href="2026-11-05-data-window-kinds-design-run.html">the design run</a> · component:
+        <a href="components/chip-box.html">ChipBox</a> · epic plan:
+        <a href="2026-11-05-inspect-window-v2-plan.html">E-INSPWIN2</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome" data-c="outcome">
+      <tr><th>Planned</th><th>Delivered</th></tr>
+      <tr><td>One closed run on the data window's kinds, preview and find</td><td>Delivered: <code>2026-11-05-data-window-kinds-design-run.html</code>,
+        archived, green on every hard rule, headless render clean (9 mounts)</td></tr>
+      <tr><td>Decisions 1–8 of the plan</td><td>Delivered as calls E1–E9 (the preview's light page default split out as E9), all held in
+        round 1: the status bar names what decided the kind · <em>source · preview</em> in the status bar, ⋯ and ⇧⌘V · one fixed withheld
+        sentence · find leaves during preview, ⌘F returns · <em>reformat</em> on ⌥⇧F · nine picker rows · the query bar's box layout · the
+        refused chip and fault faces · a light page default in the preview</td></tr>
+      <tr><td>Decision 9: the chip box's shape</td><td>Delivered as <code>docs/work/components/chip-box.html</code>, a T1 ChipBox taking an
+        injected grammar; confirmed by the owner</td></tr>
+      <tr><td>States: json-from-bytes, html source and preview, javascript reformatted, css, the picker open, two chips, suggestions, a
+        fault, a refused chip</td><td>Delivered as state toggles over four payloads (JSON served as text/plain, minified javascript, css,
+        html)</td></tr>
+      <tr><td><code>design/v1</code> naming the run and the component design</td><td>Written on this tip by the design step, with an empty
+        built set</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations" data-c="deviations">
+      <tr><th>Plan said</th><th>Shipped</th><th>Why</th></tr>
+      <tr><td>E1: four wordings, the pick read <em>your choice · read JSON from its bytes</em></td><td>the pick reads <em>read JSON from its
+        bytes</em></td><td>the owner's round 1 comment, "no need this": the picker already shows the chosen kind</td></tr>
+      <tr><td>nine decisions</td><td>ten calls (E1–E9 plus the ChipBox design)</td><td>the preview's colours surfaced at render: a page with
+        no background showed dark text on the dark canvas, so it became its own call (E9)</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence" data-c="evidence">
+      <tr><th>Kind</th><th>Pointer</th></tr>
+      <tr><td>Commits</td><td><code>67cba964</code> plan · <code>0c0df6e6</code> run and ChipBox, round 1 draft · <code>7fe836bd</code> run closed,
+        ChipBox confirmed</td></tr>
+      <tr><td>Checks</td><td><code>verify-doc</code> green on the run and ChipBox before archiving · <code>node scripts/check-render.mjs</code>
+        clean · a headless screenshot of each state</td></tr>
+      <tr><td>Owner</td><td>round 1, 2026-11-05: E1–E9 accepted, ChipBox confirmed, one comment on E1 resolved; recorded on the run's review
+        item</td></tr>
+      <tr><td>Tests</td><td>none: no code path changes; each layer waived in <code>test/v2</code></td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation" data-c="distillation">Nothing citable yet: a design reaches UC-9 and the rulebook once it is built. W8 retires
+      the ChipBox design into its TSDoc (DEC-16); W9 distills UC-9 and the ⌥⇧F and ⇧⌘V keyboard rows.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-item="follow-ups" data-c="follow-ups">
+      <tr><th>For</th><th>What</th></tr>
+      <tr><td>W5</td><td>The status bar's words (E1, the pick naming the kind it read) and the nine-row picker (E6), citing this run's blob</td></tr>
+      <tr><td>W6</td><td><em>reformat</em> for javascript and css on ⌥⇧F (E5); EditSurface's javascript and css languages</td></tr>
+      <tr><td>W7</td><td>The preview frame, its withheld line, the switch and ⇧⌘V, the light page default (E2–E4, E9)</td></tr>
+      <tr><td>W8</td><td>Build ChipBox from its design, rebuild QueryBar on it, and the find bar (E7, E8)</td></tr>
+      <tr><td>W9</td><td>The rulebook's ⌥⇧F and ⇧⌘V rows; UC-9</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
