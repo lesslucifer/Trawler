@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec28e49f34851f0dfae785" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC epic plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC — epic plan</h1>
+      <p>Capture with no window open: the app outlives its window behind a menu-bar icon, and can start at login
+        with no window at all.</p>
+      <div class="meta">v3 · opened 2026-11-05 · owner rulings 2026-11-05 on Q1–Q14 · Trawler · T3 (docs/work/) · branch
+        <code>epic/bg-service</code> · WU branches <code>wu/bg-service/&lt;slug&gt;</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <p data-item="intent">Today the main window <em>is</em> the app: closing it quits, and quitting stops the
+      capture service (<a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a> rule 14,
+      E-ONEAPP's Q7). A user who wants traffic recorded while they work elsewhere must keep a window open, and
+      Trawler cannot be running before they think to open it. This epic lets the app run with no window: a
+      menu-bar icon shows the service's state and reopens the window, a switch keeps capture running when the
+      window closes, and another starts Trawler at login with no window. The app still supervises its core —
+      the background service <strong>is the app process without a window</strong> (Q1), so the lifeline, the
+      single instance, the CA location and every API stay as they are. Now, because it is the roadmap's next
+      user-facing row and E-PACKAGING (in flight beside it) makes an installed app — the thing a login item
+      points at — real.</p>
+
+    <h2 id="lifecycle">The app's lifecycle — before / after</h2>
+    <div class="diagram" data-c="lifecycle-diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Windowed: launch
+  [*] --> Windowless: --background (login item)
+  Windowed --> AskOnce: first ✕, never answered
+  AskOnce --> Windowless: Keep capturing (switch on)
+  AskOnce --> Asking: Quit (switch off)
+  Windowed --> Windowless: ✕ with "keep capturing" on
+  Windowed --> Asking: ✕ with it off · ⌘Q
+  Windowless --> Windowed: menu-bar Open · Dock click · second launch
+  Windowless --> Asking: menu-bar Quit (the window opens to ask)
+  Asking --> [*]: confirmed or nothing at stake → core stopped
+  Asking --> Windowed: cancelled
+  Windowed --> [*]: Dock Quit · logout (unasked, as today)
+  Windowless --> [*]: Dock Quit · logout (unasked, as today)
+      </pre>
+      <div class="caption">Before: only Windowed and Asking exist, and ✕ always asks-then-quits. The core lives
+        exactly as long as the app process in every state; only the window comes and goes.</div>
+    </div>
+
+    <h2 id="topology">Who keeps what alive</h2>
+    <div data-c="topology-table">
+      <table>
+        <tr><th>Piece</th><th>Today</th><th>After</th></tr>
+        <tr><td>app process</td><td>lives while the main window exists</td><td>lives until a quit; may hold no window</td></tr>
+        <tr><td>core child</td><td>spawned at launch, stopped on every exit (stdin lifeline)</td><td>unchanged</td></tr>
+        <tr><td>main window</td><td>built once in setup; its destruction exits the app</td>
+          <td>destroyed on ✕ in background mode, rebuilt on reopen with the same init script and saved geometry (Q2)</td></tr>
+        <tr><td>menu-bar icon</td><td>none</td><td>present whenever the app runs and a tray can be created (Q4, Q12)</td></tr>
+        <tr><td>Dock icon (macOS)</td><td>always</td><td>only while a Trawler window is open (Q11)</td></tr>
+        <tr><td>"keep capturing" switch</td><td>—</td><td>a shell preference in its config dir, never the core's (DEC-12)</td></tr>
+        <tr><td>"open at login" switch</td><td>—</td><td>read from the OS's own login item every time, never cached (Q7)</td></tr>
+      </table>
+      <div class="caption">One invariant rides on all of it: <strong>the app is never windowless without a
+        menu-bar icon</strong>. A host that cannot show one never hides the window.</div>
+    </div>
+
+    <h2 id="switches">The two switches</h2>
+    <div data-c="switches-table">
+      <table>
+        <tr><th>Switch</th><th>On means</th><th>Default</th><th>Stored</th></tr>
+        <tr><td><em>Keep capturing when the window closes</em></td><td>✕ closes the window; Trawler keeps
+          recording, reachable from the menu-bar icon. Off: ✕ quits, as today</td><td>off — unanswered until the first ✕ asks once (Q3)</td><td>a shell file in the app's config dir</td></tr>
+        <tr><td><em>Open Trawler at login</em></td><td>Trawler starts when the user logs in, menu-bar icon only, no
+          window (Q6)</td><td>off</td><td>the OS's own login entry, read back each time; the last write wins, its path shown on
+          hover (Q7, Q8)</td></tr>
+      </table>
+      <div class="caption">Both live in Settings → General (Q5). Neither changes what the core does.</div>
+    </div>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <table>
+        <tr><th>UC</th><th>Change</th><th>Contract after this epic</th></tr>
+        <tr><td><span class="badge id">UC-BG</span></td><td>new</td>
+          <td><strong>Capture with no window open.</strong> With "keep capturing when the window closes" on, ✕
+            closes the main window and capture continues; a menu-bar icon shows the service (running · stopped)
+            and offers Open Trawler, Settings…, Restart (when stopped) and Quit Trawler. With "open at login" on,
+            Trawler starts at login with no window. Reopening shows everything captured meanwhile. The first ✕ that would quit asks once
+            whether to keep capturing, and the answer becomes the switch. With no menu-bar icon possible, nothing
+            asks, the switch is off and says why.</td></tr>
+        <tr><td><span class="badge id">UC-4</span></td><td>changed</td>
+          <td>"One launch, one app" keeps: one core per app, every quit stops it, a second launch reaches the
+            first. Changed: the first close asks once (Q3); after that, closing the main window quits only while
+            "keep capturing" is off; a second launch with no window open opens one.</td></tr>
+        <tr><td><span class="badge id">UC-ONBOARD</span></td><td>changed (quit)</td>
+          <td><a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>'s
+            check runs on every quit Trawler can hold: ⌘Q, ✕ when it quits, and the menu-bar's Quit — which
+            opens the window to ask (Q9). ✕ in background mode stops nothing, so it asks nothing. The Dock's
+            Quit and a logout stay unasked. Dialog cases and copy unchanged.</td></tr>
+        <tr><td><span class="badge id">UC-SVC</span></td><td>changed</td>
+          <td>The Settings window gains a <strong>General</strong> page holding both switches (Q5). The Capture
+            service page is unchanged; the menu-bar icon reads the same service state.</td></tr>
+        <tr><td><span class="badge id">UC-1 · UC-2 · UC-3 · UC-5–8</span></td><td>unchanged</td>
+          <td>Capture, inspection, the web shell, export and replay behave as before.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <tr><th>#</th><th>A reader who wasn't there checks…</th><th>…and sees</th></tr>
+        <tr><td>1</td><td>a fresh app: ✕, answer <strong>Quit</strong>; relaunch, ✕ again; relaunch, ⌘Q</td>
+          <td>The first ✕ asks once, then quits through DEC-64's check. Neither later quit asks it again; each
+            goes through DEC-64's check as today. Ports <code>7420</code>/<code>7421</code> free, no trawler process
+            left.</td></tr>
+        <tr><td>2</td><td>Settings → General → keep capturing on; ✕ the main window</td>
+          <td>No dialog. The window and the Dock icon go; the menu-bar icon stays.
+            <code>curl -x http://127.0.0.1:7420 http://example.com/</code> then
+            <code>curl http://127.0.0.1:7421/flows</code> lists the request.</td></tr>
+        <tr><td>3</td><td>then menu-bar → Open Trawler; again via a Dock click and via a second launch</td>
+          <td>The window returns where it was, its chips restored, the request from #2 in the list.</td></tr>
+        <tr><td>4</td><td>windowless, <code>kill</code> the core's pid; then menu-bar → Restart</td>
+          <td>The icon reads stopped and the menu offers Restart; after it the API answers on the same ports.</td></tr>
+        <tr><td>5</td><td>windowless, menu-bar → Quit Trawler — once while this machine routes through Trawler, once while nothing does</td>
+          <td>The first opens the window on DEC-64's dialog; the second quits at once. Both end with ports free
+            and no process left.</td></tr>
+        <tr><td>6</td><td>keep capturing on, window open, ⌘Q</td>
+          <td>Quits (through the check) — ⌘Q never just hides.</td></tr>
+        <tr><td>7</td><td>Settings → General → open at login on, then off</td>
+          <td>On: <code>~/Library/LaunchAgents/dev.trawler.app.plist</code> exists, naming this binary with
+            <code>--background</code>. Off: it is gone. Hovering the switch shows the path the entry starts. After a real logout/login: menu-bar icon, no window,
+            capture running.</td></tr>
+        <tr><td>8</td><td><code>trawler-ui --background</code> (keep capturing either way)</td>
+          <td>No window, the menu-bar icon, the core answering. A second launch opens the window.</td></tr>
+        <tr><td>9</td><td>a host with no tray (Linux without an appindicator)</td>
+          <td>Keep capturing reads off and disabled with its reason; <code>--background</code> opens the window
+            instead.</td></tr>
+        <tr><td>10</td><td>windowless, <code>kill -9</code> the app</td>
+          <td>The core exits by its lifeline; both ports rebindable.</td></tr>
+        <tr><td>11</td><td>a fresh app: ✕, answer <strong>Keep capturing</strong></td>
+          <td>No DEC-64 dialog; the app goes windowless as in #2, and Settings → General shows the switch on.</td></tr>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <div data-item="non-goals">
+      <table>
+        <tr><th>Out of scope</th><th>Why / where it goes</th></tr>
+        <tr><td>A core that outlives the app (launchd/system service, app attaching to it)</td><td>Q1 — breaks the lifeline and the owned/attached split DEC-69 rests on</td></tr>
+        <tr><td>Signing, notarization, installers, <code>SMAppService</code></td><td>E-PACKAGING; the login item is re-pointed there if it needs to be (Q7)</td></tr>
+        <tr><td>OS notifications (core stopped, still capturing)</td><td>Q10 — the menu-bar icon carries the state; a notification is a later row</td></tr>
+        <tr><td>Captured traffic surviving a quit or a restart</td><td>Flows stay in the core's memory; the 256 MB ring already bounds a long windowless run</td></tr>
+        <tr><td>Capture controls (pause, clear, filters) in the menu-bar menu</td><td>The window owns them; the menu opens it</td></tr>
+        <tr><td>Holding the Dock's Quit or a logout</td><td>tao still offers no <code>applicationShouldTerminate</code> (DEC-64 rule 1)</td></tr>
+        <tr><td>Any API, route or port change</td><td>The core is untouched by this epic</td></tr>
+      </table>
+    </div>
+
+    <h2 id="wu-summaries">Working units</h2>
+    <div class="diagram" data-c="wu-graph">
+      <pre class="mermaid">
+flowchart LR
+  W1["W1 · the app outlives its window"] --> W2["W2 · menu-bar icon"]
+  W1 --> W3["W3 · every quit asks the same"]
+  W2 --> W3
+  W1 --> W4["W4 · login item"]
+  W5["W5 · design: Settings → General"] --> W6["W6 · build General"]
+  W2 --> W6
+  W4 --> W6
+  W3 --> W7["W7 · e2e + distill"]
+  W6 --> W7
+      </pre>
+      <div class="caption">W5 is a design run and depends on nothing; it can land first. W1–W4 are shell work
+        behind no visible switch until W6.</div>
+    </div>
+    <div data-item="wu-summaries">
+
+      <div data-wu="E-BGSVC.W1">
+        <h3 id="w1">E-BGSVC.W1 — the app outlives its main window</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The decision record <strong>DEC-next (the app
+            outlives its window)</strong>, amending DEC-69 rule 14. A shell preference
+            <code>keep_capturing</code> in its config dir (read/write commands, a corrupt file reads off). With it
+            on, the main window's destruction no longer exits the app; with it off, nothing changes
+            (<a href="../../ui/src-tauri/src/settings.rs">settings.rs</a> <code>ends_the_app</code> becomes a
+            decision over label + preference + tray availability). Reopening the main window — a second launch
+            (single-instance), macOS <code>RunEvent::Reopen</code> — rebuilds it if destroyed, through the same
+            builder setup uses (init script with the core address, geometry restore). macOS activation policy:
+            Regular while a window is open, Accessory while none is. A <code>--background</code> launch flag
+            skips building the main window.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-BG, UC-4. Expected #1, #3 (Dock, second launch), #8,
+            #10. Q2, Q3, Q11.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Shell integration tests (Tauri
+            <code>MockRuntime</code>): with the preference off, destroying main exits; with it on, the app and
+            its core survive, and a reopen builds a main window carrying the core-address init script. Unit tests
+            cover the exit decision table, the preference file's round trip and corrupt read, and the flag parse
+            beside <code>--core</code>. The lifeline integration test is re-run windowless.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">none — the first shell WU</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-BGSVC.W2">
+        <h3 id="w2">E-BGSVC.W2 — the menu-bar icon</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A <code>tray</code> module (Tauri's
+            <code>tray-icon</code> feature): a template icon with a running and a stopped variant, driven by the
+            supervisor's <code>CoreEvent::State</code> observer. Menu: a status line (Capturing · Capture service
+            stopped · Attached), Open Trawler, Settings…, Restart capture service (only when stopped, the same
+            restart path the Capture service page uses), Quit Trawler. Tray creation failure is recorded as the
+            host's tray availability, which W1's exit decision and W6's switch read — so the window is never
+            hidden on a host that cannot show the icon. Native menu, no <code>ui/src</code> file: outside the
+            design gate, its wording follows the closed vocabulary.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-BG. Expected #3 (menu Open), #4, #9.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Unit tests: menu items per core state
+            (running · exited · attached), the menu-action table, icon variant per state. Shell integration test:
+            a state change through the supervisor's observer updates the menu; Restart from the menu round-trips
+            to running on the same ports; a failed tray build marks the host trayless.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — Open needs the rebuild path, and the exit
+            decision consumes tray availability</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-BGSVC.W3">
+        <h3 id="w3">E-BGSVC.W3 — every quit Trawler can hold asks the same</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The close request and the quit request come
+            apart. The first ✕ that would quit, while the switch is unanswered and a tray exists, shows the
+            once-question as W5 designed it (Keep capturing · Quit) and stores the answer as the switch. ⌘Q and
+            the menu-bar's Quit emit a quit request and never show it; the shell opens (or rebuilds) the main window
+            and the window runs DEC-64's check, then asks the shell to exit — one dialog, one copy of each
+            reversal (DEC-64 rule 7). ✕ runs the check only when it quits; in background mode it closes at once.
+            <a href="../../ui/src/closeConfirm.ts">closeConfirm.ts</a> gains the request kind; DEC-64 rules 1
+            and 6 are amended. The once-question cites W5's design; any other <code>.tsx</code> it touches is
+            declared <code>design.undesigned</code> — DEC-64's dialog is reused as is.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-ONBOARD (quit), UC-BG. Expected #1, #5, #6, #11. Q3, Q9.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Vitest: the decision per (request kind ×
+            keep_capturing unanswered/on/off × tray × proxy reading) — the once-question only on an unanswered ✕
+            with a tray, its answer persisted, Quit then running DEC-64's check; ✕ in background mode never reads
+            the proxy; ⌘Q always runs the check and never the once-question; a cancelled quit leaves the window
+            open. Shell integration test: a quit request with no window builds
+            one and emits to it; the menu's Quit maps to the quit request; the Dock's terminate path still stops
+            the core.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 (rebuild the window to ask) · W2 (the menu's Quit, tray availability) · W5
+            (the once-question's design)</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-BGSVC.W4">
+        <h3 id="w4">E-BGSVC.W4 — Trawler at login</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A <code>login_item</code> module with one writer per
+            platform, each rooted in a directory the caller passes: macOS
+            <code>$HOME/Library/LaunchAgents/dev.trawler.app.plist</code> (<code>RunAtLoad</code>,
+            <code>ProgramArguments = [current_exe, --background]</code>), Linux
+            <code>$XDG_CONFIG_HOME/autostart/dev.trawler.app.desktop</code>, Windows the
+            <code>HKCU\…\Run</code> value. Commands <code>login_item_read</code> (on when an entry exists,
+            with the path it starts) and <code>login_item_write</code> (on overwrites any entry with this binary —
+            the last write wins, Q8). No <code>launchctl</code> call: the item takes
+            effect at the next login, the way macOS login items do.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-BG. Expected #7, #8. Q6, Q7, Q8.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Integration tests in a tempdir: on writes a
+            plist that <code>plutil -lint</code> accepts (macOS) and a desktop entry with the exact Exec line
+            (Linux); read reports off, or on with the entry's path; off removes it; on over an entry naming
+            another binary replaces it with this one. Unit tests: the plist and desktop renderings, path quoting
+            with spaces. Windows writer: unit-tested rendering only, its real check owed.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W1 — the <code>--background</code> flag the item launches</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-BGSVC.W5">
+        <h3 id="w5">E-BGSVC.W5 — design: Settings → General</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">A design run per the
+            <a href="../design-flow.html">design flow</a> (mockup + lists,
+            <a href="../decisions/dec-53-the-design-flow-is-the-mockup-and-its-lists.html">DEC-53</a>) for the
+            Settings window's second page and the navigation between its two pages: the two switches, keep
+            capturing's unavailable state with its reason (no tray), the login switch's hover path, and the one
+            line that says closing the window keeps capturing — plus the once-question dialog the first ✕ shows
+            (Q3). Closed and accounted by the design-review step.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-SVC (General page), UC-BG. Q3, Q5, Q8.</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">A closed design run at the WU tip and its
+            <code>design/v1</code> note; no code. Test levels exempt (design artifact only).</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">none</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-BGSVC.W6">
+        <h3 id="w6">E-BGSVC.W6 — build Settings → General</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The General page and the Settings navigation as W5
+            designed them, wired to W1's preference commands, W2's tray availability and W4's login-item commands.
+            Every new surface cites W5's design (<code>design.implements</code>); the design file retires into
+            the code's TSDoc.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">UC-SVC, UC-BG. Expected #2, #7, #9 (the visible half).</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">Vitest per state: both switches on/off, keep
+            capturing unanswered reading off, the trayless reason, the login switch's hover showing the entry's
+            path, a failed write said with its reason and the switch left at the truth. Shell integration test: the commands round-trip through the preference file
+            and the login-item writer in a tempdir.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W5 (the design it cites) · W2 · W4</td></tr>
+        </table>
+      </div>
+
+      <div data-wu="E-BGSVC.W7">
+        <h3 id="w7">E-BGSVC.W7 — the epic's e2e and the distillation</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary"><code>background.spec.ts</code> under the owned-core
+            harness (<code>one-app.conf.ts</code>, temp <code>HOME</code>) driving the journeys below, the
+            hardware checks recorded as owed, and the distillation plan landed.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E: expected #1, #2, #7, #11 through the real window</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">e2e green over J1–J3; T2/T1 docs carry the new
+            truth; the roadmap row closed and its owed checks listed.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W3, W6</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <table>
+        <tr><th>Journey</th><th>Drives</th><th>Asserts</th></tr>
+        <tr><td>J1 · asked once, capture with no window</td><td>a fresh temp <code>HOME</code>: open Settings;
+          close the main window, answer <strong>Keep capturing</strong>; from the harness, send one request
+          through the reported proxy port to the local origin</td>
+          <td>The Settings window is still driven, its General page shows the switch on, the app process is
+          alive; <code>GET /flows</code> on the
+          reported API port returns the request; killing the app frees both ports</td></tr>
+        <tr><td>J2 · nothing switched, nothing changed</td><td>the existing quit journey (<code>quit.ts</code>)
+          with keep capturing answered off in the temp <code>HOME</code></td><td>✕ quits through DEC-64's check
+          with no once-question, ports free</td></tr>
+        <tr><td>J3 · open at login</td><td>Settings → General → open at login on, then off</td>
+          <td>The plist under the harness's temp <code>HOME</code> names the app binary with
+          <code>--background</code>; off removes it</td></tr>
+      </table>
+      <p><span class="badge approval">waiver intent</span> The menu-bar menu, the Dock's reopen, a second
+        launch's reopen and a real login are native and outside any webview, so WebDriver cannot drive them.
+        W1–W4 prove them at shell integration level; the real-hardware checks (macOS menu bar, a logout/login,
+        Windows and Linux trays) are recorded as owed on the roadmap, as E-ONBRVP's were.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table>
+        <tr><th>Tier</th><th>Doc</th><th>Absorbs</th></tr>
+        <tr><td>T2</td><td><code>docs/decisions/</code> DEC-next + index</td><td>The app outlives its window:
+          windowless app process, never without a tray, keep-capturing default off, the login item and its
+          <code>--background</code> flag, ✕ vs quit</td></tr>
+        <tr><td>T2</td><td><a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a></td><td>Rule 14 amended (pointer to DEC-next)</td></tr>
+        <tr><td>T2</td><td><a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a></td><td>Rules 1 and 6 amended: which requests ask, the menu-bar Quit</td></tr>
+        <tr><td>T2</td><td><a href="../use-cases/web-ui.html">web-ui.html</a> + index</td><td>New UC-BG; UC-4, UC-SVC and UC-ONBOARD's quit clause</td></tr>
+        <tr><td>T2</td><td><code>docs/design-rules/</code></td><td>Whatever W5's run promotes to a rule</td></tr>
+        <tr><td>T2</td><td><a href="../backlog/roadmap.html">roadmap.html</a></td><td>The row closed; the owed hardware checks as a row</td></tr>
+        <tr><td>T1</td><td><a href="../architecture.html">architecture.html</a></td><td>The app's lifecycle (it no longer ends with its window), via <code>mr commit</code> with a <code>Reviewed-By</code> trailer (Q14)</td></tr>
+      </table>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <table>
+        <tr><th>#</th><th>Question</th><th>Answer</th></tr>
+        <tr><td>Q1</td><td>What is the "background service" — the app process with no window, or a core running
+          as its own login/system service that the app attaches to?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>The app process with no window.</strong> It keeps DEC-69 whole: one supervisor, the stdin
+          lifeline, one CA dir, single instance. A separate service would make every launch an attach, orphan the
+          Capture service page's Restart and log, and need its own install/uninstall story.</td></tr>
+        <tr><td>Q2</td><td>✕ in background mode: destroy the main webview or hide it?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Destroy</strong>, rebuild on reopen. No webview rendering a live list for hours unseen; the
+          list reloads from the core, chips and geometry from their files. Cost: a reopen paints a fresh
+          window (~a cold window's time).</td></tr>
+        <tr><td>Q3</td><td>How does the user decide what ✕ does — the switch only, or a question the first time
+          they close the window?
+          <table>
+            <tr><th>Option</th><th>The user sees</th><th>Costs</th></tr>
+            <tr><td>(a) switch only</td><td>✕ quits, as today, until they find
+              <em>Keep capturing when the window closes</em> in Settings → General and turn it on. Never asked.</td>
+              <td>nothing new; the feature is easy to miss</td></tr>
+            <tr><td>(b) ask once</td><td>The first ✕ that would quit asks: <em>"Keep capturing in the menu bar
+              after the window closes?"</em> — <strong>Keep capturing</strong> · <strong>Quit</strong>. The answer
+              becomes the switch; never asked again; changeable in Settings → General.</td>
+              <td>a new dialog (W3 shows it, W5 designs it). Answering Quit while this machine routes through
+              Trawler is followed by DEC-64's dialog — two questions, on that one close only</td></tr>
+          </table></td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(b) ask once</strong> — the choice is offered at the one moment it matters, and
+          nothing changes until the user picks it. A host with no menu-bar icon never asks and just quits.</td></tr>
+        <tr><td>Q4</td><td>Menu-bar icon always, or only while windowless / background mode is on?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Always while the app runs.</strong> One place that says the service is running and
+          reaches the window, and the icon is already there the moment the window goes.</td></tr>
+        <tr><td>Q5</td><td>Where do the <a href="#switches">two switches</a> — <em>Keep capturing when the window
+          closes</em> and <em>Open Trawler at login</em> — live?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Settings → a new General page</strong> (designed, W5), and only there — one control per setting, as DEC-61 rejected two controls
+          for one. The menu-bar menu offers Settings… to reach it; it carries no switches itself.</td></tr>
+        <tr><td>Q6</td><td>Does a login launch open a window?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>No</strong> — it starts with <code>--background</code>. Opening a window at every login is
+          what users turn login items off for.</td></tr>
+        <tr><td>Q7</td><td>To start at login, Trawler must register itself with the OS. Which way?
+          <table>
+            <tr><th>Way</th><th>What it is</th><th>Trade-off</th></tr>
+            <tr><td>(a) write the entry ourselves</td><td>One small file per OS: macOS
+              <code>~/Library/LaunchAgents/dev.trawler.app.plist</code>, Linux an autostart
+              <code>.desktop</code> file, Windows a registry value</td>
+              <td>works for any build, tests write into a temp folder. On macOS 13+ the entry appears under
+              System Settings → Login Items → "Allow in the Background", and macOS posts a one-time
+              "Background Items Added" notice</td></tr>
+            <tr><td>(b) <code>tauri-plugin-autostart</code></td><td>a ready-made plugin that writes the same kind
+              of entry</td><td>always writes into the real home folder, so a test would register the test build
+              on this machine</td></tr>
+            <tr><td>(c) Apple's <code>SMAppService</code></td><td>the modern macOS API — Trawler shows by name in
+              Login Items</td><td>needs macOS 13 and a signed app installed in /Applications, which only
+              E-PACKAGING brings</td></tr>
+          </table></td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>(a)</strong> now;
+          E-PACKAGING may move the macOS entry to (c) once the app is signed.</td></tr>
+        <tr><td>Q8</td><td>The login entry stores the path of the Trawler program to start. If that path is not
+          the Trawler now open — e.g. it was turned on from a <code>cargo run</code> build in
+          <code>target/debug/</code> and this is <code>/Applications/Trawler.app</code>, or the app was moved
+          — what does the <em>Open Trawler at login</em> switch show?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>The last write wins.</strong> The switch reads on whenever an entry exists, whatever
+          copy it names; turning it on (or off and on) points it at the copy now open. Hovering the switch shows
+          the entry's path, for debugging — a mismatch is not a real-use case, so it gets no state of its
+          own.</td></tr>
+        <tr><td>Q9</td><td>Menu-bar Quit with no window open: how does DEC-64's check ask?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Open the main window and ask there.</strong> A native shell dialog would be a second copy
+          of every case and reversal (DEC-64 rule 7).</td></tr>
+        <tr><td>Q10</td><td>The core dies while no window is open — notify?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>No OS notification in this epic.</strong> The icon turns to its stopped variant and the
+          menu offers Restart; no automatic restart (E-ONEAPP Q12). A notification becomes a roadmap row.</td></tr>
+        <tr><td>Q11</td><td>Dock icon while windowless (macOS)?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Hidden</strong> (Accessory policy) while no Trawler window is open, shown again with the
+          first window — the menu-bar convention.</td></tr>
+        <tr><td>Q12</td><td>Platforms?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>All three built, macOS proven.</strong> Windows and Linux compile and are unit-tested;
+          their tray and login checks are owed. A host where the tray cannot be created never goes windowless.</td></tr>
+        <tr><td>Q13</td><td>E-INSPWIN's inspector windows when the main window closes in background mode?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>They close with it.</strong> Whichever epic lands second adopts the rule (E-INSPWIN is
+          in flight on its own worktree).</td></tr>
+        <tr><td>Q14</td><td>May W7 edit T1 <code>architecture.html</code>?</td>
+          <td><span class="badge approval">owner ruling 2026-11-05</span> <strong>Yes</strong>, the lifecycle rows only, via <code>mr commit</code>. No T0 edit is
+          foreseen: no command in CLAUDE.md changes.</td></tr>
+      </table>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
