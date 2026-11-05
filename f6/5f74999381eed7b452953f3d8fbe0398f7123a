@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU gate-parity2/merge-proves-tree -> epic/gate-parity2"
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W1
+branch: wu/gate-parity2/merge-proves-tree
+base: bd49c25e7400372885c39a2e14454c374d339ac6
+head: f65f74999381eed7b452953f3d8fbe0398f7123a
+diff_sha256: 521fa3725b43cb46bb7831a91c7909c00676e0490910a7c01cdc7233cb4e2ce1
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    gate0: 0
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency:  { found: 1, verified: 1 }
+    altitude:    { found: 1, verified: 1 }
+findings: { found: 4, verified: 4, waived: 0 }
+waivers: []
+nits:
+  - finding: "pre-push still runs the suite blind on a tree the merge just proved"
+    waived: "outside this diff, and exactly E-GATEPAR2.W2 (push-reads-proof), planned next in the epic"
+  - finding: "merge-refusal wording and a gate0 merge entrypoint live in the Gate 0 module rather than the hooks"
+    waived: "one source for both hooks, named by lint_spawn.rs rather than restated in shell; DEC-74 rejects hook-side logic for the same reason"
+  - finding: "check_command strips every GIT_*, including deliberately set ones like GIT_SSH_COMMAND or GIT_CONFIG_GLOBAL"
+    waived: "deliberate: the same blanket rule as git.rs cmd (DEC-2), widened by DEC-74; the suite is hermetic and sets what it needs itself"
+  - finding: "a spawn error from run_checks reaches the merge without the abort/back-merge guidance"
+    waived: "the merge is still refused (set -e / exec); a failure to spawn cargo is not a verdict on the merged tree, so back-merge advice would misdirect"
+verdict: PASS
+date: 2026-11-05
