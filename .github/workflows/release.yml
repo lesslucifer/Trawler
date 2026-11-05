@@ -9,15 +9,21 @@ name: Release
 permissions:
   contents: read
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   version:
     name: Tag equals the workspace version
     runs-on: ubuntu-22.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable, 2026-10-16
         with:
           toolchain: 1.99.0
 
@@ -35,42 +41,60 @@ jobs:
     needs: version
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: true
       matrix:
         include:
           - name: macos-universal
+            host: aarch64-apple-darwin
             os: macos-latest
             targets: aarch64-apple-darwin,x86_64-apple-darwin
             package-args: --universal
             bundle: target/universal-apple-darwin/release/bundle
             wrap: ""
           - name: windows-x64
+            host: x86_64-pc-windows-msvc
             os: windows-latest
             targets: ""
             package-args: ""
             bundle: target/release/bundle
             wrap: ""
           - name: windows-arm64
+            host: aarch64-pc-windows-msvc
             os: windows-11-arm
             targets: ""
             package-args: ""
             bundle: target/release/bundle
             wrap: ""
           - name: linux-x64
+            host: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
             targets: ""
             package-args: ""
             bundle: target/release/bundle
             wrap: xvfb-run
           - name: linux-arm64
+            host: aarch64-unknown-linux-gnu
             os: ubuntu-22.04-arm
             targets: ""
             package-args: ""
             bundle: target/release/bundle
             wrap: xvfb-run
     steps:
-      - uses: actions/checkout@v4
+      - env:
+          KEY_PRESENT: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        run: |
+          if [ "$KEY_PRESENT" != true ]; then
+            echo "::error::the TAURI_SIGNING_PRIVATE_KEY secret is empty or missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
       - if: startsWith(matrix.os, 'ubuntu')
         run: >-
@@ -78,24 +102,28 @@ jobs:
           libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
           librsvg2-dev libssl-dev libxdo-dev patchelf xvfb
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable, 2026-10-16
         with:
           toolchain: 1.99.0
           targets: ${{ matrix.targets }}
 
-      - uses: pnpm/action-setup@v4
+      - env:
+          HOST: ${{ matrix.host }}
+        run: |
+          rustc -vV
+          rustc -vV | grep -qx "host: $HOST"
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:
           version: 11
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
 
-      - uses: Swatinem/rust-cache@v2
+      - run: cargo xtask package ${{ matrix.package-args }} --build-only
 
-      - run: cargo xtask package ${{ matrix.package-args }}
+      - run: cargo xtask package ${{ matrix.package-args }} --bundle-only
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -103,7 +131,7 @@ jobs:
 
       - run: ${{ matrix.wrap }} cargo xtask smoke ${{ matrix.package-args }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-${{ matrix.name }}
           if-no-files-found: error
@@ -125,21 +153,27 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable, 2026-10-16
         with:
           toolchain: 1.99.0
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: release-*
-          merge-multiple: true
           path: dist
 
       - run: |
-          find dist -mindepth 2 -type f -exec mv {} dist/ \;
+          find dist -mindepth 2 -type f -exec mv -n {} dist/ \;
           find dist -mindepth 1 -type d -empty -delete
+          if [ -n "$(find dist -mindepth 1 -type d)" ]; then
+            find dist -mindepth 2 -type f
+            echo "::error::two artifacts share a file name"
+            exit 1
+          fi
 
       - env:
           TAG: ${{ github.ref_name }}
@@ -153,4 +187,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mv dist/notes.md notes.md
+          if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then
+            gh release delete "$TAG" --yes
+          fi
           gh release create "$TAG" dist/* --draft --title "Trawler ${TAG#v}" --notes-file notes.md

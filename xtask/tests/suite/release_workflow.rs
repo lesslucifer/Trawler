@@ -1,10 +1,24 @@
 use serde_yaml::Value;
 
-fn workflow() -> Value {
+fn text() -> String {
     let repo = xtask::repo_root().unwrap();
-    let text = std::fs::read_to_string(repo.join(".github/workflows/release.yml"))
-        .expect("the release workflow exists");
-    serde_yaml::from_str(&text).expect("the release workflow is YAML")
+    std::fs::read_to_string(repo.join(".github/workflows/release.yml"))
+        .expect("the release workflow exists")
+}
+
+fn workflow() -> Value {
+    serde_yaml::from_str(&text()).expect("the release workflow is YAML")
+}
+
+fn every_step() -> Vec<(String, Value)> {
+    keys(&workflow()["jobs"])
+        .into_iter()
+        .flat_map(|name| steps(&job(&name)).into_iter().map(move |step| (name.clone(), step)))
+        .collect()
+}
+
+fn uses_of(step: &Value) -> &str {
+    step["uses"].as_str().unwrap_or_default()
 }
 
 fn keys(map: &Value) -> Vec<String> {
@@ -30,7 +44,11 @@ fn position(job: &Value, wanted: impl Fn(&Value) -> bool, what: &str) -> usize {
 }
 
 fn builds(step: &Value) -> bool {
-    run_of(step).contains("cargo xtask package")
+    run_of(step).contains("cargo xtask package") && run_of(step).contains("--build-only")
+}
+
+fn bundles(step: &Value) -> bool {
+    run_of(step).contains("cargo xtask package") && run_of(step).contains("--bundle-only")
 }
 
 fn smokes(step: &Value) -> bool {
@@ -98,21 +116,61 @@ fn every_target_is_built_on_its_runner() {
 }
 
 #[test]
-fn each_build_packages_then_smokes_then_uploads() {
+fn each_build_compiles_then_bundles_then_smokes_then_uploads() {
     let build = job("build");
-    let package = position(&build, builds, "cargo xtask package");
+    let compile = position(&build, builds, "cargo xtask package --build-only");
+    let bundle = position(&build, bundles, "cargo xtask package --bundle-only");
     let smoke = position(&build, smokes, "cargo xtask smoke");
     let upload = position(&build, uploads, "upload-artifact");
-    assert!(package < smoke && smoke < upload, "package {package}, smoke {smoke}, upload {upload}");
+    assert!(
+        compile < bundle && bundle < smoke && smoke < upload,
+        "compile {compile}, bundle {bundle}, smoke {smoke}, upload {upload}"
+    );
+    let packaging =
+        steps(&build).iter().filter(|s| run_of(s).contains("cargo xtask package")).count();
+    assert_eq!(packaging, 2, "one compile and one bundle");
     assert_eq!(steps(&build).iter().filter(|s| uploads(s)).count(), 1);
 }
 
 #[test]
-fn the_smoke_checks_the_bundle_the_package_step_built() {
+fn the_smoke_checks_the_bundle_the_package_steps_built() {
     let build = job("build");
-    let package = run_of(&steps(&build)[position(&build, builds, "package")]);
-    let smoke = run_of(&steps(&build)[position(&build, smokes, "smoke")]);
-    assert!(package.contains("matrix.package-args") && smoke.contains("matrix.package-args"));
+    for (wanted, what) in
+        [(builds as fn(&Value) -> bool, "compile"), (bundles, "bundle"), (smokes, "smoke")]
+    {
+        let run = run_of(&steps(&build)[position(&build, wanted, what)]);
+        assert!(run.contains("matrix.package-args"), "{what}: {run}");
+    }
+}
+
+#[test]
+fn every_build_proves_its_rustc_host_is_the_row_s_architecture() {
+    let build = job("build");
+    let rows = build["strategy"]["matrix"]["include"].as_sequence().unwrap().clone();
+    let hosts: Vec<(&str, &str)> =
+        rows.iter().map(|r| (r["name"].as_str().unwrap(), r["host"].as_str().unwrap())).collect();
+    assert_eq!(
+        hosts,
+        [
+            ("macos-universal", "aarch64-apple-darwin"),
+            ("windows-x64", "x86_64-pc-windows-msvc"),
+            ("windows-arm64", "aarch64-pc-windows-msvc"),
+            ("linux-x64", "x86_64-unknown-linux-gnu"),
+            ("linux-arm64", "aarch64-unknown-linux-gnu"),
+        ]
+    );
+    let check = position(
+        &build,
+        |s| run_of(s).contains("rustc -vV") && run_of(s).contains("grep -qx \"host: $HOST\""),
+        "a rustc host check",
+    );
+    assert_eq!(steps(&build)[check]["env"]["HOST"].as_str(), Some("${{ matrix.host }}"));
+    assert!(check < position(&build, builds, "compile"));
+    assert_eq!(
+        build["defaults"]["run"]["shell"].as_str(),
+        Some("bash"),
+        "grep runs on Windows too"
+    );
 }
 
 #[test]
@@ -127,18 +185,86 @@ fn an_upload_without_files_is_red_and_carries_every_installer_kind() {
 }
 
 #[test]
-fn the_signing_key_is_read_by_secret_name_and_only_where_the_package_is_built() {
-    let text =
-        std::fs::read_to_string(xtask::repo_root().unwrap().join(".github/workflows/release.yml"))
-            .unwrap();
-    for secret in ["TAURI_SIGNING_PRIVATE_KEY", "TAURI_SIGNING_PRIVATE_KEY_PASSWORD"] {
-        assert!(text.contains(&format!("secrets.{secret}")), "{secret}");
-    }
+fn the_signing_key_reaches_the_bundle_step_alone() {
+    let squeezed: String = text().split_whitespace().collect();
+    assert!(
+        !squeezed.contains("toJSON(secrets") && !squeezed.contains("secrets["),
+        "secrets by name"
+    );
+    assert_eq!(squeezed.matches("secrets.").count(), 3, "the presence check and the bundle's two");
+    assert_eq!(squeezed.matches("secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD").count(), 1);
+    let carrying: Vec<(String, Value)> = every_step()
+        .into_iter()
+        .filter(|(_, step)| serde_yaml::to_string(step).unwrap().contains("secrets."))
+        .collect();
     let build = job("build");
-    let package = steps(&build)[position(&build, builds, "package")].clone();
-    assert!(keys(&package["env"]).contains(&"TAURI_SIGNING_PRIVATE_KEY".to_string()));
-    let elsewhere = text.matches("secrets.TAURI_SIGNING_PRIVATE_KEY ").count();
-    assert_eq!(elsewhere, 1, "the key appears in one step only");
+    let bundle = steps(&build)[position(&build, bundles, "bundle")].clone();
+    let presence = steps(&build)[0].clone();
+    assert_eq!(
+        carrying,
+        [("build".to_string(), presence.clone()), ("build".to_string(), bundle.clone())]
+    );
+    assert_eq!(
+        bundle["env"]["TAURI_SIGNING_PRIVATE_KEY"].as_str(),
+        Some("${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}")
+    );
+    assert_eq!(
+        bundle["env"]["TAURI_SIGNING_PRIVATE_KEY_PASSWORD"].as_str(),
+        Some("${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}")
+    );
+    assert_eq!(
+        presence["env"]["KEY_PRESENT"].as_str(),
+        Some("${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}"),
+        "the first build step sees whether the key is set, never its value"
+    );
+    assert!(run_of(&presence).contains("exit 1"), "{presence:?}");
+}
+
+#[test]
+fn every_action_is_pinned_to_a_full_commit_sha() {
+    let pinned = |uses: &str| {
+        uses.split_once('@').is_some_and(|(_, sha)| {
+            sha.len() == 40 && sha.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        })
+    };
+    assert!(!pinned("actions/checkout@v4") && !pinned("dtolnay/rust-toolchain@stable"));
+    let used: Vec<String> = every_step()
+        .iter()
+        .map(|(_, s)| uses_of(s).to_string())
+        .filter(|u| !u.is_empty())
+        .collect();
+    assert!(used.len() >= 9, "{used:?}");
+    for uses in used {
+        assert!(pinned(&uses), "{uses} is not pinned to a commit");
+    }
+}
+
+#[test]
+fn a_release_restores_no_cache() {
+    for (job, step) in every_step() {
+        assert!(!uses_of(&step).contains("cache"), "{job}: {step:?}");
+        assert!(step["with"].get("cache").is_none(), "{job}: {step:?}");
+    }
+}
+
+#[test]
+fn no_checkout_leaves_the_token_in_git() {
+    let checkouts: Vec<Value> = every_step()
+        .into_iter()
+        .map(|(_, s)| s)
+        .filter(|s| uses_of(s).starts_with("actions/checkout@"))
+        .collect();
+    assert_eq!(checkouts.len(), 3);
+    for checkout in checkouts {
+        assert_eq!(checkout["with"]["persist-credentials"], Value::Bool(false));
+    }
+}
+
+#[test]
+fn one_release_per_tag_runs_at_a_time_and_none_is_cancelled() {
+    let concurrency = &workflow()["concurrency"];
+    assert_eq!(concurrency["group"].as_str(), Some("release-${{ github.ref }}"));
+    assert_eq!(concurrency["cancel-in-progress"], Value::Bool(false));
 }
 
 #[test]
@@ -151,11 +277,17 @@ fn the_release_waits_for_every_build_and_is_only_ever_a_draft() {
     assert!(manifest < create, "latest.json exists before the release is created");
     assert!(runs[create].contains("--draft"), "{}", runs[create]);
     assert!(!runs.iter().any(|r| r.contains("prerelease") || r.contains("gh release edit")));
-    let download = steps(&release)
-        .into_iter()
-        .find(|s| s["uses"].as_str().is_some_and(|u| u.starts_with("actions/download-artifact")))
-        .unwrap();
-    assert_eq!(download["with"]["merge-multiple"], Value::Bool(true));
+}
+
+#[test]
+fn a_rerun_replaces_only_a_draft_of_its_tag() {
+    let runs: Vec<String> = steps(&job("release")).iter().map(run_of).collect();
+    let create = runs.iter().find(|r| r.contains("gh release create")).unwrap();
+    let replace = create.find("gh release delete \"$TAG\"").expect("a stale draft is deleted");
+    let guard = create.find("--json isDraft").expect("only when it is a draft");
+    assert!(guard < replace && replace < create.find("gh release create").unwrap(), "{create}");
+    assert!(create.contains("= true ]"), "{create}");
+    assert!(!create.contains("--cleanup-tag"), "the tag stays");
 }
 
 #[test]
@@ -163,10 +295,20 @@ fn the_downloaded_installers_are_flattened_into_dist_before_the_manifest_reads_t
     let runs: Vec<String> = steps(&job("release")).iter().map(run_of).collect();
     let flatten = runs
         .iter()
-        .position(|r| r.contains("find dist") && r.contains("-mindepth 2") && r.contains("mv"))
-        .expect("a step moves every downloaded file up into dist");
+        .position(|r| r.contains("find dist") && r.contains("-mindepth 2") && r.contains("mv -n"))
+        .expect("a step moves every downloaded file up into dist, never over another");
+    assert!(
+        runs[flatten].contains("find dist -mindepth 1 -type d)")
+            && runs[flatten].contains("exit 1"),
+        "a name two artifacts share leaves a directory behind and turns the run red"
+    );
     let manifest = runs.iter().position(|r| r.contains("cargo xtask release-manifest")).unwrap();
     assert!(flatten < manifest, "flatten {flatten}, manifest {manifest}");
+    let download = steps(&job("release"))
+        .into_iter()
+        .find(|s| uses_of(s).starts_with("actions/download-artifact"))
+        .unwrap();
+    assert!(download["with"].get("merge-multiple").is_none(), "a merge would overwrite silently");
 }
 
 #[test]
@@ -181,10 +323,10 @@ fn the_toolchain_is_the_pinned_one_in_every_job() {
         .trim()
         .trim_matches('"')
         .to_string();
-    for name in ["version", "build", "release"] {
-        let setups: Vec<Value> = steps(&job(name))
+    for name in keys(&workflow()["jobs"]) {
+        let setups: Vec<Value> = steps(&job(&name))
             .into_iter()
-            .filter(|s| s["uses"].as_str().is_some_and(|u| u.starts_with("dtolnay/rust-toolchain")))
+            .filter(|s| uses_of(s).starts_with("dtolnay/rust-toolchain@"))
             .collect();
         assert_eq!(setups.len(), 1, "{name}: one toolchain step");
         assert_eq!(setups[0]["with"]["toolchain"].as_str(), Some(channel.as_str()), "{name}");
@@ -193,8 +335,8 @@ fn the_toolchain_is_the_pinned_one_in_every_job() {
 
 #[test]
 fn no_step_can_fail_without_turning_the_run_red() {
-    for name in ["version", "build", "release"] {
-        let job = job(name);
+    for name in keys(&workflow()["jobs"]) {
+        let job = job(&name);
         assert!(job.get("continue-on-error").is_none(), "{name}");
         assert!(job["timeout-minutes"].as_u64().is_some_and(|m| m <= 120), "{name}: a timeout");
         for step in steps(&job) {

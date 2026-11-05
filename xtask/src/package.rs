@@ -38,10 +38,19 @@ impl Os {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Stage {
+    #[default]
+    BuildAndBundle,
+    BuildOnly,
+    BundleOnly,
+}
+
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Options {
     pub universal: bool,
     pub profile: Option<String>,
+    pub stage: Stage,
 }
 
 pub fn parse(args: &[&str]) -> Result<Options, String> {
@@ -50,6 +59,12 @@ pub fn parse(args: &[&str]) -> Result<Options, String> {
     while let Some(arg) = rest.next() {
         match *arg {
             "--universal" if !options.universal => options.universal = true,
+            "--build-only" if options.stage == Stage::BuildAndBundle => {
+                options.stage = Stage::BuildOnly;
+            }
+            "--bundle-only" if options.stage == Stage::BuildAndBundle => {
+                options.stage = Stage::BundleOnly;
+            }
             "--profile" if options.profile.is_none() => match rest.next() {
                 Some(name) if !name.starts_with('-') => options.profile = Some((*name).to_string()),
                 _ => return Err(super::USAGE.to_string()),
@@ -81,9 +96,15 @@ pub fn plan(
     installed: &[&str],
     signs_updates: bool,
 ) -> Result<Plan, String> {
-    let mut args: Vec<String> =
-        ["tauri", "build", "--bundles", os.bundles()].map(String::from).into();
-    if signs_updates {
+    let mut args: Vec<String> = match options.stage {
+        Stage::BuildAndBundle => vec!["tauri", "build", "--bundles", os.bundles()],
+        Stage::BuildOnly => vec!["tauri", "build", "--no-bundle"],
+        Stage::BundleOnly => vec!["tauri", "bundle", "--bundles", os.bundles()],
+    }
+    .into_iter()
+    .map(String::from)
+    .collect();
+    if signs_updates && options.stage != Stage::BuildOnly {
         args.extend(["--config".to_string(), UPDATER_ARTIFACTS.to_string()]);
     }
     let mut bundle_dir = PathBuf::new();
@@ -103,6 +124,9 @@ pub fn plan(
         bundle_dir.push(UNIVERSAL);
     }
     if let Some(profile) = &options.profile {
+        if options.stage == Stage::BundleOnly {
+            return Err("--bundle-only bundles the release profile; drop --profile".to_string());
+        }
         args.extend(["--".to_string(), "--profile".to_string(), profile.clone()]);
     }
     bundle_dir.push(options.profile.as_deref().unwrap_or(RELEASE));
@@ -117,8 +141,13 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let signs_updates = std::env::var_os(SIGNING_KEY_VAR).is_some_and(|key| !key.is_empty());
     let plan = plan(os, &options, &installed.lines().collect::<Vec<_>>(), signs_updates)?;
     let ui = repo.join("ui");
-    pnpm(&ui, os.pnpm(), &["install".to_string(), "--frozen-lockfile".to_string()])?;
+    if options.stage != Stage::BundleOnly {
+        pnpm(&ui, os.pnpm(), &["install".to_string(), "--frozen-lockfile".to_string()])?;
+    }
     pnpm(&ui, plan.program, &plan.args)?;
+    if options.stage == Stage::BuildOnly {
+        return Ok((0, "build complete; cargo xtask package --bundle-only bundles it".to_string()));
+    }
     let bundle_dir = repo.join("target").join(&plan.bundle_dir);
     let artifacts = artifacts(&bundle_dir)?;
     if os == Os::MacOs {
@@ -249,11 +278,29 @@ pub fn drift_of(
             "ui/src-tauri/tauri.conf.json: carries a version; Tauri takes the crate's".to_string(),
         );
     }
+    if !msi_takes(shipped) {
+        drift.push(format!(
+            "{SHIPPED} {shipped}: an MSI takes <=255.<=255.<=65535 with at most a numeric pre-release <=65535 (0.1.0-1, never 0.1.0-rc.1)"
+        ));
+    }
     let ui_version = ui_package["version"].as_str();
     if ui_version != Some(shipped) {
         drift.push(format!("ui/package.json: version {ui_version:?}, the app ships {shipped}"));
     }
     Ok(drift)
+}
+
+fn msi_takes(version: &str) -> bool {
+    let (core, pre) = version.split_once('-').unwrap_or((version, "0"));
+    let numeric = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
+    let parts: Vec<&str> = core.split('.').collect();
+    numeric(pre)
+        && pre.parse::<u16>().is_ok()
+        && parts.len() == 3
+        && parts.iter().all(|part| numeric(part))
+        && parts[0].parse::<u8>().is_ok()
+        && parts[1].parse::<u8>().is_ok()
+        && parts[2].parse::<u16>().is_ok()
 }
 
 pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
@@ -274,7 +321,11 @@ mod tests {
     use super::*;
 
     fn options(universal: bool, profile: Option<&str>) -> Options {
-        Options { universal, profile: profile.map(str::to_string) }
+        Options { universal, profile: profile.map(str::to_string), stage: Stage::BuildAndBundle }
+    }
+
+    fn staged(stage: Stage, universal: bool) -> Options {
+        Options { universal, profile: None, stage }
     }
 
     fn argv(plan: &Plan) -> String {
@@ -309,6 +360,34 @@ mod tests {
         );
         let unsigned = plan(Os::MacOs, &Options::default(), &[], false).unwrap();
         assert!(!argv(&unsigned).contains("createUpdaterArtifacts"));
+    }
+
+    #[test]
+    fn the_build_never_sees_the_key_and_the_bundle_alone_signs() {
+        let build = plan(Os::Windows, &staged(Stage::BuildOnly, false), &[], true).unwrap();
+        assert_eq!(argv(&build), "pnpm.cmd tauri build --no-bundle");
+        let bundle = plan(Os::Windows, &staged(Stage::BundleOnly, false), &[], true).unwrap();
+        assert_eq!(
+            argv(&bundle),
+            format!("pnpm.cmd tauri bundle --bundles msi,nsis --config {UPDATER_ARTIFACTS}")
+        );
+        assert_eq!(bundle.bundle_dir, Path::new("release/bundle"));
+        let universal =
+            plan(Os::MacOs, &staged(Stage::BundleOnly, true), &UNIVERSAL_PARTS, true).unwrap();
+        assert!(argv(&universal).ends_with("--target universal-apple-darwin"));
+        assert_eq!(universal.bundle_dir, Path::new("universal-apple-darwin/release/bundle"));
+        let universal =
+            plan(Os::MacOs, &staged(Stage::BuildOnly, true), &UNIVERSAL_PARTS, false).unwrap();
+        assert_eq!(
+            argv(&universal),
+            "pnpm tauri build --no-bundle --target universal-apple-darwin"
+        );
+    }
+
+    #[test]
+    fn a_bundle_only_run_refuses_a_profile() {
+        let options = Options { profile: Some("x".into()), ..staged(Stage::BundleOnly, false) };
+        assert!(plan(Os::Linux, &options, &[], false).unwrap_err().contains("--bundle-only"));
     }
 
     #[test]
@@ -347,8 +426,15 @@ mod tests {
             parse(&["--profile", "package-test", "--universal"]).unwrap(),
             options(true, Some("package-test"))
         );
+        assert_eq!(parse(&["--build-only"]).unwrap().stage, Stage::BuildOnly);
+        assert_eq!(
+            parse(&["--universal", "--bundle-only"]).unwrap(),
+            staged(Stage::BundleOnly, true)
+        );
         for bad in [
             &["--sign"][..],
+            &["--build-only", "--bundle-only"],
+            &["--bundle-only", "--bundle-only"],
             &["--profile"],
             &["--profile", "--universal"],
             &["--universal", "--universal"],
@@ -403,7 +489,7 @@ mod tests {
     }
 
     fn one_version() -> Vec<Member> {
-        ["trawler", "trawler-ui", "xtask"].map(|name| member(name, "1.2.3-rc.1")).into()
+        ["trawler", "trawler-ui", "xtask"].map(|name| member(name, "1.2.3-1")).into()
     }
 
     fn json(text: &str) -> serde_json::Value {
@@ -420,7 +506,7 @@ mod tests {
 
     #[test]
     fn one_version_everywhere_is_no_drift() {
-        let drift = drift_of(&one_version(), &json("{}"), &json(r#"{"version":"1.2.3-rc.1"}"#));
+        let drift = drift_of(&one_version(), &json("{}"), &json(r#"{"version":"1.2.3-1"}"#));
         assert_eq!(drift.unwrap(), Vec::<String>::new());
     }
 
@@ -428,26 +514,42 @@ mod tests {
     fn each_source_that_disagrees_is_named() {
         let mut members = one_version();
         members[2].version = "0.1.0".to_string();
-        let drift = drift_of(
-            &members,
-            &json(r#"{"version":"1.2.3-rc.1"}"#),
-            &json(r#"{"version":"1.2.3"}"#),
-        )
-        .unwrap();
+        let drift =
+            drift_of(&members, &json(r#"{"version":"1.2.3-1"}"#), &json(r#"{"version":"1.2.3"}"#))
+                .unwrap();
         assert_eq!(
             drift,
             [
-                "xtask is 0.1.0, the app ships 1.2.3-rc.1",
+                "xtask is 0.1.0, the app ships 1.2.3-1",
                 "ui/src-tauri/tauri.conf.json: carries a version; Tauri takes the crate's",
-                "ui/package.json: version Some(\"1.2.3\"), the app ships 1.2.3-rc.1",
+                "ui/package.json: version Some(\"1.2.3\"), the app ships 1.2.3-1",
             ]
         );
     }
 
     #[test]
+    fn only_a_version_an_msi_can_carry_ships() {
+        for good in ["0.1.0", "0.1.0-1", "255.255.65535-65535"] {
+            assert!(msi_takes(good), "{good}");
+        }
+        for bad in
+            ["0.1.0-rc.1", "0.1.0-65536", "0.1.0-+1", "0.1.0-1.2", "0.1.0+5", "256.0.0", "0.1"]
+        {
+            assert!(!msi_takes(bad), "{bad}");
+        }
+        let mut members = one_version();
+        for member in &mut members {
+            member.version = "0.1.0-rc.1".to_string();
+        }
+        let drift = drift_of(&members, &json("{}"), &json(r#"{"version":"0.1.0-rc.1"}"#)).unwrap();
+        assert_eq!(drift.len(), 1, "{drift:?}");
+        assert!(drift[0].contains("never 0.1.0-rc.1"), "{drift:?}");
+    }
+
+    #[test]
     fn a_package_json_without_a_version_is_drift() {
         let drift = drift_of(&one_version(), &json("{}"), &json("{}")).unwrap();
-        assert_eq!(drift, ["ui/package.json: version None, the app ships 1.2.3-rc.1"]);
+        assert_eq!(drift, ["ui/package.json: version None, the app ships 1.2.3-1"]);
     }
 
     #[test]
@@ -458,6 +560,8 @@ mod tests {
 
     #[test]
     fn package_is_documented() {
-        assert!(crate::USAGE.contains("cargo xtask package [--universal] [--profile <name>]"));
+        assert!(crate::USAGE.contains(
+            "cargo xtask package [--universal] [--profile <name>] [--build-only|--bundle-only]"
+        ));
     }
 }

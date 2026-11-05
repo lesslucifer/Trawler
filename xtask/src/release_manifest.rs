@@ -253,8 +253,8 @@ mod tests {
         let template =
             std::fs::read_to_string(crate::repo_root().expect("repo root").join(TEMPLATE))
                 .expect("the notes template");
-        let text = notes(&template, "0.2.0-rc.1");
-        assert!(text.starts_with("# Trawler 0.2.0-rc.1"), "{text}");
+        let text = notes(&template, "0.2.0-1");
+        assert!(text.starts_with("# Trawler 0.2.0-1"), "{text}");
         for needle in
             ["## macOS", "Open Anyway", "## Windows", "Run anyway", "## Linux", "AppImage"]
         {
