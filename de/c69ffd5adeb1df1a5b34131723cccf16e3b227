@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU inspect-window/time-decoder -> epic/inspect-window (round 3)"
+epic: E-INSPWIN
+wu: E-INSPWIN.W8
+branch: wu/inspect-window/time-decoder
+base: a5bf40a9a8368dc95b27cf963139dcf2468e4cd2
+head: dec69ffd5adeb1df1a5b34131723cccf16e3b227
+diff_sha256: ae6983cb85337457c2783175f9646b98c7ff7c2e499131606399d3ba5626c687
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 2
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "civil takes month length from Date.UTC, which maps years 0-99 to 1900-1999, so 0000-02-29 is refused"
+    waived: "only year 0's leap day differs; no API sends year 0, and the four-digit years in use are 1000-9999"
+  - finding: "dateTimeAround slices the whole enclosing line and scans it with TIME_SHAPE on each decode gesture, so a multi-MB single-line body is scanned per decode"
+    waived: "linear and once per explicit decode, never on pointer move or render; W6's round-2 measurement (267 ms at 10 MiB per decode) bounds the same shape"
+verdict: PASS
+date: 2026-11-05
