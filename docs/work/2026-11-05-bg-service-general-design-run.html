@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec50f39f34851f0dfae8d0">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run: Settings → General</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- theme + shared specimen behaviours + the real collection, one classic
+       script so the doc opens over file://. Generated, git-ignored:
+       `cargo xtask ui specimens`. -->
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .statebtn{margin-top:10px;margin-right:6px;border:1px solid var(--line);border-radius:4px;
+      padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    .a-mock h1,.a-mock h2,.a-mock h3{margin:0;padding:0;border:0}
+    .a-mock p,.a-mock li{color:inherit}
+    /* mockup assembly only — which state the window shows. The base is the General
+       page reached by the top page switch, a tray available, both switches off. */
+    .a-zone{display:block}
+    .a-on-keep,.a-on-login,.a-on-trayless,.a-on-failed,.a-on-service,.a-on-sidebar,.a-on-onepage,
+    .a-on-pathline,.a-on-dialog{display:none}
+    .keep .a-on-keep,.login .a-on-login,.trayless .a-on-trayless,.failed .a-on-failed,
+    .service .a-on-service,.sidebar .a-on-sidebar,.onepage .a-on-onepage,.pathline .a-on-pathline,
+    .dialog .a-on-dialog{display:block}
+    .keep .a-off-keep,.login .a-off-login,.trayless .a-off-trayless,.failed .a-off-failed,
+    .service .a-off-service,.sidebar .a-off-sidebar,.onepage .a-off-onepage,.pathline .a-off-pathline,
+    .dialog .a-off-dialog{display:none}
+    .sidebar .a-window{display:flex}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — Settings → General</h1>
+      <p>The Settings window's second page and the way between its two pages, the two switches the page holds, and
+        the once-question the first ✕ asks.</p>
+      <div class="meta">Design run · round 1 opened 2026-11-05 · Trawler · T3 (docs/work/) · <strong>E-BGSVC.W5</strong> ·
+        branch <code>wu/bg-service/general-design</code> · epic <a href="2026-11-05-bg-service-plan.html">E-BGSVC</a> ·
+        <a href="2026-11-05-bg-service-w5-general-design-plan.html">WU plan</a></div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="ready">
+
+    <h2 id="mockup">Mockup</h2>
+    <p class="kd">Mounted from the real <code>ui/src/components/</code>. The page switch is drawn by the screen: it is a
+      proposal (D1 below). The dialog's frame is <code>ModalShell</code>, build-local, as DEC-64's dialog uses it. Each
+      button shows one state — read each alone; the three D-buttons show the options the owner is asked to pick between.</p>
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-mock bg-canvas p-4" id="mock">
+          <div class="a-window w-pane gap-4 font-ui text-body text-ink">
+            <div class="a-zone a-off-onepage" data-zone="pages" id="m-pages"></div>
+            <div class="a-zone flex-1">
+              <div class="a-off-service">
+                <div class="a-zone mb-3" data-zone="page title" id="m-title"></div>
+                <div class="a-zone mb-4" data-zone="keep capturing" id="m-keep"></div>
+                <div class="a-zone mb-4" data-zone="at login" id="m-login"></div>
+              </div>
+              <div class="a-zone a-on-service a-on-onepage" data-zone="capture service page" id="m-service"></div>
+            </div>
+          </div>
+          <div class="a-zone a-on-dialog" data-zone="once-question" id="m-dialog"></div>
+        </div>
+      </div>
+      <p>overflow: pages — two names, pinned while the page scrolls under it · page title — one line · keep capturing — one
+        row, one line and at most one notice, bounded · at login — one row and one line; its entry path is unbounded and
+        wraps, mono, never cut · capture service page — unchanged, its log keeps its own scroll (owner: that page) ·
+        once-question — one title, one sentence, two answers at <code>dialog-max</code> wide, bounded. Where the window is
+        shorter than the page, the page scrolls.</p>
+      <p class="kd">Payload: only the login entry's program path, such as
+        <span class="font-mono" data-wire="login entry path">/Applications/Trawler.app/Contents/MacOS/trawler-ui</span>,
+        read verbatim. Nothing else on the page is wire data.</p>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="keep"
+        data-label-off="▶ keep capturing on" data-label-on="◀ off (or never answered)">▶ keep capturing on</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="login"
+        data-label-off="▶ open at login on" data-label-on="◀ off">▶ open at login on</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="trayless"
+        data-label-off="▶ no menu-bar icon on this host" data-label-on="◀ a tray">▶ no menu-bar icon on this host</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="failed"
+        data-label-off="▶ a save failed" data-label-on="◀ saved">▶ a save failed</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="service"
+        data-label-off="▶ the Capture service page" data-label-on="◀ General">▶ the Capture service page</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="dialog"
+        data-label-off="▶ the first ✕ (once-question)" data-label-on="◀ no dialog">▶ the first ✕ (once-question)</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="sidebar"
+        data-label-off="▶ D1 (b) pages in a sidebar" data-label-on="◀ D1 (a) pages along the top">▶ D1 (b) pages in a sidebar</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="onepage"
+        data-label-off="▶ D1 (c) one page, no switch" data-label-on="◀ D1 (a) two pages">▶ D1 (c) one page, no switch</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="pathline"
+        data-label-off="▶ D3 (b) the path as a line" data-label-on="◀ D3 (a) on hover only">▶ D3 (b) the path as a line</button>
+      <script type="text/babel">
+        const { React, createRoot, Button, IconButton, Checkbox, Notice, Section } = window.Trawler;
+
+        const mount = (id, node) => {
+          const host = document.getElementById(id);
+          if (host) createRoot(host).render(node);
+        };
+        const noop = () => {};
+        const ENTRY = "/Applications/Trawler.app/Contents/MacOS/trawler-ui";
+
+        const page = (name, current) => (
+          <span className={current
+            ? "border-b border-ink pb-chrome-y text-ink"
+            : "border-b border-transparent pb-chrome-y text-ink-mute"}>{name}</span>
+        );
+        mount("m-pages", (
+          <>
+            <div className="a-off-sidebar mb-4 flex gap-4 border-b border-hairline">
+              <span className="a-off-service">{page("General", true)}</span>
+              <span className="a-on-service">{page("General", false)}</span>
+              <span className="a-off-service">{page("Capture service", false)}</span>
+              <span className="a-on-service">{page("Capture service", true)}</span>
+            </div>
+            <div className="a-on-sidebar w-field flex-col gap-2 border-r border-hairline pr-3">
+              <div className="a-off-service mb-2">{page("General", true)}</div>
+              <div className="a-on-service mb-2">{page("General", false)}</div>
+              <div className="a-off-service">{page("Capture service", false)}</div>
+              <div className="a-on-service">{page("Capture service", true)}</div>
+            </div>
+          </>
+        ));
+
+        mount("m-title", <h1 className="font-serif text-title italic">General</h1>);
+
+        const caption = (text) => <p className="pt-chrome-tight font-ui text-chrome text-ink-mute">{text}</p>;
+
+        mount("m-keep", (
+          <Section title="when the window closes">
+            <div className="a-off-trayless">
+              <span className="a-off-keep"><Checkbox checked={false} onChange={noop}>keep capturing in the menu bar</Checkbox></span>
+              <span className="a-on-keep"><Checkbox checked onChange={noop}>keep capturing in the menu bar</Checkbox></span>
+              {caption("Closing the window leaves Trawler capturing behind its menu-bar icon. Quit Trawler from there, or with ⌘Q.")}
+            </div>
+            <div className="a-on-trayless">
+              <Checkbox checked={false} onChange={noop} disabled>keep capturing in the menu bar</Checkbox>
+              <div className="pt-chrome-tight">
+                <Notice>unavailable — this desktop can't show a menu-bar icon, so nothing would bring the window back. Closing the window quits Trawler.</Notice>
+              </div>
+            </div>
+            <div className="a-on-failed pt-chrome-tight">
+              <Notice tone="warn">couldn't save this — permission denied. It stays as it was.</Notice>
+            </div>
+          </Section>
+        ));
+
+        mount("m-login", (
+          <Section title="at login">
+            <span className="a-off-login"><Checkbox checked={false} onChange={noop}>open Trawler at login</Checkbox></span>
+            <span className="a-on-login" title={`starts ${ENTRY} --background`}><Checkbox checked onChange={noop}>open Trawler at login</Checkbox></span>
+            {caption("Trawler starts in the menu bar with no window, capturing.")}
+            <div className="a-on-login a-on-pathline">
+              <p className="pt-chrome-tight font-ui text-chrome text-ink-mute">starts <span data-wire="login entry path" className="font-mono">{ENTRY}</span></p>
+            </div>
+          </Section>
+        ));
+
+        mount("m-service", (
+          <>
+            <h1 className="mb-3 font-serif text-title italic">Capture service</h1>
+            <Notice>the Capture service page as it is today — its status, facts, restart and log, unchanged</Notice>
+          </>
+        ));
+
+        mount("m-dialog", (
+          <div className="mt-4 bg-scrim p-8">
+            <div className="mx-auto w-full max-w-dialog-max rounded-lg border border-hairline bg-canvas p-4 font-ui text-body text-ink">
+              <div className="mb-3 flex items-start justify-between gap-2">
+                <h2 className="font-serif text-title italic">keep capturing after the window closes?</h2>
+                <IconButton glyph="close" label="cancel" onClick={noop} />
+              </div>
+              <p className="mb-3 font-ui text-body text-ink-mute">Trawler can stay in the menu bar and keep capturing with no window open. You can change this in Settings → General.</p>
+              <div className="flex justify-end gap-chrome-gap">
+                <Button onClick={noop} frame="bare" tone="mute">quit</Button>
+                <Button onClick={noop}>keep capturing</Button>
+              </div>
+            </div>
+          </div>
+        ));
+      </script>
+    </div>
+
+    <h2 id="questions">What the owner is asked</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Proposed</th></tr>
+      <tr><td>D1</td><td>How does the Settings window reach its two pages?</td>
+        <td>(a) page names along the top, the current one underlined — the base mockup · (b) a sidebar of page names —
+          <em>D1 (b)</em> · (c) no switch: one page, General above the Capture service page — <em>D1 (c)</em></td>
+        <td>(a): two or three pages read best along the top (macOS settings idiom); (a) and (b) are a new component
+          (Proposals), (c) needs none but makes General scroll past a log</td></tr>
+      <tr><td>D2</td><td>Each switch is the collection's <code>Checkbox</code> — is that the control?</td>
+        <td>(a) <code>Checkbox</code>, as drawn (its @use: a durable boolean preference) · (b) a new on/off toggle
+          component</td><td>(a): no new vocabulary for one boolean</td></tr>
+      <tr><td>D3</td><td>Where does the login entry's path show?</td>
+        <td>(a) on hover only (Q8 as ruled), a native tooltip <em>starts &lt;path&gt; --background</em> · (b) also as a
+          line under the switch while it is on — <em>D3 (b)</em></td>
+        <td>(a): Q8 ruled it a debugging aid; a tooltip has no keyboard route, so the Keyboard row says so</td></tr>
+      <tr><td>D4</td><td>What does ✕ or Esc do on the once-question?</td>
+        <td>(a) cancel: the window stays open, nothing is stored, the next ✕ asks again · (b) count as quit</td>
+        <td>(a): DEC-64's dialog cancels the same way; a dismissal is not an answer</td></tr>
+    </table>
+
+    <h2 id="given">Given — what the page and the dialog are handed</h2>
+    <table data-item="capabilities" data-c="given-table">
+      <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
+      <tr><td><code>keep_capturing_read</code> — unanswered · on · off</td><td>used</td><td>keep capturing's box: on is
+        ticked; off and unanswered both read unticked (an unanswered switch is off until the first ✕ asks)</td></tr>
+      <tr><td><code>keep_capturing_write(on)</code> and its error</td><td>used</td><td>the box; a refusal is the warn
+        notice under it and the box returns to the stored reading</td></tr>
+      <tr><td>tray availability — whether the menu-bar icon built</td><td>used</td><td>keep capturing disabled with its
+        reason; the once-question never shows without one</td></tr>
+      <tr><td><code>login_item_read</code> — <code>{on, starts}</code></td><td>used</td><td>the login box; <code>starts</code>
+        on hover (D3)</td></tr>
+      <tr><td><code>login_item_write(on)</code> and its error</td><td>used</td><td>the box; a refusal is the warn notice,
+        as keep capturing's</td></tr>
+      <tr><td>the current page</td><td>used</td><td>the page switch (D1) and which page shows</td></tr>
+      <tr><td>the once-question's answer — keep capturing · quit · cancel</td><td>used</td><td>the dialog's two answers and
+        ✕/Esc (D4); W3 stores the answer as the switch</td></tr>
+      <tr><td>the core's state</td><td>deliberately unused</td><td>General says nothing about the capture service — its
+        page does, and the menu-bar icon does</td></tr>
+    </table>
+    <p class="kd">Not given: whether a login entry has taken effect (it does at the next login) · whether this desktop
+      really shows a tray that built (an appindicator-less Linux may build one nobody sees) · DEC-64's proxy reading,
+      which W3's quit path runs after the once-question, unchanged.</p>
+
+    <h2 id="keyboard">Keyboard</h2>
+    <table data-item="keyboard" data-c="keyboard-table">
+      <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
+      <tr><td>click a page name</td><td>pages</td><td>proposed: Tab to the page switch · ← / → (↑ / ↓ in a sidebar) moves
+        to a page and shows it, no wrap</td></tr>
+      <tr><td>tick keep capturing in the menu bar</td><td>keep capturing</td><td>Tab · Space (Checkbox)</td></tr>
+      <tr><td>tick open Trawler at login</td><td>at login</td><td>Tab · Space (Checkbox)</td></tr>
+      <tr><td>hover the login switch for its path</td><td>at login</td><td>proposed: none under D3 (a) — a debugging aid,
+        read by hover; under D3 (b) the line is on screen</td></tr>
+      <tr><td>click keep capturing · quit</td><td>once-question</td><td>Tab · Enter or Space; focus lands on keep capturing</td></tr>
+      <tr><td>click ✕</td><td>once-question</td><td>Esc — dismiss the surface (D4)</td></tr>
+      <tr><td>close the Settings window</td><td>—</td><td>⌘W — the app keeps running</td></tr>
+    </table>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
+      <tr><td>component (T1)</td><td>a page switch for a window with two or more pages: names in a row (D1 a) or a column
+        (D1 b), the current one marked by an underline and ink, a tablist with ←/→</td><td><code>SegmentedControl</code>
+        @avoid: tabs that own panels; <code>Select</code> hides the pages behind a click</td><td>W6, if D1 is (a) or (b)</td></tr>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr><td>whether a built tray is visible (Linux without an appindicator)</td><td>tray-icon upstream</td><td>the
+        unavailable state is drawn for a tray that failed to build; a silent one is an owed hardware check</td></tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>Start — the epic's W5: Q3 ask once, Q5 Settings → General only, Q8 the path on hover</td><td>capabilities ·
+          mockup · keyboard — the two switches, their unavailable and failed states, the once-question with two answers</td>
+          <td><code>Checkbox</code> @use · DEC-77</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
