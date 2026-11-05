@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-BGSVC
+wu: E-BGSVC.W5
+base: 206a182edafc13ad9ffc46bf5f8ee4fbfdd55d97
+design_sha256: e5bafdb22cb462b947eb720ab7f02c31bdfd4a5166fcfaa7cd91eb40ae05e088
+verdict: PASS
+artifacts: [docs/work/2026-11-05-bg-service-general-design-run.html]
+date: 2026-11-05
