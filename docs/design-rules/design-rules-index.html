@@ -120,6 +120,13 @@ flowchart LR
         <tr><td><strong>draft</strong></td><td>the request in the composer, before and after it is sent. The query bar's half-typed text is a draft in code and docs only; the screen never names it. The screen's word for the thing being edited, because <em>request</em> is what a flow recorded (<span class="badge id">E-REPLAY</span>)</td><td>form · template · copy</td></tr>
         <tr><td><strong>sent</strong></td><td>a flow Trawler itself sent, from a draft: the <code>source</code> value (<a href="../decisions/dec-58-a-sent-flow-is-sent-by-the-core-and-marked.html">DEC-58</a>) and the name of the list's ↗ mark (<span class="badge id">E-REPLAY</span>)</td><td>replayed · composed · resent</td></tr>
         <tr><td><strong>replay</strong></td><td>open a draft from a flow. The act, never its result, which is a <em>sent</em> flow. <em>seed</em> stays the API's word; the screen says <em>draft from the flow at</em> and the time (<span class="badge id">E-REPLAY</span>)</td><td>resend · repeat · retry · and <em>seed</em> on screen</td></tr>
+        <tr><td><strong>data window</strong></td><td>the window a piece of data opens in, from <em>open in data window</em> (<a href="../decisions/dec-76-the-data-window.html">DEC-76</a>, <span class="badge id">E-INSPWIN</span>)</td><td>viewer · inspector · editor · popout</td></tr>
+        <tr><td><strong>original</strong></td><td>the bytes a data window was handed, never changed: <em>copy original</em>, <em>save original</em>. Not <em>raw</em>, which is a pane mode over a flow's bytes (<span class="badge id">E-INSPWIN</span>)</td><td>raw · source · captured · initial</td></tr>
+        <tr><td><strong>working copy</strong></td><td>what the user changes in a data window; <em>copy</em> and <em>save</em> deliver it as it is on screen (<span class="badge id">E-INSPWIN</span>)</td><td>draft · edited version · scratch, on screen</td></tr>
+        <tr><td><strong>modified</strong></td><td>the working copy differs from the original: the status bar's <em>modified · N edits</em> (<span class="badge id">E-INSPWIN</span>)</td><td>dirty · unsaved · changed</td></tr>
+        <tr><td><strong>restore original</strong></td><td>make the working copy the original again, as one act (<span class="badge id">E-INSPWIN</span>)</td><td>reset · revert all · discard</td></tr>
+        <tr><td><strong>re-indent</strong> · <strong>minified</strong></td><td>rewrite the working copy's indentation · the JSON with no whitespace (<span class="badge id">E-INSPWIN</span>)</td><td>prettify · format · beautify · compact · compress</td></tr>
+        <tr><td><strong>decoded as</strong></td><td>the decode peek's label for the decoder that read the value; a decode that changes the working copy is the step <em>replaced … with its decoded form</em> (<span class="badge id">E-INSPWIN</span>)</td><td>parsed as · detected · converted</td></tr>
       </tbody>
     </table>
 
@@ -141,6 +148,14 @@ flowchart LR
         <tr><td><strong>close a secondary window</strong></td><td>⌘W — the app keeps running</td><td>the Settings window</td></tr>
         <tr><td><strong>scroll a region</strong></td><td>one tab stop · ↑ / ↓ / Page Up / Page Down / Home / End</td><td>the Capture service log</td></tr>
         <tr><td><strong>resize a split</strong> — the focused line</td><td>← / → (↑ / ↓ across a horizontal line) by 8&nbsp;px, Shift by 48; Home / End to its bounds. No key resets: double-click does (<a href="../decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html">DEC-68</a>)</td><td><code>Splitter</code> · list ↔ pane · headers ↔ body · column handles</td></tr>
+        <tr><td><strong>find</strong> in the data shown</td><td>⌘F to the find field · Enter / ⇧Enter or ⌘G / ⇧⌘G to the next / previous match · Esc clears it</td><td>the data window's find bar (<span class="badge id">E-INSPWIN</span>)</td></tr>
+        <tr><td><strong>undo / redo</strong> a working-copy step</td><td>⌘Z / ⇧⌘Z</td><td>the data window</td></tr>
+        <tr><td><strong>save what is on screen</strong></td><td>⌘S</td><td>the data window</td></tr>
+        <tr><td><strong>decode</strong> the selection or the value under it</td><td>⌘⇧D · Esc closes the peek</td><td>the data window's surface and form table</td></tr>
+        <tr><td><strong>open in data window</strong></td><td>⌘⇧O while the body has focus</td><td><code>BodyViewer</code></td></tr>
+        <tr><td><strong>copy a JSON node</strong></td><td>⌥⌘C its path · ⇧⌥⌘C its value</td><td>the data window's JSON surface</td></tr>
+        <tr><td><strong>act on a row</strong></td><td>⌘C copies its value · ⌘⌫ removes it · ⌘↵ commits a multi-line edit</td><td><code>FormTable</code></td></tr>
+        <tr><td><strong>wrap long lines</strong> · <strong>re-indent</strong></td><td>⌥Z · ⌥⇧F (XML)</td><td>the data window's text surfaces</td></tr>
       </tbody>
     </table>
 

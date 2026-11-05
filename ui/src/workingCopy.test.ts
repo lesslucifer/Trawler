@@ -1,0 +1,159 @@
+import { describe, expect, it } from "vitest";
+import {
+  amend,
+  lineCountOf,
+  lineBreakOf,
+  canRedo,
+  canUndo,
+  commit,
+  currentStepName,
+  editCount,
+  isModified,
+  redo,
+  restoreOriginal,
+  startHistory,
+  undo,
+  workingBytes,
+  workingText,
+  type History,
+} from "./workingCopy";
+
+const steps = (history: History) => history.steps.map((s) => s.name);
+
+describe("one history of named steps", () => {
+  it("starts at the original, unmodified, with nothing to undo or redo", () => {
+    const history = startHistory("{}");
+    expect(workingText(history)).toBe("{}");
+    expect([isModified(history), canUndo(history), canRedo(history), editCount(history)]).toEqual([false, false, false, 0]);
+  });
+
+  it("each change is a step; undo and redo walk them", () => {
+    let history = commit(startHistory("a"), "ab", "typed on line 1");
+    history = commit(history, "abc", "typed on line 1");
+    expect(editCount(history)).toBe(2);
+
+    history = undo(history);
+    expect(workingText(history)).toBe("ab");
+    history = undo(history);
+    expect(workingText(history)).toBe("a");
+    expect(isModified(history)).toBe(false);
+    expect(undo(history)).toBe(history);
+
+    history = redo(redo(history));
+    expect(workingText(history)).toBe("abc");
+    expect(redo(history)).toBe(history);
+  });
+
+  it("names the step the working copy is at", () => {
+    const history = commit(startHistory("a"), "b", "minified");
+    expect(currentStepName(history)).toBe("minified");
+    expect(currentStepName(undo(history))).toBe("original");
+  });
+
+  it("a change that changes nothing adds no step", () => {
+    const history = startHistory("a");
+    expect(commit(history, "a", "typed")).toBe(history);
+  });
+
+  it("a change after an undo drops the steps that were undone", () => {
+    const history = commit(undo(commit(commit(startHistory("a"), "b", "one"), "c", "two")), "d", "three");
+    expect(steps(history)).toEqual(["original", "one", "three"]);
+    expect(canRedo(history)).toBe(false);
+  });
+
+  it("an edit back to the original text reads unmodified, though it is a step", () => {
+    const history = commit(commit(startHistory("a"), "b", "one"), "a", "two");
+    expect(isModified(history)).toBe(false);
+    expect(editCount(history)).toBe(2);
+  });
+});
+
+describe("a step the surface is still typing into", () => {
+  it("is amended in place, so one input group undoes as one step", () => {
+    let history = commit(startHistory("a"), "ab", "typed on line 1");
+    history = amend(history, "abc", "typed on line 1");
+    expect(editCount(history)).toBe(1);
+    expect(workingText(history)).toBe("abc");
+    expect(workingText(undo(history))).toBe("a");
+  });
+
+  it("never rewrites the original or a step that was undone past", () => {
+    expect(steps(amend(startHistory("a"), "ab", "typed"))).toEqual(["original", "typed"]);
+    const undone = undo(commit(commit(startHistory("a"), "b", "one"), "c", "two"));
+    const amended = amend(undone, "bx", "typed");
+    expect(steps(amended)).toEqual(["original", "one", "typed"]);
+    expect(workingText(amended)).toBe("bx");
+  });
+});
+
+describe("restore original", () => {
+  it("is a step of its own, so it undoes like any other", () => {
+    const edited = commit(startHistory("orig"), "edited", "typed");
+    const restored = restoreOriginal(edited);
+    expect(workingText(restored)).toBe("orig");
+    expect(steps(restored)).toEqual(["original", "typed", "restore original"]);
+    expect(workingText(undo(restored))).toBe("edited");
+  });
+
+  it("after any sequence of steps the bytes delivered are the exact original bytes", () => {
+    const original = new Uint8Array([0x7b, 0xff, 0x7d]);
+    const decoded = new TextDecoder().decode(original);
+    let history = startHistory(decoded);
+    for (const text of ["{x}", "{xy}", "", "{é}"]) history = commit(history, text, "typed");
+    history = undo(history);
+    history = restoreOriginal(history);
+
+    expect(workingBytes(history, original)).toBe(original);
+  });
+
+  it("an unmodified copy is the original bytes, a modified one its text encoded", () => {
+    const original = new TextEncoder().encode("a");
+    expect(workingBytes(startHistory("a"), original)).toBe(original);
+    expect(workingBytes(commit(startHistory("a"), "é", "typed"), original)).toEqual(new TextEncoder().encode("é"));
+  });
+});
+
+describe("the history is bounded", () => {
+  it("past its budget the oldest edits go, the original never does, and the count still says how many", () => {
+    const budget = 10;
+    let history = startHistory("orig");
+    for (const text of ["aaaa", "bbbb", "cccc", "dddd"]) history = commit(history, text, `set ${text}`, budget);
+    expect(steps(history)).toEqual(["original", "set cccc", "set dddd"]);
+    expect(editCount(history)).toBe(4);
+    expect(workingText(history)).toBe("dddd");
+    expect(workingText(restoreOriginal(history, budget))).toBe("orig");
+    expect(workingText(undo(undo(history)))).toBe("orig");
+  });
+
+  it("the step being made is kept even when it alone is past the budget", () => {
+    const history = commit(startHistory("a"), "x".repeat(50), "pasted", 10);
+    expect(workingText(history)).toBe("x".repeat(50));
+  });
+});
+
+
+describe("the line break a text is written with", () => {
+  it.each([
+    ["a\nb", "\n"],
+    ["one line", "\n"],
+    ["a\r\nb\r\n", "\r\n"],
+    ["a\rb", "\r"],
+    ["a\r\nb\nc", null],
+    ["a\rb\nc", null],
+  ])("%j → %j", (text, lineBreak) => {
+    expect(lineBreakOf(text)).toBe(lineBreak);
+  });
+});
+
+describe("the lines a text holds", () => {
+  it.each([
+    ["", 1],
+    ["one", 1],
+    ["a\nb\nc", 3],
+    ["a\r\nb\r\n", 3],
+    ["a\rb\rc", 3],
+    ["a\r\nb\nc\rd", 4],
+  ])("%j has %i", (text, lines) => {
+    expect(lineCountOf(text)).toBe(lines);
+  });
+});
