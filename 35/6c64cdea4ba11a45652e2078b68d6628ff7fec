@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 356c64cdea4ba11a45652e2078b68d6628ff7fec
+base: 165e6f701861037b039858bade078cd9e7248d21
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-packaging-v2-w2-ci-platforms-result.html
+report_sha256: 1ac618a808b5861adf30a0e9511a272b232d51e84f856fc78c05d37f32f4dd54
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDXFE8rIaH9+sq2M/klFWUDrWRnnNXo/+GYOlrWCrJ/gM7BUb1IkzIg32
+  IrxL5SfaIDBuioyYzWqwXbyhP+z1IF
+  -----END SSH SIGNATURE-----
