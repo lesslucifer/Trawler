@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W2
+base: 4edde57435db3278ac2422260c903c4c754c6371
+design_sha256: f8cc8e2475387d21339b46aa2f483038c62b19aed73f1dedc533b299eb3c55d9
+verdict: PASS
+artifacts: [docs/work/2026-11-05-inspector-one-line-design-run.html]
+date: 2026-11-05
