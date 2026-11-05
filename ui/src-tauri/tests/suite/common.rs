@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::time::Duration;
 
 use trawler_ui_lib::supervisor::Launch;
@@ -23,6 +23,8 @@ pub fn launch(ca_dir: &Path, proxy_port: u16, api_port: u16) -> Launch {
 
 #[cfg(unix)]
 pub fn alive(pid: u32) -> bool {
+    use std::process::Stdio;
+
     Command::new("kill")
         .args(["-0", &pid.to_string()])
         .stderr(Stdio::null())
