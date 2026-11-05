@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 37cab1cffcea7758b0eef7b925f7413dcf6689cf
+base: a44c3fac7e94212dcec8561b232fbf3369d8270f
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-v2-w6-javascript-css-result.html
+report_sha256: 4d9fbc7e375c8321935b44c01be049ced05ecb09f2e85226255fb2aafa413c64
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECeCZGHuWegcQnUN31JrbCXgh+EevtktbNl5B2KiQXPC+tGEkexSu77X6
+  R1RiM7h3bL46O9NNKMsw/G67yARGUH
+  -----END SSH SIGNATURE-----
