@@ -8,6 +8,7 @@ pub mod launch;
 pub mod mr;
 pub mod notes;
 pub mod notes_write;
+pub mod package;
 pub mod preflight;
 pub mod tally;
 pub mod target;
@@ -46,6 +47,7 @@ usage:
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
   cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
   cargo xtask dod list [--epic <id>]
+  cargo xtask package [--universal] [--profile <name>]       (the host's installers under target/[<triple>/]<profile>/bundle; macOS: ad-hoc signed and verified; --universal: both Mac architectures)
   cargo xtask ui build                                        (pnpm install + build → ui/dist/)
   cargo xtask ui dev                                          (pnpm install + launch the Tauri window)
   cargo xtask ui bench                                        (pnpm install + run the perf benchmarks)
@@ -83,6 +85,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["target", rest @ ..] => target::run(rest, repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
+        ["package", rest @ ..] => package::run(rest, repo),
         ["ui", rest @ ..] => ui::run(rest, repo),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),
