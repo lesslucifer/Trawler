@@ -34,6 +34,7 @@ usage:
   cargo xtask notes write <wu|epic|commit> <tip> [--target <ref>] [--judgment <path>|--template]  (write the tip's test/v2 + doc/v1 from one judgment)
   cargo xtask tally [--fleet]                                (local gate tally: refused check ids per level, review rounds per tip; --fleet: what each round's fleet cost, from the cr notes' fleet: blocks)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
+  cargo xtask gate0 merge                                    (gate0 on a merge's working tree; red refuses the merge into main with the abort line)
   cargo xtask lint                                           (pre-commit hook: fmt+clippy, skipped when this tree content already passed them)
   cargo xtask hooks install                                  (git runs the tracked .cargo-husky/hooks/ in every worktree; the gates above refuse a checkout without it)
   cargo xtask target seed                                    (this checkout's absent target/ gets the main checkout's third-party artifacts, cloned copy-on-write)
@@ -73,6 +74,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["notes", "write", rest @ ..] => notes_write::run(rest, repo),
         ["tally", rest @ ..] => tally::run(rest, repo),
         ["gate0"] => gate0::gate0(repo),
+        ["gate0", "merge"] => gate0::merge(repo),
         ["lint"] => gate0::lint(repo),
         ["hooks", rest @ ..] => hooks::run(rest, repo),
         ["target", rest @ ..] => target::run(rest, repo),
@@ -393,9 +395,13 @@ mod tests {
 
     #[test]
     fn the_hook_and_merge_entrypoints_are_gated() {
-        for gate in
-            [&["verify-dod", "hook", "wu"][..], &["gate0"], &["lint"], &["preflight", "wu", "x"]]
-        {
+        for gate in [
+            &["verify-dod", "hook", "wu"][..],
+            &["gate0"],
+            &["gate0", "merge"],
+            &["lint"],
+            &["preflight", "wu", "x"],
+        ] {
             assert!(is_gate(gate), "{gate:?} must refuse a checkout whose git runs other hooks");
         }
     }

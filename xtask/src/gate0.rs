@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -41,17 +42,39 @@ fn store_key_at(path: &Path, key: &str) -> Result<(), String> {
     std::fs::write(path, key).map_err(|e| format!("write {}: {e}", path.display()))
 }
 
+// Git exports GIT_INDEX_FILE, GIT_REFLOG_ACTION and friends into the hooks that
+// call these checks; a suite inheriting them reads the hook's merge as its own.
+fn check_command(
+    repo: &Path,
+    program: &str,
+    args: &[&str],
+    inherited: impl IntoIterator<Item = OsString>,
+) -> Command {
+    let mut cmd = Command::new(program);
+    cmd.args(args).current_dir(repo);
+    for key in inherited {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    cmd
+}
+
+fn inherited_names() -> impl Iterator<Item = OsString> {
+    std::env::vars_os().map(|(key, _)| key)
+}
+
 fn run(repo: &Path, program: &str, args: &[&str]) -> Result<bool, String> {
-    let status = Command::new(program)
-        .args(args)
-        .current_dir(repo)
+    let status = check_command(repo, program, args, inherited_names())
         .status()
         .map_err(|e| format!("failed to spawn {program}: {e}"))?;
     Ok(status.success())
 }
 
-fn nextest_available() -> bool {
-    Command::new("cargo").args(["nextest", "--version"]).output().is_ok_and(|o| o.status.success())
+fn nextest_available(repo: &Path) -> bool {
+    check_command(repo, "cargo", &["nextest", "--version"], inherited_names())
+        .output()
+        .is_ok_and(|o| o.status.success())
 }
 
 // `--workspace` is the load-bearing flag, not boilerplate: the repo root is both
@@ -73,7 +96,7 @@ fn run_checks(repo: &Path) -> Result<bool, String> {
     if !run_lints(repo)? {
         return Ok(false);
     }
-    let tests = if nextest_available() {
+    let tests = if nextest_available(repo) {
         run(repo, "cargo", &["nextest", "run", "--all"])?
     } else {
         run(repo, "cargo", &["test", "--all"])?
@@ -94,6 +117,24 @@ pub fn gate0(repo: &Path) -> Result<(i32, String), String> {
         Ok((0, format!("gate0 green - fmt+clippy+tests passed, cached ({})", short(&key))))
     } else {
         Ok((1, "gate0 red - fmt/clippy/tests failed; not cached".to_string()))
+    }
+}
+
+/// What a merge into `main` stands on: Gate 0 over the merged working tree, so
+/// the merge commit is refused before it exists when the combination is red.
+pub fn merge(repo: &Path) -> Result<(i32, String), String> {
+    gate0(repo).map(merge_verdict)
+}
+
+pub const MERGE_REFUSED: &str = "merge refused - the merged tree fails Gate 0; main is unchanged.
+  git merge --abort
+then back-merge main into the epic, fix the combination there, and merge again";
+
+fn merge_verdict((code, said): (i32, String)) -> (i32, String) {
+    if code == 0 {
+        (code, said)
+    } else {
+        (code, format!("{said}\n{MERGE_REFUSED}"))
     }
 }
 
@@ -133,8 +174,42 @@ pub fn lint(repo: &Path) -> Result<(i32, String), String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{cache_path, cached_key_at, lint_cache_path, lint_proof, store_key_at, CLIPPY};
+    use super::{
+        cache_path, cached_key_at, check_command, lint_cache_path, lint_proof, merge_verdict,
+        store_key_at, CLIPPY,
+    };
+    use std::ffi::{OsStr, OsString};
     use tempfile::TempDir;
+
+    fn removed(cmd: &std::process::Command) -> Vec<&OsStr> {
+        cmd.get_envs().filter(|(_, value)| value.is_none()).map(|(key, _)| key).collect()
+    }
+
+    #[test]
+    fn a_check_runs_without_any_inherited_git_variable() {
+        let inherited = ["GIT_INDEX_FILE", "GIT_REFLOG_ACTION", "GIT_EDITOR", "PATH", "HOME"]
+            .map(OsString::from);
+        let cmd = check_command(std::path::Path::new("."), "cargo", &["test"], inherited);
+        let mut gone = removed(&cmd);
+        gone.sort();
+        assert_eq!(gone, ["GIT_EDITOR", "GIT_INDEX_FILE", "GIT_REFLOG_ACTION"]);
+    }
+
+    #[test]
+    fn a_red_merge_names_the_abort_and_the_back_merge() {
+        let (code, said) = merge_verdict((1, "gate0 red".to_string()));
+        assert_eq!(code, 1);
+        assert!(said.starts_with("gate0 red"), "the cause stays first: {said}");
+        assert!(said.contains("git merge --abort"), "{said}");
+        assert!(said.contains("back-merge main into the epic"), "{said}");
+    }
+
+    #[test]
+    fn a_green_or_skipped_merge_passes_through_unchanged() {
+        for said in ["gate0 green - cached (k)", "gate0 skipped - unchanged (k)"] {
+            assert_eq!(merge_verdict((0, said.to_string())), (0, said.to_string()));
+        }
+    }
 
     // The gate's own implementation is a workspace member, so a package-scoped
     // lint would exempt exactly the code that enforces everything else. The

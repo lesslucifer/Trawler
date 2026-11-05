@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec0ec19f34851f0dfae6bd">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-74: the merge into main proves the tree it creates</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-74 — the merge into main proves the tree it creates</h1>
+      <p>A merge into <code>main</code> is refused unless Gate 0 passes on the merged working tree, in the checkout making the merge.</p>
+      <div class="meta">Decided 2026-11-05 · E-GATEPAR2.W1 · active · widens <a href="workflow-gates.html#dec-2">DEC-2</a>'s <code>GIT_*</code> scrub</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>Notes first, then the tree.</strong> When <code>HEAD</code> is <code>main</code>, <code>pre-merge-commit</code> (and the
+      conflicted-merge completion in <code>pre-commit</code>) runs <code>cargo xtask verify-dod hook epic</code> and, only if it is green,
+      <code>cargo xtask gate0 merge</code>: fmt, clippy and the suite on the merged working tree, read from the checkout's own tree-keyed
+      marker (<a href="workflow-gates.html#dec-54">DEC-54</a>). A red Gate 0 refuses the merge commit and prints <code>git merge --abort</code>
+      and the back-merge. Every check Gate 0 and lint spawn runs with no inherited <code>GIT_*</code>.</p>
+    </div>
+
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  M["merge into main"] --> V{"verify-dod hook epic"}
+  V -->|red| R1["refused"]
+  V -->|green| G{"gate0 merge"}
+  G -->|"marker = tree key"| C["merge commit"]
+  G -->|"green · marker written"| C
+  G -->|red| R2["refused · main unchanged"]
+      </pre>
+      <div class="caption">A merge into <code>epic/*</code> stops after <code>verify-dod hook wu</code>.</div>
+    </div>
+
+    <h2 id="why">Why</h2>
+    <table data-c="why-table">
+      <thead><tr><th>Fact</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td><code>verify-dod hook</code> checks notes, hashes and signatures, never the suite (C1)</td><td>a merge went green on a tree nothing had tested</td></tr>
+        <tr><td>Gate 0 proves the epic tip; the merged tree is the tip plus everything that landed on <code>main</code> since its fork (C2)</td><td>two epics, each green alone, could combine into a red <code>main</code>, found only at the push, after the merge commit was on a merge-only branch</td></tr>
+        <tr><td>Git exports <code>GIT_INDEX_FILE</code>, <code>GIT_REFLOG_ACTION=merge &lt;branch&gt;</code>, <code>GIT_EDITOR</code>, <code>GIT_PREFIX</code>, <code>GIT_EXEC_PATH</code> to the hook (probed 2026-11-05) (C10)</td><td>a suite run from the hook would read the hook's merge as its own: tests that drive <code>verify-dod hook</code> resolve their tips from the reflog action</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Gate 0 at every WU seam into <code>epic/*</code></td><td>the epic branch is not shared; combinations meet at <code>main</code>, and the WU already runs Gate 0 in its preflight</td></tr>
+        <tr><td>Trust the epic tip's Gate 0 green</td><td>it proves a different tree whenever <code>main</code> moved after the last back-merge, which is exactly the red case</td></tr>
+        <tr><td>Share proofs between checkouts</td><td>a marker vouches for a build in its own <code>target/</code> (<a href="dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>); the main checkout pays one suite run per merge</td></tr>
+        <tr><td>Strip <code>GIT_*</code> in the hook scripts</td><td>it would cover two hooks; Gate 0 is also run by the preflight and by shells started from a hook</td></tr>
+        <tr><td>Skip Gate 0 for a docs/infra-only merge</td><td>the proof is about the tree, and the suite reads docs (link integrity, the verify-doc corpus)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li>A red combination is repaired on the epic, after <code>git merge --abort</code> and a back-merge of <code>main</code>; <code>main</code> never holds it.</li>
+      <li>The merge into <code>main</code> pays fmt, clippy and the suite once in the main checkout, unless that checkout already proved this exact tree.</li>
+      <li>The marker the merge writes is the proof E-GATEPAR2.W2's push reads, in the same checkout.</li>
+      <li>Held by <code>tests/dod_hooks.rs</code> (the hook order, refusals and the WU seam), <code>xtask/tests/lint_spawn.rs</code> (the spawned environment, the refusal text, the marker) and the unit tests in <code>xtask/src/gate0.rs</code>.</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
