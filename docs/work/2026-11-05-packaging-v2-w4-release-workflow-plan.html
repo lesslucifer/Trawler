@@ -36,7 +36,7 @@ flowchart LR
   V -- yes --> B
   subgraph B["build × 5 (needs version)"]
     direction TB
-    P["cargo xtask package --build-only (keyless) → --bundle-only (key + password secrets in env)"] --> S["cargo xtask smoke"] --> U["upload-artifact"]
+    P["cargo xtask package --build-only → --bundle-only (both keyless)"] --> S["cargo xtask smoke"] --> G["package --sign-only (key + password secrets in env)"] --> U["upload-artifact"]
   end
   B --> R["release · needs all five"]
   R --> M["cargo xtask release-manifest → latest.json + notes"]
@@ -63,6 +63,7 @@ flowchart LR
       <tr><td>C3</td><td>New <code>cargo xtask release-manifest &lt;dist-dir&gt; --tag v… --repo owner/name</code> writes <code>latest.json</code> and <code>notes.md</code> into the dist dir.</td><td>A latest.json merge in shell is untestable. In Rust the platform keys, installer kinds, signatures and the "every platform present" refusal are unit tests.</td></tr>
       <tr><td>C4</td><td>The draft is never marked prerelease by the workflow.</td><td><code>releases/latest/download</code> skips drafts <em>and</em> prereleases, so an rc the app must take by update has to be a plain release. The owner can tick prerelease on a draft that nobody should update to.</td></tr>
       <tr><td>C6</td><td>Review round 2: rc versions are numeric (<code>0.1.0-1</code>), actions pinned to SHAs, no caches, a <code>rustc</code> host check per row, the key only in the bundle step, concurrency per ref, a re-run replaces its own draft.</td><td>DEC-86 rules 4, 7 to 9 and its known limits.</td></tr>
+      <tr><td>C7</td><td>Review round 3: no bundling with the key. <code>--bundle-only</code> runs keyless (xtask archives the macOS <code>.app.tar.gz</code>); a new <code>--sign-only</code> runs <code>tauri signer sign --app-version</code> per updater target, after the smoke. rc rpm → final, the never-run Windows <code>pnpm.cmd</code> quoting and the arm64-only universal smoke are DEC-86 limits.</td><td>tauri-bundler's AppImage step downloads and runs unhashed tools; DEC-86 rule 4.</td></tr>
       <tr><td>C5</td><td>Trigger: tag push only; no <code>workflow_dispatch</code>.</td><td>A dispatch has no tag to check against the version.</td></tr>
     </table>
 
