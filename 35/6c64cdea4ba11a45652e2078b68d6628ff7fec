@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W2
+branch: HEAD
+tests:
+  unit: { count: 223, covers: "the edited unit tests still assert emptiness (now with the value shown on failure); clippy 1.97 and 1.99 clean over the workspace" }
+  integration: { count: 8, covers: "the workflow's triggers, permissions and three jobs: timeout, no quietly failing step, setup order, lockfile install before cargo, clippy and test commands, Ubuntu's apt libraries and xvfb" }
+  e2e: { waived: "the proof is a real three-OS run on GitHub, which needs the owner's push and a workflow dispatch; E-PKG2.W3 takes its red output as input and is done on a green dispatched run" }
