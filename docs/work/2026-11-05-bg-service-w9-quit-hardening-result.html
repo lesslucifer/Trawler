@@ -40,6 +40,7 @@
       <tr><td>integration test that fails on the old code, finding 2</td><td>the mock runtime emits no Destroyed event and keeps a destroyed window listed, so the test calls <code>on_window_destroyed</code> on an app with no window and a pending flag</td><td>that is the state the handler meets; the old handler builds nothing and the test times out waiting for the window</td></tr>
       <tr><td>—</td><td>the refusal notice is cleared when the question is asked again</td><td>review round 1's correctness finder: a quit request closing the question left the notice set, and the next ✕ showed it before any save. A test fails on the old code</td></tr>
       <tr><td>—</td><td>while keep capturing is being stored, the question's other answers (cancel, quit) wait</td><td>review rounds 2 and 3's correctness finder: the question now stays open during the save, so a click in that window was newly possible, and a withdrawn answer or a quit racing the write left the stored switch and the window disagreeing. Waiting removes the class instead of guarding each interleaving. Two tests fail on the old code</td></tr>
+      <tr><td>—</td><td>the keep-capturing write is bounded (<em>couldn't save — it took too long</em>) and a quit request that landed during it owns the window</td><td>review round 4: waiting on a write that never settles would leave the question unusable. Tests: a never-settling write, with fake timers</td></tr>
     </table>
 
     <h2 id="not-reviewed">What no independent review covers</h2>
@@ -55,7 +56,7 @@
       <tr><td>unit (cargo)</td><td><code>lifecycle.rs</code>: <code>an_attempt_is_retried_once_and_only_once</code></td></tr>
       <tr><td>integration</td><td><code>outlive_window.rs</code> (+3): no buildable window · pending request at a destroyed main window · nothing pending</td></tr>
       <tr><td>unit (vitest)</td><td><code>closeConfirm.test.tsx</code> (failed write keeps the question, names the reason, cancel clears it) · <code>KeepCapturingDialog.test.tsx</code> (+1)</td></tr>
-      <tr><td>commits</td><td>plan <code>2af9ba5d</code> · code <code>2c566124</code> · round 1 fix <code>93fce20a</code> · round 2 fix <code>f378e0b7</code> · round 3 fix <code>1671ffca</code> · this report</td></tr>
+      <tr><td>commits</td><td>plan <code>2af9ba5d</code> · code <code>2c566124</code> · round 1 fix <code>93fce20a</code> · round 2 fix <code>f378e0b7</code> · round 3 fix <code>1671ffca</code> · round 4 fix <code>58e8c460</code> · this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
