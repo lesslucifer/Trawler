@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-GATEPAR2
+branch: HEAD
+tests:
+  unit: { count: 29, covers: "GIT_* scrub of every spawned check, merge/push refusal texts, machine refusals never blame the tree, pushed-sha parsing and the clean-HEAD/scratch split, the launch probe's threshold, per-boot cache and never-await timing" }
+  integration: { count: 46, covers: "pre-merge-commit and the conflicted pre-commit path run the epic gate then gate0 merge into main only, red refuses with main unchanged; pre-push hands its refspecs to gate0 push and a red tree sends nothing; the real xtask gate0 against shims: scrubbed environment, marker, scratch worktree, nextest required, slow launch refused and re-measured; no workspace lib runs or hides a doc-test" }
+  e2e: { count: 1, covers: "the whole epic through the real tracked hooks and xtask: a slow-launch machine is refused before any suite, two epics green alone are refused together at the merge into main with the abort line, the push after a green merge reads its marker and runs no test binary, a non-HEAD push is proven once in a scratch worktree" }
