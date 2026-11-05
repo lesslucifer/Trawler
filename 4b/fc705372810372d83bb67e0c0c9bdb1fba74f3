@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W3
+branch: HEAD
+tests:
+  unit: { count: 12, covers: "ci_workflow fails when rust-toolchain.toml and every CI job's toolchain disagree, and when the wdio plugin lock drifts" }
+  integration: { count: 7, covers: "the app's process, supervisor and mock-runtime invoke tests run per platform; the real three-OS CI run 42050165698 is green" }
+  e2e: { waived: "platform fixes to existing tests and build config; no new flow, the three-OS dispatch is the proof" }
