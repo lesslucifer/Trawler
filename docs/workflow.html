@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v18 · 2026-11-05 · Trawler · T1 process doc</div>
+      <div class="meta">v19 · 2026-11-05 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -81,7 +81,7 @@ flowchart TD
       <thead><tr><th>Check</th><th>Verified by</th></tr></thead>
       <tbody>
         <tr><td><code>fmt</code> + <code>clippy -D warnings</code> green</td><td><span class="badge auto">pre-commit hook</span> — <code>cargo xtask lint</code>, cached per tree content</td></tr>
-        <tr><td>Unit tests cover all code the commit adds/changes</td><td><span class="badge auto">pre-push hook</span> (suite) · WU review judges the coverage</td></tr>
+        <tr><td>Unit tests cover all code the commit adds/changes</td><td><span class="badge auto">pre-push hook</span> (Gate 0 on each pushed tree) · WU review judges the coverage</td></tr>
         <tr><td>One coherent increment; imperative message names it; self-documenting code</td><td>WU review (judgment)</td></tr>
         <tr><td><em>Standalone only:</em> <code>level: commit</code> manifest, unit ≥ 1 or waived</td><td><span class="badge auto">epic walk · pre-push range check</span></td></tr>
         <tr><td><em>Rule-bearing docs only (T0 <code>CLAUDE.md</code> / T1 flat <code>docs/</code>):</em> a <code>Reviewed-By</code> trailer naming a listed authoriser — T2/T3 doc commits carry none, their human coverage is the boundary mr</td><td><span class="badge auto">commit-msg hook · pre-push range check (<code>gpgsig</code> verify for <code>key</code>-backed identities)</span></td></tr>
@@ -113,7 +113,7 @@ flowchart TD
         <tr><td>Docs distilled: T3 plan archived out of git (→ <code>docs/.archive/</code>, untracked) with lineage, T2 current, T1 only if the shape changed</td><td><span class="badge auto">gate check 6</span> (file-tree + diff facts) · adequacy = review</td></tr>
         <tr><td>Every component design the epic added is built — a roster entry at the tip — or the note records the drop and why (<a href="#design-handoff">design → build</a>)</td><td><span class="badge auto"><code>components·unbuilt</code></span></td></tr>
         <tr><td>A listed <code>mr/v1</code> note attesting the epic result report — a human read the result and authorised the epic (always required, not waivable). <strong>Signed last</strong>, on the same rule as the WU (<a href="#sign-last">why</a>)</td><td><span class="badge auto">gate check 8</span></td></tr>
-        <tr><td>Merge <code>--no-ff</code> into <code>main</code>; notes on origin; branches deleted</td><td><span class="badge auto">hooks</span> · merge ritual</td></tr>
+        <tr><td>Merge <code>--no-ff</code> into <code>main</code>, its merged tree green under Gate 0 in the merging checkout; notes on origin; branches deleted</td><td><span class="badge auto">pre-merge-commit hook</span> (<code>gate0 merge</code>, <a href="decisions/dec-74-the-merge-proves-the-tree-it-creates.html">DEC-74</a>) · merge ritual</td></tr>
       </tbody>
     </table>
 
@@ -327,7 +327,9 @@ cargo xtask verify-dod commit &lt;sha&gt;               # standalone commit chec
 cargo xtask verify-dod hook &lt;wu|epic&gt;             # merge-hook mode: tip = MERGE_HEAD, target = HEAD
 cargo xtask verify-dod range &lt;old&gt; &lt;new&gt;          # pre-push mode: standalone commits in a pushed range
 cargo xtask lint                                  # fmt + clippy, skipped when this tree content already passed them (what pre-commit calls)
-cargo xtask gate0                                 # fmt + clippy + the whole suite, skipped the same way
+cargo xtask gate0                                 # fmt + clippy + the whole suite (nextest), skipped the same way; refuses a machine that cannot run it, exit 2
+cargo xtask gate0 merge                           # pre-merge-commit into main: gate0 on the merged tree; red prints the abort + back-merge line
+cargo xtask gate0 push                            # pre-push: reads git's refspec lines; proves each pushed tree (marker for the clean HEAD, scratch worktree otherwise)
 cargo xtask preflight wu|epic &lt;tip&gt; [--target &lt;ref&gt;]  # the review's first step: gate0 + test/v2, the note the review reads, before any finder spawns
 cargo xtask notes write wu|epic|commit &lt;tip&gt; [--target &lt;ref&gt;] [--judgment &lt;path&gt;|--template]  # writes the tip's test/v2 + doc/v1 from one judgment, deriving the range, identity, tiers and counts, and prints the code_sha256 the review binds
 cargo xtask mr commit -m &lt;msg&gt; --as &lt;id&gt;          # T0/T1 doc commit: append a Reviewed-By trailer (identity must be listed)
@@ -367,10 +369,10 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
     <table data-c="hooks-table">
       <thead><tr><th>Hook</th><th>Enforces</th></tr></thead>
       <tbody>
-        <tr><td><code>pre-commit</code></td><td>refuses non-merge commits on <code>main</code> with branch guidance (DEC-6) · <code>cargo xtask lint</code> — <code>fmt</code> + <code>clippy -D warnings</code>, skipped when this exact tree <em>content</em> already passed them (<a href="decisions/workflow-gates.html#dec-54">DEC-54</a>) · when completing a <em>conflicted</em> merge (MERGE_HEAD on disk — those never reach pre-merge-commit), runs the same merge gate</td></tr>
+        <tr><td><code>pre-commit</code></td><td>refuses non-merge commits on <code>main</code> with branch guidance (DEC-6) · <code>cargo xtask lint</code> — <code>fmt</code> + <code>clippy -D warnings</code>, skipped when this exact tree <em>content</em> already passed them (<a href="decisions/workflow-gates.html#dec-54">DEC-54</a>) · when completing a <em>conflicted</em> merge (MERGE_HEAD on disk — those never reach pre-merge-commit), runs the same merge gate — on <code>main</code> also <code>cargo xtask gate0 merge</code> on the resolved tree</td></tr>
         <tr><td><code>commit-msg</code></td><td>if the staged diff touches rule-bearing docs (T0 <code>CLAUDE.md</code> / T1 flat <code>docs/</code>), refuses the commit unless the message carries a <code>Reviewed-By</code> trailer naming a listed authoriser (manual review at commit level — a presence check only: the hook runs before git signs, so a <code>key</code>-backed signature is verified later, at pre-push); T2/T3 doc commits pass untrailered (DEC-10); merge commits are skipped — their merged doc commits carried their own authorisation when they were created and pushed</td></tr>
-        <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes, incl. each rule-bearing (T0/T1) doc commit's authorisation (trailer listed; <code>gpgsig</code> verifies for a <code>key</code>-backed identity)</td></tr>
-        <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated unless they carry a design artifact; red refuses the merge</td></tr>
+        <tr><td><code>pre-push</code></td><td><code>cargo xtask gate0 push</code> — every pushed tree proven before it leaves: the clean <code>HEAD</code>'s by this checkout's marker (a push right after a green merge runs no suite), any other in a scratch worktree (<a href="decisions/dec-74-the-merge-proves-the-tree-it-creates.html">DEC-74</a>) · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes, incl. each rule-bearing (T0/T1) doc commit's authorisation (trailer listed; <code>gpgsig</code> verifies for a <code>key</code>-backed identity)</td></tr>
+        <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate, then <code>cargo xtask gate0 merge</code> on the merged working tree (<a href="decisions/dec-74-the-merge-proves-the-tree-it-creates.html">DEC-74</a>); docs/infra-only merges pass the notes gate ungated unless they carry a design artifact — into <code>main</code> the tree is still proven; red refuses the merge, a red tree with <code>git merge --abort</code> and the back-merge line</td></tr>
         <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup · seeds a new worktree's own <code>target/</code> with third-party artifacts only (<a href="decisions/dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>)</td></tr>
       </tbody>
     </table>
@@ -379,6 +381,7 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
       <thead><tr><th>Each checkout must</th><th>Set by</th><th>A gate refuses otherwise, printing</th></tr></thead>
       <tbody>
         <tr><td>run the hooks it carries: <code>core.hooksPath</code> = <code>.cargo-husky/hooks</code> (relative), every tracked hook executable (<a href="decisions/dec-72-git-runs-the-tracked-hooks.html">DEC-72</a>)</td><td><code>cargo xtask hooks install</code>, once per clone</td><td><code>cargo xtask hooks install</code> · or the <code>chmod +x</code> line</td></tr>
+        <tr><td>run the suite: <code>cargo-nextest</code> installed, and a freshly linked binary first-launching within 2 s — the verdict cached per boot (<a href="decisions/dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html">DEC-75</a>)</td><td>the machine: <code>cargo install cargo-nextest --locked</code> · macOS: Developer Tools enabled for the terminal or editor</td><td>exit 2 — the install line, or the Developer Tools line and the <code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> override; never a tree refusal</td></tr>
         <tr><td>build into its own <code>target/</code>, never a symlink (<a href="decisions/dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>)</td><td><code>post-checkout</code> (new worktree) · <code>cargo xtask target isolate</code> (old one)</td><td><code>cargo xtask target isolate</code></td></tr>
       </tbody>
     </table>
