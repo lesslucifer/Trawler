@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec088c9f34851f0dfae680">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-72: git runs the tracked hooks</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-72 — git runs the tracked hooks, from each checkout</h1>
+      <p>The hooks that run are the ones in the commit being worked on. No installed copy exists that could drift from them.</p>
+      <div class="meta">Decided 2026-11-05 · E-GATEPAR.W1 · active</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong><code>core.hooksPath</code> is the relative path <code>.cargo-husky/hooks</code>, set once per clone
+      by <code>cargo xtask hooks install</code>.</strong> Git resolves it against each worktree's root, so every
+      worktree runs the hooks its own branch carries. The four gate entrypoints (<code>verify-dod</code>,
+      <code>gate0</code>, <code>lint</code>, <code>preflight</code>) refuse a checkout where git would run anything
+      else. cargo-husky's copy-install is retired.</p>
+    </div>
+
+    <h2 id="why">Why</h2>
+    <table data-c="why-table">
+      <thead><tr><th>Observed (main @ 4d1c1942)</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>cargo-husky copied hooks into <code>.git/hooks</code> on the first build only</td><td>landed hook changes never reached the machine</td></tr>
+        <tr><td>the installed <code>pre-commit</code> still ran raw fmt + clippy</td><td><a href="workflow-gates.html#dec-54">DEC-54</a>'s cached <code>cargo xtask lint</code> never took effect</td></tr>
+        <tr><td>the installed <code>commit-msg</code> predated <a href="workflow-gates.html#dec-10">DEC-10</a></td><td>a rule change was silently unenforced</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rules">Rules</h2>
+    <table data-c="rules-table">
+      <thead><tr><th>Situation</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td><code>core.hooksPath</code> unset, absolute, or pointing elsewhere</td><td>the gate exits 1, runs nothing and prints <code>cargo xtask hooks install</code></td></tr>
+        <tr><td>a tracked hook is not executable (git skips it silently)</td><td>the gate exits 1 with the <code>chmod +x … &amp;&amp; git update-index --chmod=+x …</code> line</td></tr>
+        <tr><td><code>hooks install</code> while a linked worktree's tracked hook is not executable</td><td>refused, with each worktree listed: the value is repo-wide, and writing it would switch off that worktree's gates</td></tr>
+        <tr><td>a tree with no <code>.cargo-husky/hooks/</code></td><td>no refusal: there is nothing to drift from</td></tr>
+        <tr><td><code>hooks install</code>, <code>verify-doc</code>, <code>mr</code></td><td>not guarded: they are the fix, or they gate nothing</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Re-install the copies when they drift</td><td>a copy can always drift again; the drift check would be one more thing to forget</td></tr>
+        <tr><td>An absolute <code>core.hooksPath</code></td><td>pins every worktree to one checkout's hooks, which is the same drift moved somewhere else</td></tr>
+        <tr><td>A worktree-scoped value (<code>extensions.worktreeConfig</code>) as the steady state</td><td>used only as the W1 bridge in one worktree; it must be set per worktree, so the next new worktree is unguarded</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li>Editing a tracked hook takes effect on the next git operation in that checkout, with no rebuild.</li>
+      <li>A fresh clone gates nothing until <code>cargo xtask hooks install</code> runs. The gate says so on its first run.</li>
+      <li>Supersedes DEC-54's "installed by cargo-husky at build time" consequence.</li>
+      <li>Held by <code>xtask/src/hooks.rs</code> tests, <code>xtask/tests/hooks_install.rs</code> and the epic e2e <code>xtask/tests/e2e_gate_parity.rs</code>.</li>
+    </ul>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -27,6 +27,10 @@
       — refusals counted per check id per level, rounds listed per tip. The file is local measurement: under
       the gitignored <code>target/</code>, in the shape of Gate 0's cache, never a git note, never synced, and
       never read back by any gate check.</p>
+      <p><em>(Amended by <a href="dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>: once each
+      worktree has its own <code>target/</code>, the file is <code>&lt;git-common-dir&gt;/trawler-gate-tally</code>,
+      so a machine keeps one tally for all its checkouts. <code>cargo xtask target prune</code> folds a legacy
+      <code>target/.gate-tally</code> into it. It is still local, unsynced and never read by a gate.)</em></p>
     </div>
 
     <h2 id="why">Why it needed deciding</h2>
@@ -128,8 +132,9 @@ flowchart LR
       </div>
       <div class="card">
         <h3>It expires honestly</h3>
-        <p><code>target/</code> is gitignored and <code>cargo clean</code> takes it. The measurement starts
-        again from zero on a clean checkout, which is the truth about it — a count that survived a clone
+        <p>It lives outside the tracked tree (<code>target/</code> at first, the git common dir since
+        <a href="dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>) and no clone carries it. The measurement starts
+        again from zero on a fresh clone, which is the truth about it — a count that survived a clone
         would be a claim about a machine nobody can inspect. It is a reading rather than a history, so it is
         also bounded: past 2048 records the oldest half goes.</p>
       </div>
