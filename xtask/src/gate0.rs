@@ -4,6 +4,7 @@ use std::process::Command;
 
 use crate::gate::short;
 use crate::git::{git, git_outcome, worktree_key};
+use crate::launch::{self, Launch};
 use crate::target::{self, Workspace};
 
 // A local, per-checkout build shortcut - deliberately NOT a git note. Gate 0
@@ -97,12 +98,36 @@ fn run_checks(repo: &Path) -> Result<bool, String> {
     if !run_lints(repo)? {
         return Ok(false);
     }
-    let tests = if nextest_available(repo) {
-        run(repo, "cargo", &["nextest", "run", "--all"])?
-    } else {
-        run(repo, "cargo", &["test", "--all"])?
-    };
-    Ok(tests)
+    run(repo, "cargo", &["nextest", "run", "--all"])
+}
+
+/// Exit code of a refusal about the machine rather than the tree, so a merge or
+/// push names the machine's fix and not the tree's.
+pub const MACHINE_REFUSED: i32 = 2;
+
+pub const NEXTEST_MISSING: &str =
+    "gate0 refused - cargo-nextest is not installed; the suite runs only through it.
+  cargo install cargo-nextest --locked";
+
+pub fn slow_launch_refusal() -> String {
+    format!(
+        "gate0 refused - a freshly linked binary took over {}s to first launch: the OS is assessing each new test binary, \
+which costs minutes per suite and fails tests on their deadlines.
+  macOS: System Settings > Privacy & Security > Developer Tools - enable the terminal or editor running this, then retry
+  or accept the wait: {}=1",
+        launch::THRESHOLD.as_secs(),
+        launch::ACCEPT_SLOW
+    )
+}
+
+fn machine_refusal(repo: &Path) -> Result<Option<String>, String> {
+    if !nextest_available(repo) {
+        return Ok(Some(NEXTEST_MISSING.to_string()));
+    }
+    if launch::slow_accepted() {
+        return Ok(None);
+    }
+    Ok((launch::machine()? == Launch::Slow).then(slow_launch_refusal))
 }
 
 pub fn gate0(repo: &Path) -> Result<(i32, String), String> {
@@ -112,6 +137,9 @@ pub fn gate0(repo: &Path) -> Result<(i32, String), String> {
             0,
             format!("gate0 skipped - working tree unchanged since last green ({})", short(&key)),
         ));
+    }
+    if let Some(refusal) = machine_refusal(repo)? {
+        return Ok((MACHINE_REFUSED, refusal));
     }
     if run_checks(repo)? {
         store_key_at(&cache_path(repo), &key)?;
@@ -132,7 +160,7 @@ pub const MERGE_REFUSED: &str = "merge refused - the merged tree fails Gate 0; m
 then back-merge main into the epic, fix the combination there, and merge again";
 
 fn merge_verdict((code, said): (i32, String)) -> (i32, String) {
-    if code == 0 {
+    if code == 0 || code == MACHINE_REFUSED {
         (code, said)
     } else {
         (code, format!("{said}\n{MERGE_REFUSED}"))
@@ -254,7 +282,7 @@ pub const PUSH_REFUSED: &str = "push refused - a pushed tree fails Gate 0; nothi
   fix it on the branch, commit, and push again";
 
 fn push_verdict((code, said): (i32, String)) -> (i32, String) {
-    if code == 0 {
+    if code == 0 || code == MACHINE_REFUSED {
         (code, said)
     } else {
         (code, format!("{said}\n{PUSH_REFUSED}"))
@@ -327,8 +355,8 @@ pub fn lint(repo: &Path) -> Result<(i32, String), String> {
 mod tests {
     use super::{
         cache_path, cached_key_at, check_command, lint_cache_path, lint_proof, merge_verdict,
-        push_verdict, pushed_shas, split_proofs, store_key_at, PushProofs, CLIPPY, PUSH_REFUSED,
-        ZERO_SHA,
+        push_verdict, pushed_shas, slow_launch_refusal, split_proofs, store_key_at, PushProofs,
+        CLIPPY, MACHINE_REFUSED, MERGE_REFUSED, NEXTEST_MISSING, PUSH_REFUSED, ZERO_SHA,
     };
     use std::ffi::{OsStr, OsString};
     use tempfile::TempDir;
@@ -360,6 +388,28 @@ mod tests {
     fn a_green_or_skipped_merge_passes_through_unchanged() {
         for said in ["gate0 green - cached (k)", "gate0 skipped - unchanged (k)"] {
             assert_eq!(merge_verdict((0, said.to_string())), (0, said.to_string()));
+        }
+    }
+
+    #[test]
+    fn a_missing_nextest_names_the_install_line() {
+        assert!(NEXTEST_MISSING.contains("cargo install cargo-nextest --locked"));
+    }
+
+    #[test]
+    fn a_slow_launch_names_developer_tools_and_the_override() {
+        let said = slow_launch_refusal();
+        assert!(said.contains("Developer Tools"), "{said}");
+        assert!(said.contains("TRAWLER_ACCEPT_SLOW_LAUNCH=1"), "{said}");
+    }
+
+    #[test]
+    fn a_machine_refusal_never_blames_the_tree() {
+        for verdict in [merge_verdict, push_verdict] {
+            let (code, said) = verdict((MACHINE_REFUSED, NEXTEST_MISSING.to_string()));
+            assert_eq!(code, MACHINE_REFUSED);
+            assert_eq!(said, NEXTEST_MISSING);
+            assert!(!said.contains(MERGE_REFUSED) && !said.contains(PUSH_REFUSED));
         }
     }
 

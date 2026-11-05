@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec15a79f34851f0dfae6f9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR2.W3 launch-guard result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>launch-guard — result</h1>
+      <p>Gate 0 proves the machine before the tree: no nextest or a slow first launch is refused in seconds with its fix line, and the suite runs only through nextest.</p>
+      <div class="meta">2026-11-05 · Trawler · T3 WU result · <span class="badge id">E-GATEPAR2.W3</span> · <a href="2026-11-05-launch-guard-plan.html">plan</a> · <a href="2026-11-05-gate-parity2-plan.html">epic plan</a> · <a href="../decisions/dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html">DEC-75</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <table data-item="outcome">
+      <thead><tr><th>Expected</th><th>Shipped</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>No nextest → refused with the install line, no check runs</td><td><code>gate0::machine_refusal</code> before <code>run_checks</code> on a miss; <code>NEXTEST_MISSING</code> names <code>cargo install cargo-nextest --locked</code></td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>First launch over 2 s → refused with the Developer Tools line and the override, no check runs</td><td><code>launch::machine</code> links a nonce-bearing probe with <code>$RUSTC</code>; <code>first_launch</code> times it on a thread and answers <code>Slow</code> at the threshold without awaiting it</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>Override skips the probe</td><td><code>TRAWLER_ACCEPT_SLOW_LAUNCH=1</code> → no link, checks run</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>Fast machine pays the probe once</td><td>boot key (<code>kern.boottime</code> · <code>boot_id</code>) stored at <code>$XDG_CACHE_HOME</code> or <code>~/.cache</code> <code>/trawler/launch-fast</code>; slow never cached</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>Marker hit runs neither prerequisite</td><td>the check sits after the marker read</td><td><span class="badge auto">delivered</span></td></tr>
+        <tr><td>Suite only through nextest</td><td><code>run_checks</code> runs <code>cargo nextest run --all</code>; the <code>cargo test --all</code> branch removed</td><td><span class="badge auto">delivered</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-item="deviations">
+      <thead><tr><th>Found</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code>gate0 merge</code>/<code>push</code> appended their tree refusal (abort + back-merge, fix on the branch) to any non-zero verdict — wrong advice for a machine problem</td><td>machine refusals exit <code>MACHINE_REFUSED</code> = 2, and both wrappers pass code 2 through untouched. Recorded as DEC-75, which the plan allowed only if a rule needed rationale beyond the report's numbers — this and the per-boot cache do.</td></tr>
+        <tr><td>nextest runs no doc-tests, so the removed fallback was the only path that ran them</td><td>no change: the report counts 0 doc-tests in the workspace, and machines with nextest already ran none. W4's guard fails a crate that gains a runnable example.</td></tr>
+        <tr><td>Review round 1 (<code>cr/v5</code> FAIL on <code>a46a3a46</code>): the preflight wrapped a machine refusal with the tree fix line; a cache dir that could not be written failed the gate on a fast machine</td><td><code>preflight::gate0_blocker</code> gives <code>MACHINE_REFUSED</code> its own fix (“the tree was not measured”); <code>launch::machine</code> writes the fast verdict best-effort. Each pinned by a regression test written first.</td></tr>
+        <tr><td>This machine had no cargo-nextest</td><td>installed (<code>cargo-nextest 0.9.151</code>) so the WU could prove itself — the step every contributor machine now owes.</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-item="evidence">
+      <thead><tr><th>Kind</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td>unit</td><td><code>xtask/src/launch.rs</code>: <code>the_cache_follows_xdg_then_home</code>, <code>a_stored_boot_is_a_hit_and_another_boot_a_miss</code>, <code>each_probe_source_is_a_distinct_program</code>, <code>a_program_that_exits_at_once_is_fast</code>, <code>a_launch_past_the_threshold_is_slow_without_waiting_for_it</code>, <code>a_program_that_cannot_start_is_an_error</code> · <code>xtask/src/gate0.rs</code>: <code>a_missing_nextest_names_the_install_line</code>, <code>a_slow_launch_names_developer_tools_and_the_override</code>, <code>a_machine_refusal_never_blames_the_tree</code> · <code>xtask/src/preflight.rs</code>: <code>a_machine_refusal_names_the_machine_fix_not_the_tree_fix</code>, <code>a_red_tree_names_the_tree_fix_and_green_is_no_blocker</code></td></tr>
+        <tr><td>integration · spawned process</td><td><code>xtask/tests/lint_spawn.rs</code>, harness gains a <code>rustc</code> shim (via <code>RUSTC</code>) whose program sleeps a set time and a cargo shim that can deny nextest; 4 new: no nextest refused before any check · slow probe refused at the threshold and measured again next run · override skips the probe · fast probe linked once across two misses and a hit, suite = <code>nextest run --all</code>, no <code>test</code> call · an unwritable cache dir still passes a fast machine — 19/19</td></tr>
+        <tr><td>real probe</td><td>this machine: fresh tiny binary first launch 0.008 s ×3; <code>~/.cache/trawler/launch-fast</code> holds the boot key after the first real Gate 0</td></tr>
+        <tr><td>suite</td><td><code>cargo xtask gate0</code> green on the WU tree: 1180 passed through nextest, tests 10.7 s, whole gate 21.7 s wall</td></tr>
+        <tr><td>e2e</td><td>waived — the epic e2e (W5) stubs the probe above and below the threshold through the real hooks</td></tr>
+        <tr><td>commits</td><td><code>e4d7e274</code> · <code>8e29a3fd</code> (review fix) on <code>wu/gate-parity2/launch-guard</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">T2: new DEC-75 and its decisions-index row. T1 owed at W5 via <code>mr commit</code>: <code>workflow.html</code> § Hooks (the suite-running rows name the machine prerequisites) and <code>testing-strategy.html</code> (nextest is a required runner, not CI-only).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <ul data-item="follow-ups">
+      <li>W4 (suite-cost): the doc-test guard now also stands in for the doc-test pass nextest never runs.</li>
+      <li>W5: the e2e's probe scenarios; the two T1 rows above.</li>
+    </ul>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

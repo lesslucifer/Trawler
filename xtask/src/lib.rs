@@ -4,6 +4,7 @@ pub mod gate;
 pub mod gate0;
 pub mod git;
 pub mod hooks;
+pub mod launch;
 pub mod mr;
 pub mod notes;
 pub mod notes_write;
