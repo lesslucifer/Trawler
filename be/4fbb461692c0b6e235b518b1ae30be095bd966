@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU wu/bg-service/e2e-distill -> epic/bg-service"
+epic: E-BGSVC
+wu: E-BGSVC.W7
+branch: wu/bg-service/e2e-distill
+base: a2098f848515f891ebcb10670585ea0c9e3b1678
+head: be4fbb461692c0b6e235b518b1ae30be095bd966
+diff_sha256: 83c5ce614066786d1ad78496cdb1b604b79b39d3259d336781e187375a37016f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    important: 1
+    nit: 4
+  stage_seconds:
+    gate0: 36
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "handler_names splits on ',' before dropping a #[-prefixed entry, so a compound cfg with a comma would leave a garbage name"
+    waived: "no compound cfg in either list; it would surface as a loud comparison diff, never a missed command"
+  - finding: "the background specs depend on each other's leftover answer and on each file's final quit; one failure can cascade"
+    waived: "deliberate (one-app.conf.ts's comment): the stored answer crossing a real exit is what is proven; recorded as a follow-up (F3) in the result doc"
+  - finding: "background-keep.spec.ts's inline origin server repeats one-app.spec.ts's startOrigin"
+    waived: "three lines of node:http setup differing in the body; nothing drifts"
+  - finding: "exit helpers are split between quit.ts and app.ts"
+    waived: "quit.ts is shared with the attached suite via layout.ts, app.ts is the owned suite's; no behavioural effect"
+verdict: PASS
+date: 2026-11-06
