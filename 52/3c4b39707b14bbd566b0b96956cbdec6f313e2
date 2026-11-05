@@ -1,0 +1,26 @@
+schema: cr/v5
+scope: "WU quit-asks-the-same -> epic/bg-service"
+epic: E-BGSVC
+wu: E-BGSVC.W3
+branch: wu/bg-service/quit-asks-the-same
+base: 91cda7c38af82779d82ca3150ba2ce8d8fda542c
+head: 523c4b39707b14bbd566b0b96956cbdec6f313e2
+diff_sha256: 136a598a55f62883c041e311f5d36a6d0b0d843761dfd67a41c77af4295d25ee
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
