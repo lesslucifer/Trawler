@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 50502da4549e691c1bdbf57aed4c9c9b6d291021
+base: 80b452a7307bc710737254c44f4358699dda51d5
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-push-reads-proof-result.html
+report_sha256: 33638987a5ae57f33d1a7921f58fd6af988fcbf7b226cb41a05ea32fcf36847f
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBtpGcFQVf+QRFEwfO9MwNjOBmtOgxalD9sy75PaaX3wrnqbyojnpUXcm
+  nfIFI7XiUqZ9hEQB9hMzLSzi7v/FgO
+  -----END SSH SIGNATURE-----
