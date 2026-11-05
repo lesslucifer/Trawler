@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 9dda5a037274a4a9307d9cf9532d4d76fe0106d0
+base: 550ef568d6084769aed445f30e2a74d316eab052
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w8-smappservice-result.html
+report_sha256: f9808c7e3c32ca0d789b991e8551c77aedae5caac4a067d0976ad3754efeb28b
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECvWzgbnxXB9df9PJ/1mibIJTwG6I00e2Hcnd+H86ZTqxpvNxlu8pT7+w
+  6w1igAuySjbIhNj8iX9A9APw/QMLMF
+  -----END SSH SIGNATURE-----
