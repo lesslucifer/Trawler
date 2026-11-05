@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-BGSVC
+wu: E-BGSVC.W7
+base: a2098f848515f891ebcb10670585ea0c9e3b1678
+tip: be4fbb461692c0b6e235b518b1ae30be095bd966
+diff_sha256: 8908893071a98964702e25a340ebb02364aaaed241af8ecf73b441cb622d43fc
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-06
