@@ -1,0 +1,21 @@
+schema: doc/v1
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html"
+    tier: T2
+    action: added
+    distills: "DEC-75: on a marker miss Gate 0 checks nextest then a 2 s first-launch probe; machine refusals exit 2 with their fix line and no tree refusal; fast verdict cached per boot, slow never; serial fallback removed; rejected alternatives"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-75 row"
+  - path: "docs/work/2026-11-05-launch-guard-plan.html"
+    tier: T3
+    action: added
+    distills: "the W3 plan: requirement, prerequisite flow, test plan"
+  - path: "docs/work/2026-11-05-launch-guard-result.html"
+    tier: T3
+    action: added
+    distills: "the W3 result report: outcome, the machine-refusal exit code and doc-test deviations, evidence"
