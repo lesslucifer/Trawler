@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec4b879f34851f0dfae878">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-79: the bytes decide the kind</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-79 — the bytes decide the kind</h1>
+      <p>What a body or payload is read as comes from its bytes first; the served or handed-over media type is a hint, and
+        every surface says what decided it.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-INSPWIN2.W1</strong> from the owner's rulings on
+        the epic plan's Q4–Q7 · UC-5 · UC-9 · <strong>active</strong> · planned as DEC-78 (DEC-next-b); DEC-79 because E-BGSVC.W1 minted
+        DEC-77 first · built in <code>ui/src/contentKind.ts</code>, wired by E-INSPWIN2.W5</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this record exists</h2>
+    <table data-c="why">
+      <tr><th>Today</th><th>The limit</th></tr>
+      <tr><td>UC-5: the pane dispatches on the served content type alone</td><td>JSON served as <code>text/plain</code> or
+        <code>text/html</code> renders as flat text or markup</td></tr>
+      <tr><td>The data window trusts any label that names a kind; bytes speak only without one</td><td>the same mislabels
+        reach the window; the user must know to pick the kind</td></tr>
+      <tr><td>HTML is read as XML; JavaScript and CSS as plain text</td><td>no kind of their own to carry tools</td></tr>
+    </table>
+
+    <div class="callout" data-c="decision">
+      <p><strong>Decision.</strong> One function, <code>readKind(bytes, label?)</code>, decides among nine kinds — json · form ·
+        xml · html · javascript · css · text · hex · image — and returns what decided it: <em>the label</em> or <em>the bytes</em>,
+        with the label as served. <strong>A whole parse beats a label; a label beats a guess.</strong> The pane and the data window
+        both read through it.</p>
+    </div>
+
+    <h2 id="order">The order</h2>
+    <div class="diagram" data-c="order">
+      <pre class="mermaid">
+flowchart TB
+  IN["bytes, label"] --> I{"image signature,<br/>or an image/* label?"}
+  I -- yes --> IMG["image"]
+  I -- no --> T{"UTF-8 text without<br/>control bytes?"}
+  T -- no --> HEX["hex"]
+  T -- yes --> J{"whole JSON object or array?"}
+  J -- yes --> JS["json"]
+  J -- no --> L{"label's kind"}
+  L -- "generic" --> G["html signature → html<br/>well-formed XML → xml<br/>else text"]
+  L -- "html" --> H["html"]
+  L -- "xml" --> X["well-formed → xml<br/>html signature → html<br/>else xml"]
+  L -- "json" --> JL["html signature → html<br/>well-formed XML → xml<br/>else json"]
+  L -- "form · javascript · css" --> K["the label's kind"]
+      </pre>
+      <div class="caption">JSON is parsed at most once, and XML only when the text starts with <code>&lt;</code>.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>A label is <em>generic</em> when it names no kind: <code>text/plain</code>, <code>application/octet-stream</code>,
+        <code>binary/octet-stream</code>, absent, or any type the table below does not list. A generic label never decides</td>
+        <td>these labels say "some bytes"; they are where mislabels live</td></tr>
+      <tr><td>2</td><td>A whole JSON object or array is json under every text label — javascript, css and form included (owner,
+        Q5 reading, 2026-11-05)</td><td>JSON is also valid JavaScript, so "the bytes fail the label" alone would keep the commonest
+        mislabel; no CSS, form or meaningful script is a whole JSON object</td></tr>
+      <tr><td>3</td><td>An html signature is a leading <code>&lt;!doctype html</code>, <code>&lt;html</code>, <code>&lt;head</code>
+        or <code>&lt;body</code>, any case, after a BOM, whitespace, comments and an XML prolog</td><td>HTML parses from anything,
+        so only its opening says it is a page</td></tr>
+      <tr><td>4</td><td>JavaScript, CSS and form are never read from bytes; only a label or the user's pick names them (Q6)</td>
+        <td>no cheap whole-parse tells them from text</td></tr>
+      <tr><td>5</td><td>An <code>image/*</code> label is never overruled; bytes that are not text are hex under any other label</td>
+        <td>an image surface already says when it cannot draw; text tools over binary bytes would lie</td></tr>
+      <tr><td>6</td><td>A JSON label over broken JSON stays json</td><td>the surface's parse notice says why — more use than plain text</td></tr>
+      <tr><td>7</td><td>Every consumer states what decided the kind; when the bytes overrule a non-generic label the pane says
+        <em>served as …</em></td><td>the evidence rule (UC-5): the pane still shows the captured bytes, so a reader must see that
+        the renderer choice moved</td></tr>
+      <tr><td>8</td><td>The data window's kind picker still overrides</td><td>the user knows the bytes better than any rule</td></tr>
+    </table>
+
+    <h2 id="labels">Labels that name a kind</h2>
+    <table data-c="labels">
+      <tr><th>Label (parameters dropped, lower case)</th><th>Kind</th></tr>
+      <tr><td><code>application/json</code>, <code>text/json</code>, <code>*+json</code></td><td>json</td></tr>
+      <tr><td><code>application/x-www-form-urlencoded</code></td><td>form</td></tr>
+      <tr><td><code>text/html</code>, <code>application/xhtml+xml</code></td><td>html</td></tr>
+      <tr><td><code>application/xml</code>, <code>text/xml</code>, other <code>*+xml</code></td><td>xml</td></tr>
+      <tr><td><code>application/javascript</code>, <code>text/javascript</code>, <code>application/x-javascript</code>,
+        <code>application/ecmascript</code>, <code>text/ecmascript</code></td><td>javascript</td></tr>
+      <tr><td><code>text/css</code></td><td>css</td></tr>
+      <tr><td><code>image/*</code></td><td>image</td></tr>
+    </table>
+
+    <h2 id="alternatives">Rejected</h2>
+    <table data-c="alternatives">
+      <tr><th>Alternative</th><th>Why not</th></tr>
+      <tr><td>Trust the label whenever it names a kind (today)</td><td>keeps every mislabel the user meets</td></tr>
+      <tr><td>Sniff only in the data window, leave the pane on the label</td><td>owner, Q4: one detector, both surfaces</td></tr>
+      <tr><td>Guess JavaScript, CSS or form from bytes</td><td>owner, Q6: no reliable cheap test; the label or the picker names them</td></tr>
+      <tr><td>Read a JSON scalar (<code>42</code>, <code>"x"</code>) as json</td><td>almost any short text would turn into JSON</td></tr>
+      <tr><td>A kind picker in the pane</td><td>the pane stays a glance; the window is where a kind is overridden</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
