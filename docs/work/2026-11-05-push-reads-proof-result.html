@@ -27,7 +27,7 @@
     </table>
 
     <h2 id="deviations">Deviations</h2>
-    <table data-c="deviations">
+    <table data-item="deviations">
       <thead><tr><th>Found</th><th>Change</th></tr></thead>
       <tbody>
         <tr><td>First real probe: the scratch worktree had no <code>ui/node_modules</code>, so <code>trawler-ui</code>'s build script refused and the proof went red (correctly refused, scratch cleaned)</td><td><code>install_ui_packages</code> runs the frozen, offline-preferring install before Gate 0 when <code>ui/package.json</code> exists; a failed install is a red verdict. Pinned by a new spawn test.</td></tr>
