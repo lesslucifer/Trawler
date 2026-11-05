@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU updater -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W1
+branch: wu/packaging-v2/updater
+base: ad4287f321b0cc7c0e156239bfb5f09bdddbb705
+head: 053a8568751bf9292de9fc287fcc4170a43eb6a8
+diff_sha256: c0feed0709cc0dfd11db79a6dee8c6ec57f15dc8a99cc9fd0f7a4b2bdc7fe27a
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 3
+  stage_seconds:
+    gate0: 25
+    finders: 45
+    verifiers: 50
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "core.stop and update.install run synchronously in the main window's Destroyed handler on the event-loop thread"
+    waived: "the quit path already blocked there on RunEvent::Exit before this WU; the last window is gone, and DEC-82 rule 4 orders stop, install, relaunch on that quit"
+  - finding: "no in-flight guard: two checks can open two offers, and accepting both downloads twice before the later stage overwrites the earlier"
+    waived: "both stages hold the same verified update, so the overwrite installs the same bytes; a second offer costs a second download only"
+verdict: PASS
+date: 2026-11-05
