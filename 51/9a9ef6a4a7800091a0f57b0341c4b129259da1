@@ -1,0 +1,45 @@
+schema: doc/v1
+epic: E-GATEPAR
+wu: E-GATEPAR.W3
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "shared-target row closed by E-GATEPAR.W2 (DEC-73); new E-GATEPAR2 row carrying the deferred merge-proves-tree, push-reads-proof, launch-guard, suite-cost and measure work"
+  - path: "docs/decisions/dec-42-the-gate-tally-is-local-measurement.html"
+    tier: T2
+    action: updated
+    distills: "amended by DEC-73: the tally lives at <git-common-dir>/trawler-gate-tally, prune folds the legacy file; diagram updated"
+  - path: "docs/decisions/dec-72-git-runs-the-tracked-hooks.html"
+    tier: T2
+    action: added
+    distills: "DEC-72: relative core.hooksPath to the tracked hooks via cargo xtask hooks install, gate refusals, install refuses to strand a worktree, cargo-husky retired"
+  - path: "docs/decisions/dec-73-each-worktree-builds-into-its-own-target.html"
+    tier: T2
+    action: added
+    distills: "DEC-73: per-worktree target seeded with third-party artifacts by APFS clone, isolate/prune, gates refuse a symlinked target, markers per worktree, tally in the common dir, with the C9 measurements"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-72 and DEC-73 rows; DEC-42 row names the new tally path; workflow-gates row notes DEC-54's install consequence superseded"
+  - path: "docs/decisions/workflow-gates.html"
+    tier: T2
+    action: updated
+    distills: "DEC-54's 'installed by cargo-husky at build time' consequence struck and superseded by DEC-72; markers per worktree since DEC-73"
+  - path: "docs/testing-strategy.html"
+    tier: T1
+    action: updated
+    distills: "local git hooks run from each checkout's tracked .cargo-husky/hooks (DEC-72), not cargo-husky"
+  - path: "docs/work/2026-11-05-gate-parity-close-plan.html"
+    tier: T3
+    action: added
+    distills: "W3 requirement, e2e shape, doc changes and test plan"
+  - path: "docs/work/2026-11-05-gate-parity-close-result.html"
+    tier: T3
+    action: added
+    distills: "W3 outcome, deviations (DEC-71 skipped, logger pre-commit), evidence incl. mutation check, distillation and follow-ups"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "§ Hooks v18: post-checkout seeds a worktree's own target; per-checkout requirements (tracked hooks, own target) with their set-by commands and gate refusals"
