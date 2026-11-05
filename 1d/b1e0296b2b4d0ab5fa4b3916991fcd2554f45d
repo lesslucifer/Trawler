@@ -1,0 +1,7 @@
+schema: test/v2
+level: epic
+epic: E-PKG
+branch: HEAD
+tests:
+  unit: { count: 38, covers: "W1: a bundle of the other flavour, or one recording none, is stale however new, and the rebuild sets or removes VITE_E2E by flavour; the package plan's argv per host, profile and universal, and its refusals (universal off macOS, a missing Mac target named in the rustup line, unknown flags and hosts); artifact discovery; the drift guard naming each version source that disagrees with trawler-ui's, and the tree's own guard through cargo metadata; target.rs's shared cargo_metadata reader under its Workspace tests" }
+  e2e: { count: 2, covers: "THE EPIC'S FULL FLOW as re-scoped to W1, at the epic tip merged with main (feature package-tests, macOS): after an e2e-flavoured ui/dist, a plain cargo build of the app embeds a release bundle with no WebDriver plugin; cargo xtask package --profile package-test with VITE_E2E=1 in its environment builds a release bundle, an .app green under codesign --verify --deep --strict and a .dmg, and the .app's binary run as --core under env_clear, launchd's PATH, a temp HOME and cwd / prints its ready line and captures a proxied request to a local origin into GET /flows. 2 of 2 in 73s at 63faf56b" }
