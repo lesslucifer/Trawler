@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W3
+branch: HEAD
+tests:
+  unit: { count: 29, covers: "the launch cache follows XDG_CACHE_HOME then HOME, a stored boot key is a hit and another boot a miss, each probe source is a distinct program, a program that exits at once is fast, a launch past the threshold is slow without awaiting it, a program that cannot start is an error; the nextest refusal names the install line, the slow refusal names Developer Tools and the override, and gate0 merge/push pass a machine refusal through without blaming the tree" }
+  integration: { count: 18, covers: "the real xtask gate0 against cargo and rustc shims: no nextest refuses with the install line before any check or probe; a slow first launch refuses at the threshold with the fix line, runs no check, and is measured again next run; the override links no probe and runs the checks; a fast probe is linked once across two misses and a hit, and the suite runs as nextest run --all with no cargo test call; the existing merge and push spawn tests stay green on the extended harness" }
+  e2e: { waived: "the epic e2e (E-GATEPAR2.W5) stubs the launch probe above and below the threshold through the real hooks; this WU's contract is pinned at the spawned process" }
