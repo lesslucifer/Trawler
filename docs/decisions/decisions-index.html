@@ -968,6 +968,16 @@
             Rejected: a version rewritten from the tag, staleness by age, reading manifests' text</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-83-ci-is-a-signal-on-main-not-a-gate.html"><code>dec-83-ci-is-a-signal-on-main-not-a-gate.html</code></a></td>
+          <td><span class="badge id">DEC-83</span></td>
+          <td><strong>CI is a signal on <code>main</code>, not a gate.</strong> <code>ci.yml</code> runs on a push to
+            <code>main</code> and on <code>workflow_dispatch</code> only; a branch runs by hand
+            (<code>gh workflow run ci.yml --ref</code>), which needs the file on <code>main</code> first. It runs clippy and
+            the core and app tests after a frozen-lockfile install; the gate suites, vitest and the WebDriver e2e stay local.
+            Nothing refuses on its result, and it reads the repository only</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

@@ -1,5 +1,6 @@
 #![allow(clippy::unwrap_used)] // test code - panicking on setup failure is the assertion
 
+mod ci_workflow;
 mod doc_examples;
 mod doc_hooks;
 mod e2e_gate_parity;
