@@ -14,6 +14,10 @@ export async function quitTheApp() {
       .__TAURI__;
     setTimeout(() => void tauri.window.getCurrentWindow().destroy(), 100);
   });
+  await theAppExits();
+}
+
+export async function theAppExits() {
   const status = `http://${browser.options.hostname ?? "127.0.0.1"}:${browser.options.port}/status`;
   await browser.waitUntil(() => fetch(status).then(() => false, () => true), {
     timeout: 15_000,
