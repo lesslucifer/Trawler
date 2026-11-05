@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: HEAD
+tests:
+  unit: { count: 52, covers: "a second launch opens the window unless its argv carries --background (the login item's own launch); closeConfirm's 61 cases still hold with the switch read and written through generalPrefs, whose command names the xtask handler cross-check pins" }
