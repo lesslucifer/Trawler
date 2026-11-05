@@ -136,7 +136,7 @@ flowchart LR
           D4 (<code>Verdict::Draft</code> for an archived run) and O3 (a test title claiming the opposite of the
           code). Under DEC-47's severity rows all three read as nits</td></tr>
         <tr><td><strong>reuse</strong></td>
-          <td>The <code>tests/e2e_export.rs</code> class — hand-rolled CA generation duplicating
+          <td>The <code>tests/suite/e2e_export.rs</code> class — hand-rolled CA generation duplicating
           <code>trawler::test_support::tls_origin</code> that three other e2e tests already consume. Nothing else in
           the fleet catches it. <strong>This is the sharpest cost of the cut</strong>, and the owner took it
           knowingly</td></tr>

@@ -26,7 +26,7 @@ pub fn cache_path(repo: &Path) -> PathBuf {
 /// and collapsing them would either let a lint-only pass answer for tests that
 /// never ran, or make the hook pay for the suite.
 ///
-/// `pub` so `xtask/tests/lint_spawn.rs` can name the marker rather than restate
+/// `pub` so `xtask/tests/suite/lint_spawn.rs` can name the marker rather than restate
 /// its path — a second copy of the name would go stale silently, leaving the
 /// test asserting the absence of a file nothing writes any more.
 pub fn lint_cache_path(repo: &Path) -> PathBuf {

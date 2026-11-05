@@ -72,7 +72,7 @@ flowchart LR
     <ul data-c="consequences">
       <li>Every contributor machine needs <code>cargo install cargo-nextest --locked</code> before its first suite-running gate.</li>
       <li>nextest runs no doc-tests: Gate 0 runs none on any machine (it ran none already where nextest was installed). E-GATEPAR2.W4's guard fails a crate that gains a runnable example.</li>
-      <li>Held by <code>xtask/tests/lint_spawn.rs</code> (the real <code>xtask gate0</code> against cargo and rustc shims) and the unit tests in <code>xtask/src/launch.rs</code> and <code>xtask/src/gate0.rs</code>.</li>
+      <li>Held by <code>xtask/tests/suite/lint_spawn.rs</code> (the real <code>xtask gate0</code> against cargo and rustc shims) and the unit tests in <code>xtask/src/launch.rs</code> and <code>xtask/src/gate0.rs</code>.</li>
     </ul>
   </main>
   <script type="module">

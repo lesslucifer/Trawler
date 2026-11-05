@@ -51,9 +51,9 @@
 
     <div class="callout" data-c="provenance">
       <p>Pinned by <code>ui_shell_serves_live_filterable_flow_list</code> in
-      <code>tests/e2e_capture.rs</code> (page served, filter narrows, SSE event arrives,
+      <code>tests/suite/e2e_capture.rs</code> (page served, filter narrows, SSE event arrives,
       clean shutdown with the stream open) and the shell contract tests in
-      <code>tests/api.rs</code>. In-browser rendering is covered by a recorded manual check.
+      <code>tests/suite/api.rs</code>. In-browser rendering is covered by a recorded manual check.
       The shell's minimal chrome is deliberate; the native app (UC-4) is the designed surface.</p>
     </div>
 
@@ -340,7 +340,7 @@
 
     <div class="callout" data-c="listing-paging-provenance">
       <p>Delivered by <span class="badge id">E-EXPORT.W1</span>. Pinned by the paging tests in
-      <code>tests/api.rs</code> (the unparameterised summary row's field set is locked; a cursor
+      <code>tests/suite/api.rs</code> (the unparameterised summary row's field set is locked; a cursor
       walk yields exactly the unpaged listing, filtered and unfiltered; each refusal) and by
       <code>Store::page</code>'s unit and property tests in <code>src/store.rs</code> — the
       no-duplicate/no-skip invariant is proven over interleaved inserts, evictions and page
@@ -437,7 +437,7 @@
       (<code>sticky.spec.ts</code>, <code>-relaunched</code>, <code>-broken</code>) proves the leg and body mode carry to
       the next flow and through a real quit and relaunch, and that a corrupt <code>view-prefs.json</code> opens on
       request and pretty with nothing said. The decode chain itself is pinned at the
-      API seam in <code>tests/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
+      API seam in <code>tests/suite/api.rs</code> and the <code>src/api/decode.rs</code> unit suite;
       viewer dispatch, states, and copy/save are covered by the Vitest unit + integration layers.
       <code>scripts/seed-proxy.mjs</code> seeds one flow per case for manual checks.</p>
     </div>
@@ -1017,7 +1017,7 @@ the client lacks the certificate"]
       by recency rather than by having ever happened. Why these reversals were approved:
       <a href="../decisions/dec-13-onboarding-capabilities.html">DEC-13</a>.</p>
       <p><strong>Pinned by</strong>
-      <code>tests/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed handshake
+      <code>tests/suite/e2e_capture.rs::untrusted_https_records_a_connection_not_a_flow</code> (a failed handshake
       bumps <code>/stats</code> + emits <code>connection</code>, records no flow); the reach seam's
       integration tests over ephemeral ports; the state-derivation and probe-parser unit tests — This
       machine's detectors from recorded tool output in <code>ui/src-tauri/src/setup.rs</code>, their
@@ -1228,7 +1228,7 @@ the client lacks the certificate"]
       <code>src/api/har.rs</code> — the
       parser is defined against the projection it inverts, so the two cannot drift into a format
       Trawler writes but cannot read — and the exported document's shape is snapshot-locked in
-      <code>tests/api.rs</code>. Round-trip fidelity is proven as a <em>property</em> over
+      <code>tests/suite/api.rs</code>. Round-trip fidelity is proven as a <em>property</em> over
       generated flows, not by example, and the parser's never-panics claim the same way. The
       export-selects-what-the-listing-lists guarantee holds by construction (both endpoints build
       the same filter) and is asserted endpoint-to-endpoint. Why HAR and only HAR, and what a
@@ -1417,7 +1417,7 @@ the client lacks the certificate"]
     <div class="callout" data-c="uc-8-provenance">
       <p>API half delivered by <span class="badge id">E-REPLAY.W1</span>
       (<code>src/sender.rs</code>, <code>src/api/send.rs</code>). The contract is proven over real
-      sockets in <code>tests/replay.rs</code>, every wire claim asserted on what the origin received,
+      sockets in <code>tests/suite/replay.rs</code>, every wire claim asserted on what the origin received,
       and the sent flow's shape is snapshot-locked. The composer is delivered by
       <span class="badge id">E-REPLAY.W3</span> (<code>ui/src/Composer.tsx</code>, <code>ui/src/draft.ts</code>),
       built from the replay composer's design run. Its rules are unit-tested in <code>draft.test.ts</code>, and

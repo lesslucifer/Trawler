@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec1aba9f34851f0dfae725" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-GATEPAR2.W4 suite-cost plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>suite-cost — the suite costs its tests, not its structure</h1>
+      <p>One integration-test binary per crate instead of 28, and no doc-test pass for a crate with no doc-tests — guarded so neither can drift back silently.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-GATEPAR2.W4</span> · <a href="2026-11-05-gate-parity2-plan.html">epic plan</a> · <a href="../.archive/2026-11-04-push-timing-report.html">push timing report</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">
+      Every workspace crate's always-on integration tests compile into one binary, <code>suite</code>, rooted at <code>&lt;crate&gt;/tests/suite/main.rs</code>
+      with one module per former file; feature-gated targets (<code>hook-tests</code>, <code>design-e2e</code>, <code>codex-e2e</code>, <code>debug-tests</code>) keep their own.
+      Each of the three libraries (<code>trawler</code>, <code>xtask</code>, <code>trawler_ui_lib</code>) sets <code>doctest = false</code>, and a guard test fails
+      when a doc comment in any <code>doctest = false</code> library gains a fenced example rustdoc would compile. The non-ignored test count is unchanged.
+    </p>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram" data-c="binary-map">
+      <pre class="mermaid">
+flowchart LR
+  subgraph B["before · 28 always-on integration binaries"]
+    T1["trawler · 8<br/>api · ca · core_entry · e2e_capture<br/>e2e_export · e2e_h2 · reach · replay"]
+    X1["xtask · 14<br/>doc_hooks · e2e_gate_parity · gate0_cache · harness_parity<br/>hooks_install · lint_spawn · mr · notes_write · preflight<br/>tally · target_isolation · ui · verify_doc · walkthrough"]
+    U1["trawler-ui · 6<br/>layout_store · quit_stops_core · restart_command<br/>supervisor · view_prefs_store · window_geometry_store"]
+  end
+  subgraph A["after · 3"]
+    T2["tests/suite"]
+    X2["xtask/tests/suite<br/>+ doc_examples guard"]
+    U2["ui/src-tauri/tests/suite"]
+  end
+  T1 --> T2
+  X1 --> X2
+  U1 --> U2
+      </pre>
+      <div class="caption">Each change now links and first-launches 3 integration binaries instead of 28 (F6). Lib and bin unit-test binaries are unchanged.</div>
+    </div>
+    <table data-c="changes">
+      <thead><tr><th>Where</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td><code>tests/*.rs</code> → <code>tests/suite/*.rs</code> (×3 crates)</td><td><code>git mv</code> each always-on file; <code>main.rs</code> declares the modules and one shared <code>common</code> (<code>#[path = "../common/mod.rs"]</code>); each module's <code>mod common;</code> becomes <code>use crate::common</code></td></tr>
+        <tr><td>file-relative paths</td><td><code>include_str!</code> in <code>mr</code>, <code>layout_store</code>, <code>view_prefs_store</code> gain one <code>../</code>; insta snapshots move to <code>tests/suite/snapshots/</code> under their <code>suite__&lt;module&gt;__</code> names</td></tr>
+        <tr><td><code>supervisor</code> self-re-exec</td><td>the role filter becomes <code>supervisor::supervising_role</code> — the binary now holds every module</td></tr>
+        <tr><td><code>Cargo.toml</code> ×3</td><td><code>[lib] doctest = false</code> (xtask gains a <code>[lib]</code> table for it)</td></tr>
+        <tr><td><code>xtask/tests/suite/doc_examples.rs</code> (new)</td><td>reads <code>cargo metadata --no-deps</code>; for every lib target with <code>doctest: false</code>, scans its source tree's <code>///</code> and <code>//!</code> lines for a fence rustdoc compiles (no info, or a Rust tag; not <code>ignore</code>; not a foreign language) and fails naming <code>file:line</code></td></tr>
+        <tr><td>T2 docs citing a moved path</td><td>the path updated to <code>tests/suite/…</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="why-subdir">The <code>tests/suite/main.rs</code> layout is Cargo's own auto-discovered form: no <code>autotests = false</code>, so a new top-level test file still runs (as its own binary) rather than being silently dropped.</div>
+    <div class="callout warn" data-c="nextest-doctests">Gate 0 runs nextest, which never runs doc-tests (W3 result). <code>doctest = false</code> pays off for plain <code>cargo test</code>; the guard is what keeps a runnable example from going unexecuted on every gate.</div>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-GATEPAR2 · cause C8 · push timing report F6 (31 binaries per change), F7 (doc-tests for crates with none) — consistent with the W4 block in the epic plan.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <ul data-item="expected">
+      <li><code>cargo nextest list --all</code> shows one <code>suite</code> integration binary per crate; feature-gated targets build only with their feature.</li>
+      <li>The non-ignored test count before and after is identical, and every test passes.</li>
+      <li><code>cargo test -p &lt;crate&gt; --doc</code> runs no doc-test pass for any of the three libraries.</li>
+      <li>A runnable fenced example in a <code>doctest = false</code> library fails the guard with its <code>file:line</code>; <code>text</code>, <code>ignore</code> and foreign-language fences pass.</li>
+    </ul>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <thead><tr><th>Level</th><th>Test</th><th>Asserts</th></tr></thead>
+      <tbody>
+        <tr><td>unit · <code>doc_examples</code></td><td>fence classification</td><td>a bare fence, <code>rust</code>, <code>no_run</code>, <code>should_panic</code>, <code>compile_fail</code>, <code>edition2021</code> are compiled; <code>ignore</code>, <code>text</code>, <code>toml</code>, <code>sh</code> are not; fences in plain <code>//</code> comments or string literals are not doc examples; <code>~~~</code> fences count</td></tr>
+        <tr><td>integration · <code>doc_examples</code></td><td>the guard over the workspace</td><td>every workspace lib reports <code>doctest: false</code>, and none holds a compiled fenced example</td></tr>
+        <tr><td>integration · every <code>suite</code></td><td>the moved tests</td><td>all pass unchanged in the consolidated binary; non-ignored count equals the baseline taken on the epic tip</td></tr>
+        <tr><td>e2e</td><td>—</td><td><code>waived: "packaging-only: no behaviour changes; the epic e2e (W5) and the before/after timing re-run cover the suite end to end"</code></td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
