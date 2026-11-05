@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec70379f34851f0dfaea36" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-BGSVC.W8 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-BGSVC.W8 — the login item through SMAppService</h1>
+      <p>On macOS the login item is registered with Background Task Management itself, so ticking and unticking show in System Settings at once.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 (docs/work/) · WU plan · branch <code>wu/bg-service/login-item-smappservice</code> off <code>epic/bg-service</code> · fixes W4's macOS entry; W6's page stays as signed</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">On macOS, from the packaged <code>Trawler.app</code>, writing the login item on registers the bundled launch agent <code>dev.trawler.app.plist</code> with <code>SMAppService</code>, and off unregisters it; Background Task Management lists or drops the entry immediately, named “Trawler”. At login the agent starts the app's binary with <code>--background</code>. Reading reports on when the service status is enabled or awaiting approval. A refusal surfaces as the box's “couldn't save — …”. From a binary with no bundle the item is unavailable and says so.</p>
+
+    <h2 id="why">Why</h2>
+    <table data-c="why">
+      <tr><th>Today (W4)</th><th>After</th></tr>
+      <tr><td>writes <code>~/Library/LaunchAgents/dev.trawler.app.plist</code>; BTM records it as legacy agent “trawler-ui”</td><td>BTM record is made by <code>register()</code> and attributed to the app, “Trawler”</td></tr>
+      <tr><td>untick deletes the file; BTM keeps the entry until a GC pass 1–2.5 min later</td><td><code>unregister()</code> drops the record at once</td></tr>
+    </table>
+
+    <h2 id="shape">Shape</h2>
+    <table data-c="shape">
+      <tr><th>Piece</th><th>Change</th></tr>
+      <tr><td><code>ui/src-tauri/launch-agent/dev.trawler.app.plist</code></td><td>new static file: <code>Label</code>, <code>BundleProgram</code> <code>Contents/MacOS/trawler-ui</code>, <code>ProgramArguments</code> with <code>--background</code>, <code>RunAtLoad</code>. No rendering, no path escaping.</td></tr>
+      <tr><td><code>tauri.conf.json</code></td><td><code>bundle.macOS.files</code> maps <code>Library/LaunchAgents/dev.trawler.app.plist</code> to that file, so it lands in <code>Contents/Library/LaunchAgents</code> before the ad-hoc signing</td></tr>
+      <tr><td><code>login_item.rs</code></td><td>trait <code>LoginRegistry</code> (<code>enabled</code>, <code>register</code>, <code>unregister</code>) and a pure <code>apply(registry, on)</code>; <code>Place::Service</code> on macOS holds the real one (objc2-service-management <code>SMAppService::agentServiceWithPlistName</code>) when the exe sits in a <code>.app</code>, else the place is none and the existing “no place” error becomes the unavailable text. <code>Format::LaunchAgent</code> and its plist rendering are deleted; Linux and Windows are untouched.</td></tr>
+      <tr><td><code>Cargo.toml</code></td><td>macOS-only dependency <code>objc2-service-management</code> (+ <code>objc2-foundation</code> already in the lock)</td></tr>
+      <tr><td><code>xtask/src/package.rs</code></td><td>after the build, assert the plist is inside each <code>.app</code> (beside the codesign check), so a bundle without it fails <code>cargo xtask package</code></td></tr>
+    </table>
+
+    <h2 id="decisions">Decisions for the router</h2>
+    <table data-c="decisions">
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
+      <tr><td>D1</td><td>Login item from <code>cargo run</code> (no bundle)</td>
+        <td>(a) unavailable, box says so · (b) keep writing W4's plist there</td>
+        <td><b>(a)</b>: (b) keeps the stale-entry bug on the very path the user hand-tries, and leaves two mechanisms. Wording in W5's style: “unavailable — open Trawler from the installed app to start it at login.”</td></tr>
+      <tr><td>D2</td><td>The W4 plist already on dev machines</td>
+        <td>(a) remove it at every write · (b) leave it, user deletes by hand</td>
+        <td><b>(b)</b>: W4 never shipped; but a leftover plist plus the service would launch twice, so the hand-try starts with <code>rm ~/Library/LaunchAgents/dev.trawler.app.plist</code>.</td></tr>
+      <tr><td>D3</td><td>Status “requires approval” (user switched it off in Login Items)</td>
+        <td>(a) read as on · (b) read as off</td>
+        <td><b>(b)</b>: it will not start at login, and the box must not claim it will; tick then calls register again, which re-prompts.</td></tr>
+    </table>
+
+    <h2 id="tests">Test plan</h2>
+    <table data-c="tests">
+      <tr><th>Level</th><th>Test</th></tr>
+      <tr><td>unit</td><td>over a fake <code>LoginRegistry</code>: off calls unregister, on calls register, neither calls the other; a register or unregister error becomes the text the box shows after “couldn't save — ”; status maps enabled to on, requires-approval and the rest to off</td></tr>
+      <tr><td>unit</td><td><code>.app</code> detection from an exe path; the packaged plist file carries Label, BundleProgram and <code>--background</code> (<code>plutil -lint</code> on macOS)</td></tr>
+      <tr><td>unit (xtask)</td><td>the plist check names the <code>.app</code> that lacks it</td></tr>
+      <tr><td>integration (macOS, opt-in env var)</td><td>on a packaged <code>.app</code>: after unregister, <code>SMAppService.status</code> is notRegistered and <code>sfltool dumpbtm</code> has no <code>dev.trawler.app</code>. Never registers on its own: the registering half is a user step.</td></tr>
+      <tr><td>existing</td><td>W4 integration tests that cover the macOS LaunchAgent format are removed with it; Autostart cases stay</td></tr>
+    </table>
+
+    <h2 id="hand-try">Hand-try for the user (after the merge gate)</h2>
+    <p class="callout" data-c="hand-try">Packaged app, tick, check System Settings → Login Items and <code>sfltool dumpbtm | grep -B4 -A8 dev.trawler.app</code>, untick and check again at once; then log out and in to see Trawler start once, with no window. Exact commands arrive with the result report.</p>
+
+    <h2 id="out">Out of scope</h2>
+    <p>W6's page and wording of the two switches; Linux and Windows entries; options B and C (rejected by the user).</p>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
