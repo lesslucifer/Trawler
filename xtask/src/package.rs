@@ -36,6 +36,13 @@ impl Os {
             Self::MacOs | Self::Linux => "pnpm",
         }
     }
+
+    fn tauri(self) -> &'static str {
+        match self {
+            Self::Windows => "tauri.cmd",
+            Self::MacOs | Self::Linux => "tauri",
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -89,6 +96,7 @@ pub struct Plan {
     pub program: &'static str,
     pub args: Vec<String>,
     pub bundle_dir: PathBuf,
+    pub installs: bool,
 }
 
 pub fn plan(os: Os, options: &Options, installed: &[&str]) -> Result<Plan, String> {
@@ -96,7 +104,7 @@ pub fn plan(os: Os, options: &Options, installed: &[&str]) -> Result<Plan, Strin
         Stage::BuildAndBundle => vec!["tauri", "build", "--bundles", os.bundles()],
         Stage::BuildOnly => vec!["tauri", "build", "--no-bundle"],
         Stage::BundleOnly => vec!["tauri", "bundle", "--bundles", os.bundles()],
-        Stage::SignOnly => vec!["tauri", "signer", "sign"],
+        Stage::SignOnly => vec!["signer", "sign"],
     }
     .into_iter()
     .map(String::from)
@@ -128,7 +136,12 @@ pub fn plan(os: Os, options: &Options, installed: &[&str]) -> Result<Plan, Strin
     }
     bundle_dir.push(options.profile.as_deref().unwrap_or(RELEASE));
     bundle_dir.push("bundle");
-    Ok(Plan { program: os.pnpm(), args, bundle_dir })
+    let (program, installs) = match options.stage {
+        Stage::SignOnly => (os.tauri(), false),
+        Stage::BundleOnly => (os.pnpm(), false),
+        Stage::BuildAndBundle | Stage::BuildOnly => (os.pnpm(), true),
+    };
+    Ok(Plan { program, args, bundle_dir, installs })
 }
 
 pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
@@ -140,10 +153,10 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     if options.stage == Stage::SignOnly {
         return sign(&plan, &ui, &repo.join("target").join(&plan.bundle_dir), repo);
     }
-    if options.stage != Stage::BundleOnly {
-        pnpm(&ui, os.pnpm(), &["install".to_string(), "--frozen-lockfile".to_string()])?;
+    if plan.installs {
+        spawn_in(&ui, os.pnpm(), &["install".to_string(), "--frozen-lockfile".to_string()])?;
     }
-    pnpm(&ui, plan.program, &plan.args)?;
+    spawn_in(&ui, plan.program, &plan.args)?;
     if options.stage == Stage::BuildOnly {
         return Ok((0, "build complete; cargo xtask package --bundle-only bundles it".to_string()));
     }
@@ -210,15 +223,26 @@ fn sign(plan: &Plan, ui: &Path, bundle_dir: &Path, repo: &Path) -> Result<(i32, 
     if targets.is_empty() {
         return Err(format!("{} holds no updater target to sign", bundle_dir.display()));
     }
+    let signer = installed_tauri(ui, plan);
     for target in &targets {
-        let mut args = plan.args.clone();
-        args.extend(["--app-version".to_string(), version.clone()]);
-        args.push(target.to_string_lossy().into_owned());
-        pnpm(ui, plan.program, &args)?;
+        spawn_in(ui, &signer.to_string_lossy(), &sign_args(plan, &version, target))?;
     }
     let listed: Vec<String> =
         targets.iter().map(|path| format!("  {}.sig", path.display())).collect();
     Ok((0, format!("signed for the updater as {version}:\n{}", listed.join("\n"))))
+}
+
+/// The CLI the lockfile pinned, run without pnpm, whose run-time dependency
+/// check would install packages, with their scripts, beside the key.
+fn installed_tauri(ui: &Path, plan: &Plan) -> PathBuf {
+    ui.join("node_modules").join(".bin").join(plan.program)
+}
+
+fn sign_args(plan: &Plan, version: &str, target: &Path) -> Vec<String> {
+    let mut args = plan.args.clone();
+    args.extend(["--app-version".to_string(), version.to_string()]);
+    args.push(target.to_string_lossy().into_owned());
+    args
 }
 
 fn installed_targets() -> Result<String, String> {
@@ -235,7 +259,7 @@ fn installed_targets() -> Result<String, String> {
     Ok(String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
-fn pnpm(ui: &Path, program: &str, args: &[String]) -> Result<(), String> {
+fn spawn_in(ui: &Path, program: &str, args: &[String]) -> Result<(), String> {
     let status = Command::new(program)
         .args(args)
         .current_dir(ui)
@@ -418,7 +442,7 @@ mod tests {
             }
         }
         let sign = plan(Os::MacOs, &staged(Stage::SignOnly, true), &UNIVERSAL_PARTS).unwrap();
-        assert_eq!(argv(&sign), "pnpm tauri signer sign");
+        assert_eq!(argv(&sign), "tauri signer sign");
         assert_eq!(sign.bundle_dir, Path::new("universal-apple-darwin/release/bundle"));
         let universal =
             plan(Os::MacOs, &staged(Stage::BundleOnly, true), &UNIVERSAL_PARTS).unwrap();
@@ -428,6 +452,30 @@ mod tests {
         assert_eq!(
             argv(&universal),
             "pnpm tauri build --no-bundle --target universal-apple-darwin"
+        );
+    }
+
+    #[test]
+    fn only_the_build_stages_install_and_the_sign_stage_never_runs_pnpm() {
+        for os in [Os::MacOs, Os::Windows, Os::Linux] {
+            let installs = |stage| plan(os, &staged(stage, false), &[]).unwrap().installs;
+            assert!(installs(Stage::BuildAndBundle) && installs(Stage::BuildOnly));
+            assert!(!installs(Stage::BundleOnly) && !installs(Stage::SignOnly));
+            let sign = plan(os, &staged(Stage::SignOnly, false), &[]).unwrap();
+            assert!(!argv(&sign).contains("pnpm"), "{}", argv(&sign));
+        }
+    }
+
+    #[test]
+    fn the_sign_stage_runs_the_locked_tauri_cli_on_each_target_with_its_version() {
+        let ui = Path::new("/repo/ui");
+        let mac = plan(Os::MacOs, &staged(Stage::SignOnly, false), &[]).unwrap();
+        assert_eq!(installed_tauri(ui, &mac), Path::new("/repo/ui/node_modules/.bin/tauri"));
+        let windows = plan(Os::Windows, &staged(Stage::SignOnly, false), &[]).unwrap();
+        assert_eq!(installed_tauri(ui, &windows), ui.join("node_modules/.bin/tauri.cmd"));
+        assert_eq!(
+            sign_args(&mac, "0.1.0-1", Path::new("/b/Trawler.app.tar.gz")),
+            ["signer", "sign", "--app-version", "0.1.0-1", "/b/Trawler.app.tar.gz"]
         );
     }
 
@@ -492,6 +540,33 @@ mod tests {
         let listed = String::from_utf8(listed.stdout).unwrap();
         assert!(listed.lines().any(|l| l == "Trawler.app/Contents/MacOS/trawler-ui"), "{listed}");
         assert!(listed.lines().all(|l| l.starts_with("Trawler.app") && !l.contains("._")));
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn a_signed_app_still_verifies_once_extracted_from_its_updater_archive() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = dir.path().join("Trawler.app");
+        std::fs::create_dir_all(app.join("Contents/MacOS")).unwrap();
+        std::fs::copy("/usr/bin/true", app.join("Contents/MacOS/trawler-ui")).unwrap();
+        std::fs::write(
+            app.join("Contents/Info.plist"),
+            r#"<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>trawler-ui</string><key>CFBundleIdentifier</key><string>dev.trawler.test</string></dict></plist>"#,
+        )
+        .unwrap();
+        let signed = Command::new("codesign").args(["-s", "-", "--force"]).arg(&app).status();
+        assert!(signed.unwrap().success());
+        archive_for_the_updater(&app).unwrap();
+        let out = dir.path().join("out");
+        std::fs::create_dir(&out).unwrap();
+        let extracted = Command::new("tar")
+            .arg("-xzf")
+            .arg(dir.path().join("Trawler.app.tar.gz"))
+            .arg("-C")
+            .arg(&out)
+            .status();
+        assert!(extracted.unwrap().success());
+        verify_signature(&out.join("Trawler.app")).unwrap();
     }
 
     #[test]
