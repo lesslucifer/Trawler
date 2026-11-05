@@ -331,10 +331,25 @@ fn size_of(path: &Path) -> u64 {
     fs::read_dir(path).map_or(0, |entries| entries.flatten().map(|e| size_of(&e.path())).sum())
 }
 
+const REMOVE_PASSES: usize = 8;
+
+// macOS readdir can skip entries of a large directory while they are being
+// unlinked, so one remove_dir_all pass ends in ENOTEMPTY with files left behind
+// (met pruning a 13k-entry incremental/). Each further pass sees what the last
+// one skipped.
 fn remove(path: &Path) -> Result<(), String> {
     let meta = fs::symlink_metadata(path).map_err(|e| format!("stat {}: {e}", path.display()))?;
-    let removed = if meta.is_dir() { fs::remove_dir_all(path) } else { fs::remove_file(path) };
-    removed.map_err(|e| format!("remove {}: {e}", path.display()))
+    if !meta.is_dir() {
+        return fs::remove_file(path).map_err(|e| format!("remove {}: {e}", path.display()));
+    }
+    let mut pass = 1;
+    loop {
+        match fs::remove_dir_all(path) {
+            Ok(()) => return Ok(()),
+            Err(e) if e.kind() == ErrorKind::DirectoryNotEmpty && pass < REMOVE_PASSES => pass += 1,
+            Err(e) => return Err(format!("remove {} (pass {pass}): {e}", path.display())),
+        }
+    }
 }
 
 fn free_kib(path: &Path) -> Option<u64> {
