@@ -5,6 +5,7 @@ import { foldedRanges } from "@codemirror/language";
 import * as files from "./body";
 import { DataWindowScreen } from "./DataWindowScreen";
 import type { DataPayload } from "./dataWindow";
+import { systemZone, time, type TimeReading } from "./timeDecoder";
 
 const ROW = 20;
 
@@ -939,7 +940,7 @@ describe("decode", () => {
     key("D", { shiftKey: true });
     expect(within(peek()).getByText("decode")).toBeInTheDocument();
     expect(peek()).toHaveTextContent(
-      "not base64, URL-encoded or a JWT: 2 parts separated by dots. A JWT has 3: header, payload, signature",
+      "not base64, URL-encoded, a JWT or a time: 2 parts separated by dots. A JWT has 3: header, payload, signature",
     );
     expect(peek()).toHaveTextContent("the selection is left as it was");
     expect(within(peek()).queryByRole("button", { name: /replace/ })).toBeNull();
@@ -1001,6 +1002,56 @@ describe("decode", () => {
     await open(payload({ text: "a=&b=1", typeHint: "application/x-www-form-urlencoded" }));
     fireEvent.contextMenu(screen.getAllByTestId("form-pair")[0], { clientX: 5, clientY: 5 });
     expect(screen.getByRole("menuitem", { name: /^decode the value/ })).toHaveTextContent("empty value");
+  });
+
+  it("a JSON number decodes as time: local, UTC and what it was read as; ⇄ quotes the local time, one step undone", async () => {
+    const local = (time("1700000000") as TimeReading).local;
+    await open(payload({ text: '{"exp": 1700000000, "n": 1}' }));
+    rightClickAt(doc().indexOf("1700000000") + 4);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    expect(selected()).toBe("1700000000");
+    expect(within(peek()).getByText("time")).toBeInTheDocument();
+    expect(within(peek()).getByText(`local · ${systemZone()}`)).toBeInTheDocument();
+    expect(within(peek()).getByTestId("local-time")).toHaveTextContent(local);
+    expect(within(peek()).getByTestId("utc-time")).toHaveTextContent("2023-11-14 22:13:20Z");
+    expect(within(peek()).getByTestId("read-as")).toHaveTextContent(/^Unix time, seconds · \d+ years ago$/);
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with local time" }));
+    expect(doc()).toBe(`{"exp": "${local}", "n": 1}`);
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    key("z");
+    expect(doc()).toBe('{"exp": 1700000000, "n": 1}');
+  });
+
+  it("a date-time string is found whole from the pointer and replaced inside its quotes", async () => {
+    const at = "2023-11-14T22:13:20Z";
+    await open(payload({ text: `{"at": "${at}"}` }));
+    rightClickAt(doc().indexOf(at) + 12);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    expect(selected()).toBe(at);
+    expect(within(peek()).getByTestId("read-as")).toHaveTextContent(/^ISO 8601 · /);
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with local time" }));
+    expect(doc()).toBe(`{"at": "${(time(at) as TimeReading).local}"}`);
+  });
+
+  it("a form row's HTTP date decodes by ⌘⇧D and ⇄ writes the local time into the value", async () => {
+    const expires = "Tue, 14 Nov 2023 22:13:20 GMT";
+    await open(payload({ text: `id=1&expires=${encodeURIComponent(expires)}`, typeHint: "application/x-www-form-urlencoded" }));
+    fireEvent.click(screen.getAllByTestId("form-pair")[1]);
+    key("D", { shiftKey: true });
+    expect(within(peek()).getByTestId("read-as")).toHaveTextContent(/^HTTP date · /);
+    expect(within(peek()).getByTestId("utc-time")).toHaveTextContent("2023-11-14 22:13:20Z");
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with local time" }));
+    expect(within(screen.getAllByTestId("form-pair")[1]).getByText((time(expires) as TimeReading).local)).toBeInTheDocument();
+  });
+
+  it("a date-time with no zone says why and changes nothing", async () => {
+    await open(payload({ text: '{"at": "2023-11-14T22:13:20"}' }));
+    rightClickAt(doc().indexOf("2023") + 2);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    expect(selected()).toBe("2023-11-14T22:13:20");
+    expect(peek()).toHaveTextContent("not base64, URL-encoded, a JWT or a time: it names no zone, so it cannot be moved to local time");
+    expect(within(peek()).queryByRole("button", { name: /replace/ })).toBeNull();
+    expect(screen.queryByTestId("modified")).toBeNull();
   });
 
   it("Esc, an edit or another kind closes the peek", async () => {

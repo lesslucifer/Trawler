@@ -1,23 +1,25 @@
 import { rawKind } from "./body";
 import { signatureOf } from "./dataKind";
 import { reformatJson } from "./jsonTools";
+import { looksLikeTime, time, TIME_SHAPE, type TimeReading } from "./timeDecoder";
 
-export type DecoderId = "jwt" | "base64" | "url";
+export type DecoderId = "jwt" | "base64" | "url" | "time";
 
-export const DECODER_LABEL: Record<DecoderId, string> = { jwt: "JWT", base64: "base64", url: "URL" };
+export const DECODER_LABEL: Record<DecoderId, string> = { jwt: "JWT", base64: "base64", url: "URL", time: "time" };
 
 export type Reading =
   | { kind: "json"; shown: string; text: string; bytes: Uint8Array }
   | { kind: "text"; text: string; bytes: Uint8Array }
   | { kind: "binary"; bytes: Uint8Array; looks: string | null }
   | { kind: "jwt"; header: string; payload: string; signature: string; text: string; bytes: Uint8Array }
+  | TimeReading
   | { kind: "unreadable"; reason: string };
 
 export type Decoded = Exclude<Reading, { kind: "unreadable" }>;
 
 export type Peeked = { decoder: DecoderId; reading: Decoded } | { decoder: null; reason: string };
 
-const DECODER_ORDER: DecoderId[] = ["jwt", "base64", "url"];
+const DECODER_ORDER: DecoderId[] = ["jwt", "base64", "url", "time"];
 const BASE64_DIGIT = /[A-Za-z0-9+/\-_]/;
 const ESCAPE = /%[0-9A-Fa-f]{2}/;
 
@@ -110,9 +112,10 @@ export function jwt(input: string): Reading {
   return { kind: "jwt", header: header.shown, payload: payload.shown, signature: parts[2], text: payload.text, bytes: payload.bytes };
 }
 
-const DECODERS: Record<DecoderId, (input: string) => Reading> = { jwt, base64, url };
+const DECODERS: Record<DecoderId, (input: string) => Reading> = { jwt, base64, url, time: (input) => time(input) };
 
 export function guessDecoder(input: string): DecoderId {
+  if (looksLikeTime(input)) return "time";
   if (/^eyJ[\w-]*\.[\w-]*/.test(input)) return "jwt";
   return input.includes("%") ? "url" : "base64";
 }
@@ -122,8 +125,9 @@ function means(id: DecoderId, reading: Reading, input: string): reading is Decod
   return id !== "url" || ESCAPE.test(input);
 }
 
-// No value reads two ways under these three: base64 and a JWT refuse "%", a
-// JWT's dots refuse base64, and URL means something only over an escape.
+// Only a timestamp reads two ways: its digits are base64 too, and the guess
+// puts time first. Otherwise base64 and a JWT refuse "%", a JWT's dots refuse
+// base64, URL means something only over an escape, and the rest refuse ":".
 export function decode(input: string): Peeked {
   const guess = guessDecoder(input);
   const guessed = DECODERS[guess](input);
@@ -186,7 +190,21 @@ export const hasValueAround = (text: string, range: Span) => width(grown(text, t
 const readsWell = (peeked: Peeked) =>
   peeked.decoder !== null && !(peeked.reading.kind === "binary" && peeked.reading.looks === null);
 
+function dateTimeAround(text: string, range: Span): Span | null {
+  const lineFrom = text.lastIndexOf("\n", range.from - 1) + 1;
+  const lineEnd = text.indexOf("\n", range.to);
+  const lineTo = lineEnd < 0 ? text.length : lineEnd;
+  for (const match of text.slice(lineFrom, lineTo).matchAll(TIME_SHAPE)) {
+    const span = { from: lineFrom + match.index, to: lineFrom + match.index + match[0].length };
+    const outside = text.slice(range.from, Math.max(range.from, span.from)) + text.slice(Math.min(range.to, span.to), range.to);
+    if (span.from <= range.to && range.from <= span.to && !VALUE_CHAR.test(outside)) return span;
+  }
+  return null;
+}
+
 export function decodeAround(text: string, range: Span): Found | null {
+  const dateTime = dateTimeAround(text, range);
+  if (dateTime) return { range: dateTime, peeked: decode(text.slice(dateTime.from, dateTime.to)) };
   let first: Found | null = null;
   let decodes: Found | null = null;
   for (const span of candidates(text, range)) {
@@ -204,7 +222,7 @@ export function replacement(reading: Decoded): string | null {
 
 export function opensAs(reading: Decoded): { bytes: Uint8Array; typeHint?: string } {
   if (reading.kind === "binary") return { bytes: reading.bytes };
-  return { bytes: reading.bytes, typeHint: reading.kind === "text" ? "text/plain" : "application/json" };
+  return { bytes: reading.bytes, typeHint: reading.kind === "text" || reading.kind === "time" ? "text/plain" : "application/json" };
 }
 
 export async function contentKey(bytes: Uint8Array): Promise<string> {

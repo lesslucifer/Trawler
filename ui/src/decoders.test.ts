@@ -152,6 +152,58 @@ describe("decode", () => {
   });
 });
 
+describe("time among the decoders", () => {
+  const spanOf = (text: string, part: string) => ({ from: text.indexOf(part), to: text.indexOf(part) + part.length });
+  const at = (text: string, part: string, into = 3) => ({ from: text.indexOf(part) + into, to: text.indexOf(part) + into });
+
+  it("is guessed for a unit's digit count or a date-time shape, and not for other digits", () => {
+    expect(guessDecoder("1793851200")).toBe("time");
+    expect(guessDecoder("2026-11-05T04:00:00Z")).toBe("time");
+    expect(guessDecoder("Thu, 05 Nov 2026 04:00:00 GMT")).toBe("time");
+    expect(guessDecoder("17938512000")).toBe("base64");
+  });
+
+  it("reads a timestamp as time, not as the base64 its digits also are", () => {
+    expect(decode("1793851200")).toMatchObject({ decoder: "time", reading: { kind: "time", utc: "2026-11-05 04:00:00Z" } });
+  });
+
+  it("gives time's reason for a zone-less date-time", () => {
+    expect(decode("2026-11-05T04:00:00")).toEqual({ decoder: null, reason: "it names no zone, so it cannot be moved to local time" });
+  });
+
+  it("finds a whole date-time from a cursor or a rough selection, spaces and colons included", () => {
+    const text = '{"at": "2026-11-05T04:00:00+07:00", "expires": "Thu, 05 Nov 2026 04:00:00 GMT"}';
+    expect(decodeAround(text, at(text, "2026-11-05T04"))).toMatchObject({
+      range: spanOf(text, "2026-11-05T04:00:00+07:00"),
+      peeked: { decoder: "time", reading: { utc: "2026-11-04 21:00:00Z" } },
+    });
+    expect(decodeAround(text, spanOf(text, '"Thu, 05 Nov 2026 04:00:00 GMT"}'))).toMatchObject({
+      range: spanOf(text, "Thu, 05 Nov 2026 04:00:00 GMT"),
+      peeked: { decoder: "time", reading: { readAs: "HTTP date" } },
+    });
+  });
+
+  it("keeps a zone-less date-time's reason instead of reading its digits as base64", () => {
+    const text = '{"at": "2026-11-05T04:00:00"}';
+    expect(decodeAround(text, at(text, "2026"))).toMatchObject({
+      range: spanOf(text, "2026-11-05T04:00:00"),
+      peeked: { decoder: null, reason: "it names no zone, so it cannot be moved to local time" },
+    });
+  });
+
+  it("finds a bare timestamp the way it finds any value", () => {
+    const text = '{"exp": 1793851200, "n": 1}';
+    expect(decodeAround(text, at(text, "1793851200"))).toMatchObject({ range: spanOf(text, "1793851200"), peeked: { decoder: "time" } });
+  });
+
+  it("replaces with the local time and opens it as text", () => {
+    const peeked = decode("1793851200");
+    if (peeked.decoder === null || peeked.reading.kind !== "time") throw new Error("not read as time");
+    expect(replacement(peeked.reading)).toBe(peeked.reading.local);
+    expect(opensAs(peeked.reading)).toEqual({ bytes: peeked.reading.bytes, typeHint: "text/plain" });
+  });
+});
+
 describe("decodeAround finds the value in a rough selection or at the cursor", () => {
   const HELLO = b64("hello world");
   const spanOf = (text: string, part: string) => ({ from: text.indexOf(part), to: text.indexOf(part) + part.length });
