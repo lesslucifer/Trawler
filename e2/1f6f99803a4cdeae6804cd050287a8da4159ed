@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-BGSVC
+wu: E-BGSVC.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"
+    tier: T2
+    action: updated
+    distills: "rules 1 and 6: the quit request every quit Trawler can hold answers, and a close that leaves the app running asks nothing"
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 10: the once-question is the switch's first writer; keep capturing, quit, and cancel"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-64 and DEC-77 rows follow their amendments"
+  - path: "docs/work/2026-11-05-bg-service-w3-quit-asks-the-same-plan.html"
+    tier: T3
+    action: added
+    distills: "W3's requirement, shape and test plan"
+  - path: "docs/work/2026-11-05-bg-service-w3-quit-asks-the-same-result.html"
+    tier: T3
+    action: added
+    distills: "W3's outcome, deviations, what no independent review covers, and evidence"
