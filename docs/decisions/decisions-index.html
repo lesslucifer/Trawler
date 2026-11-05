@@ -797,8 +797,8 @@
         <tr>
           <td><a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html"><code>dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html</code></a></td>
           <td><span class="badge id">DEC-64</span></td>
-          <td><strong>A quit asks only about what it leaves without internet.</strong> ⌘Q is Trawler's own Quit and
-            asks as ✕ does; the Dock's Quit and a logout cannot be held. It asks while this machine routes through
+          <td><strong>A quit asks only about what it leaves without internet.</strong> ⌘Q and the menu-bar's Quit are
+            a quit request the main window answers (opened to ask when none is); ✕ asks only when it would quit; the Dock's Quit and a logout cannot be held. It asks while this machine routes through
             Trawler (its address, localhost or its own address on Trawler's port), while its proxy could not be read,
             or while reach is armed or the chosen emulator routes here. A proxy that is not Trawler's asks nothing.
             The stake is the capture service, which a quit stops when the app owns it (rule 6, amended by
@@ -962,7 +962,7 @@
             <code>keep_capturing</code> (<code>keep-capturing.json</code>: absent = unanswered, corrupt = off) is on and a
             menu-bar icon exists; then the process and its core run windowless, Tauri's last-window exit is held, the Dock
             icon hides (macOS Accessory), and a second launch or Dock click rebuilds the main window through launch's
-            builder. <code>--background</code> skips the launch window only with a tray. The menu-bar icon is built at every launch, its glyph and first line follow the core's state, and it offers Open, Settings…, Restart (when stopped) and Quit. Open at login is the OS's own entry Trawler writes (LaunchAgent plist · autostart .desktop · HKCU Run), starting this binary with <code>--background</code>, read back each time, last write wins, no <code>launchctl</code>. Amends DEC-69 rule 14. Rejected: a
+            builder. The first ✕ that would quit asks once whether to keep capturing, and the answer is the switch. <code>--background</code> skips the launch window only with a tray. The menu-bar icon is built at every launch, its glyph and first line follow the core's state, and it offers Open, Settings…, Restart (when stopped) and Quit. Open at login is the OS's own entry Trawler writes (LaunchAgent plist · autostart .desktop · HKCU Run), starting this binary with <code>--background</code>, read back each time, last write wins, no <code>launchctl</code>. Amends DEC-69 rule 14. Rejected: a
             core as its own service, hiding instead of destroying, windowless without a tray</td>
           <td><span class="badge auto">active</span></td>
         </tr>
