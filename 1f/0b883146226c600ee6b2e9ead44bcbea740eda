@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "epic gate-parity2 -> main"
+epic: E-GATEPAR2
+branch: epic/gate-parity2
+base: 00cbc1500e94c43b57626097ae8568b39748cb37
+head: 1f0b883146226c600ee6b2e9ead44bcbea740eda
+diff_sha256: 26e697a5cbbcb7f374b4a65b6a6c7d1e489922695a6eccd44414183c1558d19d
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 6
+  stage_seconds:
+    gate0: 14
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency:  { found: 3, verified: 0 }
+    altitude:    { found: 4, verified: 0 }
+findings: { found: 10, verified: 0, waived: 6 }
+waivers: []
+nits:
+  - finding: "merge_verdict and push_verdict apply the same pass-0-or-MACHINE_REFUSED rule with different suffixes"
+    waived: "two four-line functions each pinned by its own unit test, including a_machine_refusal_never_blames_the_tree over both; a shared helper saves no rule"
+  - finding: "scratch-worktree lifecycle lives in gate0.rs rather than target.rs"
+    waived: "already judged in W2's round: it is Gate 0's push entrypoint only and composes git::git and target::seed rather than restating them"
+  - finding: "a failed target::seed in prove_detached is dropped silently, turning the proof into a cold build"
+    waived: "the seed is an optimisation; a cold build is still a correct proof, and the scratch exists only for one push"
+  - finding: "a detached push proof's green is discarded with its scratch worktree"
+    waived: "deliberate, DEC-74: a marker vouches only for a build in its own target/ (DEC-73); recorded in W2's round"
+  - finding: "each detached proof pays a full pnpm install"
+    waived: "the pushed tree's own lockfile must be installed; --prefer-offline links from the local store; recorded in W2's round"
+  - finding: "the unknown-boot fallback never expires a fast verdict"
+    waived: "only where neither /proc boot_id nor kern.boottime exists - platforms without Gatekeeper; recorded in W3's round"
+verdict: PASS
+date: 2026-11-05
