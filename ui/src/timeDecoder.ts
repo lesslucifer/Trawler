@@ -2,7 +2,7 @@ export interface TimeReading {
   kind: "time";
   local: string;
   zone: string;
-  utc: string;
+  utc: string | null;
   readAs: string;
   relative: string;
   text: string;
@@ -15,6 +15,7 @@ interface Instant {
   seconds: number;
   fraction: string;
   readAs: string;
+  dateOnly?: boolean;
 }
 
 const UNITS = [
@@ -25,11 +26,11 @@ const UNITS = [
 ];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const ISO_DATE_TIME = String.raw`\d{4}-\d{2}-\d{2}[Tt ]\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?(?:[Zz]|[+-]\d{2}:?\d{2})?`;
+const ISO_DATE_TIME = String.raw`(?<![\w-])\d{4}-\d{2}-\d{2}(?:[Tt ]\d{2}:\d{2}(?::\d{2}(?:[.,]\d{1,9})?)?(?:[Zz]|[+-]\d{2}:?\d{2})?)?(?![\w-])`;
 const HTTP_DATE = String.raw`(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{1,2}[ -][A-Za-z]{3}[ -]\d{4} \d{2}:\d{2}:\d{2} (?:GMT|UTC)`;
 export const TIME_SHAPE = new RegExp(`${ISO_DATE_TIME}|${HTTP_DATE}`, "g");
 const TIMESTAMP = /^(\d+)(?:\.(\d+))?$/;
-const ISO = /^(\d{4})-(\d{2})-(\d{2})[Tt ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?(?:([Zz])|([+-])(\d{2}):?(\d{2}))?$/;
+const ISO = /^(\d{4})-(\d{2})-(\d{2})(?:[Tt ](\d{2}):(\d{2})(?::(\d{2})(?:[.,](\d{1,9}))?)?(?:([Zz])|([+-])(\d{2}):?(\d{2}))?)?$/;
 const HTTP = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (\d{1,2})[ -]([A-Za-z]{3})[ -](\d{4}) (\d{2}):(\d{2}):(\d{2}) (?:GMT|UTC)$/;
 
 const unreadable = (reason: string): TimeRead => ({ kind: "unreadable", reason });
@@ -70,11 +71,12 @@ function civil(year: number, month: number, day: number, hour: number, minute: n
 
 function fromIso(match: RegExpExecArray): Instant | string {
   const [, year, month, day, hour, minute, second, fraction, zulu, sign, offsetHours, offsetMinutes] = match;
-  if (!zulu && !sign) return "it names no zone, so it cannot be moved to local time";
-  const seconds = civil(+year, +month, +day, +hour, +minute, +(second ?? 0));
+  const seconds = civil(+year, +month, +day, +(hour ?? 0), +(minute ?? 0), +(second ?? 0));
   if (typeof seconds === "string") return seconds;
+  if (hour === undefined) return { seconds, fraction: "", readAs: "ISO 8601 date", dateOnly: true };
   const offset = sign ? (sign === "-" ? -1 : 1) * (+offsetHours * 60 + +offsetMinutes) : 0;
-  return { seconds: seconds - offset * 60, fraction: significant(fraction ?? ""), readAs: "ISO 8601" };
+  const readAs = zulu || sign ? "ISO 8601" : "ISO 8601, no zone: read as UTC";
+  return { seconds: seconds - offset * 60, fraction: significant(fraction ?? ""), readAs };
 }
 
 function fromHttp(match: RegExpExecArray): Instant | string {
@@ -92,10 +94,16 @@ function instantOf(input: string): Instant | string {
   if (iso) return fromIso(iso);
   const http = HTTP.exec(input);
   if (http) return fromHttp(http);
-  return "not a Unix time or a date-time with a zone";
+  return "not a Unix time, a date or a date-time";
 }
 
-function wallClock(seconds: number, zone: string, fraction: string): { text: string; offsetMinutes: number } {
+interface WallClock {
+  date: string;
+  text: string;
+  offsetMinutes: number;
+}
+
+function wallClock(seconds: number, zone: string, fraction: string): WallClock {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: zone,
     hourCycle: "h23",
@@ -108,8 +116,9 @@ function wallClock(seconds: number, zone: string, fraction: string): { text: str
   }).formatToParts(new Date(seconds * 1000));
   const part = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((each) => each.type === type)!.value);
   const asUtc = Date.UTC(part("year"), part("month") - 1, part("day"), part("hour"), part("minute"), part("second"));
-  const text = `${pad(part("year"), 4)}-${pad(part("month"))}-${pad(part("day"))} ${pad(part("hour"))}:${pad(part("minute"))}:${pad(part("second"))}${fraction ? `.${fraction}` : ""}`;
-  return { text, offsetMinutes: Math.round((asUtc - seconds * 1000) / 60000) };
+  const date = `${pad(part("year"), 4)}-${pad(part("month"))}-${pad(part("day"))}`;
+  const text = `${date} ${pad(part("hour"))}:${pad(part("minute"))}:${pad(part("second"))}${fraction ? `.${fraction}` : ""}`;
+  return { date, text, offsetMinutes: Math.round((asUtc - seconds * 1000) / 60000) };
 }
 
 function offsetText(minutes: number): string {
@@ -126,6 +135,8 @@ const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", Infinity],
 ];
 
+const DAY = 86400;
+
 function relative(seconds: number, now: number): string {
   let amount = seconds - now / 1000;
   for (const [unit, next] of RELATIVE_STEPS) {
@@ -137,22 +148,39 @@ function relative(seconds: number, now: number): string {
   return "";
 }
 
+function relativeDays(days: number): string {
+  if (Math.abs(days) < RELATIVE_STEPS[3][1]) return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(days, "day");
+  return relative(days * DAY, 0);
+}
+
 export const systemZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const reading = (shown: string, utc: string | null, zone: string, readAs: string, relativeText: string): TimeReading => ({
+  kind: "time",
+  local: shown,
+  zone,
+  utc,
+  readAs,
+  relative: relativeText,
+  text: shown,
+  bytes: new TextEncoder().encode(shown),
+});
+
+// A date names a calendar day, not an instant: it is shown as written, never
+// moved across zones, and counted in days from today in the user's zone.
+function dateReading({ seconds, readAs }: Instant, zone: string, now: number): TimeReading {
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "long" }).format(new Date(seconds * 1000));
+  const today = Date.parse(`${wallClock(Math.floor(now / 1000), zone, "").date}T00:00:00Z`) / 1000;
+  const shown = `${wallClock(seconds, "UTC", "").date}, ${weekday}`;
+  return reading(shown, null, zone, readAs, relativeDays(Math.round((seconds - today) / DAY)));
+}
 
 export function time(input: string, zone = systemZone(), now = Date.now()): TimeRead {
   const instant = instantOf(input.trim());
   if (typeof instant === "string") return unreadable(instant);
+  if (instant.dateOnly) return dateReading(instant, zone, now);
   const { seconds, fraction, readAs } = instant;
   const local = wallClock(seconds, zone, fraction);
   const localText = `${local.text} ${offsetText(local.offsetMinutes)}`;
-  return {
-    kind: "time",
-    local: localText,
-    zone,
-    utc: `${wallClock(seconds, "UTC", fraction).text}Z`,
-    readAs,
-    relative: relative(seconds, now),
-    text: localText,
-    bytes: new TextEncoder().encode(localText),
-  };
+  return reading(localText, `${wallClock(seconds, "UTC", fraction).text}Z`, zone, readAs, relative(seconds, now));
 }

@@ -167,8 +167,13 @@ describe("time among the decoders", () => {
     expect(decode("1793851200")).toMatchObject({ decoder: "time", reading: { kind: "time", utc: "2026-11-05 04:00:00Z" } });
   });
 
-  it("gives time's reason for a zone-less date-time", () => {
-    expect(decode("2026-11-05T04:00:00")).toEqual({ decoder: null, reason: "it names no zone, so it cannot be moved to local time" });
+  it("reads a zone-less date-time and a date as time", () => {
+    expect(decode("2026-11-05T04:00:00")).toMatchObject({ decoder: "time", reading: { readAs: "ISO 8601, no zone: read as UTC" } });
+    expect(decode("2026-01-14")).toMatchObject({ decoder: "time", reading: { readAs: "ISO 8601 date", utc: null } });
+  });
+
+  it("gives time's reason for a date off the calendar", () => {
+    expect(decode("2026-02-30T04:00:00Z")).toEqual({ decoder: null, reason: "2026-02-30 is not a day of the calendar" });
   });
 
   it("finds a whole date-time from a cursor or a rough selection, spaces and colons included", () => {
@@ -183,11 +188,19 @@ describe("time among the decoders", () => {
     });
   });
 
-  it("keeps a zone-less date-time's reason instead of reading its digits as base64", () => {
-    const text = '{"at": "2026-11-05T04:00:00"}';
+  it("finds a date whole instead of reading its year as base64", () => {
+    const text = '{"homeDeploymentStartDate": "2026-01-14",';
+    expect(decodeAround(text, at(text, "2026", 2))).toMatchObject({
+      range: spanOf(text, "2026-01-14"),
+      peeked: { decoder: "time", reading: { local: "2026-01-14, Wednesday" } },
+    });
+  });
+
+  it("keeps a date-time's reason instead of reading its digits as base64", () => {
+    const text = '{"at": "2026-02-30T04:00:00Z"}';
     expect(decodeAround(text, at(text, "2026"))).toMatchObject({
-      range: spanOf(text, "2026-11-05T04:00:00"),
-      peeked: { decoder: null, reason: "it names no zone, so it cannot be moved to local time" },
+      range: spanOf(text, "2026-02-30T04:00:00Z"),
+      peeked: { decoder: null, reason: "2026-02-30 is not a day of the calendar" },
     });
   });
 

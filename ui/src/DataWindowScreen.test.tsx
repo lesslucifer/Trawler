@@ -1044,12 +1044,32 @@ describe("decode", () => {
     expect(within(screen.getAllByTestId("form-pair")[1]).getByText((time(expires) as TimeReading).local)).toBeInTheDocument();
   });
 
-  it("a date-time with no zone says why and changes nothing", async () => {
-    await open(payload({ text: '{"at": "2023-11-14T22:13:20"}' }));
+  it("a date-time with no zone reads as UTC and says so", async () => {
+    await open(payload({ text: '{"lastModifiedOn": "2023-11-14T22:13:20",' }));
     rightClickAt(doc().indexOf("2023") + 2);
     fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
     expect(selected()).toBe("2023-11-14T22:13:20");
-    expect(peek()).toHaveTextContent("not base64, URL-encoded, a JWT or a time: it names no zone, so it cannot be moved to local time");
+    expect(within(peek()).getByTestId("utc-time")).toHaveTextContent("2023-11-14 22:13:20Z");
+    expect(within(peek()).getByTestId("read-as")).toHaveTextContent(/^ISO 8601, no zone: read as UTC · /);
+  });
+
+  it("a date reads as its calendar day, with no local or UTC line", async () => {
+    await open(payload({ text: '{"homeDeploymentStartDate": "2026-01-14",' }));
+    rightClickAt(doc().indexOf("2026") + 2);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    expect(selected()).toBe("2026-01-14");
+    expect(within(peek()).getByText("date")).toBeInTheDocument();
+    expect(within(peek()).getByTestId("local-time")).toHaveTextContent("2026-01-14, Wednesday");
+    expect(within(peek()).queryByTestId("utc-time")).toBeNull();
+    expect(within(peek()).getByTestId("read-as")).toHaveTextContent(/^ISO 8601 date · /);
+  });
+
+  it("a date off the calendar says why and changes nothing", async () => {
+    await open(payload({ text: '{"at": "2023-02-30T22:13:20Z"}' }));
+    rightClickAt(doc().indexOf("2023") + 2);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    expect(selected()).toBe("2023-02-30T22:13:20Z");
+    expect(peek()).toHaveTextContent("not base64, URL-encoded, a JWT or a time: 2023-02-30 is not a day of the calendar");
     expect(within(peek()).queryByRole("button", { name: /replace/ })).toBeNull();
     expect(screen.queryByTestId("modified")).toBeNull();
   });

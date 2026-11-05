@@ -240,8 +240,14 @@ function DecodePeek({
       );
       return (
         <div className="flex flex-col gap-2">
-          {block(`local · ${reading.zone}`, line(reading.local, "local-time"))}
-          {block("UTC", line(reading.utc, "utc-time"))}
+          {reading.utc === null ? (
+            block("date", line(reading.local, "local-time"))
+          ) : (
+            <>
+              {block(`local · ${reading.zone}`, line(reading.local, "local-time"))}
+              {block("UTC", line(reading.utc, "utc-time"))}
+            </>
+          )}
           {block("read as", line(`${reading.readAs} · ${reading.relative}`, "read-as"))}
         </div>
       );

@@ -60,13 +60,31 @@ describe("a date-time string", () => {
     }
   });
 
-  it("says why it cannot read a zone-less date-time, a day off the calendar, an hour past 23 or an unknown month", () => {
-    expect(reason("2026-11-05T04:00:00")).toBe("it names no zone, so it cannot be moved to local time");
+  it("reads a zone-less date-time as UTC and says so", () => {
+    expect(read("2026-06-01T14:27:22")).toMatchObject({
+      utc: "2026-06-01 14:27:22Z",
+      local: "2026-06-01 21:27:22 +07:00",
+      readAs: "ISO 8601, no zone: read as UTC",
+      relative: "5 months ago",
+    });
+  });
+
+  it("reads a date as the calendar day it names, never moved across zones, counted in days from today", () => {
+    expect(read("2026-01-14")).toMatchObject({ local: "2026-01-14, Wednesday", utc: null, readAs: "ISO 8601 date", relative: "10 months ago" });
+    expect(read("2026-01-14", "Pacific/Pago_Pago").local).toBe("2026-01-14, Wednesday");
+    expect(read("2026-11-05").relative).toBe("today");
+    expect(read("2026-11-04").relative).toBe("yesterday");
+    expect(read("2026-11-12").relative).toBe("in 7 days");
+    expect(read("2026-11-05", "Pacific/Pago_Pago").relative).toBe("tomorrow");
+  });
+
+  it("says why it cannot read a day off the calendar, an hour past 23 or an unknown month", () => {
+    expect(reason("2026-02-30")).toBe("2026-02-30 is not a day of the calendar");
     expect(reason("2026-02-30T04:00:00Z")).toBe("2026-02-30 is not a day of the calendar");
     expect(reason("2026-13-01T04:00:00Z")).toBe("month 13 is not a month");
     expect(reason("2026-11-05T24:00:00Z")).toBe("24:00:00 is not a time of day");
     expect(reason("Thu, 05 Nox 2026 04:00:00 GMT")).toBe("“Nox” is not a month");
-    expect(reason("next tuesday")).toBe("not a Unix time or a date-time with a zone");
+    expect(reason("next tuesday")).toBe("not a Unix time, a date or a date-time");
   });
 });
 
@@ -98,20 +116,21 @@ describe("how long ago or ahead", () => {
 });
 
 describe("looksLikeTime and TIME_SHAPE", () => {
-  it("looks like a time for a unit's digit count or a date-time shape, zone or not", () => {
-    for (const input of ["1793851200", " 1793851200.5 ", "1793851200250", "2026-11-05T04:00:00", "Thu, 05 Nov 2026 04:00:00 GMT"]) {
+  it("looks like a time for a unit's digit count, a date or a date-time shape, zone or not", () => {
+    for (const input of ["1793851200", " 1793851200.5 ", "1793851200250", "2026-11-05", "2026-11-05T04:00:00", "Thu, 05 Nov 2026 04:00:00 GMT"]) {
       expect(looksLikeTime(input)).toBe(true);
     }
-    for (const input of ["17938512000", "1793851200250.5", "2026-11-05", "SGVsbG8=", "12345"]) {
+    for (const input of ["17938512000", "1793851200250.5", "2026-11-05-report", "SGVsbG8=", "12345"]) {
       expect(looksLikeTime(input)).toBe(false);
     }
   });
 
-  it("finds each date-time inside a line", () => {
-    const line = '{"at": "2026-11-05T04:00:00.5+07:00", "expires": "Thu, 05 Nov 2026 04:00:00 GMT", "day": "2026-11-05"}';
+  it("finds each date and date-time standing alone inside a line", () => {
+    const line = '{"at": "2026-11-05T04:00:00.5+07:00", "expires": "Thu, 05 Nov 2026 04:00:00 GMT", "day": "2026-11-05", "file": "2026-11-05-r"}';
     expect(Array.from(line.matchAll(TIME_SHAPE), (match) => match[0])).toEqual([
       "2026-11-05T04:00:00.5+07:00",
       "Thu, 05 Nov 2026 04:00:00 GMT",
+      "2026-11-05",
     ]);
   });
 });
