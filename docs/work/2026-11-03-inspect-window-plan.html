@@ -11,7 +11,7 @@
       <h1>E-INSPWIN — epic plan</h1>
       <p>A data window: hand it a piece of data and it gives the user room and tools to read, find in,
         reformat, decode and freely edit a working copy — the original always one click away.</p>
-      <div class="meta">v6, owner rulings recorded; Q4 re-ruled 2026-11-04 (filter deferred); Q11 re-ruled 2026-11-04 (one shared record); W8 added 2026-11-05 (time decoder, Q13) · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
+      <div class="meta">v6, owner rulings recorded; Q4 re-ruled 2026-11-04 (filter deferred); Q11 re-ruled 2026-11-04 (one shared record); W8 added 2026-11-05 (time decoder, Q13); W9 added 2026-11-05 (close: synced with main, DEC-71 → DEC-75) · opened 2026-11-03 · Trawler · T3 (docs/work/) · branch <code>epic/inspect-window</code>
         · WU branches <code>wu/inspect-window/&lt;slug&gt;</code></div>
     </div>
   </header>
@@ -178,6 +178,7 @@ flowchart LR
   W6 --> W7
   W6 --> W8["W8 · build: time decoder"]
   W8 --> W7
+  W7 --> W9["W9 · close: main synced, DEC-75"]
       </pre>
       <div class="caption">W4–W6 are independent once W3's working-copy model and surfaces exist; W1 touches no rendered file, so it cites no design.</div>
     </div>
@@ -314,6 +315,20 @@ flowchart LR
         </table>
       </div>
 
+      <div data-wu="E-INSPWIN.W9">
+        <h3 id="w9">E-INSPWIN.W9 — close: main synced, DEC-75</h3>
+        <table>
+          <tr><th>What it builds</th><td data-item="wu-summary">The epic over today's <code>main</code> (E-QUERY, E-GATEPAR
+            back-merged): the data window's decision renumbered DEC-71 → DEC-75, since E-QUERY landed DEC-71 first and
+            E-GATEPAR2 claims DEC-74; every citation in T2, TSDoc and code follows; the e2e re-run over the merged tree.
+            Plan: <a href="2026-11-05-inspect-window-w9-close-plan.html">W9 plan</a>.</td></tr>
+          <tr><th>Maps to</th><td data-item="wu-maps-to">DoD-E; the DEC-71 record; UC-9, UC-5 citations</td></tr>
+          <tr><th>Expected outcome</th><td data-item="wu-expected">One DEC-71 (E-QUERY's) and DEC-75 the data window; no
+            citation of the data window names DEC-71; e2e green over the merged tree.</td></tr>
+          <tr><th>Dependencies</th><td data-item="wu-deps">W7</td></tr>
+        </table>
+      </div>
+
     </div>
 
     <h2 id="e2e-plan">E2E test plan</h2>
@@ -341,7 +356,7 @@ flowchart LR
         <tr><th>Target</th><th>Tier</th><th>Absorbs</th></tr>
         <tr><td><a href="../use-cases/web-ui.html">use-cases/web-ui.html</a></td><td>T2</td><td>New UC-9 section; UC-5 entry-point line</td></tr>
         <tr><td><a href="../use-cases/use-cases-index.html">use-cases-index.html</a></td><td>T2</td><td>UC-9 row; UC-5 row amended</td></tr>
-        <tr><td>DEC-next (E-INSPWIN: the data window), <code>docs/decisions/</code> + <a href="../decisions/decisions-index.html">decisions-index</a></td><td>T2</td><td>W1's record: generic payload by value, original / working copy / view, no write-back, no core</td></tr>
+        <tr><td>DEC-next (E-INSPWIN: the data window — DEC-75 as landed, W9), <code>docs/decisions/</code> + <a href="../decisions/decisions-index.html">decisions-index</a></td><td>T2</td><td>W1's record: generic payload by value, original / working copy / view, no write-back, no core</td></tr>
         <tr><td><a href="../design-rules/design-rules-index.html">design-rules-index.html</a></td><td>T2</td><td>Only if the run adds a vocabulary member (e.g. the modified marker's tone, the menu's rows) or a rule</td></tr>
         <tr><td>Component TSDoc in <code>ui/src/components/</code></td><td>T4</td><td>Each built component design retires into its TSDoc (DEC-16); <code>CutMarker</code>'s "way out" names the window</td></tr>
         <tr><td><a href="../architecture.html">architecture.html</a></td><td>T1 (rarely)</td><td>One line only if "the shell owns one window" is stated there today</td></tr>
