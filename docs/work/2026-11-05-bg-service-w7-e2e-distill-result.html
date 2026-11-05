@@ -39,6 +39,7 @@
       <tr><td>no Rust change</td><td><code>lifecycle::e2e_request_quit</code>, a command that exists only under the <code>e2e</code> feature and calls <code>request_quit</code></td><td>⌘Q and the menu-bar Quit are native and WebDriver cannot press them. An emitted <code>quit-requested</code> event does nothing without the shell's flag, so the only honest way to reach W3/W9's path is the function those entries call</td></tr>
       <tr><td>one <code>background.spec.ts</code></td><td>four files, <code>background-asked</code>, <code>-off</code>, <code>-keep</code>, <code>-quit</code></td><td>each ends in a real exit and the launcher relaunches the app per file; the stored answer one leaves is what the next asserts. They run after <code>one-app.spec.ts</code> in the owned suite, whose launcher already points <code>HOME</code> at a temp dir it deletes: no run touches the real <code>dev.trawler.app</code> data or login items</td></tr>
       <tr><td>no <code>xtask</code> change</td><td><code>handler_names</code> scans <code>generate_handler!</code> bracket-aware and skips a <code>#[cfg]</code>-gated entry</td><td>Gate 0 went red: the list was cut at the first <code>]</code>, which <code>e2e_request_quit</code>'s attribute carries; a gated command is in neither build's shared list. Held by the detector unit test's new gated case</td></tr>
+      <tr><td>—</td><td><code>background.ts</code> is <code>app.ts</code>, the owned suite's one helper module; <code>one-app.spec.ts</code> and <code>background-keep.spec.ts</code> import from it</td><td>this WU's review: the new specs had copied <code>one-app.spec.ts</code>'s <code>invoke</code>, core poll, port and liveness helpers</td></tr>
       <tr><td>—</td><td><code>forgetTheAnswer</code> throws unless <code>HOME</code> resolves under the temp dir; <code>GET /flows</code> is polled for the captured flow</td><td>router's review of <code>758755d2</code> (F2, F4): run through <code>wdio.conf.ts</code> it would delete the real <code>keep-capturing.json</code>; a single read could race the recorder</td></tr>
     </table>
 
@@ -53,8 +54,8 @@
     <h2 id="evidence">Evidence</h2>
     <table data-item="evidence">
       <tr><th>Kind</th><th>Pointer</th></tr>
-      <tr><td>e2e (owned suite)</td><td><code>cargo xtask ui e2e</code>'s owned half: 5 spec files, 16 cases, green: <code>one-app</code> (6) · <code>background-asked</code> (2) · <code>-off</code> (3) · <code>-keep</code> (4) · <code>-quit</code> (1)</td></tr>
-      <tr><td>e2e (attached suite)</td><td><code>pnpm test</code>: 14 spec files green on a quiet machine; an earlier run failed 4 while another worktree's e2e ran at once</td></tr>
+      <tr><td>e2e (owned suite)</td><td><code>cargo xtask ui e2e</code>'s owned half: 5 spec files, 16 cases, green: <code>one-app</code> (6) · <code>background-asked</code> (2) · <code>-off</code> (3) · <code>-keep</code> (4) · <code>-quit</code> (1). Re-run green at <code>cba50b12</code> after the review fixes</td></tr>
+      <tr><td>e2e (attached suite)</td><td><code>pnpm test</code>: 14 spec files green on a quiet machine; an earlier run failed 4 while another worktree's e2e ran at once. At <code>cba50b12</code> 13 of 14 green; <code>onboarding</code> lost its WebDriver on <code>:4445</code> while another worktree's e2e ran (F1); this diff leaves that spec and its helpers unchanged</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
