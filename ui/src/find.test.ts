@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { findBytes, findMatches, readHexQuery } from "./find";
-import { surfaceText } from "./jsonTools";
+import { findBytes, formStructure, jsonStructure, markBytes, markText, mergeRanges, readHexQuery, structureNames } from "./find";
+import type { FindChip } from "./findGrammar";
+import { parseJson, surfaceText } from "./jsonTools";
+
+const findMatches = (text: string, query: string, limit?: number) => markText(text, query ? [{ key: "plain", value: query }] : [], null, limit);
 
 describe("find", () => {
   it("matches case-insensitively, every occurrence, none for an empty query", () => {
@@ -80,5 +83,154 @@ describe("find in bytes", () => {
       capped: true,
     });
     expect(findBytes(new Uint8Array(4), readHexQuery(""))).toEqual({ ranges: [], capped: false });
+  });
+});
+
+const chip = (key: FindChip["key"], value: string): FindChip => ({ key, value });
+const spans = (text: string, found: { ranges: { from: number; to: number }[] }) => found.ranges.map((r) => text.slice(r.from, r.to));
+
+function jsonMarks(text: string, chips: FindChip[], limit?: number) {
+  const parsed = parseJson(text);
+  if (!parsed.ok) throw new Error(parsed.reason);
+  return markText(text, chips, jsonStructure(parsed.root), limit);
+}
+
+describe("marking text with chips", () => {
+  it("runs plain, re and case chips over the whole text", () => {
+    const text = "Login login LOGIN";
+    expect(markText(text, [chip("plain", "login")], null).ranges).toHaveLength(3);
+    expect(markText(text, [chip("case", "login")], null).ranges).toEqual([{ from: 6, to: 11 }]);
+    expect(spans(text, markText(text, [chip("re", "l.g")], null))).toEqual(["Log", "log", "LOG"]);
+  });
+
+  it("a regex that can match empty marks only what it consumes and ends", () => {
+    const text = "aab";
+    expect(spans(text, markText(text, [chip("re", "a*")], null))).toEqual(["aa"]);
+    expect(markText("abc", [chip("re", "x*")], null)).toEqual({ ranges: [], capped: false });
+    expect(markText("abc", [chip("re", "^")], null).ranges).toEqual([]);
+  });
+
+  it("key: marks only inside object keys and value: only inside values", () => {
+    const text = '{"id": "id-7", "user": {"id": 3, "name": "ida"}, "list": ["id"]}';
+    const second = text.indexOf('"id": 3') + 1;
+    expect(jsonMarks(text, [chip("key", "id")]).ranges).toEqual([
+      { from: 2, to: 4 },
+      { from: second, to: second + 2 },
+    ]);
+    expect(spans(text, jsonMarks(text, [chip("value", "id")]))).toEqual(["id", "id", "id"]);
+    expect(jsonMarks(text, [chip("value", "3")]).ranges).toEqual([{ from: text.indexOf("3"), to: text.indexOf("3") + 1 }]);
+  });
+
+  it("matches the decoded text of a key or value that holds escaped quotes", () => {
+    const text = String.raw`{"say \"hi\"": "he said \"hi\"", "hi": 1}`;
+    expect(spans(text, jsonMarks(text, [chip("key", 'say "hi"')]))).toEqual([String.raw`say \"hi\"`]);
+    expect(spans(text, jsonMarks(text, [chip("value", '"hi"')]))).toEqual([String.raw`\"hi\"`]);
+    expect(jsonMarks(text, [chip("key", "hi")]).ranges).toHaveLength(2);
+  });
+
+  it("a key or value spelled with escapes is found by its plain spelling, and the other way", () => {
+    const text = String.raw`{"caf\u00e9": "a\/b", "é": "\u00C9"}`;
+    expect(jsonMarks(text, [chip("key", "café")]).ranges).toHaveLength(1);
+    expect(jsonMarks(text, [chip("key", "é")]).ranges).toHaveLength(2);
+    expect(jsonMarks(text, [chip("value", "a/b")]).ranges).toHaveLength(1);
+    expect(jsonMarks(text, [chip("value", "É")]).ranges).toHaveLength(1);
+    expect(jsonMarks(text, [chip("case", "é")]).ranges.length).toBeGreaterThan(0);
+  });
+
+  it("a character outside the BMP is found whole, escaped as a pair, raw, or mixed, and followed by more text", () => {
+    const text = String.raw`{"a": "\ud83d\ude00x", "b": "😀x", "c": "😀\ude00"}`;
+    expect(jsonMarks(text, [chip("value", "😀x")]).ranges).toHaveLength(2);
+    expect(jsonMarks(text, [chip("value", "😀")]).ranges).toHaveLength(3);
+  });
+
+  it("key: and value: over text that is not a structure mark nothing", () => {
+    expect(markText('{"a":1}', [chip("key", "a")], null).ranges).toEqual([]);
+  });
+
+  it("form text: key: and value: use the pair's raw parts", () => {
+    const text = "scope=read&scope=write&id=scope";
+    const structure = formStructure(text);
+    expect(markText(text, [chip("key", "scope")], structure).ranges).toEqual([
+      { from: 0, to: 5 },
+      { from: 11, to: 16 },
+    ]);
+    expect(markText(text, [chip("value", "scope")], structure).ranges).toEqual([{ from: 26, to: 31 }]);
+    expect(formStructure("").keys).toEqual([]);
+    expect(formStructure("flag").values).toEqual([{ from: 4, to: 4 }]);
+  });
+
+  it("overlapping chips mark once and the union is in document order", () => {
+    const text = "the user name and user";
+    const found = markText(text, [chip("plain", "user name"), chip("plain", "user"), chip("plain", "name")], null);
+    expect(spans(text, found)).toEqual(["user name", "user"]);
+    expect(markText(text, [chip("plain", "user"), chip("plain", "user")], null).ranges).toHaveLength(2);
+    expect(found.ranges.map((r) => r.from)).toEqual([4, 18]);
+  });
+
+  it("stops at the limit across every chip and says so", () => {
+    const text = "ab ".repeat(10);
+    const found = markText(text, [chip("plain", "a"), chip("plain", "b")], null, 5);
+    expect(found.ranges).toHaveLength(5);
+    expect(found.capped).toBe(true);
+    expect(markText("a b", [chip("plain", "a"), chip("plain", "b")], null, 2).capped).toBe(false);
+  });
+
+  it("says capped when more matches follow a count that lands exactly on the limit", () => {
+    const text = '{"a": "x", "b": "x", "c": "x"}';
+    expect(jsonMarks(text, [chip("value", "x")], 3).capped).toBe(false);
+    expect(jsonMarks(text, [chip("value", "x")], 2)).toMatchObject({ capped: true });
+    const split = jsonMarks('{"a": "x", "b": "x", "c": "y"}', [chip("value", "x")], 2);
+    expect(split.capped).toBe(false);
+    expect(jsonMarks(text, [chip("value", "x")], 2).ranges).toHaveLength(2);
+  });
+
+  it("one chip scans many parts and keeps no state between them", () => {
+    const text = JSON.stringify(Object.fromEntries(Array.from({ length: 50 }, (_, i) => [`k${i}`, "aa"])));
+    expect(jsonMarks(text, [chip("value", "a")]).ranges).toHaveLength(100);
+  });
+
+  it("merges ranges that overlap but not ones that only touch", () => {
+    expect(
+      mergeRanges([
+        { ranges: [{ from: 0, to: 4 }, { from: 10, to: 12 }], capped: false },
+        { ranges: [{ from: 2, to: 6 }, { from: 6, to: 8 }], capped: false },
+      ]).ranges,
+    ).toEqual([
+      { from: 0, to: 6 },
+      { from: 6, to: 8 },
+      { from: 10, to: 12 },
+    ]);
+  });
+});
+
+describe("a structure's key names", () => {
+  it("lists each distinct key once, decoded", () => {
+    const text = String.raw`{"a": 1, "b": {"a": 2, "x\ny": 3}}`;
+    const parsed = parseJson(text);
+    if (!parsed.ok) throw new Error("parse");
+    expect(structureNames(jsonStructure(parsed.root), text, true)).toEqual(["a", "b", "x\ny"]);
+    expect(structureNames(formStructure("a%20b=1&a%20b=2&c=3"), "a%20b=1&a%20b=2&c=3", true)).toEqual(["a b", "c"]);
+    expect(structureNames(formStructure("a%20b=1&c=3"), "a%20b=1&c=3", false)).toEqual(["a%20b", "c"]);
+    expect(structureNames(formStructure("a=1&b=2&c=3"), "a=1&b=2&c=3", true, 2)).toEqual(["a", "b"]);
+  });
+});
+
+describe("marking bytes with chips", () => {
+  const bytes = new TextEncoder().encode("GET /a HTTP/1.1\r\nget /b");
+
+  it("bytes: is exact hex, text: is ASCII folded, plain keeps the guess", () => {
+    expect(markBytes(bytes, [chip("bytes", "47 45 54")]).ranges).toEqual([{ from: 0, to: 3 }]);
+    expect(markBytes(bytes, [chip("text", "get")]).ranges).toHaveLength(2);
+    const plain = markBytes(bytes, [chip("plain", "get")]);
+    expect(plain.ranges).toHaveLength(2);
+    expect(plain.as).toBe("text");
+    expect(markBytes(new Uint8Array([0xde, 0xad]), [chip("plain", "de ad")]).as).toBe("bytes");
+    expect(markBytes(bytes, [chip("bytes", "47 45 54")]).as).toBeNull();
+  });
+
+  it("chips a hex view cannot run mark nothing; the union merges and caps", () => {
+    expect(markBytes(bytes, [chip("key", "GET"), chip("re", "GET")]).ranges).toEqual([]);
+    expect(markBytes(bytes, [chip("bytes", "47 45"), chip("text", "get")]).ranges).toHaveLength(2);
+    expect(markBytes(new Uint8Array(10), [chip("bytes", "00"), chip("bytes", "00 00")], 4)).toMatchObject({ capped: true });
   });
 });

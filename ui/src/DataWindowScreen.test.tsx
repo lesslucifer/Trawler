@@ -5,6 +5,10 @@ import { foldedRanges } from "@codemirror/language";
 import * as files from "./body";
 import { DataWindowScreen } from "./DataWindowScreen";
 import type { DataPayload } from "./dataWindow";
+import type { FlowView } from "./api";
+import * as codeTools from "./codeTools";
+import { loadBeautifier } from "./codeTools";
+import { headersPayload } from "./flowPayload";
 import { systemZone, time, type TimeReading } from "./timeDecoder";
 
 const ROW = 20;
@@ -39,6 +43,11 @@ const encode = (text: string) => new TextEncoder().encode(text);
 function payload(over: Partial<DataPayload> & { text?: string } = {}): DataPayload {
   const { text = '{\n  "plan": "team"\n}', ...rest } = over;
   return { key: "k", title: "response body · GET api.example.com/v2/x", bytes: encode(text), typeHint: "application/json", ...rest };
+}
+
+function pickKind(name: string) {
+  fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
+  fireEvent.click(screen.getByRole("option", { name }));
 }
 
 async function open(handed: DataPayload | null) {
@@ -142,7 +151,7 @@ describe("a 2 MB JSON payload", () => {
     await open(payload({ text: big }));
     expect(view().state.doc.length).toBe(big.length);
     expect(view().state.readOnly).toBe(false);
-    expect(screen.getByTestId("detected")).toHaveTextContent("detected from application/json");
+    expect(screen.getByTestId("detected")).toHaveTextContent("from application/json");
     expect(footer()).toHaveTextContent(files.humanBytes(big.length));
     expect(footer()).toHaveTextContent(`${big.split("\n").length} lines`);
     expect(screen.queryByTestId("modified")).toBeNull();
@@ -201,6 +210,8 @@ describe("bytes the text cannot hold", () => {
   it("data that is not valid UTF-8 stays read-only and says why, so no edit can rewrite the bytes around it", async () => {
     const bytes = new Uint8Array([0x61, 0xe9, 0x62]);
     await open(payload({ bytes, typeHint: "text/plain", text: undefined }));
+    expect(screen.getByTestId("detected")).toHaveTextContent("from text/plain");
+    pickKind("text");
     expect(screen.getByText(/not valid UTF-8/)).toBeInTheDocument();
     expect(view().state.readOnly).toBe(true);
     expect(footer()).toHaveTextContent("read-only");
@@ -330,7 +341,7 @@ describe("a 1 MiB binary payload", () => {
 
   it("the whole dump, read-only, ⋯ holding only save, copy delivering the dump", async () => {
     await open(payload({ bytes, typeHint: "application/octet-stream", text: undefined }));
-    expect(screen.getByTestId("detected")).toHaveTextContent("detected from its bytes");
+    expect(screen.getByTestId("detected")).toHaveTextContent("from application/octet-stream");
     expect(footer()).toHaveTextContent("read-only");
     expect(footer()).toHaveTextContent("1.0 MiB");
 
@@ -357,10 +368,44 @@ describe("the kind", () => {
     await open(payload());
     fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
     fireEvent.click(screen.getByRole("option", { name: "text" }));
-    expect(screen.getByTestId("detected")).toHaveTextContent("your choice · detected JSON from application/json");
+    expect(screen.getByTestId("detected")).toHaveTextContent("read JSON from application/json");
     fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
     fireEvent.click(screen.getByRole("option", { name: "JSON" }));
-    expect(screen.getByTestId("detected")).toHaveTextContent(/^detected from application\/json$/);
+    expect(screen.getByTestId("detected")).toHaveTextContent(/^from application\/json$/);
+  });
+
+  it("the picker offers nine kinds, the pick overrides, and the detected kind restores the wording", async () => {
+    await open(payload({ typeHint: "text/plain" }));
+    fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
+    expect(screen.getAllByRole("option").map((option) => option.textContent?.replace("✓", ""))).toEqual([
+      "JSON", "form", "XML", "HTML", "JavaScript", "CSS", "text", "hex", "image",
+    ]);
+    fireEvent.click(screen.getByRole("option", { name: "text" }));
+    expect(screen.getByTestId("detected")).toHaveTextContent("read JSON from its bytes");
+    pickKind("JSON");
+    expect(screen.getByTestId("detected")).toHaveTextContent(/^read from its bytes · served as text\/plain$/);
+  });
+
+  it.each([
+    ["JSON served as text/plain", '{"a":1}', "text/plain", "read from its bytes · served as text/plain"],
+    ["JSON with no label", '{"a":1}', undefined, "read from its bytes"],
+    ["HTML served as application/octet-stream", "<!doctype html><p>x</p>", "application/octet-stream", "read from its bytes · served as application/octet-stream"],
+    ["broken JSON under text/plain", "{oops", "text/plain", "from text/plain"],
+  ])("%s: the status bar says what decided", async (_name, text, typeHint, said) => {
+    await open(payload({ text, typeHint }));
+    expect(screen.getByTestId("detected")).toHaveTextContent(new RegExp(`^${said.replace(/[/]/g, "\\/")}$`));
+  });
+
+  it("JSON served as text/plain opens as JSON, with its tools", async () => {
+    await open(payload({ text: '{"a":1}', typeHint: "text/plain" }));
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.getByRole("group", { name: "indent" })).toBeInTheDocument();
+  });
+
+  it("HTML served as application/octet-stream opens with the markup tools; broken JSON stays text", async () => {
+    await open(payload({ text: "<!doctype html><html><body><p>x</p></body></html>", typeHint: "application/octet-stream" }));
+    fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
+    expect(screen.getByRole("option", { name: "HTML", selected: true })).toBeInTheDocument();
   });
 
   it("an image offers fit and actual size in ⋯", async () => {
@@ -389,7 +434,7 @@ describe("the right-click menu on a text surface", () => {
   });
 });
 
-const findBox = () => screen.getByRole("textbox", { name: "find" });
+const findBox = () => screen.getByRole("combobox", { name: "find" });
 const findCount = () => screen.getByTestId("find-count");
 const doc = () => view().state.doc.toString();
 
@@ -464,7 +509,7 @@ describe("find over a 2 MB JSON document", () => {
 
   it("finds in a CRLF document at the surface's own positions", async () => {
     await open(payload({ text: '{\r\n  "a": "x",\r\n  "b": "x"\r\n}' }));
-    findFor('"x"');
+    findFor(String.raw`re:\x22x\x22`);
     expect(findCount()).toHaveTextContent("1 of 2");
     const marked = [...screen.getByTestId("data-surface").querySelectorAll(".cm-content .bg-wash-select, .cm-content .bg-wash-active")];
     expect(marked.map((m) => m.textContent)).toEqual(['"x"', '"x"']);
@@ -472,7 +517,7 @@ describe("find over a 2 MB JSON document", () => {
 
   it("is offered on every kind but an image", async () => {
     await open(payload({ bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]), typeHint: "image/png", text: undefined }));
-    expect(screen.queryByRole("textbox", { name: "find" })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "find" })).toBeNull();
   });
 });
 
@@ -546,6 +591,7 @@ describe("indent and sort keys", () => {
 
   it("a read-only JSON text offers fold to, never a reformat", async () => {
     await open(payload({ bytes: new Uint8Array([0x7b, 0x22, 0x61, 0x22, 0x3a, 0x22, 0xe9, 0x22, 0x7d]), text: undefined }));
+    pickKind("JSON");
     fireEvent.click(screen.getByRole("button", { name: "more" }));
     expect(screen.queryByRole("group", { name: "indent" })).toBeNull();
     expect(screen.queryByRole("menuitem", { name: /^sort keys/ })).toBeNull();
@@ -822,6 +868,209 @@ describe("XML re-indent", () => {
 });
 
 
+describe("javascript and css", () => {
+  const js = "function f(a){if(a){return a/2}return 1}\nlet total=f(4)";
+  const css = "@media (min-width:1px){a{color:red}b{margin:0}}";
+
+  async function openCode(text: string, typeHint: string) {
+    await open(payload({ text, typeHint }));
+    await act(async () => {
+      await loadBeautifier();
+    });
+  }
+
+  it("opens each under its own kind, highlighted, and find marks as on text", async () => {
+    await openCode(js, "application/javascript");
+    expect(screen.getByRole("button", { name: "treat the data as" })).toHaveTextContent("JavaScript");
+    expect(screen.getByTestId("data-surface").querySelector(".cm-line [class]")).not.toBeNull();
+    findFor("total");
+    expect(findCount()).toHaveTextContent("1");
+    cleanup();
+    await openCode(css, "text/css");
+    expect(screen.getByRole("button", { name: "treat the data as" })).toHaveTextContent("CSS");
+  });
+
+  it("reformat is a named step from ⋯ and from ⌥⇧F; undo walks it; restore returns the bytes", async () => {
+    await openCode(js, "application/javascript");
+    fireEvent.click(moreItem(/^reformat/));
+    expect(doc().split("\n").length).toBeGreaterThan(5);
+    expect(doc().replace(/\s/g, "")).toBe(js.replace(/\s/g, ""));
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    key("z");
+    expect(doc()).toBe(js);
+    fireEvent.keyDown(document.body, { key: "Ï", code: "KeyF", altKey: true, shiftKey: true });
+    expect(doc().split("\n").length).toBeGreaterThan(5);
+    fireEvent.click(moreItem(/^restore original/));
+    expect(doc()).toBe(js);
+  });
+
+  it("a formatter that cannot load is named on the disabled row, not called loading", async () => {
+    const failing = vi.spyOn(codeTools, "loadBeautifier").mockRejectedValue(new Error("chunk failed"));
+    try {
+      await open(payload({ text: js, typeHint: "application/javascript" }));
+      await act(async () => {});
+      const item = moreItem(/^reformat/);
+      expect(item).toHaveAttribute("aria-disabled", "true");
+      expect(item).toHaveTextContent("the formatter could not be loaded");
+    } finally {
+      failing.mockRestore();
+    }
+  });
+
+  it("reformats css the same way and keeps CRLF", async () => {
+    await openCode("a{color:red}\r\nb{margin:0}", "text/css");
+    fireEvent.click(moreItem(/^reformat/));
+    expect(doc()).toContain("a {\n");
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith(expect.stringMatching(/^a \{\r\n {2}color: red\r\n\}/));
+  });
+
+  it("is never offered on a read-only text", async () => {
+    await openCode("a=1;\r\nb=2;\n", "application/javascript");
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.queryByRole("menuitem", { name: /^reformat/ })).toBeNull();
+    expect(screen.getByRole("group", { name: "fold to" })).toBeInTheDocument();
+  });
+
+  it("a text under a javascript label that is only whitespace has nothing to reformat", async () => {
+    await openCode("  \n ", "application/javascript");
+    const item = moreItem(/^reformat/);
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveTextContent("there is nothing to reformat");
+  });
+
+  it("opens and reformats a 1 MiB minified bundle", async () => {
+    const bundle = "function f(a){return a+1}".repeat(40_000);
+    await openCode(bundle, "application/javascript");
+    fireEvent.click(moreItem(/^reformat/));
+    expect(view().state.doc.length).toBeGreaterThan(bundle.length);
+  });
+});
+
+describe("html source and preview", () => {
+  const page =
+    '<!doctype html><html><head><meta http-equiv="refresh" content="0;url=https://x.test"><style>p{color:red}</style></head><body><p>hello</p><script>fetch("https://x.test/b")</script><img src="https://x.test/p.gif"></body></html>';
+
+  async function openPage(text = page, typeHint = "text/html") {
+    await open(payload({ text, typeHint }));
+    await act(async () => {
+      await loadBeautifier();
+    });
+  }
+
+  const frame = () => screen.getByTestId("data-preview") as HTMLIFrameElement;
+  const showing = (name: "source" | "preview") => screen.getByRole("button", { name }).getAttribute("aria-pressed") === "true";
+
+  it("opens as HTML in its own highlighted surface, and find marks as on text", async () => {
+    await openPage();
+    expect(screen.getByRole("button", { name: "treat the data as" })).toHaveTextContent("HTML");
+    expect(screen.getByTestId("data-surface").querySelector(".cm-line [class]")).not.toBeNull();
+    findFor("hello");
+    expect(findCount()).toHaveTextContent("1");
+    expect(showing("source")).toBe(true);
+    expect(screen.queryByTestId("data-preview")).toBeNull();
+  });
+
+  it("re-indent is a named step from ⋯ and from ⌥⇧F; undo and restore return the bytes", async () => {
+    await openPage();
+    fireEvent.click(moreItem(/^re-indent/));
+    expect(doc().split("\n").length).toBeGreaterThan(8);
+    expect(doc().replace(/\s/g, "")).toBe(page.replace(/\s/g, ""));
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    key("z");
+    expect(doc()).toBe(page);
+    fireEvent.keyDown(document.body, { key: "Ï", code: "KeyF", altKey: true, shiftKey: true });
+    expect(doc().split("\n").length).toBeGreaterThan(8);
+    fireEvent.click(moreItem(/^restore original/));
+    expect(doc()).toBe(page);
+  });
+
+  it("is never offered on a read-only text", async () => {
+    await openPage("<p>a</p>\r\n<p>b</p>\n");
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(screen.queryByRole("menuitem", { name: /^re-indent/ })).toBeNull();
+  });
+
+  it("the preview is a frame with an empty sandbox over the working copy, and the page's scripts and remote loads are not in play", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    expect(frame().getAttribute("sandbox")).toBe("");
+    const built = frame().getAttribute("srcdoc")!;
+    expect(built).toContain("<p>hello</p>");
+    expect(built).toContain("<style>p{color:red}</style>");
+    expect(built.indexOf("Content-Security-Policy")).toBeLessThan(built.indexOf("<style>p{color:red}"));
+    expect(built).toContain("default-src 'none'");
+    expect(built.toLowerCase()).not.toContain("refresh");
+    expect(screen.getByText("scripts, forms and anything remote are not run or loaded")).toBeInTheDocument();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("the preview follows the working copy: an edit made in source shows on return", async () => {
+    await openPage("<p>hello</p>");
+    typeInto(0, "<h1>new</h1>");
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    expect(frame().getAttribute("srcdoc")).toContain("<h1>new</h1>");
+    fireEvent.click(screen.getByRole("button", { name: "source" }));
+    expect(doc()).toBe("<h1>new</h1><p>hello</p>");
+  });
+
+  it("the preview is read-only: no editor, no find bar, re-indent disabled with its reason", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    expect(screen.queryByTestId("data-surface")).toBeNull();
+    expect(screen.queryByRole("textbox", { name: /find/i })).toBeNull();
+    const item = moreItem(/^re-indent/);
+    expect(item).toHaveAttribute("aria-disabled", "true");
+    expect(item).toHaveTextContent("shown in preview");
+  });
+
+  it("⇧⌘V, the ⋯ choice and the switch agree", async () => {
+    await openPage();
+    key("v", { shiftKey: true });
+    expect(showing("preview")).toBe(true);
+    key("v", { shiftKey: true });
+    expect(showing("source")).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    fireEvent.click(within(screen.getByRole("menu", { name: "more" })).getByRole("menuitemradio", { name: "preview" }));
+    expect(showing("preview")).toBe(true);
+    expect(frame()).toBeInTheDocument();
+  });
+
+  it("⌘F leaves the preview for the source and focuses find", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    key("f");
+    expect(showing("source")).toBe(true);
+    expect(screen.getByTestId("data-surface")).toBeInTheDocument();
+    expect(document.activeElement).toBe(findBox());
+  });
+
+  it("coming back to html after another kind opens the source, not the preview", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    pickKind("text");
+    pickKind("HTML");
+    expect(showing("source")).toBe(true);
+    expect(screen.getByTestId("data-surface")).toBeInTheDocument();
+  });
+
+  it("⇧⌘V typed in the find box is left to the box", async () => {
+    await openPage();
+    fireEvent.keyDown(findBox(), { key: "v", metaKey: true, shiftKey: true });
+    expect(showing("source")).toBe(true);
+  });
+
+  it("choosing another kind in the picker leaves the preview; other kinds have no switch", async () => {
+    await openPage();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    pickKind("text");
+    expect(screen.queryByTestId("data-preview")).toBeNull();
+    expect(screen.queryByRole("button", { name: "preview" })).toBeNull();
+    key("v", { shiftKey: true });
+    expect(screen.queryByTestId("data-preview")).toBeNull();
+  });
+});
+
 describe("decode", () => {
   const b64url = (text: string) => btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   const TOKEN = `${b64url('{"alg":"RS256"}')}.${b64url('{"sub":"8812"}')}.c2ln`;
@@ -889,6 +1138,38 @@ describe("decode", () => {
     rightClickAt(doc().indexOf(TOKEN) + 12);
     fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
     expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(selected()).toBe(TOKEN);
+  });
+
+  it("open all's headers open as text, and a right-click on a bearer token there reads it as a JWT", async () => {
+    const flow: FlowView = {
+      id: "f9",
+      started_at: "2026-11-05T10:00:00Z",
+      duration_ms: 1,
+      method: "GET",
+      uri: "https://api.example.com/me",
+      status: 200,
+      source: "captured",
+      seed: null,
+      request_http_version: "HTTP/1.1",
+      response_http_version: "HTTP/1.1",
+      request_headers: [
+        { name: "Accept", value: "application/json" },
+        { name: "Authorization", value: `Bearer ${TOKEN}` },
+        { name: "Cookie", value: `session=${"x".repeat(4096)}` },
+      ],
+      response_headers: [],
+      request_body: { state: "empty" },
+      response_body: { state: "empty" },
+    };
+    await open(headersPayload(flow, "request"));
+    expect(doc()).toBe(`Accept: application/json\nAuthorization: Bearer ${TOKEN}\nCookie: session=${"x".repeat(4096)}`);
+
+    rightClickAt(doc().indexOf(TOKEN) + 12);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(decodedText(1)).toBe('{\n  "sub": "8812"\n}');
     expect(selected()).toBe(TOKEN);
   });
 
@@ -1113,5 +1394,178 @@ describe("decode", () => {
     fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
     fireEvent.click(screen.getByRole("option", { name: "text" }));
     expect(screen.queryByTestId("decode-peek")).toBeNull();
+  });
+});
+
+describe("the find bar's chips", () => {
+  const JSON_DOC = JSON.stringify({ id: 1, user: { id: 2, name: "the user" }, tags: ["user", "id"] }, null, 2);
+  const chipsShown = () => screen.queryAllByTestId("chip");
+  const chipTexts = () => chipsShown().map((c) => c.textContent?.replace("×", ""));
+  const type = (text: string) => fireEvent.change(findBox(), { target: { value: text } });
+  const press = (k: string, init: object = {}) => fireEvent.keyDown(findBox(), { key: k, ...init });
+  const marked = () => [...screen.getByTestId("data-surface").querySelectorAll(".cm-content .bg-wash-select, .cm-content .bg-wash-active")].map((m) => m.textContent);
+  const active = () => screen.getByTestId("data-surface").querySelector(".cm-content .bg-wash-active");
+
+  it("types like the flow list's filter: Space makes a chip, Backspace removes the last, a repeat is not added", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("key:id");
+    press(" ");
+    type('"the user"');
+    press(" ");
+    expect(chipTexts()).toEqual(["key:id", '"the user"']);
+    expect(findBox()).toHaveValue("");
+    expect(findBox()).toHaveAttribute("placeholder", "add to find");
+    press("Backspace");
+    expect(chipTexts()).toEqual(["key:id"]);
+    type("key:id");
+    press(" ");
+    expect(chipTexts()).toEqual(["key:id"]);
+  });
+
+  it("the placeholder and the suggestions follow the kind's keys; key: offers the document's keys", async () => {
+    await open(payload({ text: JSON_DOC }));
+    expect(findBox()).toHaveAttribute("placeholder", "find — key: value: re: case: or any text");
+    type("v");
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual(["value:only inside values↵ enter"]);
+    type("key:");
+    expect(screen.getAllByRole("option").map((o) => o.textContent?.replace("↵ enter", ""))).toEqual([
+      "key:ida key in this document",
+      "key:usera key in this document",
+      "key:namea key in this document",
+      "key:tagsa key in this document",
+    ]);
+    press("Enter");
+    expect(findBox()).toHaveValue("");
+    expect(chipTexts()).toEqual(["key:id"]);
+  });
+
+  it("Enter steps matches of a draft that starts a key name, and Tab takes the key", async () => {
+    await open(payload({ text: '{"key": "x", "key2": "key"}' }));
+    type("ke");
+    expect(findCount()).toHaveTextContent("1 of 3");
+    press("Enter");
+    expect(findCount()).toHaveTextContent("2 of 3");
+    expect(findBox()).toHaveValue("ke");
+    press("Tab");
+    expect(findBox()).toHaveValue("key:");
+  });
+
+  it("a draft that does not parse says why and makes no chip; a near-miss key too", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("re:(");
+    press(" ");
+    expect(screen.getByText(/not a regular expression/)).toBeInTheDocument();
+    expect(chipsShown()).toHaveLength(0);
+    type("kay:id");
+    press(" ");
+    expect(screen.getByText(/did you mean key:\?/)).toBeInTheDocument();
+    type("-id");
+    press(" ");
+    expect(screen.getByText(/nothing to exclude/)).toBeInTheDocument();
+    expect(chipsShown()).toHaveLength(0);
+  });
+
+  it("every chip and the live draft mark; the count is the sum and Enter steps in document order", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("key:id");
+    press(" ");
+    type('"user"');
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 5");
+    expect(marked()).toEqual(["id", "user", "id", "user", "user"]);
+    const order: (string | null | undefined)[] = [];
+    for (let i = 0; i < 5; i += 1) {
+      order.push(active()?.textContent);
+      press("Enter");
+    }
+    expect(order).toEqual(["id", "user", "id", "user", "user"]);
+    expect(findCount()).toHaveTextContent("1 of 5");
+    type("tags");
+    expect(findCount()).toHaveTextContent("1 of 6");
+    press("Enter", { shiftKey: true });
+    expect(findCount()).toHaveTextContent("6 of 6");
+  });
+
+  it("switching to text refuses key: with its reason, drops its marks and keeps the other chip counting", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("key:id");
+    press(" ");
+    type("user");
+    press(" ");
+    expect(findCount()).toHaveTextContent("of 5");
+    pickKind("text");
+    const [refused, fine] = chipsShown();
+    expect(refused).toHaveAttribute("aria-invalid", "true");
+    expect(refused).toHaveAttribute("title", "key: needs JSON or form; this is text");
+    expect(fine).not.toHaveAttribute("aria-invalid");
+    expect(findCount()).toHaveTextContent("of 3");
+    pickKind("JSON");
+    expect(chipsShown()[0]).not.toHaveAttribute("aria-invalid");
+    expect(findCount()).toHaveTextContent("of 5");
+  });
+
+  it("re: and case: run on text kinds; a regex that matches empty marks nothing", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("re:i[dm]");
+    press(" ");
+    expect(findCount()).toHaveTextContent("of 3");
+    type("case:User");
+    press(" ");
+    expect(findCount()).toHaveTextContent("of 3");
+    press("Backspace");
+    press("Backspace");
+    type("re:x*");
+    expect(findCount()).toHaveTextContent("no match");
+  });
+
+  it("Esc closes the suggestions, then clears every chip and the draft", async () => {
+    await open(payload({ text: JSON_DOC }));
+    type("user");
+    press(" ");
+    type("k");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    press("Escape");
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(chipsShown()).toHaveLength(1);
+    press("Escape");
+    expect(chipsShown()).toHaveLength(0);
+    expect(findBox()).toHaveValue("");
+    expect(findCount()).toHaveTextContent("");
+  });
+
+  it("form: key: and value: mark the table's key and value cells; encoded text marks the raw parts", async () => {
+    await open(payload({ text: "scope=read&scope=write&id=scope", typeHint: FORM_HINT }));
+    type("key:scope");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 2");
+    type("value:scope");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 3");
+    expect(findBox()).toHaveAttribute("placeholder", "add to find");
+    type("key:");
+    expect(screen.getAllByRole("option").map((o) => o.textContent?.replace("↵ enter", ""))).toEqual([
+      "key:scopea key in this document",
+      "key:ida key in this document",
+    ]);
+  });
+
+  it("hex: bytes: and text: run, a plain chip keeps the guess, key: is refused", async () => {
+    const bytes = new Uint8Array(64);
+    bytes.set([0xde, 0xad], 15);
+    bytes.set(new TextEncoder().encode("GET /"), 40);
+    await open(payload({ bytes, typeHint: "application/octet-stream", text: undefined }));
+    expect(findBox()).toHaveAttribute("placeholder", "find — bytes: text: or any text");
+    type("bytes:de ad");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 1");
+    type("text:get");
+    press(" ");
+    expect(findCount()).toHaveTextContent("1 of 2");
+    type("zz");
+    expect(findCount()).toHaveTextContent("of 2");
+    type("key:id");
+    press(" ");
+    expect(chipsShown()[2]).toHaveAttribute("aria-invalid", "true");
+    expect(findCount()).toHaveTextContent("of 2");
   });
 });

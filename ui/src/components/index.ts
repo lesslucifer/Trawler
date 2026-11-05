@@ -31,6 +31,8 @@ export { MenuPath } from "./MenuPath";
 export { MethodLabel, HTTP_METHODS } from "./MethodLabel";
 export { QrCode } from "./QrCode";
 export { Notice } from "./Notice";
+export { ChipBox } from "./ChipBox";
+export type { BoxParsed, BoxSuggestion, ChipBoxHandle, ChipBoxProps, ChipFace, ChipGrammar } from "./ChipBox";
 export { QueryBar } from "./QueryBar";
 export type { QueryBarHandle, QueryBarProps } from "./QueryBar";
 export type { NoticeTone } from "./Notice";

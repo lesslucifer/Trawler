@@ -1,24 +1,20 @@
-import { bodyKind, rawKind, type BodyKind } from "./body";
+import type { ContentKind } from "./contentKind";
 
-export type DataKind = BodyKind;
+export type DataKind = ContentKind;
 
 export const DATA_KINDS: { id: DataKind; label: string }[] = [
   { id: "json", label: "JSON" },
   { id: "form", label: "form" },
-  { id: "xml", label: "XML / HTML" },
+  { id: "xml", label: "XML" },
+  { id: "html", label: "HTML" },
+  { id: "javascript", label: "JavaScript" },
+  { id: "css", label: "CSS" },
   { id: "text", label: "text" },
   { id: "hex", label: "hex" },
   { id: "image", label: "image" },
 ];
 
 export const READ_ONLY_KINDS: ReadonlySet<DataKind> = new Set(["hex", "image"]);
-
-export interface Detected {
-  kind: DataKind;
-  from: string;
-}
-
-export const FROM_BYTES = "its bytes";
 
 export interface Signature {
   name: string;
@@ -36,28 +32,6 @@ const SIGNATURES: (Signature & { bytes: number[] })[] = [
 export function signatureOf(bytes: Uint8Array): Signature | null {
   const found = SIGNATURES.find((signature) => signature.bytes.every((byte, i) => bytes[i] === byte));
   return found ? { name: found.name, image: found.image } : null;
-}
-
-function sniff(bytes: Uint8Array): DataKind {
-  if (signatureOf(bytes)?.image) return "image";
-  if (rawKind(bytes) === "hex") return "hex";
-  const text = new TextDecoder().decode(bytes).trimStart();
-  if (text.startsWith("{") || text.startsWith("[")) {
-    try {
-      JSON.parse(text);
-      return "json";
-    } catch {
-      return "text";
-    }
-  }
-  return text.startsWith("<") ? "xml" : "text";
-}
-
-export function detectKind(typeHint: string | undefined, bytes: Uint8Array): Detected {
-  const mime = (typeHint ?? "").split(";")[0].trim().toLowerCase();
-  const hinted = mime ? bodyKind(mime) : null;
-  if (hinted !== null && hinted !== "hex") return { kind: hinted, from: mime };
-  return { kind: sniff(bytes), from: FROM_BYTES };
 }
 
 export const kindLabel = (kind: DataKind) => DATA_KINDS.find((k) => k.id === kind)?.label ?? kind;

@@ -1,34 +1,9 @@
 import type { BodyFetch, BodyView, FlowView, Leg } from "./api";
-import type { DataPayload, Heading } from "./dataWindow";
+import type { DataPayload } from "./dataWindow";
+import { flowCaption } from "./flowPayload";
 
-// Content-type → renderer dispatch, the core UC-5 contract. Decoded bodies
-// dispatch on the served content type; raw bodies sniff bytes (rawKind),
-// because stored bytes may be compressed regardless of what the type claims.
-export type BodyKind = "json" | "xml" | "image" | "form" | "text" | "hex";
-
-export function bodyKind(contentType: string | null): BodyKind {
-  const mime = (contentType ?? "").split(";")[0].trim().toLowerCase();
-  if (mime === "application/json" || mime.endsWith("+json")) return "json";
-  if (mime.startsWith("image/")) return "image";
-  if (mime === "application/x-www-form-urlencoded") return "form";
-  if (
-    mime === "application/xml" ||
-    mime === "text/xml" ||
-    mime === "text/html" ||
-    mime.endsWith("+xml")
-  ) {
-    return "xml";
-  }
-  if (
-    mime.startsWith("text/") ||
-    mime === "application/javascript" ||
-    mime === "application/ecmascript"
-  ) {
-    return "text";
-  }
-  return "hex";
-}
-
+// Raw bodies sniff bytes (rawKind), because stored bytes may be compressed
+// regardless of what the type claims; the pretty body's kind is readKind's.
 export function rawKind(bytes: Uint8Array): "text" | "hex" {
   try {
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
@@ -350,13 +325,9 @@ function pickThroughInput(extensions: string[]): Promise<ChosenFile | null> {
 // bytes that may still be compressed; the window sniffs them, as rawKind does.
 export function bodyPayload(flow: FlowView, leg: Leg, fetched: BodyFetch, pretty: boolean): DataPayload {
   const mode = pretty ? "pretty" : "raw";
-  const where = flow.uri.replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
-  const [, host, path, query] = /^([^/?#]*)([^?#]*)(.*)$/s.exec(where)!;
-  const heading: Heading = { what: `${leg} body${pretty ? "" : " · raw"}`, method: flow.method, host, path, query };
   const payload: DataPayload = {
     key: `${flow.id}:${leg}:${mode}`,
-    title: `${heading.what} · ${flow.method} ${where}`,
-    heading,
+    ...flowCaption(flow, `${leg} body${pretty ? "" : " · raw"}`),
     bytes: fetched.bytes,
   };
   if (pretty && fetched.contentType) payload.typeHint = fetched.contentType;

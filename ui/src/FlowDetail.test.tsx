@@ -7,6 +7,7 @@ import { CONFIRM_MS } from "./components/index";
 import type { FlowView, Leg, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
 import { DEFAULT_LAYOUT } from "./layoutBounds";
+import { openDataWindow } from "./dataWindow";
 import type { LayoutControls } from "./useLayout";
 
 const still: LayoutControls = {
@@ -66,30 +67,12 @@ function stubClipboard() {
 const legSelector = () => screen.getByRole("radiogroup", { name: "leg" });
 const legRadio = (leg: "request" | "response") => within(legSelector()).getByRole("radio", { name: leg });
 
-afterEach(() => vi.unstubAllGlobals());
+vi.mock("./dataWindow", () => ({ openDataWindow: vi.fn(async () => {}) }));
 
-// jsdom lays nothing out, so a value cell's overflow is stated for it: every
-// <dd> is 60px tall with 200px of content, which is what a clamped cookie is.
-function withOverflowingValueCells(run: () => void) {
-  Object.defineProperty(HTMLElement.prototype, "scrollHeight", {
-    configurable: true,
-    get(this: HTMLElement) {
-      return this.tagName === "DD" ? 200 : 0;
-    },
-  });
-  Object.defineProperty(HTMLElement.prototype, "clientHeight", {
-    configurable: true,
-    get(this: HTMLElement) {
-      return this.tagName === "DD" ? 60 : 0;
-    },
-  });
-  try {
-    run();
-  } finally {
-    delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight;
-    delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight;
-  }
-}
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.mocked(openDataWindow).mockClear();
+});
 
 test("while the flow is still loading, one sentence stands in for the whole panel", () => {
   render(<Detail split={still} api={stubApi()} flow={null} onClose={() => {}} />);
@@ -316,24 +299,110 @@ test("the panel never scrolls as a whole: headers are capped and scroll inside, 
   expect(pane.className).not.toMatch(/max-h-/);
 });
 
-test("a header value taller than three lines is clamped, and one act under its name shows the rest", () => {
-  const cookie = "session=" + "x".repeat(900);
-  withOverflowingValueCells(() => {
-    render(
-      <Detail split={still}
-        api={stubApi()}
-        flow={view({ request_headers: [{ name: "set-cookie", value: cookie }] })}
-        onClose={() => {}}
-      />,
-    );
-    const cell = screen.getByText(cookie).closest("dd")!;
-    expect(cell.className).toMatch(/max-h-value-clamp/);
-    expect(screen.getByRole("button", { name: "copy set-cookie" })).toHaveTextContent(cookie);
+const JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiI0MiIsIm5hbWUiOiJBZGEifQ.c2lnbmF0dXJl";
+const COOKIE = `session=${"x".repeat(4096)}; Path=/; HttpOnly`;
+const LONG_URI = `https://api.example.com/v2/search?${"term=abc&".repeat(228)}end=1`;
 
-    fireEvent.click(screen.getByRole("button", { name: "more of set-cookie" }));
-    expect(cell.className).not.toMatch(/max-h-value-clamp/);
-    expect(screen.getByRole("button", { name: "less of set-cookie" })).toBeInTheDocument();
+const longFlow = () =>
+  view({
+    uri: LONG_URI,
+    request_headers: [
+      { name: "Authorization", value: `Bearer ${JWT}` },
+      { name: "Cookie", value: COOKIE },
+      { name: "Accept", value: "*/*" },
+    ],
+    response_headers: [{ name: "Set-Cookie", value: COOKIE }],
   });
+
+const handed = () => vi.mocked(openDataWindow).mock.calls.map(([payload]) => payload);
+const textOf = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+
+test("every header value and the URI are one-line CopyTexts holding the whole value; no row offers more, less or an opener (DEC-78, Q1, Q3)", () => {
+  render(<Detail split={still} api={stubApi()} flow={longFlow()} onClose={() => {}} />);
+
+  const uri = screen.getByRole("button", { name: "copy uri" });
+  expect(uri).toHaveTextContent(LONG_URI);
+  expect(uri.className).toContain("truncate");
+  for (const [name, value] of [["Authorization", `Bearer ${JWT}`], ["Cookie", COOKIE], ["Accept", "*/*"]]) {
+    const cell = screen.getByRole("button", { name: `copy ${name}` });
+    expect(cell).toHaveTextContent(value);
+    expect(cell.className).toContain("truncate");
+  }
+  const rows = screen.getByTestId("headers-scroll");
+  expect(within(rows).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual([
+    "copy Authorization",
+    "copy Cookie",
+    "copy Accept",
+  ]);
+  expect(screen.queryByRole("button", { name: /^(more|less) of/ })).toBeNull();
+});
+
+test("a click on a cut value copies the whole of it", async () => {
+  const writeText = stubClipboard();
+  render(<Detail split={still} api={stubApi()} flow={longFlow()} onClose={() => {}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "copy Cookie" }));
+  await act(async () => {});
+  expect(writeText).toHaveBeenCalledWith(COOKIE);
+  expect(screen.getByText("copied").className).toContain("shrink-0");
+});
+
+test("the URI's open hands a data window the whole URI, from its button or from the keyboard in the flow line", () => {
+  render(<Detail split={still} api={stubApi()} flow={longFlow()} onClose={() => {}} />);
+  const line = screen.getByTestId("flow-line");
+
+  fireEvent.click(within(line).getByRole("button", { name: "open uri in data window" }));
+  fireEvent.keyDown(within(line).getByRole("button", { name: "copy uri" }), { key: "O", metaKey: true, shiftKey: true });
+
+  expect(handed()).toHaveLength(2);
+  for (const payload of handed()) {
+    expect(payload.key).toBe("f1:uri");
+    expect(textOf(payload.bytes)).toBe(LONG_URI);
+  }
+});
+
+test("open all, in the Headers heading, hands the leg's headers whole in wire order; so does the key in the headers zone", () => {
+  render(<Detail split={still} api={stubApi()} flow={longFlow()} onClose={() => {}} />);
+  const heading = screen.getByRole("heading", { name: "Headers · 3" });
+
+  const open = screen.getByRole("button", { name: "open all request headers in data window" });
+  expect(heading.parentElement).toContainElement(open);
+  fireEvent.click(open);
+  fireEvent.keyDown(screen.getByRole("button", { name: "copy Accept" }), { key: "o", ctrlKey: true, shiftKey: true });
+
+  expect(handed()).toHaveLength(2);
+  for (const payload of handed()) {
+    expect(payload.key).toBe("f1:request:headers");
+    expect(textOf(payload.bytes)).toBe(`Authorization: Bearer ${JWT}\nCookie: ${COOKIE}\nAccept: */*`);
+  }
+});
+
+test("open all follows the leg", () => {
+  render(<Detail split={still} api={stubApi()} flow={longFlow()} onClose={() => {}} />);
+
+  fireEvent.click(legRadio("response"));
+  fireEvent.click(screen.getByRole("button", { name: "open all response headers in data window" }));
+
+  expect(handed()[0].key).toBe("f1:response:headers");
+  expect(textOf(handed()[0].bytes)).toBe(`Set-Cookie: ${COOKIE}`);
+});
+
+test("a leg with no headers offers no open all, and the key opens nothing there", () => {
+  render(<Detail split={still} api={stubApi()} flow={view({ request_headers: [] })} onClose={() => {}} />);
+
+  expect(screen.getByText("none — this leg sent no headers")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /open all/ })).toBeNull();
+  fireEvent.keyDown(screen.getByTestId("headers-zone"), { key: "o", metaKey: true, shiftKey: true });
+  expect(openDataWindow).not.toHaveBeenCalled();
+});
+
+test("Cmd-Shift-O without Shift, or another letter, opens nothing", () => {
+  render(<Detail split={still} api={stubApi()} flow={longFlow()} onClose={() => {}} />);
+  const value = screen.getByRole("button", { name: "copy Accept" });
+
+  fireEvent.keyDown(value, { key: "o", metaKey: true });
+  fireEvent.keyDown(value, { key: "p", metaKey: true, shiftKey: true });
+  expect(openDataWindow).not.toHaveBeenCalled();
 });
 
 test("replay stands in the flow line beside copy as curl, and opens a draft of this flow", () => {

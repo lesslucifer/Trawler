@@ -197,17 +197,12 @@ describe("the body pane's size report", () => {
     expect(Math.max(...encoded)).toBeLessThanOrEqual(TEXT_MAX);
   });
 
-  // A text/*-labelled body is dispatched on its declared type, never on its
-  // bytes, so an unreadable one reaches this renderer. Its byte count and its
-  // decoded text's byte count then measure different things, and taking the
-  // first while measuring the shown slice with the second printed a marker that
-  // claimed to be showing three times the body that existed.
-  it("states no shown size larger than the total when the body will not decode", async () => {
+  it("renders a text/plain body that will not decode as hex, never as a lossy text with a size", async () => {
     const bytes = new Uint8Array(TEXT_MAX + 5000).fill(0xff);
-    const { container, findByTestId } = viewerOver(bytes, "text/plain");
-    await findByTestId("body-text");
+    const { findByTestId, queryByTestId } = viewerOver(bytes, "text/plain");
+    await findByTestId("body-hex");
 
-    expect(container.textContent).toContain("⚠ showing 384 KiB of 399 KiBopen in data window");
+    expect(queryByTestId("body-text")).toBeNull();
   });
 
   // A replacement character the body carries on purpose is valid UTF-8 and its

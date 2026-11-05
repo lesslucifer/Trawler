@@ -967,6 +967,37 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
+          <td><a href="dec-78-a-long-value-is-one-line-opened-whole.html"><code>dec-78-a-long-value-is-one-line-opened-whole.html</code></a></td>
+          <td><span class="badge id">DEC-78</span></td>
+          <td><strong>A long value is one line, opened whole.</strong> A wire value whose whole is one named act away in a data
+            window — its own <em>open</em>, or its section's <em>open all</em> — renders on one line with an end ellipsis; click still
+            copies the whole value; the column never widens. The second escape from <code>wrap-not-truncate</code> beside DEC-34;
+            the <em>more / less</em> clamp retires. Applies to header values (via <em>open all</em>) and the URI. Rejected: the clamp,
+            an opener per header value, middle ellipsis, a tooltip</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-79-the-bytes-decide-the-kind.html"><code>dec-79-the-bytes-decide-the-kind.html</code></a></td>
+          <td><span class="badge id">DEC-79</span></td>
+          <td><strong>The bytes decide the kind.</strong> <code>readKind(bytes, label?)</code> picks one of nine kinds (json · form ·
+            xml · html · javascript · css · text · hex · image) and says whether the label or the bytes decided. A whole parse beats
+            a label, a label beats a guess: a whole JSON object or array is json under every text label; an html signature or
+            well-formed XML beats a generic or failed label; JavaScript, CSS and form come only from a label or the picker; an
+            image label is never overruled. The pane says <em>served as …</em> when bytes overrule a label. Rejected: label-first,
+            window-only sniffing, guessing JS/CSS/form, JSON scalars as json, a picker in the pane</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-80-the-html-preview-holds-no-reach.html"><code>dec-80-the-html-preview-holds-no-reach.html</code></a></td>
+          <td><span class="badge id">DEC-80</span></td>
+          <td><strong>The HTML preview holds no reach.</strong> The html kind's read-only preview renders the working copy via
+            <code>srcdoc</code> in <code>&lt;iframe sandbox=""&gt;</code>, a CSP <code>&lt;meta&gt;</code> first
+            (<code>default-src 'none'; style-src 'unsafe-inline'; img-src data:</code>), meta refresh and <code>&lt;base&gt;</code>
+            removed, links aimed away and MathML addresses dropped (form-action <code>'none'</code>): no script, no request, no navigation, no IPC; proven by a real-window journey with a beacon. A source ⇄ preview toggle. Extends DEC-76. Rejected: a sanitized
+            render in the window's DOM, a load-remote switch, a rule on DEC-76, a second window</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
           <td><a href="dec-81-one-version-a-release-only-bundle-one-package-command.html"><code>dec-81-one-version-a-release-only-bundle-one-package-command.html</code></a></td>
           <td><span class="badge id">DEC-81</span></td>
           <td><strong>One version, a release-only bundle, one package command.</strong> The version is
