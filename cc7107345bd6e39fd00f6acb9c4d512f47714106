@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W11
+base: 5a9b9086daccb3e0b3adea95426e08a578cdc6e6
+design_sha256: 392968074e9446bb92eff85a03ef370c44acf790791d871f4ee035740ff505d0
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/DataWindowScreen.tsx
+    why: "the header's Caption takes the opener's heading instead of parsing the title, and decodeAt/the renumber leave the screen as drawn: the same what line, method label, host, path, query and parameter count, or the title whole when there is no heading"
+  - path: ui/src/components/EditSurface.tsx
+    why: "a TSDoc citation renumbered DEC-75 -> DEC-76 (E-GATEPAR2 landed DEC-75 first); nothing rendered changes"
+  - path: ui/src/components/FormTable.tsx
+    why: "a TSDoc citation renumbered DEC-75 -> DEC-76 (E-GATEPAR2 landed DEC-75 first); nothing rendered changes"
+  - path: ui/src/components/HexView.tsx
+    why: "a TSDoc citation renumbered DEC-75 -> DEC-76 (E-GATEPAR2 landed DEC-75 first); nothing rendered changes"
+date: 2026-11-05
