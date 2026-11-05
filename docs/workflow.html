@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Workflow Standard</h1>
       <p>How work is planned, gated and merged: epic → working unit → commit, one hook-enforced DoD gate per level, completeness proven from git notes — never from an agent's word.</p>
-      <div class="meta">v17 · 2026-09-18 · Trawler · T1 process doc</div>
+      <div class="meta">v18 · 2026-11-05 · Trawler · T1 process doc</div>
     </div>
   </header>
   <main>
@@ -371,9 +371,18 @@ cargo xtask debug serve [--port 48027]            # live browser view of the not
         <tr><td><code>commit-msg</code></td><td>if the staged diff touches rule-bearing docs (T0 <code>CLAUDE.md</code> / T1 flat <code>docs/</code>), refuses the commit unless the message carries a <code>Reviewed-By</code> trailer naming a listed authoriser (manual review at commit level — a presence check only: the hook runs before git signs, so a <code>key</code>-backed signature is verified later, at pre-push); T2/T3 doc commits pass untrailered (DEC-10); merge commits are skipped — their merged doc commits carried their own authorisation when they were created and pushed</td></tr>
         <tr><td><code>pre-push</code></td><td>full suite · auto-pushes <code>refs/notes/*</code> · range-checks standalone commits on <code>main</code>/<code>epic/*</code> pushes, incl. each rule-bearing (T0/T1) doc commit's authorisation (trailer listed; <code>gpgsig</code> verifies for a <code>key</code>-backed identity)</td></tr>
         <tr><td><code>pre-merge-commit</code></td><td>runs the gate on <code>MERGE_HEAD</code>: into <code>epic/*</code> ⇒ wu gate, into <code>main</code> ⇒ epic gate; docs/infra-only merges pass ungated unless they carry a design artifact; red refuses the merge</td></tr>
-        <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup</td></tr>
+        <tr><td><code>post-checkout</code></td><td>heals <code>merge.ff = false</code> · worktree setup · seeds a new worktree's own <code>target/</code> with third-party artifacts only (<a href="decisions/dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>)</td></tr>
       </tbody>
     </table>
+
+    <table data-c="hooks-checkout">
+      <thead><tr><th>Each checkout must</th><th>Set by</th><th>A gate refuses otherwise, printing</th></tr></thead>
+      <tbody>
+        <tr><td>run the hooks it carries: <code>core.hooksPath</code> = <code>.cargo-husky/hooks</code> (relative), every tracked hook executable (<a href="decisions/dec-72-git-runs-the-tracked-hooks.html">DEC-72</a>)</td><td><code>cargo xtask hooks install</code>, once per clone</td><td><code>cargo xtask hooks install</code> · or the <code>chmod +x</code> line</td></tr>
+        <tr><td>build into its own <code>target/</code>, never a symlink (<a href="decisions/dec-73-each-worktree-builds-into-its-own-target.html">DEC-73</a>)</td><td><code>post-checkout</code> (new worktree) · <code>cargo xtask target isolate</code> (old one)</td><td><code>cargo xtask target isolate</code></td></tr>
+      </tbody>
+    </table>
+    <p>The gates checked: <code>verify-dod</code>, <code>gate0</code>, <code>lint</code>, <code>preflight</code>. <code>cargo xtask target prune</code> trims a checkout's <code>target/</code> back to its third-party artifacts.</p>
 
     <p data-c="harness-hooks">Those are the git hooks. The <strong>harness hooks</strong> the DoD rows
     above cite — <code>PostToolUse</code> and <code>Stop</code>, running <code>verify-doc</code> at
