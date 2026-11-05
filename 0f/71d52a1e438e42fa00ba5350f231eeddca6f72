@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-INSPWIN
+wu: E-INSPWIN.W10
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-05-inspect-window-w10-json-escape-decode-plan.html"
+    tier: T3
+    action: added
+    distills: "W10 plan: decode in a JSON surface starts after an escape"
+  - path: "docs/work/2026-11-05-inspect-window-w10-json-escape-decode-result.html"
+    tier: T3
+    action: added
+    distills: "W10 result"
+t2_waived: "nothing citable: UC-9 and DEC-75 rule 11 already say decode reads the value and replace applies it to the working copy; the JSON surface now does what they say"
