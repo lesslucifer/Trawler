@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 0762260cb571f65bb2a6d746222b26ba9d7f0fb1
+base: 2913e91dddbfeb72fcc87555d0890ee694902be0
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-query-bar-w4-e2e-result.html
+report_sha256: fb5c92b8736f05773ce4f8562afcddbf44043d4ee3ffa1bce22f6b69f3c52aa1
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAiIP0Ts1L8p8HfQVKuO7+HlHW2rL8JKkKj7BYwgcM805UidiQt/eyVhj
+  npL6Hzyd1LY7FroBcQa0urF1e3vfQI
+  -----END SSH SIGNATURE-----
