@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU E-PKG2.W4 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: wu/packaging-v2/release-workflow
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+head: 0ff9dd8f9b74d49f3452d73d4fb48c47b53b7043
+diff_sha256: 9d360a3463b92839b32c7a0c48605331f6d440431d8819c248c0f66d9c2a367f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 4
+  stage_seconds:
+    gate0: 0
+    finders: 60
+    verifiers: 20
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 4, verified: 1 }
+findings: { found: 6, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "release_manifest restates the updater-key vocabulary in keys_of and required_keys (verifier: important refuted to nit)"
+    waived: "required_keys is the release contract and keys_of the recogniser; a rename in either fails the full-release test loudly"
+  - finding: "smoke::pick restates the per-OS installer suffixes"
+    waived: "it picks one installer per OS and a mismatch fails loudly (the build left no ... to smoke-test)"
+  - finding: "smoke calls package::plan with UNIVERSAL_PARTS as a fake installed list to get the bundle dir"
+    waived: "deliberate and tested (release_workflow ties each row's upload dir to package::plan); a separate helper would be a second path to the same dir"
+  - finding: "no test covers a universal build-then-bundle"
+    waived: "the macos-universal row of the first rc tag is the proof (W6), as the test note's e2e waiver declares"
+  - finding: "smoke's reader thread closes the core's stdout after the ready line"
+    waived: "the core writes stdout only once (the ready line), so nothing observable changes"
+verdict: FAIL
+date: 2026-11-06
