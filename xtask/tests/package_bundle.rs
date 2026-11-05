@@ -2,19 +2,11 @@
 #![allow(clippy::unwrap_used)] // test code - panicking on setup failure is the assertion
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
-use std::sync::mpsc;
-use std::time::{Duration, Instant};
+use std::process::Command;
 
 const PROFILE: &str = "package-test";
-const LAUNCHD_PATH: &str = "/usr/bin:/bin:/usr/sbin:/sbin";
 const WEBDRIVER_MARK: &str = "wdioTauri";
-const CAPTURED_PATH: &str = "/packaged-capture";
-// macOS assesses a freshly signed binary before its first run.
-const PATIENCE: Duration = Duration::from_mins(2);
 
 fn repo() -> PathBuf {
     xtask::repo_root().unwrap()
@@ -63,7 +55,7 @@ fn a_plain_build_after_an_e2e_bundle_embeds_a_release_bundle() {
 }
 
 #[test]
-fn a_package_is_ad_hoc_signed_and_its_binary_captures_under_a_launcher_env() {
+fn a_package_is_ad_hoc_signed_and_passes_the_release_smoke() {
     let repo = repo();
     let _turn = exclusive(&repo);
     let ui = repo.join("ui");
@@ -86,111 +78,15 @@ fn a_package_is_ad_hoc_signed_and_its_binary_captures_under_a_launcher_env() {
     let dmgs = std::fs::read_dir(bundle.join("dmg")).unwrap().flatten();
     assert!(dmgs.into_iter().any(|e| e.path().extension().is_some_and(|ext| ext == "dmg")));
 
-    let home = tempfile::tempdir().unwrap();
-    let mut core = CoreProcess::launch(&only_executable(&app), home.path());
-    let (proxy, api) = core.ready();
-    let origin = serve_once();
-    let through_proxy = http(
-        proxy,
-        &format!("GET http://{origin}{CAPTURED_PATH} HTTP/1.1\r\nHost: {origin}\r\nConnection: close\r\n\r\n"),
+    let smoked = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["smoke", "--profile", PROFILE])
+        .current_dir(&repo)
+        .output()
+        .unwrap();
+    assert!(
+        smoked.status.success(),
+        "cargo xtask smoke --profile {PROFILE}: {}{}",
+        String::from_utf8_lossy(&smoked.stdout),
+        String::from_utf8_lossy(&smoked.stderr)
     );
-    assert!(through_proxy.starts_with("HTTP/1.1 200"), "{through_proxy}");
-    assert!(captured(api), "GET /flows never listed {CAPTURED_PATH}");
-    core.stop();
-}
-
-fn only_executable(app: &Path) -> PathBuf {
-    let mut binaries: Vec<PathBuf> = std::fs::read_dir(app.join("Contents/MacOS"))
-        .unwrap()
-        .flatten()
-        .map(|entry| entry.path())
-        .collect();
-    assert_eq!(binaries.len(), 1, "one executable in the .app: {binaries:?}");
-    binaries.remove(0)
-}
-
-struct CoreProcess {
-    child: Child,
-}
-
-impl CoreProcess {
-    fn launch(binary: &Path, home: &Path) -> Self {
-        let child = Command::new(binary)
-            .env_clear()
-            .env("PATH", LAUNCHD_PATH)
-            .env("HOME", home)
-            .current_dir("/")
-            .arg("--core")
-            .arg("--ca-dir")
-            .arg(home.join("ca"))
-            .args(["--proxy-port", "0", "--api-port", "0"])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .unwrap();
-        Self { child }
-    }
-
-    fn ready(&mut self) -> (SocketAddr, SocketAddr) {
-        let stdout = self.child.stdout.take().unwrap();
-        let (sent, line) = mpsc::channel();
-        std::thread::spawn(move || {
-            let mut first = String::new();
-            let _ = BufReader::new(stdout).read_line(&mut first);
-            let _ = sent.send(first);
-        });
-        let line = line.recv_timeout(PATIENCE).expect("the core printed its ready line");
-        let ready: serde_json::Value = serde_json::from_str(&line).expect("a ready line");
-        let addr = |key: &str| ready[key].as_str().unwrap().parse().unwrap();
-        (addr("proxy"), addr("api"))
-    }
-
-    fn stop(mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
-    }
-}
-
-impl Drop for CoreProcess {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-    }
-}
-
-fn serve_once() -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.local_addr().unwrap();
-    std::thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap();
-        let mut request = BufReader::new(stream.try_clone().unwrap());
-        let mut line = String::new();
-        while request.read_line(&mut line).is_ok_and(|n| n > 0) && line != "\r\n" {
-            line.clear();
-        }
-        let _ = stream
-            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok");
-    });
-    addr
-}
-
-fn http(to: SocketAddr, request: &str) -> String {
-    let mut stream = TcpStream::connect(to).unwrap();
-    stream.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
-    stream.write_all(request.as_bytes()).unwrap();
-    let mut response = String::new();
-    let _ = stream.read_to_string(&mut response);
-    response
-}
-
-fn captured(api: SocketAddr) -> bool {
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while Instant::now() < deadline {
-        let flows =
-            http(api, &format!("GET /flows HTTP/1.1\r\nHost: {api}\r\nConnection: close\r\n\r\n"));
-        if flows.contains(CAPTURED_PATH) {
-            return true;
-        }
-        std::thread::park_timeout(Duration::from_millis(100));
-    }
-    false
 }

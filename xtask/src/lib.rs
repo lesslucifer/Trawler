@@ -10,6 +10,8 @@ pub mod notes;
 pub mod notes_write;
 pub mod package;
 pub mod preflight;
+pub mod release_manifest;
+pub mod smoke;
 pub mod tally;
 pub mod target;
 pub mod ui;
@@ -47,7 +49,9 @@ usage:
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
   cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
   cargo xtask dod list [--epic <id>]
-  cargo xtask package [--universal] [--profile <name>]       (the host's installers under target/[<triple>/]<profile>/bundle; macOS: ad-hoc signed and verified; --universal: both Mac architectures)
+  cargo xtask package [--universal] [--profile <name>] [--build-only|--bundle-only|--sign-only] (the host's installers under target/[<triple>/]<profile>/bundle; macOS: ad-hoc signed and verified, plus the updater's .app.tar.gz; --universal: both Mac architectures; --build-only compiles, --bundle-only then bundles it, --sign-only then writes each updater target's .sig with TAURI_SIGNING_PRIVATE_KEY)
+  cargo xtask release-manifest <dist-dir> --tag v<version> --repo <owner/name> --pub-date <rfc3339>  (latest.json + notes.md beside the release artifacts; refuses a missing signature or platform)
+  cargo xtask smoke [--universal] [--profile <name>]          (install the package's own installer in a temp dir, run its core headless: a request through the proxy is captured, the CA is served, quitting frees both ports)
   cargo xtask ui build                                        (pnpm install + build → ui/dist/)
   cargo xtask ui dev                                          (pnpm install + launch the Tauri window)
   cargo xtask ui bench                                        (pnpm install + run the perf benchmarks)
@@ -86,6 +90,8 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["package", rest @ ..] => package::run(rest, repo),
+        ["smoke", rest @ ..] => smoke::run(rest, repo),
+        ["release-manifest", rest @ ..] => release_manifest::run(rest, repo),
         ["ui", rest @ ..] => ui::run(rest, repo),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),
