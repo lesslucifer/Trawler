@@ -1,0 +1,51 @@
+schema: cr/v5
+scope: "epic inspect-window -> main (round 4, judged at the W11 tip 04f51374, whose code the epic tip carries byte-for-byte)"
+epic: E-INSPWIN
+branch: epic/inspect-window
+base: 36d5d839abbc9d1b0e94beaf1152f58ce28070a6
+head: 6cb1beaa42eb71ae1df6b7064130d6ddf3a1a6f1
+diff_sha256: 16e1b54de86d1bcc9ea176fd3e5db5da14e3ca7240747742d2d5add4e1934af0
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 10
+  stage_seconds:
+    gate0: 46
+    finders: 166
+    verifiers: 46
+    total: 212
+  by_finder:
+    correctness: { found: 6, verified: 5 }
+    efficiency: { found: 4, verified: 4 }
+    altitude: { found: 2, verified: 1 }
+findings: { found: 12, verified: 10, waived: 0 }
+waivers: []
+nits:
+  - finding: "the found and pairs memos run findMatches/findInPairs and parsePairs on the live text each keystroke, not on the settled copy"
+    waived: "linear in the payload, capped at MATCH_LIMIT matches, and run only while a find query is open or the form kind shows; settling them on the 250 ms copy would show a match count for text the user has already changed; not measured, left for a perf WU if a large form lags"
+  - finding: "workingCopy commit re-sums heldAfterOriginal per eviction step"
+    waived: "the steps are bounded by HISTORY_BUDGET; eviction runs only when a commit crosses it, over a handful of steps"
+  - finding: "EditSurface rebuilds the whole document string on every edit transaction"
+    waived: "the working copy is text by design (DEC-76 rule 4: each step holds the text); amend coalesces typing and the settled copy gates the derived views"
+  - finding: "findBytes folds case per byte with no first-byte skip, O(n*m)"
+    waived: "the hex query is a few bytes and matches stop at MATCH_LIMIT; the hex surface is virtualised"
+  - finding: "bodyPayload (window key, title, heading) lives in body.ts rather than beside dataWindow.ts"
+    waived: "bodyPayload is the body pane's opener: it reads the flow, leg and fetched body the pane owns and hands DataPayload over; the payload type and its transport stay in dataWindow.ts"
+  - finding: "contentKey hashes only the bytes, so the same bytes opened with another type hint focus the first window"
+    waived: "DEC-76 rule 3: one window per key, and the decoded bytes are the key's content; the hint is the opener's guess, overridable in the window's 'treat the data as'"
+  - finding: "contentKey needs crypto.subtle, absent in an insecure browser context, and its rejection is unhandled"
+    waived: "the browser fallback runs on vite's localhost, a secure context; the native app is always one"
+  - finding: "dateTimeAround takes lineFrom past range.from when the text begins with a newline and the range starts at 0"
+    waived: "no value exists on an empty first line; the overlap guard keeps any match inside the range"
+  - finding: "an XML parse error's column on line 1 is off by one when the text carries a BOM"
+    waived: "the message names line and column of a refusal the user reads; the BOM is invisible and rare in XML bodies"
+  - finding: "the heading's query takes a #fragment and queryCount counts its &-parts"
+    waived: "a captured request URI carries no fragment (clients do not send it); the heading shows what the flow's uri holds"
+verdict: PASS
+date: 2026-11-05
