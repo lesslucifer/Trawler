@@ -1,0 +1,23 @@
+schema: cr/v5
+scope: "standalone commit 72472a37 on epic/bg-service"
+base: 9d3218b0d46655df0ce9879a58af31a48d5fb6c3
+head: 72472a3764126201cb65b608bf58f8a8a618879a
+diff_sha256: 9a34753b947f7d3aee66053dc77f14e67d78cd1ce06e0a8c44497e76fd5e837b
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 0
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
