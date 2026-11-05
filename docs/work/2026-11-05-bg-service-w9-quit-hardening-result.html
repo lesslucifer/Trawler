@@ -38,6 +38,7 @@
       <tr><td>finding 1: keep the flag after a failed build</td><td>the flag is cleared</td><td>a kept flag makes the next Open quit unasked, which is finding 2</td></tr>
       <tr><td>finding 2: clear the flag when the main window is destroyed</td><td>the flag is taken and the request re-issued when the app stays</td><td>plain clearing drops a request whose new window was built before the old Destroyed event ran (the generation hole the brief hints at); re-issuing answers it once</td></tr>
       <tr><td>integration test that fails on the old code, finding 2</td><td>the mock runtime emits no Destroyed event and keeps a destroyed window listed, so the test calls <code>on_window_destroyed</code> on an app with no window and a pending flag</td><td>that is the state the handler meets; the old handler builds nothing and the test times out waiting for the window</td></tr>
+      <tr><td>—</td><td>the refusal notice is cleared when the question is asked again</td><td>review round 1's correctness finder: a quit request closing the question left the notice set, and the next ✕ showed it before any save. A test fails on the old code</td></tr>
     </table>
 
     <h2 id="not-reviewed">What no independent review covers</h2>
@@ -53,7 +54,7 @@
       <tr><td>unit (cargo)</td><td><code>lifecycle.rs</code>: <code>an_attempt_is_retried_once_and_only_once</code></td></tr>
       <tr><td>integration</td><td><code>outlive_window.rs</code> (+3): no buildable window · pending request at a destroyed main window · nothing pending</td></tr>
       <tr><td>unit (vitest)</td><td><code>closeConfirm.test.tsx</code> (failed write keeps the question, names the reason, cancel clears it) · <code>KeepCapturingDialog.test.tsx</code> (+1)</td></tr>
-      <tr><td>commits</td><td>plan <code>2af9ba5d</code> · code <code>2c566124</code> · this report</td></tr>
+      <tr><td>commits</td><td>plan <code>2af9ba5d</code> · code <code>2c566124</code> · round 1 fix <code>93fce20a</code> · this report</td></tr>
     </table>
 
     <h2 id="distillation">Distillation</h2>
