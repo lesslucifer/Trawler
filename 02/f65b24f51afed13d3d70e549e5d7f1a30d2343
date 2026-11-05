@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 02f65b24f51afed13d3d70e549e5d7f1a30d2343
+base: 18bf728ba3fa0de3d88a83068fd98d295516fbc0
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w9-quit-hardening-result.html
+report_sha256: 7f860b8761d9ae7b36203663ea5440ada08abcb02737266cdda5e3c9091bfc13
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECLUByNy4IjwQvTWFife/W26oT74x+rJ8dsuTEvAWheMSJIhON8BQsTnB
+  fi3QuHRzwDf9ConUO4rFBPuxwg4aAM
+  -----END SSH SIGNATURE-----
