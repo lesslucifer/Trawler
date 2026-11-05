@@ -21,7 +21,8 @@
       all three native surfaces re-designed and rebuilt by <span class="badge id">E-REDESIGN</span> ·
       UC-4's failure states, status class and pane width by <span class="badge id">E-RFINISH</span> ·
       UC-3/UC-4 paging + provenance + UC-4's capture-management controls + UC-6 (incl. the curl paste)
-      + UC-7 by <span class="badge id">E-EXPORT</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
+      + UC-7 by <span class="badge id">E-EXPORT</span> · the listing's lists, <code>not_</code> and <code>is</code> by
+      <span class="badge id">E-QUERY.W1</span> · UC-8 by <span class="badge id">E-REPLAY</span> ·
       UC-ONBOARD's moves and dot by E-ONBRVP.W1, its state words, own request and scannable code, and UC-4's
       way into setup, by <span class="badge id">E-ONBRVP.W2</span> · This machine's status by
       <span class="badge id">E-ONBRVP.W3</span> · UC-SVC by <span class="badge id">E-ONEAPP.W3</span></div>    </div>
@@ -63,17 +64,22 @@
       base layout and updates live as new traffic passes the proxy, via the existing
       <code>GET /stream</code> SSE stream.</p>
       <ul>
-        <li>A filter bar narrows the list by host, method, status and free text — the same
-        <code>GET /flows</code> query-parameter semantics as UC-3, because the app delegates filtering
-        to the API rather than reimplementing it. Status color distinguishes 2xx / 4xx / 5xx at a glance.
-        <strong>The two keys the API matches exactly are chosen, not typed</strong>: method from the closed
-        set of verbs, host from the hosts capture has seen, each with an "any" option that clears it. Free
-        text and status stay typed — the API substring-matches the first, and reads the second at either
-        resolution: <code>status=404</code> is the exact code and <code>status=4xx</code> the class, with
-        anything that names neither refused as a stated <code>400</code> rather than an empty list
-        (<span class="badge id">E-RFINISH</span>). The status control takes either resolution and says so
-        in its placeholder — <code>status — 404 or 4xx</code> — and a refusal is rendered rather than
-        swallowed (below).</li>
+        <li><strong>One query bar of filter chips</strong> (<span class="badge id">E-QUERY</span>, <a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>) narrows
+        the list. Status color distinguishes 2xx / 4xx / 5xx at a glance. The grammar is the app's, and each chip is
+        sent as one <code>GET /flows</code> parameter (<a href="#listing-paging">the listing</a>), so an API client
+        writes the same query directly. Text (<code>login</code>, <code>"two words"</code>) is a substring of the
+        URI, sent as <code>q=</code>, and several text chips match all of them. A keyed chip (<code>host:</code>
+        <code>method:</code> <code>status:</code> <code>type:</code> <code>source:</code> <code>is:</code>) is sent
+        under its key (<code>type</code> as <code>content_type</code>), and the same key twice matches either.
+        <code>status</code> takes <code>404</code> or <code>4xx</code>, <code>is</code> takes <code>pending</code> or
+        <code>https</code>. A <code>-</code> before either hides what it would select, sent as
+        <code>not_&lt;key&gt;=</code>. Typing writes a draft and suggestions follow it: the keys, then that key's
+        values (the hosts seen, the verbs, the status classes, types, sources and states). Enter or Tab takes the
+        highlighted suggestion, Space takes the draft as typed, and a draft that does not parse stays a draft and says
+        why. The list moves only when a chip is added or removed, never on a keystroke. A chip goes by its × or by
+        Backspace in an empty draft. ⌘F focuses the bar, and the chips come back after a relaunch. A value the core
+        still refuses marks the chip that sent it, and the list region names it rather than going silently empty
+        (below).</li>
         <li><strong>One launch, one app</strong> (<span class="badge id">E-ONEAPP.W2</span>,
         <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>): the app runs its core as a
         child process on <code>:7420</code>/<code>:7421</code> and opens its window once that core is ready. A taken
@@ -109,8 +115,10 @@
         <td>Nothing captured yet names the proxy address to send traffic to; a filter that excludes the
         traffic says so and names the act that widens it. One sentence previously served both, telling users
         to send traffic they had already sent.</td></tr>
-        <tr><td>An exactly-matched filter is <strong>chosen rather than typed</strong></td>
-        <td>Method and host are dropdowns. Typing <code>GE</code> into the old free-text method box
+        <tr><td><s>An exactly-matched filter is <strong>chosen rather than typed</strong></s> — reversed by
+        <a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>: every filter is typed into the query bar, and a draft that cannot be satisfied stays a draft that
+        says why, which keeps what the dropdowns protected</td>
+        <td>Method and host were dropdowns. Typing <code>GE</code> into the old free-text method box
         returned an empty list indistinguishable from no traffic, because the server matches the verb
         whole — a query the user could write but never satisfy. What the dropdown costs is stated: a
         partial host (<code>api.</code> matching every API host) is no longer expressible there, and the
@@ -254,7 +262,11 @@
       WebdriverIO drives the real WebKit window against an ephemeral <code>run(Config)</code> core — empty
       layout renders, a proxied request appears live carrying every column, the status pill carries its
       reason phrase, the filter narrows and restores, an unmatched filter states its own absence, the
-      keyboard alone selects a row and opens its detail, and a second request appends without refresh. Three
+      keyboard alone selects a row and opens its detail, and a second request appends without refresh. The query bar (<span class="badge id">E-QUERY.W4</span>) is walked in
+      <code>query-bar.spec.ts</code> and <code>query-bar-relaunched.spec.ts</code> over imported and proxied flows:
+      ⌘F, chips built from suggestions alone with no listing while typing, a host with its port, repeated, negated
+      and combined keys, two text chips, a misspelt key that stays a draft, Backspace, the window's query exported
+      and cleared exactly, and the chips restored after a real quit. Three
       assertions came with the second pass: a status class narrows the list to that class while 2xx and 5xx
       traffic is present and an exact code still narrows to the code; the core is killed under the open
       window and the band appears above rows whose count is unchanged; and its control — a reachable core
@@ -288,8 +300,26 @@
             Every row also carries <code>seed</code>: the flow a sent one was replayed from, <code>null</code> otherwise</td>
           </tr>
           <tr>
-            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is none of the three</td>
-            <td>refused <code>400</code> with a reason naming the parameter — never an unbounded read a client did not ask for, and never a silently empty listing that reads like "nothing matched"</td>
+            <td><code>?host=a&amp;host=b</code> · <code>?q=login&amp;q=token</code> (<span class="badge id">E-QUERY.W1</span>)</td>
+            <td>a repeated <code>q</code> matches <strong>all of</strong> its values; any other repeated key matches
+            <strong>any of</strong> them; different keys combine as all of. A single parameter selects what it did before
+            (<a href="../decisions/dec-71-a-filter-is-a-chip-the-core-stays-keyed.html">DEC-71</a>)</td>
+          </tr>
+          <tr>
+            <td><code>?not_method=OPTIONS</code> · <code>not_&lt;key&gt;</code> for every key, repeatable</td>
+            <td>every flow the key would select, removed. <code>not_status=5xx</code> keeps a flow with no response yet</td>
+          </tr>
+          <tr>
+            <td><code>?is=pending</code> · <code>?is=https</code></td>
+            <td>flows with no response yet · flows requested over https</td>
+          </tr>
+          <tr>
+            <td><code>?host=localhost:8080</code></td>
+            <td><code>host</code> is a substring of the host, or of host:port when the URI names a port</td>
+          </tr>
+          <tr>
+            <td>a <code>limit</code> that is not a positive integer · a <code>cursor</code> that is not a flow id · a <code>cursor</code> with no <code>limit</code> · a <code>source</code> that is none of the three · a <code>status</code> that names no code or class · an <code>is</code> that is neither state, in either form</td>
+            <td>refused <code>400</code> with a reason led by the parameter as sent (<code>not_status must be …</code>) — never an unbounded read a client did not ask for, and never a silently empty listing that reads like "nothing matched"</td>
           </tr>
         </tbody>
       </table>
@@ -1038,7 +1068,8 @@ the client lacks the certificate"]
             <code>timings</code> block, and its bodies</td>
           </tr>
           <tr>
-            <td><code>GET /flows/export?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…</code></td>
+            <td><code>GET /flows/export?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…</code>, with every
+            listing form: repeated keys, <code>not_&lt;key&gt;</code>, <code>is</code></td>
             <td>the same document over the filtered set: <strong>the export selects exactly what
             the listing with those parameters lists</strong>, in the same order — the same filter,
             not a second implementation of it</td>
@@ -1225,7 +1256,8 @@ the client lacks the certificate"]
             answers with, so both mutating endpoints report what they did</td>
           </tr>
           <tr>
-            <td><code>DELETE /flows?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…&amp;source=…</code></td>
+            <td><code>DELETE /flows?host=…&amp;method=…&amp;status=…&amp;content_type=…&amp;q=…&amp;source=…</code>, with
+            every listing form: repeated keys, <code>not_&lt;key&gt;</code>, <code>is</code></td>
             <td>only the matching rows leave: <strong>a delete selects exactly what the listing
             with those parameters lists</strong> — the same filter as the listing and the export,
             not a third implementation. Every survivor stays whole: still listed, still readable
@@ -1234,7 +1266,7 @@ the client lacks the certificate"]
           <tr>
             <td>a filter matching nothing</td>
             <td><code>200</code> with <code>{ "removed": 0 }</code> — the request expresses an end
-            state and that state is already true. An unrecognised <code>source=</code> is the
+            state and that state is already true. A value the listing refuses is the
             exception: <code>400</code> with a reason, because a destructive request must never
             act on a set the caller did not name</td>
           </tr>
