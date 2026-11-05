@@ -19,7 +19,9 @@ Generated CA in `ca/` (headless, git-ignored) or the app's data dir (app).
 **Commands**: `cargo run` (the app, owning its core) · `cargo run -p trawler`
 (headless core; `RUST_LOG=trawler=debug` for logs) · `cargo test` (needs
 Node + pnpm; `-p trawler` = core only) · `cargo clippy` ·
-`cargo xtask ui build|dev|e2e` (front-end bundle · HMR window · WebDriver e2e).
+`cargo xtask ui build|dev|e2e` (front-end bundle · HMR window · WebDriver e2e) ·
+`cargo xtask hooks install` (once per clone: git runs the tracked
+`.cargo-husky/hooks/` via `core.hooksPath`; every gate refuses without it).
 Quick check (either run): `curl -x http://127.0.0.1:7420 http://example.com/`
 → `curl http://127.0.0.1:7421/flows`.
 

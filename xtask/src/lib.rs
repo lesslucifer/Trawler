@@ -3,11 +3,13 @@ pub mod doc;
 pub mod gate;
 pub mod gate0;
 pub mod git;
+pub mod hooks;
 pub mod mr;
 pub mod notes;
 pub mod notes_write;
 pub mod preflight;
 pub mod tally;
+pub mod target;
 pub mod ui;
 pub mod walkthrough;
 pub mod wizard;
@@ -33,6 +35,10 @@ usage:
   cargo xtask tally [--fleet]                                (local gate tally: refused check ids per level, review rounds per tip; --fleet: what each round's fleet cost, from the cr notes' fleet: blocks)
   cargo xtask gate0                                          (fmt+clippy+tests, skipped when the tree is unchanged since last green)
   cargo xtask lint                                           (pre-commit hook: fmt+clippy, skipped when this tree content already passed them)
+  cargo xtask hooks install                                  (git runs the tracked .cargo-husky/hooks/ in every worktree; the gates above refuse a checkout without it)
+  cargo xtask target seed                                    (this checkout's absent target/ gets the main checkout's third-party artifacts, cloned copy-on-write)
+  cargo xtask target isolate [<checkout>]                    (a symlinked target/ becomes the checkout's own, seeded; the gates above refuse a symlinked one)
+  cargo xtask target prune                                   (drop workspace-crate artifacts, incremental/ and uplifted files from target/; prints what it freed)
   cargo xtask mr setup [--as <id>] [--key <path>]            (wizard: pick + register an auth method; args skip prompts)
   cargo xtask mr commit [-m <msg>] [--as <id>]               (doc commit: Reviewed-By trailer; signs if <id> is a key)
   cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
@@ -51,6 +57,14 @@ pub fn repo_root() -> Result<PathBuf, String> {
 
 pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
     let strs: Vec<&str> = args.iter().map(String::as_str).collect();
+    if is_gate(&strs) {
+        if let Some(refusal) = hooks::refusal(repo)? {
+            return Ok((1, refusal));
+        }
+        if let Some(refusal) = target::refusal(repo) {
+            return Ok((1, refusal));
+        }
+    }
     match strs.as_slice() {
         ["verify-dod", rest @ ..] => verify_dod(rest, repo),
         ["verify-doc", paths @ ..] if !paths.is_empty() => doc::run_paths(repo, paths),
@@ -60,12 +74,21 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["tally", rest @ ..] => tally::run(rest, repo),
         ["gate0"] => gate0::gate0(repo),
         ["lint"] => gate0::lint(repo),
+        ["hooks", rest @ ..] => hooks::run(rest, repo),
+        ["target", rest @ ..] => target::run(rest, repo),
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["ui", rest @ ..] => ui::run(rest, repo),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),
     }
+}
+
+// The commands a git hook or the merge ritual runs. A gate in a checkout whose
+// git runs some other copy of the hooks would vouch for a process that is not
+// the one enforcing it.
+fn is_gate(args: &[&str]) -> bool {
+    matches!(args.first(), Some(&("verify-dod" | "gate0" | "lint" | "preflight")))
 }
 
 fn verify_dod(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
@@ -366,7 +389,39 @@ pub(crate) fn infer_wu_target(tip: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{flag_value, infer_wu_target};
+    use super::{flag_value, infer_wu_target, is_gate};
+
+    #[test]
+    fn the_hook_and_merge_entrypoints_are_gated() {
+        for gate in
+            [&["verify-dod", "hook", "wu"][..], &["gate0"], &["lint"], &["preflight", "wu", "x"]]
+        {
+            assert!(is_gate(gate), "{gate:?} must refuse a checkout whose git runs other hooks");
+        }
+    }
+
+    #[test]
+    fn a_symlinked_target_refuses_the_gates_after_the_hooks_check() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let shared = dir.path().join("shared");
+        std::fs::create_dir(&shared).unwrap();
+        let repo = dir.path().join("wt");
+        std::fs::create_dir(&repo).unwrap();
+        #[cfg(unix)]
+        std::os::unix::fs::symlink(&shared, repo.join("target")).unwrap();
+        let (code, said) = super::run(&["lint".to_string()], &repo).unwrap();
+        assert_eq!(code, 1);
+        assert!(said.contains(crate::target::ISOLATE), "{said}");
+    }
+
+    // `hooks install` is the refusal's own fix, and verify-doc runs from the
+    // harness on files anywhere: gating either would strand the caller.
+    #[test]
+    fn the_fix_and_the_non_gate_commands_stay_reachable() {
+        for open in [&["hooks", "install"][..], &["verify-doc", "a.html"], &["mr", "setup"], &[]] {
+            assert!(!is_gate(open), "{open:?} must run in an uninstalled checkout");
+        }
+    }
 
     // `design-scope` tells a reader which note to write the verdict to. It said
     // `cr/v3` for a whole epic after DEC-46 moved the verdict to `design/v1`,
