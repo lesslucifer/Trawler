@@ -1,0 +1,29 @@
+schema: cr/v5
+scope: "WU inspect-window/close -> epic/inspect-window"
+epic: E-INSPWIN
+wu: E-INSPWIN.W9
+branch: wu/inspect-window/close
+base: 374502e4ac6ee3c4e6b68b00f731df2018787fa0
+head: 3635b9e974c3f40cbf17c0b9a35002564f80828b
+diff_sha256: 19314b6fa32f6af0694d7b49e0997cc2511178f72d8af7f7d6e20eb80db4e137
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 16
+    total: 41
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-05
