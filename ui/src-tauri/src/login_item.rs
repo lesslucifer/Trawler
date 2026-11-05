@@ -324,6 +324,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_bundled_agent_is_named_by_the_label_and_starts_with_the_background_flag() {
+        let shell = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let plist =
+            std::fs::read_to_string(shell.join(format!("launch-agent/{LABEL}.plist"))).unwrap();
+        assert!(plist.contains(&format!("<string>{LABEL}</string>")), "{plist}");
+        assert!(plist.contains(&format!("<string>{BACKGROUND_FLAG}</string>")), "{plist}");
+        let conf = std::fs::read_to_string(shell.join("tauri.conf.json")).unwrap();
+        assert!(conf.contains(&format!("\"identifier\": \"{LABEL}\"")), "{conf}");
+        assert!(
+            conf.contains(&format!(
+                "\"Library/LaunchAgents/{LABEL}.plist\": \"launch-agent/{LABEL}.plist\""
+            )),
+            "{conf}"
+        );
+    }
+
+    #[test]
     fn a_path_a_login_entry_cannot_name_is_refused_before_anything_is_written() {
         let root = tempfile::tempdir().unwrap();
         let split = Path::new("/opt/trawler\nName=Other/trawler-ui");

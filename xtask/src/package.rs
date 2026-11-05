@@ -266,6 +266,16 @@ pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn the_checked_agent_path_is_the_one_the_bundle_places() {
+        let conf = std::fs::read_to_string(
+            crate::repo_root().unwrap().join("ui/src-tauri/tauri.conf.json"),
+        )
+        .unwrap();
+        let placed = LOGIN_AGENT.strip_prefix("Contents/").unwrap();
+        assert!(conf.contains(&format!("\"{placed}\":")), "{conf}");
+    }
+
     fn options(universal: bool, profile: Option<&str>) -> Options {
         Options { universal, profile: profile.map(str::to_string) }
     }

@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, writeFileSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -46,29 +46,17 @@ function clearSavedState() {
   for (const file of SAVED_STATE) rmSync(file, { force: true });
 }
 
-// The user's keep-capturing answer would keep the app running windowless after
-// quitTheApp destroys its window, so the run holds it aside and stores off. The
-// kept file always exists while a run holds the answer, empty when the user had
-// none, so a run that never completed leaves the user's own state to restore.
+// A stored keep-capturing answer of on keeps the app running windowless after
+// quitTheApp destroys its window, so every spec that waits for the exit would
+// time out; the run refuses up front rather than change the user's answer.
 const KEEP_CAPTURING = resolve(process.env.HOME ?? "", "Library/Application Support/dev.trawler.app/keep-capturing.json");
-const KEEP_CAPTURING_KEPT = `${KEEP_CAPTURING}.e2e-kept`;
 
-function storeKeepCapturingOff() {
-  mkdirSync(dirname(KEEP_CAPTURING), { recursive: true });
-  if (!existsSync(KEEP_CAPTURING_KEPT)) {
-    if (existsSync(KEEP_CAPTURING)) renameSync(KEEP_CAPTURING, KEEP_CAPTURING_KEPT);
-    else writeFileSync(KEEP_CAPTURING_KEPT, "");
-  }
-  writeFileSync(KEEP_CAPTURING, JSON.stringify({ keepCapturing: false }));
-}
-
-function restoreKeepCapturing() {
-  if (!existsSync(KEEP_CAPTURING_KEPT)) return;
-  if (readFileSync(KEEP_CAPTURING_KEPT, "utf8") === "") {
-    rmSync(KEEP_CAPTURING, { force: true });
-    rmSync(KEEP_CAPTURING_KEPT);
-  } else {
-    renameSync(KEEP_CAPTURING_KEPT, KEEP_CAPTURING);
+function refuseKeepCapturingOn() {
+  const stored = existsSync(KEEP_CAPTURING) ? readFileSync(KEEP_CAPTURING, "utf8") : "";
+  if (/"keepCapturing"\s*:\s*true/.test(stored)) {
+    throw new Error(
+      `keep capturing is on in ${KEEP_CAPTURING}: the attached e2e quits the app by closing its window, which then keeps running. Turn it off in Settings → General and run again`,
+    );
   }
 }
 
@@ -191,14 +179,13 @@ export const config: WebdriverIO.Config = {
   mochaOpts: { ui: "bdd", timeout: 60_000 },
 
   onPrepare: async () => {
+    refuseKeepCapturingOn();
     clearSavedState();
-    storeKeepCapturingOff();
     useFakeSdk();
     await startCore();
     await seedSentFlow();
   },
   onComplete: async (_exitCode, _config, _capabilities, results) => {
-    restoreKeepCapturing();
     writeFileSync(
       RUN_TALLY,
       JSON.stringify({
