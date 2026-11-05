@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 15c764093f00312ba13fa7ebc2ec220fdbbc445f
+base: 342b6673a3a63cb7a809992ea077e4609501a68e
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w2-tray-result.html
+report_sha256: ed4fd622222e37b9a5d9d2849452cbfd98bffc5ee88459a116759b35df38c250
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEABELCt0QuS5oJihmWXBHdNHQhxLZlEQ2JKlYxFdhcGPQsChkGs0zCfnj
+  tdPdfBd+W/uIDTBA+XMEyUCyxXUlAJ
+  -----END SSH SIGNATURE-----
