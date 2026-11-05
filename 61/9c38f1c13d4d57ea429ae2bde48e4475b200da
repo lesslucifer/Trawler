@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W4
+branch: HEAD
+tests:
+  unit: { count: 6, covers: "rustdoc's fence rule: a bare fence and rust/no_run/should_panic/compile_fail/edition/error-code tags are compiled; ignore, text and foreign-language fences are not; only /// and //! lines carry examples (not //, ////, or string literals); ~~~ fences count; a fence never spans two doc blocks" }
+  integration: { count: 6, covers: "over the real workspace (cargo metadata): every lib target reports doctest: false and none holds a compiled fenced example; the three consolidated suite binaries run every moved test green under nextest and plain cargo test — 1183 before, 1189 after = 1183 + the 6 guard tests, 34 binaries -> 9" }
+  e2e: { waived: "packaging only, no behaviour change; the epic e2e (E-GATEPAR2.W5) and its before/after re-run cover the suite end to end" }
