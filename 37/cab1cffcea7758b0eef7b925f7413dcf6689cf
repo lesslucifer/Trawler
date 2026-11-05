@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W6
+branch: 37cab1cf
+tests:
+  unit: { count: 6, covers: "reformatCode keeps every token for minified JS and CSS, the text's line break and trailing break, refuses empty and lossy results; loadBeautifier resolves one module" }
+  integration: { count: 113, covers: "javascript and css open in their own surfaces with find; reformat from the menu and the key is one named undoable step with restore exact; never offered read-only; whitespace-only has nothing to reformat; a 1 MiB bundle; both languages mount, colour and fold" }
+  e2e: { waived: "J3 over real windows is W9's, per the plan" }
