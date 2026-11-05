@@ -5,6 +5,9 @@ edition = "2021"
 description = "Repo tooling: the verify-dod done-gate over git-note evidence"
 publish = false
 
+[lib]
+doctest = false
+
 [features]
 hook-tests = []
 debug-tests = []

@@ -70,7 +70,7 @@ flowchart LR
       <li>Gate markers (<code>.gate0-green</code>, <code>.lint-green</code>, <a href="workflow-gates.html#dec-54">DEC-54</a>) are per worktree, so one worktree's green no longer overwrites another's (cause C5).</li>
       <li>The gate tally (<a href="dec-42-the-gate-tally-is-local-measurement.html">DEC-42</a>) moves to <code>&lt;git-common-dir&gt;/trawler-gate-tally</code>, so a machine still keeps one tally.</li>
       <li>A seeded worktree's first build compiles only the workspace crates. Measured: 13.6 s for 3 crates; prune freed 65.5 GiB on the main checkout.</li>
-      <li>Held by <code>xtask/src/target.rs</code> tests, <code>xtask/tests/target_isolation.rs</code>, <code>tests/worktree_setup_hook.rs</code> and the epic e2e <code>xtask/tests/e2e_gate_parity.rs</code>.</li>
+      <li>Held by <code>xtask/src/target.rs</code> tests, <code>xtask/tests/suite/target_isolation.rs</code>, <code>tests/worktree_setup_hook.rs</code> and the epic e2e <code>xtask/tests/suite/e2e_gate_parity.rs</code>.</li>
     </ul>
   </main>
   <script type="module">

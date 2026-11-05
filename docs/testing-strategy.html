@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Testing Standard</h1>
       <p>The permanent, project-wide rule for how Trawler is tested: each unit of work carries a mandatory kind of test — <strong>Epic → e2e, Working Unit → integration, Commit → unit</strong>.</p>
-      <div class="meta">Draft v5 · 2026-07-05 · Trawler</div>
+      <div class="meta">Draft v6 · 2026-11-05 · Trawler</div>
     </div>
   </header>
   <main>
@@ -88,12 +88,12 @@ flowchart TD
         <tr>
           <td><strong>Integration</strong></td>
           <td>A WU's contract at its real boundary — public crate surface, an in-process router (<code>tower::oneshot</code>), a seeded <code>Store</code>, temp-dir fs. No full product.</td>
-          <td><code>tests/&lt;subsystem&gt;.rs</code> (public API only).</td>
+          <td><code>&lt;crate&gt;/tests/suite/&lt;subsystem&gt;.rs</code> — modules of one <code>suite</code> binary per crate, so a change links and first-launches one; public API only. A feature-gated target keeps its own file.</td>
         </tr>
         <tr>
           <td><strong>E2E</strong></td>
           <td>An epic's full flow through the running system on ephemeral ports: real client → real transport → local test dependency. Asserts external behaviour <em>and</em> internal fidelity.</td>
-          <td><code>tests/e2e_&lt;epic&gt;.rs</code> + shared <code>tests/common/</code>.</td>
+          <td><code>&lt;crate&gt;/tests/suite/e2e_&lt;epic&gt;.rs</code> + the shared <code>tests/suite/common.rs</code>.</td>
         </tr>
       </tbody>
     </table>
@@ -119,7 +119,8 @@ flowchart TD
         <tr><td>Snapshot the wire contract</td><td>Locks externally visible JSON; unintended changes surface as a reviewable diff.</td><td><code>insta</code></td></tr>
         <tr><td>Concurrency stress</td><td>N tasks mutate shared state; assert no panic and invariants hold — pragmatic coverage of mutex/broadcast designs.</td><td><code>tokio</code> tasks</td></tr>
         <tr><td>Mutation testing</td><td>Flips operators / deletes lines and fails if the suite still passes — measures whether tests catch real bugs.</td><td><code>cargo-mutants</code></td></tr>
-        <tr><td>Shared fixtures</td><td>Builders, local test servers, ephemeral CAs, proxy client — so higher-level tests read as scenarios, not boilerplate.</td><td><code>tests/common/</code></td></tr>
+        <tr><td>Shared fixtures</td><td>Builders, local test servers, ephemeral CAs, proxy client — so higher-level tests read as scenarios, not boilerplate.</td><td><code>tests/suite/common.rs</code></td></tr>
+        <tr><td>No doc-test pass</td><td>Every library sets <code>doctest = false</code>; a guard fails when a doc comment gains an example rustdoc would compile, which then belongs in a test.</td><td><code>xtask/tests/suite/doc_examples.rs</code></td></tr>
         <tr><td>Named regression tests</td><td>Each documented quirk gets a test named for it (e.g. <code>streaming_body_never_buffered</code>).</td><td>—</td></tr>
       </tbody>
     </table>
@@ -134,7 +135,8 @@ flowchart TD
         <tr><td><code>axum</code> / <code>hyper</code></td><td>Local test origin/dependency servers.</td><td>e2e</td></tr>
         <tr><td><code>tempfile</code></td><td>Isolated temp dirs for filesystem tests.</td><td>integration · e2e</td></tr>
         <tr><td><code>proptest</code> · <code>insta</code></td><td>Property tests · snapshot tests.</td><td>unit · integration</td></tr>
-        <tr><td><code>cargo-nextest</code> · <code>cargo-llvm-cov</code> · <code>cargo-mutants</code> <span class="badge">CI</span></td><td>Runner · coverage gate · mutation gate.</td><td>all</td></tr>
+        <tr><td><code>cargo-nextest</code> <span class="badge">required</span></td><td>The only runner Gate 0 uses; a machine without it is refused (<a href="decisions/dec-75-a-gate-refuses-a-machine-that-cannot-run-the-suite.html">DEC-75</a>). Runs no doc-tests.</td><td>all</td></tr>
+        <tr><td><code>cargo-llvm-cov</code> · <code>cargo-mutants</code> <span class="badge">CI</span></td><td>Coverage gate · mutation gate.</td><td>all</td></tr>
         <tr><td><code>Vitest</code> + <code>Testing Library</code> + <code>jsdom</code></td><td>Front-end (<code>ui/</code>) unit + integration: pure functions, the typed API client, and components/layout against a mock API.</td><td>unit · integration</td></tr>
         <tr><td><code>@wdio/tauri-service</code> (embedded WebDriver)</td><td>Drives the real Tauri window in two suites (<code>cargo xtask ui e2e</code>): attached to a harness <code>run(Config)</code> core on ephemeral ports, and owning its own core, which the e2e build puts on ephemeral ports. macOS-primary, since raw <code>tauri-driver</code> is Linux/Windows-only.</td><td>e2e</td></tr>
       </tbody>

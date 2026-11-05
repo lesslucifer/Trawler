@@ -1,18 +1,13 @@
 #!/bin/sh
-# Fast local mirror of the CI test gate + DoD evidence sync.
+# Every pushed tree proven (Gate 0's marker when it is the clean HEAD) + DoD evidence sync.
 set -e
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
 remote="$1"
 refspecs=$(cat)
 
-if command -v cargo-nextest >/dev/null 2>&1; then
-  echo "[pre-push] cargo nextest run --all"
-  cargo nextest run --all
-else
-  echo "[pre-push] cargo test --all (install cargo-nextest for faster runs)"
-  cargo test --all
-fi
+echo "[pre-push] cargo xtask gate0 push"
+printf '%s\n' "$refspecs" | cargo xtask gate0 push
 
 zero=0000000000000000000000000000000000000000
 printf '%s\n' "$refspecs" | while read -r local_ref local_sha remote_ref remote_sha; do
