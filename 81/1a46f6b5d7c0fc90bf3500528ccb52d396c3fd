@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 811a46f6b5d7c0fc90bf3500528ccb52d396c3fd
+base: 85973158d0368eec417251cc1b293a00fc359bc5
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-bg-service-w6-general-page-result.html
+report_sha256: a4f81152ab7cf1d5a1e7690361461629bbabb299b2aa2aa5ef2c97a480900e5f
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEARxRCos8iNm5apUQsMjKZR/af0NXha2rBBXgWHQVx0BYoMXaKYumRG+3
+  8cpM2WqSUvF5bNAfGeqnlNNO2mR5oD
+  -----END SSH SIGNATURE-----
