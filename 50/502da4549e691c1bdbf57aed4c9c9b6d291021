@@ -1,0 +1,43 @@
+schema: cr/v5
+scope: "WU gate-parity2/push-reads-proof -> epic/gate-parity2"
+epic: E-GATEPAR2
+wu: E-GATEPAR2.W2
+branch: wu/gate-parity2/push-reads-proof
+base: 80b452a7307bc710737254c44f4358699dda51d5
+head: 50502da4549e691c1bdbf57aed4c9c9b6d291021
+diff_sha256: faecde24b7cf030d298fb87d133a3ad36198856f4d396ad175475a9d296e45a9
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 6
+  stage_seconds:
+    gate0: 21
+    finders: 31
+    total: 104
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 3, verified: 1 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 6, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "a scratch proof's green is discarded with the scratch, so re-pushing the same unproven tree re-runs the workspace build and suite"
+    waived: "deliberate and recorded: DEC-74 accepts one scratch build per unproven push and leaves nothing behind; a marker vouches only for its own checkout's target (DEC-73); third-party crates are seeded, and the common push after a green merge reads the checkout marker"
+  - finding: "push proves each distinct unproven tree sequentially, including a tag or branch on an old commit"
+    waived: "the contract is never to send an unproven tree; distinct trees are deduplicated, and parallel proofs would contend for the same cores and target seed"
+  - finding: "each scratch proof repays pnpm install"
+    waived: "the pushed tree's own lockfile must be the one installed; --frozen-lockfile --prefer-offline links from the local store"
+  - finding: "scratch-worktree lifecycle and refspec parsing live in gate0.rs rather than git.rs/target.rs"
+    waived: "it is Gate 0's push entrypoint and used nowhere else; it composes git::git and target::seed rather than restating them"
+  - finding: "the ui dir and pnpm flags are hardcoded in gate0.rs, duplicating UI setup the post-checkout path owns"
+    waived: "post-checkout installs no UI packages (it copies .gitworktreecopy files and seeds target), so there is no second owner; the requirement is ui/src-tauri/build.rs's refusal, named in the comment"
+  - finding: "two concurrent pushes of the same sha share one scratch path and can remove each other's worktree"
+    waived: "concurrent pushes of one sha from one checkout are not a workflow; the failure is a spawn error that refuses the push, never a false green, since both runs prove the same content"
+verdict: PASS
+date: 2026-11-05
