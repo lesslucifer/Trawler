@@ -1,0 +1,33 @@
+schema: doc/v1
+epic: E-PKG2
+wu: E-PKG2.W5
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the owed-hardware row: AppImage autostart done, tray host a release note, macOS 11/12 check owed, the windowless update is W6's hand check"
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 9: the macOS 13 floor and the Linux $APPIMAGE program for a binary inside its $APPDIR"
+  - path: "docs/decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html"
+    tier: T2
+    action: updated
+    distills: "rule 4: install is the quit request, a windowless app reopens its window to ask, the relaunch keeps the launch's arguments, a quit that cannot open its window drops the update"
+  - path: "docs/decisions/dec-84-unsafe-is-confined-to-the-login-service-crate.html"
+    tier: T2
+    action: updated
+    distills: "rule 4: no service below macOS 13, the app's minimum stays 11, CI runs the crate"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-82 and DEC-84 rows follow their records"
+  - path: "docs/work/2026-11-06-packaging-v2-w5-bg-service-sync-plan.html"
+    tier: T3
+    action: added
+    distills: "W5's plan: gaps G1-G6, test plan, distillation"
+  - path: "docs/work/2026-11-06-packaging-v2-w5-bg-service-sync-result.html"
+    tier: T3
+    action: added
+    distills: "W5's result: the back-merge's resolutions, each gap's change and red test, what was not taken, owed hand checks"
