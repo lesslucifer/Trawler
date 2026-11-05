@@ -1,0 +1,35 @@
+schema: design/v1
+epic: E-INSPWIN
+base: 36d5d839abbc9d1b0e94beaf1152f58ce28070a6
+design_sha256: 7fb31858debf6ffc1f37d98bee9cf8e2e46a725e7352113f59e9e6f552ae0bdd
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-03-data-window-design-run.html
+    blob: e5f9c5c5f16f6a67d7e6eb156d9989dd69c1e99f
+    built: [ui/src/DataWindowScreen.tsx, ui/src/BodyViewer.tsx, ui/src/components/CutMarker.tsx, ui/src/components/IconButton.tsx]
+  - path: docs/work/components/menu.html
+    blob: 356990cc9c62b84c5c4485eb4da5897df6dfa878
+    built: [ui/src/components/Menu.tsx]
+  - path: docs/work/components/edit-surface.html
+    blob: 48a2b04a40fef563e5f44a1778029118d63f5d39
+    built: [ui/src/components/EditSurface.tsx]
+  - path: docs/work/components/form-table.html
+    blob: efae89feca354bec6052a88f2334450b9a3d0e05
+    built: [ui/src/components/FormTable.tsx]
+  - path: docs/work/components/hex-view.html
+    blob: 344f7deef36688a9696e2128fc590271c066f325
+    built: [ui/src/components/HexView.tsx]
+undesigned:
+  - path: ui/src/components/CopyButton.tsx
+    why: "its clipboard write and confirm moved into the shared useCopy hook; the button's markup, states and labels are unchanged (W3)"
+  - path: ui/src/components/CopyText.tsx
+    why: "its clipboard write and confirm moved into the shared useCopy hook; the text's markup, states and labels are unchanged (W3)"
+  - path: ui/src/components/SourceSurface.tsx
+    why: "its CodeMirror theme and highlight moved verbatim to warpTheme.ts so EditSurface shares them; the pane renders exactly as before (W3)"
+  - path: ui/src/components/Select.tsx
+    why: "a placement prop: opens=above anchors the same popup to the trigger's top edge, for a trigger on a window's bottom edge; anatomy, rows, states and keys unchanged (W3); the back-merge kept E-QUERY's @use/@avoid wording beside it"
+  - path: ui/src/main.tsx
+    why: "the root picks DataWindowScreen for a data-* window and App otherwise; a mount switch with no layout of its own (W3)"
+accounting: "THE EPIC'S HAND-OFF, END TO END. W2 closed the data-window design run and four component designs (edit-surface, form-table, hex-view, menu) after the owner's rounds. W3 built the screen and the four components from them and retired each component design into its TSDoc (DEC-16); W4, W5 and W6 built their tools from the same run; its bytes moved after W3 only by the epic's decision renumbers (b3ab1e01, the back-merge 8dcf2c1a), so its last state e5f9c5c5 is cited; W8 to W11 declared their edits undesigned (a time reading from existing peek members; TSDoc renumbers; decode's json flag passed from the screen; the header's Caption reading the opener's heading instead of parsing the title, drawn as before). Every component design the epic added is built: none dropped."
+date: 2026-11-05
