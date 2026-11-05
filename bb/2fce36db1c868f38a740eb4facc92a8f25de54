@@ -1,0 +1,25 @@
+schema: cr/v5
+scope: "epic E-BGSVC -> main (round 7, main at E-INSPWIN2 merged in)"
+epic: E-BGSVC
+branch: epic/bg-service
+base: 54fc1233e6c9edb9a8ad2313a6029dd22db0fde8
+head: bb2fce36db1c868f38a740eb4facc92a8f25de54
+diff_sha256: a210bca67ea8246f0f2bb74e741739620a0d945716cb9c316f7aa4f9f26fc64b
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
