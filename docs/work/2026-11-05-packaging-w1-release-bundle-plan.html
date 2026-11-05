@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec37b39f34851f0dfae833" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PKG.W1 plan: release-bundle</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PKG.W1 — one version, a release-only bundle, <code>cargo xtask package</code></h1>
+      <p>The artifact every later WU ships: one committed version, a front-end bundle that can never be the e2e one, and one
+      command that builds and ad-hoc signs the host's installers.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T3 WU plan · <span class="badge id">E-PKG.W1</span> · branch
+      <code>wu/packaging/release-bundle</code> off <code>epic/packaging</code> · <a href="2026-11-05-packaging-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p class="callout" data-item="requirement" data-c="requirement">
+      <code>cargo xtask package</code> builds the host's installers from one committed version
+      (<code>[workspace.package] version</code>), from a front-end bundle marked <code>release</code> whatever bundle
+      <code>ui/dist</code> held before, and on macOS leaves an ad-hoc-signed <code>Trawler.app</code> and <code>.dmg</code>
+      that pass <code>codesign --verify --deep --strict</code> and whose binary captures under a launcher's environment.
+    </p>
+
+    <h2 id="mapping">Mapping</h2>
+    <p data-item="maps-to" data-c="mapping">
+      E-PKG · UC-INSTALL (the artifact) · epic expected #1, #2 · Q2 (universal), Q8 (one version), Q15 (the
+      <code>package-test</code> profile) · roadmap row <em>a plain cargo run after an e2e run embeds the e2e bundle</em>,
+      closed here.
+    </p>
+
+    <h2 id="shape">What changes</h2>
+    <table data-c="shape">
+      <tr><th>Seam</th><th>Before</th><th>After</th></tr>
+      <tr><td>version</td><td><code>0.1.0</code> typed in <code>Cargo.toml</code>, <code>ui/src-tauri/Cargo.toml</code>,
+        <code>xtask/Cargo.toml</code>, <code>tauri.conf.json</code>, <code>ui/package.json</code></td>
+        <td><code>[workspace.package] version</code> only; every member says <code>version.workspace = true</code>;
+        <code>tauri.conf.json</code> carries none (Tauri falls back to the crate's); <code>ui/package.json</code> is
+        guarded equal</td></tr>
+      <tr><td>bundle flavour</td><td><code>ui/dist</code> judged stale by age alone</td>
+        <td>Vite writes <code>dist/bundle-flavour</code> (<code>release</code> | <code>e2e</code>, from
+        <code>VITE_E2E</code>); <code>build.rs</code> wants <code>e2e</code> under the <code>e2e</code> feature,
+        <code>release</code> otherwise, and a missing or other flavour is stale and rebuilt in the wanted flavour</td></tr>
+      <tr><td>packaging</td><td>none</td>
+        <td><code>cargo xtask package [--universal] [--profile &lt;name&gt;]</code> → <code>pnpm tauri build</code> with
+        the host's bundles, <code>VITE_E2E</code> removed from its environment; macOS: ad-hoc identity <code>-</code> in
+        <code>tauri.conf.json</code>, then <code>codesign --verify --deep --strict</code> on the <code>.app</code></td></tr>
+      <tr><td>profile</td><td><code>release</code> only</td>
+        <td><code>[profile.package-test]</code>: release without LTO, for the tests that package (Q15)</td></tr>
+    </table>
+
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  A["cargo xtask package [--universal] [--profile p]"] --> P{"package plan (host os, targets installed)"}
+  P -- "--universal off macOS · a target missing" --> R["refused · names the fix (rustup target add …)"]
+  P --> T["pnpm tauri build --bundles … VITE_E2E removed"]
+  T --> V["beforeBuildCommand: pnpm build → dist/bundle-flavour = release"]
+  V --> B["build.rs: wanted release = dist release → fresh"]
+  B --> S["bundles under target/…/p/bundle"]
+  S --> C{"macOS: codesign --verify --deep --strict"}
+  C -- red --> R2["refused · names the .app"]
+  C -- green --> OK["prints each artifact path"]
+      </pre>
+      <div class="caption">One command, one plan, refusals named before any build starts.</div>
+    </div>
+
+    <h3 id="bundles">Bundles per host</h3>
+    <table data-c="bundles">
+      <tr><th>Host</th><th><code>--bundles</code></th><th>Runner</th><th><code>--universal</code></th></tr>
+      <tr><td>macOS</td><td><code>app,dmg</code></td><td><code>pnpm</code></td><td><code>--target universal-apple-darwin</code>; refused unless
+        <code>aarch64-apple-darwin</code> and <code>x86_64-apple-darwin</code> are installed</td></tr>
+      <tr><td>Windows</td><td><code>msi,nsis</code></td><td><code>pnpm.cmd</code></td><td>refused</td></tr>
+      <tr><td>Linux</td><td><code>deb,rpm,appimage</code></td><td><code>pnpm</code></td><td>refused</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected" data-c="expected">
+      <tr><th>A reader runs…</th><th>…and sees</th></tr>
+      <tr><td><code>cargo xtask package</code> on this Mac</td><td><code>target/release/bundle/macos/Trawler.app</code> and
+        <code>target/release/bundle/dmg/Trawler_0.1.0_aarch64.dmg</code>, the <code>.app</code> green under
+        <code>codesign --verify --deep --strict</code></td></tr>
+      <tr><td><code>cargo xtask package --universal</code> here (only <code>aarch64-apple-darwin</code> installed)</td>
+        <td>refused before any build, naming <code>rustup target add x86_64-apple-darwin</code></td></tr>
+      <tr><td><code>VITE_E2E=1 pnpm build</code>, then <code>cargo run</code> or <code>cargo xtask package</code></td>
+        <td><code>ui/dist/bundle-flavour</code> reads <code>release</code> and no bundle file carries the WebDriver
+        plugin</td></tr>
+      <tr><td>the version in <code>ui/package.json</code> or a member manifest edited apart from
+        <code>[workspace.package]</code></td><td>a unit test red, naming the file</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan" data-c="test-plan">
+      <tr><th>Level</th><th>Where</th><th>Asserts</th></tr>
+      <tr><td>unit</td><td><code>ui/src-tauri/src/bundle.rs</code></td><td>a missing or mismatched flavour is stale even
+        when the bundle is newer than every input; a matching one is fresh; the rebuild command sets
+        <code>VITE_E2E=1</code> for <code>e2e</code> and removes it for <code>release</code></td></tr>
+      <tr><td>unit</td><td><code>xtask/src/package.rs</code></td><td>the plan's argv per host (bundles, runner,
+        profile, universal target); refusals: <code>--universal</code> off macOS, a missing target named in the
+        <code>rustup target add</code> line, an unknown flag; the workspace version parser; the tree's guard —
+        every member inherits the version, <code>tauri.conf.json</code> carries none, <code>ui/package.json</code>
+        equals it</td></tr>
+      <tr><td>integration</td><td><code>xtask/tests/package_bundle.rs</code> (macOS; feature <code>package-tests</code>)</td>
+        <td>(1) an e2e-flavoured <code>ui/dist</code>, then <code>cargo build -p trawler-ui</code>: the dist is
+        <code>release</code> and carries no WebDriver plugin. (2) an e2e-flavoured <code>ui/dist</code> and
+        <code>VITE_E2E=1</code> in the environment, then <code>xtask package --profile package-test</code>: the dist is
+        <code>release</code>; the <code>.app</code> passes <code>codesign --verify --deep --strict</code>; a
+        <code>.dmg</code> exists; the <code>.app</code>'s binary, run with <code>env_clear</code>, launchd's
+        <code>PATH</code>, a temp <code>HOME</code> and cwd <code>/</code> as <code>--core</code> on ephemeral ports,
+        prints the ready line and a request through its proxy to a local origin is in <code>GET /flows</code></td></tr>
+      <tr><td>e2e</td><td>—</td><td>waived at this level: the epic's <code>e2e_packaging</code> (W6) installs and drives
+        this artifact; W1 is its build step</td></tr>
+    </table>
+    <div class="callout warn" data-c="gating">
+      <strong>Why the integration test is feature-gated.</strong> Both cases run a full Tauri build of the app and a
+      bundle, minutes each; in the default suite every <code>gate0</code> would pay that. They follow the
+      <code>hook-tests</code> precedent: compiled by every <code>clippy --all-features</code>, run explicitly with
+      <code>cargo test -p xtask --features package-tests --test package_bundle</code>, recorded in the WU result. Where
+      the epic's own packaging e2e runs is W6's to settle.
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
