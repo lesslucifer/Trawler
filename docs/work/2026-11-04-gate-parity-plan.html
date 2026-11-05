@@ -161,7 +161,7 @@ flowchart LR
           <tr><td>Split the shared <code>target/</code>?</td><td><strong>yes</strong> — reversed from v2 of this plan. C9 shows the sharing is unsound, not only slow. Sharing stays only where it is sound: third-party artifacts, by APFS clone</td></tr>
           <tr><td>Symlink the safe parts of <code>target/</code> instead of cloning?</td><td><strong>no</strong>: cargo keeps third-party and workspace-crate artifacts in the same directories (<code>deps/</code>, <code>build/</code>, <code>.fingerprint/</code>), named only by hash, so no directory symlink separates them</td></tr>
           <tr><td><code>core.hooksPath</code> vs reinstall-on-drift?</td><td><strong><code>core.hooksPath</code></strong> → tracked dir, relative, repo-wide once no worktree would be stranded</td></tr>
-          <tr><td><code>target/.gate-tally</code> becomes per worktree once <code>target/</code> is. Move it to the git common dir to keep one machine tally?</td><td><strong>proposed default: yes</strong> — settled in the W2 plan</td></tr>
+          <tr><td><code>target/.gate-tally</code> becomes per worktree once <code>target/</code> is. Move it to the git common dir to keep one machine tally?</td><td><strong>yes</strong> (W2 plan): <code>&lt;git-common-dir&gt;/trawler-gate-tally</code>; <code>prune</code> folds a checkout's legacy file in</td></tr>
           <tr><td>Change the dev profile's debug info to stop <code>.rcgu.o</code> regrowth?</td><td><strong>proposed default: no</strong> — W2 measures first; prune is the fix if the size comes back</td></tr>
         </tbody>
       </table>

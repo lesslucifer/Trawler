@@ -213,14 +213,15 @@ fn the_rounds_are_the_tips_own_line_not_everything_it_merged() {
 }
 
 #[test]
-fn the_tally_lives_under_target_and_never_becomes_a_note() {
+fn the_tally_lives_in_the_git_common_dir_and_never_becomes_a_note() {
     let (repo, _first) = wu_branch();
     let before = repo.note_refs();
 
     repo.xtask(&["verify-dod", "wu", "wu/x/one", "--target", "epic/x"]);
 
     let file = repo.tally_path();
-    assert!(file.starts_with(repo.path.join("target")), "{file:?}");
+    let common = std::fs::canonicalize(repo.path.join(".git")).unwrap();
+    assert_eq!(file.parent(), Some(common.as_path()), "{file:?}");
     assert!(file.exists(), "the gate appends its record to {file:?}");
     let tracked = repo.git(&["ls-files", "--", file.to_str().unwrap()]);
     assert!(tracked.is_empty(), "the tally is not tracked: {tracked}");
