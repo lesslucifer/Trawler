@@ -968,6 +968,18 @@
             Rejected: a version rewritten from the tag, staleness by age, reading manifests' text</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-82-an-update-asks-is-signed-and-quits-through-the-check.html"><code>dec-82-an-update-asks-is-signed-and-quits-through-the-check.html</code></a></td>
+          <td><span class="badge id">DEC-82</span></td>
+          <td><strong>An update asks, is signed, and quits through the check.</strong> The channel is the public release's
+            <code>latest.json</code>. A launch checks at most once a day and only when installed from a bundle, and says
+            nothing unless it offers; <em>Check for Updates…</em> always answers. The offer names both versions and says the
+            captured list is cleared. An update installs only if the owner's key signed that exact version. It installs by
+            closing the main window as ⌘Q does (DEC-64), then the core stops and the app relaunches. A cancelled quit drops it.
+            Every bundle type updates in place, deb and rpm through <code>pkexec</code>. Only the release workflow holds the
+            key. Rejected: deb/rpm via the release page, a pending update outliving its quit, unversioned signatures</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">
