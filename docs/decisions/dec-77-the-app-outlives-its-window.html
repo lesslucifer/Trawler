@@ -12,7 +12,7 @@
       <p>The background service is the app process with no window: it keeps supervising its core after the main
         window closes, but only while a menu-bar icon can bring the window back.</p>
       <div class="meta">v3 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W1</strong> from the owner's
-        rulings on the epic plan's Q1–Q4, Q6–Q8, Q10–Q13 · rule 8 by <strong>E-BGSVC.W2</strong>, rule 9 by <strong>E-BGSVC.W4</strong> · UC-BG, UC-4 · amends
+        rulings on the epic plan's Q1–Q4, Q6–Q8, Q10–Q13 · rule 8 by <strong>E-BGSVC.W2</strong>, rule 9 by <strong>E-BGSVC.W4</strong>, amended by <strong>E-BGSVC.W8</strong> · UC-BG, UC-4 · amends
         <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a> rule 14 · <strong>active</strong></div>
     </div>
   </header>
@@ -73,12 +73,13 @@ flowchart LR
         place that always says whether capture runs and reaches the window. Restart greys out rather than vanishing, so
         the menu keeps its shape</td></tr>
       <tr><td>9</td><td>Open at login is the OS's own entry, written by Trawler: macOS
-        <code>~/Library/LaunchAgents/dev.trawler.app.plist</code> (<code>RunAtLoad</code>,
-        <code>ProgramArguments = [this binary, --background]</code>), Linux
+        the bundled launch agent <code>Contents/Library/LaunchAgents/dev.trawler.app.plist</code> (<code>BundleProgram</code>,
+        <code>--background</code>, <code>RunAtLoad</code>) registered with <code>SMAppService</code> so System Settings shows
+        “Trawler” at once (unavailable from a binary with no bundle; W8, <a href="dec-84-unsafe-is-confined-to-the-login-service-crate.html">DEC-84</a>), Linux
         <code>$XDG_CONFIG_HOME/autostart/dev.trawler.app.desktop</code>, Windows the <code>HKCU\…\Run</code> value
         <code>Trawler</code>. It reads on whenever an entry exists, with the program it starts, read back each time and never
         cached; writing on points it at the binary now running (the last write wins). No <code>launchctl</code>: it takes
-        effect at the next login</td><td>Q7(a): works for any build, and a test writes it under a temp root. Q8: a
+        effect at the next login. On macOS it reads on only while the service is enabled, so awaiting approval reads off</td><td>Q7(a): works for any build, and a test writes it under a temp root. Q8: a
         mismatch is a debugging case, shown as the path on hover, not a state of its own</td></tr>
     </table>
 

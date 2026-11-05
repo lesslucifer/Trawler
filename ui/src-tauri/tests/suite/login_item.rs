@@ -1,10 +1,31 @@
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use tauri::ipc::{CallbackFn, InvokeBody, InvokeResponseBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, MockRuntime};
 use tauri::webview::InvokeRequest;
 use tauri::{Manager, WebviewWindow, WebviewWindowBuilder};
-use trawler_ui_lib::login_item::{self, Format, LoginItem, LoginItemPlace, Place};
+use trawler_ui_lib::login_item::{self, Format, LoginItem, LoginItemPlace, LoginRegistry, Place};
+
+#[derive(Debug, Default)]
+struct Registered(AtomicBool);
+
+impl LoginRegistry for Registered {
+    fn enabled(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+
+    fn register(&self) -> Result<(), String> {
+        self.0.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+
+    fn unregister(&self) -> Result<(), String> {
+        self.0.store(false, Ordering::SeqCst);
+        Ok(())
+    }
+}
 
 const THIS: &str = "/Applications/Trawler.app/Contents/MacOS/trawler-ui";
 const OTHER: &str = "/Users/me/src/Trawler/target/debug/trawler-ui";
@@ -13,40 +34,14 @@ fn on(starts: &str) -> LoginItem {
     LoginItem { on: true, starts: Some(PathBuf::from(starts)) }
 }
 
-fn off() -> LoginItem {
-    LoginItem { on: false, starts: None }
-}
-
-#[test]
-fn a_launch_agent_is_a_valid_plist_starting_this_binary_and_off_removes_it() {
-    let home = tempfile::tempdir().unwrap();
-    let entry = home.path().join("Library/LaunchAgents/dev.trawler.app.plist");
-    assert_eq!(login_item::read(Format::LaunchAgent, home.path()), off());
-
-    let written = login_item::write(Format::LaunchAgent, home.path(), true, Path::new(THIS));
-    assert_eq!(written.unwrap(), on(THIS));
-    assert!(entry.is_file());
-    if cfg!(target_os = "macos") {
-        let lint = std::process::Command::new("plutil").arg("-lint").arg(&entry).output().unwrap();
-        assert!(lint.status.success(), "{}", String::from_utf8_lossy(&lint.stdout));
-    }
-
-    let removed = login_item::write(Format::LaunchAgent, home.path(), false, Path::new(THIS));
-    assert_eq!(removed.unwrap(), off());
-    assert!(!entry.exists());
-    let again = login_item::write(Format::LaunchAgent, home.path(), false, Path::new(THIS));
-    assert_eq!(again.unwrap(), off(), "off with no entry stays off");
-}
-
 #[test]
 fn whichever_binary_an_entry_names_it_reads_on_and_the_last_write_wins() {
-    for format in [Format::LaunchAgent, Format::Autostart] {
-        let root = tempfile::tempdir().unwrap();
-        login_item::write(format, root.path(), true, Path::new(OTHER)).unwrap();
-        assert_eq!(login_item::read(format, root.path()), on(OTHER), "{format:?}");
-        login_item::write(format, root.path(), true, Path::new(THIS)).unwrap();
-        assert_eq!(login_item::read(format, root.path()), on(THIS), "{format:?}");
-    }
+    let format = Format::Autostart;
+    let root = tempfile::tempdir().unwrap();
+    login_item::write(format, root.path(), true, Path::new(OTHER)).unwrap();
+    assert_eq!(login_item::read(format, root.path()), on(OTHER));
+    login_item::write(format, root.path(), true, Path::new(THIS)).unwrap();
+    assert_eq!(login_item::read(format, root.path()), on(THIS));
 }
 
 #[test]
@@ -90,7 +85,6 @@ fn invoke(
 
 #[test]
 fn the_commands_turn_the_entry_on_for_this_binary_and_off_again() {
-    let home = tempfile::tempdir().unwrap();
     let app = mock_builder()
         .invoke_handler(tauri::generate_handler![
             login_item::login_item_read,
@@ -98,10 +92,7 @@ fn the_commands_turn_the_entry_on_for_this_binary_and_off_again() {
         ])
         .build(mock_context(noop_assets()))
         .expect("a mock app");
-    app.manage(LoginItemPlace(Some(Place::File {
-        format: Format::LaunchAgent,
-        root: home.path().to_path_buf(),
-    })));
+    app.manage(LoginItemPlace(Some(Place::Service(Arc::new(Registered::default())))));
     let main =
         WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default()).build().unwrap();
     let this = std::env::current_exe().unwrap();
@@ -122,4 +113,29 @@ fn the_commands_turn_the_entry_on_for_this_binary_and_off_again() {
         invoke(&main, "login_item_write", serde_json::json!({ "on": false })),
         serde_json::json!({ "on": false, "starts": null })
     );
+}
+
+#[test]
+fn from_a_binary_with_no_bundle_the_commands_say_the_item_is_unavailable() {
+    let app = mock_builder()
+        .invoke_handler(tauri::generate_handler![login_item::login_item_read])
+        .build(mock_context(noop_assets()))
+        .expect("a mock app");
+    app.manage(LoginItemPlace(None));
+    let main =
+        WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default()).build().unwrap();
+    let refused = get_ipc_response(
+        &main,
+        InvokeRequest {
+            cmd: "login_item_read".into(),
+            callback: CallbackFn(0),
+            error: CallbackFn(1),
+            url: "tauri://localhost".parse().expect("a url"),
+            body: InvokeBody::Json(serde_json::json!({})),
+            headers: tauri::http::HeaderMap::default(),
+            invoke_key: tauri::test::INVOKE_KEY.into(),
+        },
+    )
+    .unwrap_err();
+    assert_eq!(refused, serde_json::json!(login_item::UNAVAILABLE));
 }

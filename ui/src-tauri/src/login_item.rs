@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use serde::Serialize;
 use tauri::{AppHandle, Manager, Runtime, State};
@@ -23,35 +24,31 @@ impl LoginItem {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Format {
-    LaunchAgent,
     Autostart,
 }
 
 impl Format {
     pub fn entry(self, root: &Path) -> PathBuf {
         match self {
-            Self::LaunchAgent => root.join("Library/LaunchAgents").join(format!("{LABEL}.plist")),
             Self::Autostart => root.join("autostart").join(format!("{LABEL}.desktop")),
         }
     }
 
     pub fn render(self, exe: &str) -> String {
         match self {
-            Self::LaunchAgent => launch_agent(exe),
             Self::Autostart => autostart(exe),
         }
     }
 
     pub fn starts(self, entry: &str) -> Option<PathBuf> {
         match self {
-            Self::LaunchAgent => launch_agent_program(entry),
             Self::Autostart => autostart_program(entry),
         }
         .map(PathBuf::from)
     }
 }
 
-// A control character would end the desktop entry's Exec line, or the plist's XML.
+// A control character would end the desktop entry's Exec line.
 fn utf8(exe: &Path) -> std::io::Result<&str> {
     exe.to_str().filter(|exe| !exe.chars().any(char::is_control)).ok_or_else(|| {
         std::io::Error::new(
@@ -78,47 +75,6 @@ pub fn write(format: Format, root: &Path, on: bool, exe: &Path) -> std::io::Resu
         }
     }
     Ok(read(format, root))
-}
-
-fn xml_escaped(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
-}
-
-fn xml_unescaped(text: &str) -> String {
-    text.replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&amp;", "&")
-}
-
-fn launch_agent(exe: &str) -> String {
-    format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>{LABEL}</string>
-	<key>ProgramArguments</key>
-	<array>
-		<string>{}</string>
-		<string>{BACKGROUND_FLAG}</string>
-	</array>
-	<key>RunAtLoad</key>
-	<true/>
-</dict>
-</plist>
-"#,
-        xml_escaped(exe)
-    )
-}
-
-fn launch_agent_program(plist: &str) -> Option<String> {
-    let (_, arguments) = plist.split_once("<key>ProgramArguments</key>")?;
-    let (_, first) = arguments.trim_start().strip_prefix("<array>")?.split_once("<string>")?;
-    let (program, _) = first.split_once("</string>")?;
-    Some(xml_unescaped(program))
 }
 
 // Desktop Entry spec: inside double quotes `"`, `` ` ``, `$` and `\` take a
@@ -226,8 +182,64 @@ mod registry {
     }
 }
 
+pub trait LoginRegistry: std::fmt::Debug + Send + Sync {
+    fn enabled(&self) -> bool;
+    fn register(&self) -> Result<(), String>;
+    fn unregister(&self) -> Result<(), String>;
+}
+
+pub fn apply(registry: &dyn LoginRegistry, on: bool, exe: &Path) -> Result<LoginItem, String> {
+    if on {
+        registry.register()?;
+    } else {
+        registry.unregister()?;
+    }
+    Ok(if registry.enabled() {
+        LoginItem::from_entry(Some(exe.to_path_buf()))
+    } else {
+        LoginItem::OFF
+    })
+}
+
+#[cfg(target_os = "macos")]
+struct BundledAgent(trawler_login_service::AgentService);
+
+#[cfg(target_os = "macos")]
+impl std::fmt::Debug for BundledAgent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("BundledAgent")
+    }
+}
+
+#[cfg(target_os = "macos")]
+impl LoginRegistry for BundledAgent {
+    fn enabled(&self) -> bool {
+        self.0.enabled()
+    }
+
+    fn register(&self) -> Result<(), String> {
+        self.0.register()
+    }
+
+    fn unregister(&self) -> Result<(), String> {
+        self.0.unregister()
+    }
+}
+
+pub fn is_app_bundle_binary(exe: &Path) -> bool {
+    let contents =
+        exe.parent().filter(|dir| dir.ends_with("Contents/MacOS")).and_then(Path::parent);
+    contents
+        .and_then(Path::parent)
+        .is_some_and(|app| app.extension().is_some_and(|ext| ext == "app"))
+}
+
+pub const UNAVAILABLE: &str =
+    "unavailable — open Trawler from the installed app to start it at login.";
+
 #[derive(Clone, Debug)]
 pub enum Place {
+    Service(Arc<dyn LoginRegistry>),
     File {
         format: Format,
         root: PathBuf,
@@ -239,17 +251,24 @@ pub enum Place {
 impl Place {
     pub fn read(&self) -> LoginItem {
         match self {
+            Self::Service(registry) => match std::env::current_exe() {
+                Ok(exe) if registry.enabled() => LoginItem::from_entry(Some(exe)),
+                _ => LoginItem::OFF,
+            },
             Self::File { format, root } => read(*format, root),
             #[cfg(windows)]
             Self::Registry => registry::read(),
         }
     }
 
-    pub fn write(&self, on: bool, exe: &Path) -> std::io::Result<LoginItem> {
+    pub fn write(&self, on: bool, exe: &Path) -> Result<LoginItem, String> {
         match self {
-            Self::File { format, root } => write(*format, root, on, exe),
+            Self::Service(registry) => apply(registry.as_ref(), on, exe),
+            Self::File { format, root } => {
+                write(*format, root, on, exe).map_err(|err| err.to_string())
+            }
             #[cfg(windows)]
-            Self::Registry => registry::write(on, exe),
+            Self::Registry => registry::write(on, exe).map_err(|err| err.to_string()),
         }
     }
 }
@@ -257,9 +276,11 @@ impl Place {
 pub struct LoginItemPlace(pub Option<Place>);
 
 #[cfg(target_os = "macos")]
-fn this_hosts_place<R: Runtime>(app: &AppHandle<R>) -> Option<Place> {
-    let root = app.path().home_dir().ok()?;
-    Some(Place::File { format: Format::LaunchAgent, root })
+fn this_hosts_place<R: Runtime>(_app: &AppHandle<R>) -> Option<Place> {
+    std::env::current_exe().ok().filter(|exe| is_app_bundle_binary(exe))?;
+    Some(Place::Service(Arc::new(BundledAgent(trawler_login_service::AgentService::new(
+        &format!("{LABEL}.plist"),
+    )))))
 }
 
 #[cfg(windows)]
@@ -281,7 +302,7 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) {
 }
 
 fn place<'a>(place: &'a State<'_, LoginItemPlace>) -> Result<&'a Place, String> {
-    place.0.as_ref().ok_or_else(|| "this host has no place for a login item".into())
+    place.0.as_ref().ok_or_else(|| UNAVAILABLE.into())
 }
 
 #[tauri::command]
@@ -295,35 +316,12 @@ pub fn login_item_write(
     on: bool,
 ) -> Result<LoginItem, String> {
     let exe = std::env::current_exe().map_err(|err| err.to_string())?;
-    place(&login_item)?.write(on, &exe).map_err(|err| err.to_string())
+    place(&login_item)?.write(on, &exe)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const PLAIN: &str = "/Applications/Trawler.app/Contents/MacOS/trawler-ui";
-
-    #[test]
-    fn a_launch_agent_starts_the_binary_in_the_background_at_load() {
-        let plist = launch_agent(PLAIN);
-        for line in [
-            "<string>dev.trawler.app</string>",
-            "<string>/Applications/Trawler.app/Contents/MacOS/trawler-ui</string>\n\t\t<string>--background</string>",
-            "<key>RunAtLoad</key>\n\t<true/>",
-        ] {
-            assert!(plist.contains(line), "{line} in {plist}");
-        }
-        assert_eq!(launch_agent_program(&plist).as_deref(), Some(PLAIN));
-    }
-
-    #[test]
-    fn markup_in_a_path_is_escaped_and_reads_back() {
-        let odd = "/Users/a&b/<odd> dir/trawler-ui";
-        let plist = launch_agent(odd);
-        assert!(plist.contains("<string>/Users/a&amp;b/&lt;odd&gt; dir/trawler-ui</string>"));
-        assert_eq!(launch_agent_program(&plist).as_deref(), Some(odd));
-    }
 
     #[test]
     fn a_path_a_login_entry_cannot_name_is_refused_before_anything_is_written() {
@@ -332,12 +330,6 @@ mod tests {
         let refused = write(Format::Autostart, root.path(), true, split).unwrap_err();
         assert_eq!(refused.kind(), std::io::ErrorKind::InvalidInput);
         assert_eq!(read(Format::Autostart, root.path()), LoginItem::OFF);
-    }
-
-    #[test]
-    fn a_plist_that_names_no_program_reads_none() {
-        assert_eq!(launch_agent_program("<plist><dict></dict></plist>"), None);
-        assert_eq!(Format::LaunchAgent.starts("<key>ProgramArguments</key><array></array>"), None);
     }
 
     #[test]
