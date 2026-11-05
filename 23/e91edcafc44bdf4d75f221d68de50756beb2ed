@@ -1,0 +1,43 @@
+schema: cr/v5
+scope: "WU target-isolation -> epic/gate-parity"
+epic: E-GATEPAR
+wu: E-GATEPAR.W2
+branch: wu/gate-parity/target-isolation
+base: f1f350f4064a7b3377c79864d0f470848e8bba42
+head: 23e91edcafc44bdf4d75f221d68de50756beb2ed
+diff_sha256: e74b0a931006549116f62927841886db3f52ca63fb2a06d5991d814327d55234
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 2
+    nit: 6
+  stage_seconds:
+    gate0: 34
+    total: 140
+  by_finder:
+    correctness: { found: 5, verified: 2 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 2, verified: 1 }
+findings: { found: 7, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "target prune deletes the uplifted target/debug/xtask the post-checkout hook seeds with (verified, downgraded from important)"
+    waived: "planned: uplifted files are pruned; the hook degrades to a warned, correct cold build, and the next cargo xtask in the source checkout re-uplifts the binary; prune is an occasional maintenance command"
+  - finding: "legacy target/.gate-tally records are folded only by target prune, so an unpruned checkout's history is unread by cargo xtask tally (verified, downgraded from important; raised by altitude and correctness)"
+    waived: "planned in both plans' decision rows; the file is kept, not lost, the tally is never evidence (DEC-42), and the W3 sync sequence runs prune in each worktree after its back-merge"
+  - finding: "tally::path falls back to target/ when git rev-parse --git-common-dir fails, and fleet_summary's tests still build /repo/target paths"
+    waived: "the fallback only fires outside a git repo, where no gate runs; the test paths are display strings, not the location under test"
+  - finding: "prune_dir treats every non-directory file in a profile dir as uplifted, including .cargo-lock"
+    waived: "prune requires no concurrent cargo (the rollout paused every worktree); cargo recreates .cargo-lock"
+  - finding: "fold_legacy's record count includes blank lines"
+    waived: "the count is a printed reading only; legacy files are written one record per line by tally::write"
+  - finding: "isolate removes the symlink before seed_checkout can refuse (main checkout) or fail, leaving no target"
+    waived: "no target is a valid, unrefused state: the next build is a correct cold build, and the main checkout never holds a symlinked target"
+  - finding: "prune walks each doomed tree twice (size_of then remove)"
+    waived: "one-off maintenance command; measured at 4 min for 860k entries, dominated by unlinks"
+verdict: PASS
+date: 2026-11-05
