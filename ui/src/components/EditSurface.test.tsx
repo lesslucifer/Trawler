@@ -198,6 +198,28 @@ describe("the handle", () => {
     spy.mockReturnValue(null);
     expect(ref.current!.positionAt({ x: 4, y: 8 })).toBeNull();
   });
+
+  it("reads the selection's range, empty at the cursor", () => {
+    const ref = createRef<EditSurfaceHandle>();
+    const { container } = render(<EditSurface handle={ref} text={DOC} language="json" />);
+    const view = viewIn(container);
+    act(() => {
+      view.dispatch({ selection: EditorSelection.range(14, 5) });
+    });
+    expect(ref.current!.selection()).toEqual({ from: 5, to: 14 });
+    act(() => {
+      view.dispatch({ selection: EditorSelection.cursor(9) });
+    });
+    expect(ref.current!.selection()).toEqual({ from: 9, to: 9 });
+  });
+
+  it("selects a range it is handed", () => {
+    const ref = createRef<EditSurfaceHandle>();
+    const { container } = render(<EditSurface handle={ref} text={DOC} language="json" />);
+    const view = viewIn(container);
+    act(() => ref.current!.select({ from: 5, to: 14 }));
+    expect(view.state.selection.main).toMatchObject({ from: 5, to: 14 });
+  });
 });
 
 describe("folding", () => {

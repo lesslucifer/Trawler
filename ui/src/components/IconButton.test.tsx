@@ -26,6 +26,7 @@ describe("IconButton", () => {
     ["add", "+"],
     ["previous", "↑"],
     ["next", "↓"],
+    ["replace", "⇄"],
   ] as const)("%s draws %s and is named after it unless labelled", (glyph, face) => {
     render(<IconButton glyph={glyph} onClick={() => {}} />);
     expect(screen.getByRole("button", { name: glyph })).toHaveTextContent(face);

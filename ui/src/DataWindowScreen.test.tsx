@@ -815,3 +815,211 @@ describe("XML re-indent", () => {
   });
 });
 
+
+describe("decode", () => {
+  const b64url = (text: string) => btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const TOKEN = `${b64url('{"alg":"RS256"}')}.${b64url('{"sub":"8812"}')}.c2ln`;
+  const JSON_DOC = `{\n  "session_token": "${TOKEN}",\n  "plan": "team"\n}`;
+  const GZIP_B64 = btoa(String.fromCharCode(0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03));
+  const FORM = `grant=jwt&assertion=${TOKEN}&note=50%2525%2520off`;
+
+  function select(text: string) {
+    const from = doc().indexOf(text);
+    act(() => {
+      view().dispatch({ selection: { anchor: from, head: from + text.length } });
+    });
+  }
+
+  function decodeFromMenu(target: HTMLElement, item: RegExp) {
+    fireEvent.contextMenu(target, { clientX: 10, clientY: 10 });
+    fireEvent.click(within(screen.getByRole("menu", { name: "the selection" })).getByRole("menuitem", { name: item }));
+  }
+
+  const peek = () => screen.getByTestId("decode-peek");
+  const decodedText = (at = 0) =>
+    EditorView.findFromDOM(within(peek()).getAllByTestId("decoded")[at].querySelector(".cm-editor") as HTMLElement)!.state.doc.toString();
+
+  async function openWith(handed: DataPayload, opened = vi.fn(() => Promise.resolve())) {
+    render(<DataWindowScreen take={() => Promise.resolve(handed)} open={opened} />);
+    await screen.findByRole("heading", { name: handed.title });
+    return opened;
+  }
+
+  function rightClickAt(offset: number) {
+    vi.spyOn(view(), "posAtCoords").mockReturnValue(offset);
+    fireEvent.contextMenu(screen.getByTestId("data-surface"), { clientX: 10, clientY: 10 });
+  }
+
+  const selected = () => {
+    const { from, to } = view().state.selection.main;
+    return doc().slice(from, to);
+  };
+
+  it("waits for a value under the pointer or a selection, then reads a JWT under its line, leaving the working copy as it was", async () => {
+    await open(payload({ text: JSON_DOC }));
+    rightClickAt(0);
+    expect(screen.getByRole("menuitem", { name: /^decode/ })).toHaveTextContent("no value here: right-click on one or select it");
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "Escape" });
+
+    select(TOKEN);
+    await waitFor(() => expect(footer()).toHaveTextContent(`selection ${TOKEN.length} characters`));
+    decodeFromMenu(screen.getByTestId("data-surface"), /^decode/);
+
+    expect(within(peek()).getByText("decoded as")).toBeInTheDocument();
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(within(peek()).queryByRole("radiogroup")).toBeNull();
+    expect(decodedText(0)).toBe('{\n  "alg": "RS256"\n}');
+    expect(decodedText(1)).toBe('{\n  "sub": "8812"\n}');
+    expect(within(peek()).getByText("signature · not verified")).toBeInTheDocument();
+    expect(within(peek()).getByTestId("signature")).toHaveTextContent("c2ln");
+    const above = peek().parentElement!.previousElementSibling!;
+    expect(above).toHaveClass("cm-line");
+    expect(above).toHaveTextContent('"session_token"');
+    expect(screen.queryByTestId("modified")).toBeNull();
+  });
+
+  it("right-clicking a value with nothing selected decodes that value and selects it", async () => {
+    await open(payload({ text: JSON_DOC }));
+    rightClickAt(doc().indexOf(TOKEN) + 12);
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(selected()).toBe(TOKEN);
+  });
+
+  it("⌘⇧D takes the value out of a rough selection, its key and quotes dropped", async () => {
+    await open(payload({ text: JSON_DOC }));
+    select(`"session_token": "${TOKEN}",`);
+    key("D", { shiftKey: true });
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(selected()).toBe(TOKEN);
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with the payload" }));
+    expect(doc()).toBe(`{\n  "session_token": "{\\"sub\\":\\"8812\\"}",\n  "plan": "team"\n}`);
+  });
+
+  it("valid base64 with no known format reads as binary to open, not as unreadable", async () => {
+    const proto = btoa(String.fromCharCode(0x08, 0x96, 0x01, 0x12, 0x0b, ...new TextEncoder().encode("suggestions"), 0x18, 0xfe, 0x03));
+    await open(payload({ text: `{"t": "${proto}"}` }));
+    select(proto);
+    key("D", { shiftKey: true });
+    expect(peek()).toHaveTextContent("19 B of binary · no known signature");
+    expect(within(peek()).getByRole("button", { name: "open in data window" })).toBeInTheDocument();
+  });
+
+  it("⇄ replaces the token with its payload as JSON string content, one step undone by ⌘Z", async () => {
+    await open(payload({ text: JSON_DOC }));
+    select(TOKEN);
+    key("D", { shiftKey: true });
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with the payload" }));
+    expect(doc()).toBe(`{\n  "session_token": "{\\"sub\\":\\"8812\\"}",\n  "plan": "team"\n}`);
+    expect(screen.queryByTestId("decode-peek")).toBeNull();
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    key("z");
+    expect(doc()).toBe(JSON_DOC);
+  });
+
+  it("replaces only the selected occurrence, its surrounding spaces kept, in the text's own breaks", async () => {
+    const text = "a%20b\r\n  a%20b  \r\nend";
+    await open(payload({ text, typeHint: "text/plain" }));
+    act(() => {
+      view().dispatch({ selection: { anchor: 6, head: 15 } });
+    });
+    key("D", { shiftKey: true });
+    expect(within(peek()).getByText("URL")).toBeInTheDocument();
+    expect(decodedText()).toBe("a b");
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with decoded" }));
+    expect(doc()).toBe("a%20b\n  a b  \nend");
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith("a%20b\r\n  a b  \r\nend");
+  });
+
+  it("a malformed token says why, offers no act on it, and changes nothing", async () => {
+    const bad = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ODEyIn0";
+    await open(payload({ text: `{"t": "${bad}"}` }));
+    select(bad);
+    key("D", { shiftKey: true });
+    expect(within(peek()).getByText("decode")).toBeInTheDocument();
+    expect(peek()).toHaveTextContent(
+      "not base64, URL-encoded or a JWT: 2 parts separated by dots. A JWT has 3: header, payload, signature",
+    );
+    expect(peek()).toHaveTextContent("the selection is left as it was");
+    expect(within(peek()).queryByRole("button", { name: /replace/ })).toBeNull();
+    expect(within(peek()).queryByRole("button", { name: "open in data window" })).toBeNull();
+    expect(screen.queryByTestId("modified")).toBeNull();
+  });
+
+  it("binary offers ↗ only, which opens the decoded bytes as data of their own", async () => {
+    const opened = await openWith(payload({ text: `{"blob": "${GZIP_B64}"}` }));
+    select(GZIP_B64);
+    key("D", { shiftKey: true });
+    expect(peek()).toHaveTextContent("10 B of binary · looks like gzip");
+    expect(within(peek()).queryByRole("button", { name: /replace/ })).toBeNull();
+    fireEvent.click(within(peek()).getByRole("button", { name: "open in data window" }));
+    await waitFor(() => expect(opened).toHaveBeenCalledTimes(1));
+    const handed = (opened.mock.calls[0] as unknown as [DataPayload])[0];
+    expect(handed.title).toBe("response body · GET api.example.com/v2/x · decoded base64");
+    expect(Array.from(handed.bytes)).toEqual([0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03]);
+    expect(handed.typeHint).toBeUndefined();
+    expect(handed.key).toMatch(/^decoded-[0-9a-f]{32}$/);
+    expect(handed.key).not.toBe("k");
+  });
+
+  it("a JWT opens its payload as JSON", async () => {
+    const opened = await openWith(payload({ text: JSON_DOC }));
+    select(TOKEN);
+    key("D", { shiftKey: true });
+    fireEvent.click(within(peek()).getByRole("button", { name: "open in data window" }));
+    await waitFor(() => expect(opened).toHaveBeenCalledTimes(1));
+    const handed = (opened.mock.calls[0] as unknown as [DataPayload])[0];
+    expect(new TextDecoder().decode(handed.bytes)).toBe('{"sub":"8812"}');
+    expect(handed.typeHint).toBe("application/json");
+    expect(handed.title).toMatch(/ · decoded JWT$/);
+  });
+
+  it("a form row decodes its value from the right-click or ⌘⇧D and ⇄ re-encodes the payload into it", async () => {
+    await open(payload({ text: FORM, typeHint: "application/x-www-form-urlencoded" }));
+    decodeFromMenu(screen.getAllByTestId("form-pair")[1], /^decode the value/);
+    expect(within(peek()).getByText("JWT")).toBeInTheDocument();
+    expect(peek()).toHaveTextContent("decoded as");
+    expect(screen.getAllByTestId("form-pair")[1].nextElementSibling).toContainElement(peek());
+
+    fireEvent.click(screen.getByRole("button", { name: "close the peek" }));
+    expect(screen.queryByTestId("decode-peek")).toBeNull();
+    fireEvent.click(screen.getAllByTestId("form-pair")[2]);
+    key("D", { shiftKey: true });
+    expect(within(peek()).getByText("URL")).toBeInTheDocument();
+    expect(decodedText()).toBe("50% off");
+    fireEvent.click(screen.getAllByTestId("form-pair")[1]);
+    key("D", { shiftKey: true });
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with the payload" }));
+    expect(screen.getByTestId("modified")).toHaveTextContent("modified · 1 edit");
+    expect(within(screen.getAllByTestId("form-pair")[1]).getByText('{"sub":"8812"}')).toBeInTheDocument();
+    fireEvent.click(moreItem(/^undo/));
+    expect(within(screen.getAllByTestId("form-pair")[1]).getByText(TOKEN)).toBeInTheDocument();
+  });
+
+  it("an empty value has nothing to decode", async () => {
+    await open(payload({ text: "a=&b=1", typeHint: "application/x-www-form-urlencoded" }));
+    fireEvent.contextMenu(screen.getAllByTestId("form-pair")[0], { clientX: 5, clientY: 5 });
+    expect(screen.getByRole("menuitem", { name: /^decode the value/ })).toHaveTextContent("empty value");
+  });
+
+  it("Esc, an edit or another kind closes the peek", async () => {
+    await open(payload({ text: JSON_DOC }));
+    select(TOKEN);
+    key("D", { shiftKey: true });
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByTestId("decode-peek")).toBeNull();
+
+    select(TOKEN);
+    key("D", { shiftKey: true });
+    typeInto(0, " ");
+    expect(screen.queryByTestId("decode-peek")).toBeNull();
+
+    select(TOKEN);
+    key("D", { shiftKey: true });
+    expect(peek()).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "treat the data as" }));
+    fireEvent.click(screen.getByRole("option", { name: "text" }));
+    expect(screen.queryByTestId("decode-peek")).toBeNull();
+  });
+});
