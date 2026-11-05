@@ -88,4 +88,27 @@ describe("Section", () => {
     expect(plain.className).toContain("border-b");
     expect(band.className).toContain("shrink-0");
   });
+
+  it("an action sits at the heading's trailing edge, in the heading's row, and the heading stays on one line", () => {
+    render(
+      <Section title="Headers · 3" action={<button type="button">open all</button>}>
+        <p>rows</p>
+      </Section>,
+    );
+
+    const heading = screen.getByRole("heading", { name: "Headers · 3", level: 2 });
+    const action = screen.getByRole("button", { name: "open all" });
+    expect(heading.parentElement).toBe(action.parentElement!.parentElement);
+    expect(heading.className).toContain("whitespace-nowrap");
+    expect(action.parentElement!.className).toContain("ml-auto");
+    expect(action.parentElement!.className).toContain("shrink-0");
+  });
+
+  it("no action, no row: the heading is the section's first child as before", () => {
+    const { container } = render(<Section title="Body" action={false}>x</Section>);
+
+    expect(container.querySelector("section > h2")).toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
 });
+
