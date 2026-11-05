@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-GATEPAR
+wu: E-GATEPAR.W1
+branch: HEAD
+tests:
+  unit: { count: 20, covers: "refusal: no tracked dir passes; unset, other dir and absolute core.hooksPath refuse with the install line; relative tracked dir (with or without trailing slash) passes; a 644 hook is refused by name with the chmod fix. install writes the relative value, refuses a 644 hook, a stranded linked worktree and a tree without tracked hooks before writing. Every tracked hook in this repo is executable. run() guards verify-dod, gate0, lint, preflight and leaves hooks install, verify-doc, mr reachable" }
+  integration: { count: 4, covers: "real xtask binary in a hermetic repo: an uninstalled lint exits 1 with the install line and spawns no cargo; after install an edited tracked pre-commit runs on the next commit; an installed gate runs; a linked worktree runs its own checkout's hook without a second install" }
