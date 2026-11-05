@@ -1,0 +1,40 @@
+schema: cr/v5
+scope: "WU E-PKG2.W4 -> epic/packaging-v2"
+epic: E-PKG2
+wu: E-PKG2.W4
+branch: wu/packaging-v2/release-workflow
+base: 348b9f68deba97202967ef60931c4df87dbbc714
+head: 518d97a47a5ecff8be26753a1771fa26240ddf60
+diff_sha256: 45e037c020c434f154db3e05274b1f0a1a37a166cd7f81b65254740ebda4462a
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 3
+  stage_seconds:
+    gate0: 0
+    finders: 110
+    verifiers: 11
+    total: 156
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 4, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "release_manifest restates the updater-key vocabulary in keys_of and required_keys (verifier: important refuted to nit)"
+    waived: "a full-release test ties the two (platforms.len() == required_keys().len()); DEC-86 fixes the 18 entries as a reviewed contract, and deriving one from the other would weaken that guard"
+  - finding: "keys_of maps any .app.tar.gz to both darwin architectures"
+    waived: "the release builds only the universal app (DEC-86 rule 2); a single-arch archive would need its own row and name"
+  - finding: "release-manifest does not validate --pub-date as RFC 3339 or the tag's version as semver"
+    waived: "the workflow's date -u format and the version job's tag check make a malformed value unreachable; its only caller is release.yml"
+  - finding: "--sign-only requires TAURI_SIGNING_PRIVATE_KEY though tauri signer also accepts TAURI_SIGNING_PRIVATE_KEY_PATH"
+    waived: "the workflow passes the key by value from the secret (DEC-82 rule 6); the path form is never used"
+verdict: PASS
+date: 2026-11-06
