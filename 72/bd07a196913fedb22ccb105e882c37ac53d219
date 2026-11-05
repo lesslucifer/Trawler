@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 72bd07a196913fedb22ccb105e882c37ac53d219
+base: c94214064c55177bc4f3b5e6cc02d7a3c7012e5c
+tier: key
+signer: vuluu
+report: docs/work/2026-11-05-inspect-window-v2-w1-kind-detector-result.html
+report_sha256: c6f704e7b9e9f6923f1a17bcf6ed0b0b0b694e526c711121b2e0f8282468dd7f
+date: 2026-11-05
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDJQC04k/ldkdXc7713jiVcfcW5H79fQVXchLj/ydtovF9upLTUobx4hm
+  qwFby9cGx669osleqzHyQ5apM5WDUL
+  -----END SSH SIGNATURE-----
