@@ -86,7 +86,8 @@ function useFakeSdk() {
 // alphabetical-by-accident. The three layout specs run in this order because each
 // of the first two ends by quitting the app, and the launcher launches it again
 // for the next file: that relaunch is what the second and third assert. The three
-// sticky specs are the same shape for the user's view choices.
+// sticky specs are the same shape for the user's view choices, and the two
+// query-bar specs for the chips.
 const SPECS = [
   "./specs/onboarding.spec.ts",
   "./specs/capture.spec.ts",
@@ -99,6 +100,8 @@ const SPECS = [
   "./specs/layout-relaunched.spec.ts",
   "./specs/layout-broken.spec.ts",
   "./specs/data-window.spec.ts",
+  "./specs/query-bar.spec.ts",
+  "./specs/query-bar-relaunched.spec.ts",
   "./specs/flows.spec.ts",
 ];
 

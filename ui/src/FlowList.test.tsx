@@ -100,9 +100,11 @@ test("an empty list with no filter names the act that fills it", () => {
   );
 });
 
+const STATUS_REFUSED = { label: "status:6xx", param: "status", reason: "status must be a code or a range" };
+
 // Every empty is the whole of the row region, so each is stated centred in it.
 test("every empty is centred in the region, as the region's own statement", () => {
-  const cases = [{}, { filtered: true }, { cleared: true }, { refused: "abc" }, { silent: true }];
+  const cases = [{}, { filtered: true }, { cleared: true }, { refused: STATUS_REFUSED }, { silent: true }];
   for (const props of cases) {
     const { unmount } = render(<FlowList flows={[]} {...props} />);
     const region = screen.getByTestId("empty");
@@ -116,7 +118,7 @@ test("every empty is centred in the region, as the region's own statement", () =
 // The owner, on round 10: less technical, more user friendly. No empty names an
 // address, a port or a piece of Trawler's insides.
 test("no empty speaks in addresses or internals", () => {
-  const cases = [{}, { filtered: true }, { cleared: true }, { refused: "abc" }, { silent: true }];
+  const cases = [{}, { filtered: true }, { cleared: true }, { refused: STATUS_REFUSED }, { silent: true }];
   for (const props of cases) {
     const { unmount } = render(<FlowList flows={[]} onSetUp={() => {}} {...props} />);
     const said = screen.getByTestId("empty").textContent ?? "";
@@ -135,7 +137,7 @@ test("an empty list with nothing captured offers set up capture", () => {
 });
 
 test("a filtered, cleared, refused or silent empty offers no setup: none of them is a window nothing reached", () => {
-  const cases = [{ filtered: true }, { cleared: true }, { refused: "abc" }, { silent: true }];
+  const cases = [{ filtered: true }, { cleared: true }, { refused: STATUS_REFUSED }, { silent: true }];
   for (const props of cases) {
     const { unmount } = render(<FlowList flows={[]} onSetUp={() => {}} {...props} />);
     expect(screen.queryByRole("button", { name: "set up capture" })).toBeNull();
@@ -150,7 +152,7 @@ test("an empty list with a filter says the query excludes the traffic, not that 
     "Nothing matches your filter",
   );
   expect(screen.getByTestId("empty")).toHaveTextContent(
-    "Try a shorter search, or clear one of the fields above.",
+    "Remove a filter above, or widen one.",
   );
   expect(screen.getByTestId("empty")).not.toHaveTextContent("Nothing captured yet");
 });
@@ -365,9 +367,9 @@ test("a cleared capture that then loses its core is not told nothing ever arrive
 // refusal, so the build does not either: the refusal keeps the region it earned
 // and the silence is stated above it by the shell.
 test("a refusal is not hidden by the silence that followed it", () => {
-  render(<FlowList flows={[]} silent refused="4xz" />);
+  render(<FlowList flows={[]} silent refused={STATUS_REFUSED} />);
   const region = screen.getByTestId("empty");
-  expect(region).toHaveTextContent("“4xz” isn't a status code");
+  expect(region).toHaveTextContent("“status:6xx” isn't a status code");
   expect(region).not.toHaveTextContent("Trawler's capture service isn't answering");
 });
 
@@ -387,14 +389,27 @@ test("a retry in flight disables its button and says what is awaited", () => {
 });
 
 // A rejection is not a failure: the API answered and said no, so there is nothing
-// to retry — the correction is more typing, and the sentence names what was typed.
-test("a refused status names the value and offers a grammar, not a retry", () => {
-  render(<FlowList flows={[]} filtered refused="4xz" />);
+// to retry — the correction is a different filter, and the sentence names the chip.
+test("a refused status names the chip and offers a grammar, not a retry", () => {
+  render(<FlowList flows={[]} filtered refused={STATUS_REFUSED} />);
   const region = screen.getByTestId("empty");
-  expect(region).toHaveTextContent("“4xz” isn't a status code");
-  expect(region).toHaveTextContent("Try a code like 404, or a range like 4xx.");
+  expect(region).toHaveTextContent("“status:6xx” isn't a status code");
+  expect(region).toHaveTextContent("Remove the marked filter, or try a code like 404 or a range like 4xx.");
   expect(region).not.toHaveTextContent("Nothing matches your filter");
   expect(screen.queryByRole("button", { name: "try again" })).toBeNull();
+});
+
+test("a refusal of any other key names the chip and carries the service's sentence", () => {
+  render(
+    <FlowList
+      flows={[]}
+      filtered
+      refused={{ label: "-source:x", param: "not_source", reason: "not_source must be captured, imported or sent" }}
+    />,
+  );
+  const region = screen.getByTestId("empty");
+  expect(region).toHaveTextContent("“-source:x” isn't a filter the capture service takes");
+  expect(region).toHaveTextContent("not_source must be captured, imported or sent. Remove the marked filter.");
 });
 
 test("with no failure the two inherited empties are unchanged", () => {

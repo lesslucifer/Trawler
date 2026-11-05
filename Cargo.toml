@@ -91,7 +91,6 @@ if-addrs = "0.15.0"
 
 [dev-dependencies]
 trawler = { path = ".", features = ["test-utils"] }
-cargo-husky = { version = "1", default-features = false, features = ["user-hooks"] }
 proptest = "1"
 tempfile = "3"
 tower = { version = "0.5", features = ["util"] }

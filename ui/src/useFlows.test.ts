@@ -1,8 +1,23 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { TUNNEL_TIMES_MAX, tunnelHost, useFlowDetail, useFlows, type FlowsScope } from "./useFlows";
 import { ApiError } from "./api";
-import type { FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
+import type { Filter, FlowSummary, FlowView, StreamHandlers, TrawlerApi } from "./api";
 import { apiStub } from "./apiStub";
+import type { Chip, ChipKey } from "./query";
+
+const chip = (key: ChipKey, value: string): Chip => ({ key, value, negated: false });
+const STATUS_REFUSAL = "status must be a code like 404 or a range like 4xx";
+
+// The hook is handed its chips by the screen; a test hands them the same way.
+function withChips(api: TrawlerApi, scope: () => FlowsScope = () => "list") {
+  let chips: Filter = [];
+  const hook = renderHook(() => useFlows(api, scope(), chips));
+  const setChips = (...next: Chip[]) => {
+    chips = next;
+    hook.rerender();
+  };
+  return { ...hook, setChips };
+}
 
 // A captured stream handler set, so a test can fire a live `connection`.
 function fakeApi() {
@@ -112,7 +127,10 @@ describe("the setup scope reads unfiltered, and the list keeps its own rows", ()
   const rows = () => [summary("f1", "http://example.com/"), summary("f2", "http://other.test/")];
   const scopedApi = (store = rows()) =>
     apiStub({
-      listFlows: vi.fn(async (filter) => store.filter((f) => !filter.host || f.uri.includes(filter.host))),
+      listFlows: vi.fn(async (filter: Filter) => {
+        const host = filter.find((c) => c.key === "host")?.value;
+        return store.filter((f) => !host || f.uri.includes(host));
+      }),
     });
 
   it("an empty filter answers both scopes with one listing", async () => {
@@ -125,9 +143,9 @@ describe("the setup scope reads unfiltered, and the list keeps its own rows", ()
 
   it("a filtered list leaves everything as it was", async () => {
     const api = scopedApi();
-    const { result } = renderHook(() => useFlows(api));
+    const { result, setChips } = withChips(api);
     await waitFor(() => expect(result.current.everything).toHaveLength(2));
-    act(() => result.current.update("host", "other.test"));
+    act(() => setChips(chip("host", "other.test")));
     await waitFor(() => expect(result.current.flows).toHaveLength(1));
     expect(result.current.everything).toHaveLength(2);
   });
@@ -136,20 +154,20 @@ describe("the setup scope reads unfiltered, and the list keeps its own rows", ()
     const store = rows();
     const api = scopedApi(store);
     let scope: FlowsScope = "list";
-    const { result, rerender } = renderHook(() => useFlows(api, scope));
-    act(() => result.current.update("host", "other.test"));
+    const { result, rerender, setChips } = withChips(api, () => scope);
+    act(() => setChips(chip("host", "other.test")));
     await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
     store.push(summary("f3", "https://third.test/"));
     scope = "setup";
     rerender();
     await waitFor(() => expect(result.current.everything).toHaveLength(3));
-    expect(api.listFlows).toHaveBeenLastCalledWith({});
+    expect(api.listFlows).toHaveBeenLastCalledWith([]);
     expect(result.current.flows.map((f) => f.id)).toEqual(["f2"]);
 
     scope = "list";
     rerender();
-    await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith({ host: "other.test" }));
+    await waitFor(() => expect(api.listFlows).toHaveBeenLastCalledWith([chip("host", "other.test")]));
     expect(result.current.flows.map((f) => f.id)).toEqual(["f2"]);
   });
 });
@@ -182,10 +200,10 @@ test("a host stays on offer after the filter narrows the list away from it", asy
     [summary("f1", "http://example.com/"), summary("f2", "http://other.test/")],
     [summary("f2", "http://other.test/")],
   ]);
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   await waitFor(() => expect(result.current.hosts).toEqual(["example.com", "other.test"]));
 
-  act(() => result.current.update("host", "other.test"));
+  act(() => setChips(chip("host", "other.test")));
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
   expect(result.current.hosts).toEqual(["example.com", "other.test"]);
@@ -212,11 +230,11 @@ function feedApi(answer: () => Promise<FlowSummary[]>) {
 test("a core that says nothing is unreachable, and the rows it already sent survive", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const api = feedApi(() => answer());
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
   answer = () => Promise.reject(new TypeError("Failed to fetch"));
-  act(() => result.current.update("q", "x"));
+  act(() => setChips(chip("q", "x")));
   await waitFor(() => expect(result.current.silent).toBe(true));
 
   // Discarding evidence on a transient failure is the worse error — the band
@@ -224,15 +242,17 @@ test("a core that says nothing is unreachable, and the rows it already sent surv
   expect(result.current.flows).toHaveLength(1);
 });
 
-test("a refused query is rejected, names the value typed, and takes the rows with it", async () => {
+test("a refused query names the parameter the core named, and takes the rows with it", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const api = feedApi(() => answer());
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
-  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  act(() => result.current.update("status", "4xz"));
-  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+  answer = () => Promise.reject(new ApiError(400, STATUS_REFUSAL));
+  act(() => setChips(chip("status", "4xx")));
+  await waitFor(() =>
+    expect(result.current.refused).toEqual({ param: "status", reason: STATUS_REFUSAL, values: ["4xx"] }),
+  );
 
   // The old rows are not an answer to the query that was refused.
   expect(result.current.flows).toEqual([]);
@@ -255,7 +275,7 @@ test("a listing that arrives clears whichever failure preceded it", async () => 
 test("answered counts the listings that came back, so an empty answer is told from none yet", async () => {
   let answer: () => Promise<FlowSummary[]> = () => Promise.reject(new TypeError("dead"));
   const api = feedApi(() => answer());
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   expect(result.current.answered).toBe(0);
   await waitFor(() => expect(result.current.silent).toBe(true));
   expect(result.current.answered).toBe(0);
@@ -267,9 +287,9 @@ test("answered counts the listings that came back, so an empty answer is told fr
   expect(result.current.answered).toBe(1);
   expect(result.current.flows).toEqual([]);
 
-  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  act(() => result.current.update("status", "4xz"));
-  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+  answer = () => Promise.reject(new ApiError(400, STATUS_REFUSAL));
+  act(() => setChips(chip("status", "4xx")));
+  await waitFor(() => expect(result.current.refused?.param).toBe("status"));
   expect(result.current.answered).toBe(1);
 });
 
@@ -453,15 +473,15 @@ test("a dropped stream records the silence without unsaying the refusal", async 
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const f = streamApi();
   const api: TrawlerApi = apiStub({ ...f.api, listFlows: () => answer() });
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
-  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  act(() => result.current.update("status", "4xz"));
-  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+  answer = () => Promise.reject(new ApiError(400, STATUS_REFUSAL));
+  act(() => setChips(chip("status", "4xx")));
+  await waitFor(() => expect(result.current.refused?.values).toEqual(["4xx"]));
 
   act(() => f.fireDown());
-  expect(result.current.refused).toBe("4xz");
+  expect(result.current.refused?.values).toEqual(["4xx"]);
   expect(result.current.silent).toBe(true);
 });
 
@@ -473,37 +493,37 @@ test("a refusal does not outlive the value it was about", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const f = streamApi();
   const api: TrawlerApi = apiStub({ ...f.api, listFlows: () => answer() });
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
-  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  act(() => result.current.update("status", "4xz"));
-  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+  answer = () => Promise.reject(new ApiError(400, STATUS_REFUSAL));
+  act(() => setChips(chip("status", "4xx")));
+  await waitFor(() => expect(result.current.refused?.values).toEqual(["4xx"]));
 
   answer = () => Promise.reject(new TypeError("dead socket"));
-  act(() => result.current.update("status", "200"));
+  act(() => setChips(chip("status", "200")));
   await waitFor(() => expect(result.current.silent).toBe(true));
   expect(result.current.refused).toBeNull();
 });
 
-// Its pair: asking the SAME refused value again and getting no answer teaches
+// Its pair: still sending the SAME refused value and getting no answer teaches
 // nothing new about it, so the refusal stands rather than flickering off on a
-// transient failure.
-test("a silence on the refused value itself leaves the refusal standing", async () => {
+// transient failure — whatever other chip was added beside it.
+test("a silence while the refused value is still sent leaves the refusal standing", async () => {
   let answer: () => Promise<FlowSummary[]> = async () => [summary("f1", "http://example.com/")];
   const f = streamApi();
   const api: TrawlerApi = apiStub({ ...f.api, listFlows: () => answer() });
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   await waitFor(() => expect(result.current.flows).toHaveLength(1));
 
-  answer = () => Promise.reject(new ApiError(400, "GET /flows failed: 400"));
-  act(() => result.current.update("status", "4xz"));
-  await waitFor(() => expect(result.current.refused).toBe("4xz"));
+  answer = () => Promise.reject(new ApiError(400, STATUS_REFUSAL));
+  act(() => setChips(chip("status", "4xx")));
+  await waitFor(() => expect(result.current.refused?.values).toEqual(["4xx"]));
 
   answer = () => Promise.reject(new TypeError("dead socket"));
-  act(() => result.current.update("q", "x"));
+  act(() => setChips(chip("status", "4xx"), chip("q", "x")));
   await waitFor(() => expect(result.current.silent).toBe(true));
-  expect(result.current.refused).toBe("4xz");
+  expect(result.current.refused?.values).toEqual(["4xx"]);
 });
 
 // A listing that arrives is the only thing that ends the silence — the stream
@@ -534,24 +554,24 @@ test("a refusal names the value that was asked, not whatever the box holds now",
   const api: TrawlerApi = apiStub({
     listFlows: (filter) =>
       new Promise<FlowSummary[]>((_, reject) =>
-        calls.push({ status: filter.status ?? "", reject }),
+        calls.push({ status: filter.find((c) => c.key === "status")?.value ?? "", reject }),
       ),
     getFlow: async () => { throw new Error("unused"); },
     getBody: async () => { throw new Error("unused"); },
   });
-  const { result } = renderHook(() => useFlows(api));
+  const { result, setChips } = withChips(api);
   await waitFor(() => expect(calls).toHaveLength(1)); // the mount's own listing
 
-  act(() => result.current.update("status", "4xz"));
+  act(() => setChips(chip("status", "4xx")));
   await waitFor(() => expect(calls).toHaveLength(2));
-  expect(calls[1].status).toBe("4xz");
+  expect(calls[1].status).toBe("4xx");
 
-  // The box changes while that listing is still out, and before the debounce
-  // has dispatched anything for the new value.
-  act(() => result.current.update("status", ""));
+  // The chip goes while that listing is still out, and before the debounce
+  // has dispatched anything for the new chips.
+  act(() => setChips());
 
   await act(async () => {
-    calls[1].reject(new ApiError(400, "GET /flows failed: 400"));
+    calls[1].reject(new ApiError(400, STATUS_REFUSAL));
   });
-  expect(result.current.refused).toBe("4xz");
+  expect(result.current.refused?.values).toEqual(["4xx"]);
 });

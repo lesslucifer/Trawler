@@ -9,6 +9,25 @@ import type { LayoutControls } from "./useLayout";
 
 const ROW_HEIGHT = 30;
 
+export interface RefusedFilter {
+  label: string;
+  param: string;
+  reason: string;
+}
+
+function RefusedNotice({ refused }: { refused: RefusedFilter }) {
+  const status = refused.param === "status" || refused.param === "not_status";
+  return status ? (
+    <Notice layout="region" detail="Remove the marked filter, or try a code like 404 or a range like 4xx.">
+      {`“${refused.label}” isn't a status code`}
+    </Notice>
+  ) : (
+    <Notice layout="region" detail={`${refused.reason}. Remove the marked filter.`}>
+      {`“${refused.label}” isn't a filter the capture service takes`}
+    </Notice>
+  );
+}
+
 type ColumnLabel = { track: Track; label: string; align?: string };
 
 const BEFORE_PATH: readonly ColumnLabel[] = [
@@ -91,7 +110,7 @@ function Absence({
   filtered: boolean;
   cleared: boolean;
   silent: boolean;
-  refused: string | null;
+  refused: RefusedFilter | null;
   retrying: boolean;
   onRetry: () => void;
   onSetUp?: () => void;
@@ -100,10 +119,8 @@ function Absence({
     <div data-testid="empty" className="flex flex-1 items-center justify-center p-12">
       {refused !== null ? (
         // A rejection, not a failure: the API answered and said no, so there is
-        // no ⚠ and no retry — the correction is more typing.
-        <Notice layout="region" detail="Try a code like 404, or a range like 4xx.">
-          {`“${refused}” isn't a status code`}
-        </Notice>
+        // no ⚠ and no retry — the correction is a different filter.
+        <RefusedNotice refused={refused} />
       ) : silent ? (
         // The clause is a claim about why this region is empty, so it is made
         // only when it is this region's own truth. Neither a filter that
@@ -121,7 +138,7 @@ function Absence({
           All cleared
         </Notice>
       ) : filtered ? (
-        <Notice layout="region" detail="Try a shorter search, or clear one of the fields above.">
+        <Notice layout="region" detail="Remove a filter above, or widen one.">
           Nothing matches your filter
         </Notice>
       ) : (
@@ -174,7 +191,7 @@ export function FlowList({
   filtered?: boolean;
   cleared?: boolean;
   silent?: boolean;
-  refused?: string | null;
+  refused?: RefusedFilter | null;
   retrying?: boolean;
   onRetry?: () => void;
   onSetUp?: () => void;

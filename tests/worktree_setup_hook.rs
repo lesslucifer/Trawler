@@ -100,3 +100,65 @@ fn existing_files_in_new_worktree_are_never_overwritten() {
 
     assert_eq!(fs::read_to_string(wt.join("tracked.env")).unwrap(), "FROM_SOURCE=1");
 }
+
+fn worktree_add_output(repo: &Path, wt: &Path) -> String {
+    let mut cmd = Command::new("git");
+    for (key, _) in std::env::vars_os() {
+        if key.to_string_lossy().starts_with("GIT_") {
+            cmd.env_remove(key);
+        }
+    }
+    let out = cmd
+        .args(["worktree", "add", "-q", wt.to_str().expect("utf-8 temp path"), "-b", "feature"])
+        .current_dir(repo)
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GIT_CONFIG_SYSTEM", "/dev/null")
+        .output()
+        .expect("failed to spawn git");
+    assert!(out.status.success(), "worktree add failed: {}", String::from_utf8_lossy(&out.stderr));
+    format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr))
+}
+
+fn repo_with_copy_list(tmp: &Path) -> std::path::PathBuf {
+    let repo = tmp.join("repo");
+    fs::create_dir(&repo).expect("failed to create repo dir");
+    git(&repo, &["init", "-q", "-b", "main"]);
+    install_post_checkout_hook(&repo);
+    fs::write(repo.join(".gitworktreecopy"), "ca/*\n").expect("failed to write .gitworktreecopy");
+    git(&repo, &["add", "."]);
+    git(&repo, &["commit", "-q", "-m", "init"]);
+    repo
+}
+
+#[test]
+fn a_new_worktree_is_seeded_by_the_source_checkouts_built_xtask() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = repo_with_copy_list(tmp.path());
+    let seeder = repo.join("target/debug/xtask");
+    fs::create_dir_all(seeder.parent().unwrap()).unwrap();
+    fs::write(&seeder, "#!/bin/sh\necho \"$*\" > seeded-with\nmkdir target\n").unwrap();
+    fs::set_permissions(&seeder, fs::Permissions::from_mode(0o755)).unwrap();
+
+    let wt = tmp.path().join("wt");
+    worktree_add_output(&repo, &wt);
+
+    assert_eq!(fs::read_to_string(wt.join("seeded-with")).unwrap().trim(), "target seed");
+    let target = wt.join("target").symlink_metadata().unwrap();
+    assert!(target.is_dir() && !target.file_type().is_symlink());
+}
+
+#[test]
+fn a_new_worktree_without_a_seeder_gets_no_shared_target_and_a_note() {
+    let tmp = tempfile::tempdir().unwrap();
+    let repo = repo_with_copy_list(tmp.path());
+    fs::create_dir_all(repo.join("target/debug")).unwrap();
+
+    let wt = tmp.path().join("wt");
+    let said = worktree_add_output(&repo, &wt);
+
+    assert!(
+        wt.join("target").symlink_metadata().is_err(),
+        "no target at all: the first build makes its own"
+    );
+    assert!(said.contains("target/ not seeded"), "{said}");
+}

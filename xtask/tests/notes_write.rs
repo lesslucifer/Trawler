@@ -308,7 +308,7 @@ fn a_run_writes_the_two_notes_and_nothing_else() {
         assert!(!refs.contains(other), "no {other} note is this command's to write: {refs}");
     }
     assert!(
-        !repo.path.join("target/.gate-tally").exists(),
+        !xtask::tally::path(&repo.path).exists(),
         "a note is not a gate run, and writes no tally"
     );
 }

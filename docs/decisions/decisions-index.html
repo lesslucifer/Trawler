@@ -29,7 +29,7 @@
         <tr>
           <td><a href="workflow-gates.html"><code>workflow-gates.html</code></a></td>
           <td><span class="badge id">DEC-2 · DEC-3 · DEC-6 · DEC-7 · DEC-8 · DEC-9 · DEC-10 · DEC-11 · DEC-27 · DEC-54</span></td>
-          <td>Shape of DoD evidence (four notes, receipt, no-ff, diff binding) · archived docs leave git, tracked-doc layout gated · main is merge-only (pre-commit refuses direct commits) · manual review (fifth note, path-derived) · SSH-signature auth for key-backed identities (gpgsig for doc commits, note-carried for WU/epic tips) · epic walk skips target-reachable history, per-seam walk waiver on cr/v2 · authority rebalance: WU/epic mr always attests a result report (sign-what-you-read), commit signatures narrow to T0/T1, .mr-allowed gitignored · gate speed is caching under DEC-2, never relaxation — incremental Gate 0 adopted, five other cuts measured and rejected (DEC-11, minted as DEC-9 on the E-GATEFAST branch, renumbered at the E-MRSIG merge) · the human signature goes last: mr confirm refuses a tip lacking test/v2, doc/v1 or a diff-bound cr/v3 PASS, because every binding pins the diff and a later tree change orphans it (DEC-27) · the cache key is the tree’s content, not its history, and the commit hook reads a lint-level cache of its own — amending DEC-11’s key definition, which made every commit a false miss (DEC-54)</td>
+          <td>Shape of DoD evidence (four notes, receipt, no-ff, diff binding) · archived docs leave git, tracked-doc layout gated · main is merge-only (pre-commit refuses direct commits) · manual review (fifth note, path-derived) · SSH-signature auth for key-backed identities (gpgsig for doc commits, note-carried for WU/epic tips) · epic walk skips target-reachable history, per-seam walk waiver on cr/v2 · authority rebalance: WU/epic mr always attests a result report (sign-what-you-read), commit signatures narrow to T0/T1, .mr-allowed gitignored · gate speed is caching under DEC-2, never relaxation — incremental Gate 0 adopted, five other cuts measured and rejected (DEC-11, minted as DEC-9 on the E-GATEFAST branch, renumbered at the E-MRSIG merge) · the human signature goes last: mr confirm refuses a tip lacking test/v2, doc/v1 or a diff-bound cr/v3 PASS, because every binding pins the diff and a later tree change orphans it (DEC-27) · the cache key is the tree’s content, not its history, and the commit hook reads a lint-level cache of its own — amending DEC-11’s key definition, which made every commit a false miss (DEC-54); its “installed by cargo-husky” consequence superseded by DEC-72</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -418,7 +418,7 @@
           <td><a href="dec-42-the-gate-tally-is-local-measurement.html"><code>dec-42-the-gate-tally-is-local-measurement.html</code></a></td>
           <td><span class="badge id">DEC-42</span></td>
           <td><strong>The gate's own measurement is local, and a review round is a <code>cr</code> note in
-            the gate's range</strong> — one record per gate run, appended to <code>target/.gate-tally</code>
+            the gate's range</strong> — one record per gate run, appended to <code>target/.gate-tally</code> (since DEC-73 <code>&lt;git-common-dir&gt;/trawler-gate-tally</code>)
             (the shape of Gate 0's cache: gitignored, never synced, wiped by <code>cargo clean</code>),
             holding the refused check ids and the rounds the work paid; <code>cargo xtask tally</code>
             aggregates it. E-SIMPWF's stopping rule adopts or drops W5 and W7 on a number, so the number has
@@ -880,6 +880,42 @@
             Layout. Amends DEC-31 and DEC-60 rule 6. Rejected: a body mode per leg, fields in
             <code>layout.json</code>, restoring <code>chosen</code>, restoring the selection or draft, a debounced
             write, localStorage</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-71-a-filter-is-a-chip-the-core-stays-keyed.html"><code>dec-71-a-filter-is-a-chip-the-core-stays-keyed.html</code></a></td>
+          <td><span class="badge id">DEC-71</span></td>
+          <td><strong>A filter is a chip, the core stays keyed.</strong> One typed query bar replaces the four filter
+            controls. The app parses each draft into a chip and refetches only when a chip is added or removed; a draft
+            that does not parse stays in the bar and names its fault. The core parses no grammar: keyed parameters, each
+            repeatable (<code>q</code> all of, any other key any of), a <code>not_&lt;key&gt;</code> form of each (none of),
+            and <code>is=pending|https</code>; a single parameter behaves as before; a refusal names the parameter as sent;
+            host matches host or host:port. Reverses UC-4's “chosen rather than typed”. Rejected: a core
+            <code>?query=</code>, OR syntax within a key, applying per keystroke, highlighted text instead of chips,
+            commands in the bar</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-72-git-runs-the-tracked-hooks.html"><code>dec-72-git-runs-the-tracked-hooks.html</code></a></td>
+          <td><span class="badge id">DEC-72</span></td>
+          <td><strong>Git runs the tracked hooks, from each checkout.</strong> <code>core.hooksPath</code> is the relative
+            <code>.cargo-husky/hooks</code>, set once per clone by <code>cargo xtask hooks install</code>, so each worktree runs
+            its own branch's hooks. <code>verify-dod</code>, <code>gate0</code>, <code>lint</code> and <code>preflight</code>
+            refuse a checkout where the value is unset or elsewhere, or a tracked hook is not executable; install refuses
+            while a linked worktree would lose a hook. cargo-husky retired; supersedes DEC-54's install consequence.
+            Rejected: reinstall-on-drift, an absolute path, a worktree-scoped value as the steady state</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-73-each-worktree-builds-into-its-own-target.html"><code>dec-73-each-worktree-builds-into-its-own-target.html</code></a></td>
+          <td><span class="badge id">DEC-73</span></td>
+          <td><strong>Each worktree builds into its own target; only third-party artifacts are shared.</strong> A new
+            worktree's <code>target/</code> is seeded by <code>post-checkout</code>: an APFS clone of the main checkout's
+            third-party artifacts (empty off macOS). <code>target isolate</code> replaces a symlinked target, <code>target
+            prune</code> drops workspace artifacts and <code>incremental/</code>; the gates refuse a symlinked target. Gate
+            markers become per worktree; the gate tally moves to <code>&lt;git-common-dir&gt;/trawler-gate-tally</code>
+            (amends DEC-42). Reverses the shared <code>~&gt; target</code> symlink, which linked and ran other worktrees'
+            code. Rejected: the shared target, symlinking third-party parts, sccache, a dev-profile change</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>

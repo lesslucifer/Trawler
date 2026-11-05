@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aec088d9f34851f0dfae682">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-73: each worktree builds into its own target</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-73 — each worktree builds into its own target; only third-party artifacts are shared</h1>
+      <p>Worktrees no longer share one <code>target/</code>. Third-party build artifacts are still shared, as APFS copy-on-write blocks.</p>
+      <div class="meta">Decided 2026-11-05 · E-GATEPAR.W2 · active · reverses the <code>~&gt; target</code> symlink in <code>.gitworktreecopy</code></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="decision">The decision</h2>
+    <div class="callout" data-c="decision">
+      <p><strong>Every checkout's <code>target/</code> is a directory of its own.</strong> A new worktree's
+      <code>target/</code> is <em>seeded</em>: an APFS clone (<code>cp -c</code>, mtimes kept) of the main checkout's
+      third-party artifacts, without any workspace-crate artifact, <code>incremental/</code>, uplifted binary or gate
+      marker. Off macOS it starts empty. A gate in a checkout whose <code>target</code> is a symlink is refused.</p>
+    </div>
+
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  A["worktree A"] --> TA["A's target/<br/>own crates + incremental"]
+  B["worktree B"] --> TB["B's target/<br/>own crates + incremental"]
+  TA -. "APFS clone: third-party blocks shared" .- TB
+      </pre>
+      <div class="caption">Only what is identical across checkouts is shared, and it is shared as blocks, not as a path.</div>
+    </div>
+
+    <h2 id="why">Why — sharing was unsound, not only slow</h2>
+    <table data-c="why-table">
+      <thead><tr><th>Fact</th><th>Consequence</th></tr></thead>
+      <tbody>
+        <tr><td>A workspace crate's artifact hash is the same in every checkout, and freshness is judged by mtime</td><td>worktree B's build can accept A's artifact as fresh and link A's code</td></tr>
+        <tr><td>Uplifted binaries (<code>target/debug/xtask</code>) carry no hash</td><td>whoever built last owns the binary every worktree's gates run</td></tr>
+        <tr><td>Met live in E-GATEPAR.W1</td><td>clippy linted another worktree's <code>xtask</code> lib; 4 false test reds ran another worktree's binary</td></tr>
+        <tr><td>Shared tree measured 2026-11-05: 72 GB — 727 workspace-crate hashes, ~828k leftover <code>.rcgu.o</code>, ~17 GB third-party, 12–20 GB <code>incremental/</code></td><td>the sharing saved little that a clone of the third-party part does not</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="commands">Commands</h2>
+    <table data-c="commands-table">
+      <thead><tr><th>Command</th><th>Does</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td><code>cargo xtask target seed</code></td><td>third-party-only clone into an absent <code>target/</code></td><td><code>post-checkout</code>, via the source checkout's built <code>xtask</code></td></tr>
+        <tr><td><code>cargo xtask target isolate [&lt;checkout&gt;]</code></td><td>replaces a symlinked <code>target</code> with a seeded one; leaves a directory alone</td><td>once per pre-E-GATEPAR worktree</td></tr>
+        <tr><td><code>cargo xtask target prune</code></td><td>drops workspace-crate artifacts and <code>incremental/</code>, keeps third-party, prints bytes and volume free space before/after; folds a legacy <code>target/.gate-tally</code> into the common-dir tally</td><td>any time the tree grows; once after the sync</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <table data-c="rejected-table">
+      <thead><tr><th>Alternative</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>Keep the shared <code>target/</code></td><td>unsound (above)</td></tr>
+        <tr><td>Symlink only the third-party parts</td><td>cargo keeps both kinds in the same <code>deps/</code>, <code>build/</code>, <code>.fingerprint/</code>, distinguished only by hash, so no directory symlink can separate them</td></tr>
+        <tr><td>sccache</td><td>a service to run and debug for a saving the clone already gives</td></tr>
+        <tr><td>Change the dev profile's debug info</td><td>not needed yet: if the leftover objects grow back, <code>prune</code> is the fix</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="consequences">Consequences</h2>
+    <ul data-c="consequences">
+      <li>Gate markers (<code>.gate0-green</code>, <code>.lint-green</code>, <a href="workflow-gates.html#dec-54">DEC-54</a>) are per worktree, so one worktree's green no longer overwrites another's (cause C5).</li>
+      <li>The gate tally (<a href="dec-42-the-gate-tally-is-local-measurement.html">DEC-42</a>) moves to <code>&lt;git-common-dir&gt;/trawler-gate-tally</code>, so a machine still keeps one tally.</li>
+      <li>A seeded worktree's first build compiles only the workspace crates. Measured: 13.6 s for 3 crates; prune freed 65.5 GiB on the main checkout.</li>
+      <li>Held by <code>xtask/src/target.rs</code> tests, <code>xtask/tests/target_isolation.rs</code>, <code>tests/worktree_setup_hook.rs</code> and the epic e2e <code>xtask/tests/e2e_gate_parity.rs</code>.</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

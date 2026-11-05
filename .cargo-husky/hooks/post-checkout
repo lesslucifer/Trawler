@@ -1,5 +1,5 @@
 #!/bin/bash
-# Installed to .git/hooks by cargo-husky (user-hooks feature).
+# Runs from the checkout via core.hooksPath (cargo xtask hooks install).
 # Copies files matching patterns in .gitworktreecopy from the source worktree
 # (the one `git worktree add` was invoked from) to the new worktree.
 # Falls back to the main worktree if the source cannot be detected.
@@ -153,3 +153,15 @@ while IFS= read -r raw_pattern || [ -n "$raw_pattern" ]; do
 done < "$COPY_FILE"
 
 echo "Done: $copied copied, $linked symlinked, $skipped skipped (already existed)"
+
+# A worktree builds into its own target/ (E-GATEPAR.W2). `cargo xtask` here would
+# compile every third-party crate before it could seed, so the source checkout's
+# already-built binary does the seeding.
+SEEDER="$SOURCE_WORKTREE/target/debug/xtask"
+if [ ! -e "$CURRENT_DIR/target" ] && [ ! -L "$CURRENT_DIR/target" ]; then
+  if [ -x "$SEEDER" ] && (cd "$CURRENT_DIR" && "$SEEDER" target seed); then
+    :
+  else
+    echo "  ⚠ target/ not seeded (no working $SEEDER): the first build compiles every crate"
+  fi
+fi
