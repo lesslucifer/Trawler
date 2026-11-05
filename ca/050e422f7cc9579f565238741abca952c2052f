@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-CI
+wu: E-CI.W1
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-83-ci-is-a-signal-on-main-not-a-gate.html"
+    tier: T2
+    action: added
+    distills: "CI on main is a signal: triggers, dispatch by hand, what runs and what stays local, nothing refuses on its result, read-only"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-83 row"
+  - path: "docs/work/2026-11-05-ci-result.html"
+    tier: T3
+    action: added
+    distills: "the E-CI result (epic and WU, collapsed)"
