@@ -292,9 +292,8 @@ pub fn artifacts(bundle_dir: &Path) -> Result<Vec<PathBuf>, String> {
 
 fn is_artifact(path: &Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-    [".app", ".dmg", ".msi", "-setup.exe", ".deb", ".rpm", ".AppImage", ".app.tar.gz", ".sig"]
-        .iter()
-        .any(|suffix| name.ends_with(suffix))
+    [".app", ".dmg", ".sig"].iter().any(|suffix| name.ends_with(suffix))
+        || !matches!(crate::release_manifest::keys_of(name), Ok(None))
 }
 
 fn verify_signature(app: &Path) -> Result<(), String> {
@@ -656,6 +655,22 @@ mod tests {
                 "nsis/Trawler_0.1.0_x64-setup.exe"
             ]
         );
+    }
+
+    #[test]
+    fn every_installer_the_release_manifest_maps_is_an_artifact() {
+        for name in [
+            "Trawler.app.tar.gz",
+            "Trawler_0.1.0_x64_en-US.msi",
+            "Trawler_0.1.0_arm64-setup.exe",
+            "Trawler_0.1.0_aarch64.AppImage",
+            "Trawler_0.1.0_amd64.deb",
+            "Trawler-0.1.0-1.x86_64.rpm",
+            "Trawler.msi",
+        ] {
+            assert!(is_artifact(Path::new(name)), "{name}");
+        }
+        assert!(!is_artifact(Path::new("bundle_dmg.sh")));
     }
 
     #[test]
