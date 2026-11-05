@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU E-INSPWIN2.W9 -> epic/inspect-window-v2"
+epic: E-INSPWIN2
+wu: E-INSPWIN2.W9
+branch: wu/inspect-window-v2/e2e-distillation
+base: 4d79f316b497d8d4692a3e438d5a31d975911259
+head: 3305c3d164cca38609fee77ace7a9e51f631e869
+diff_sha256: ac4f7e6e7a24f2c698815fb59ca9d7ea65fce8bd4193a05e282da0de24dda680
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    nit: 5
+  by_finder:
+    correctness: { found: 2, verified: 2 }
+    efficiency: { found: 2, verified: 2 }
+    altitude: { found: 1, verified: 1 }
+findings: { found: 4, verified: 4, waived: 4 }
+waivers: []
+nits:
+  - finding: "htmlPreview.ts removes only the null-namespace href, so a MathML xlink:href stays (raised by correctness and altitude)"
+    waived: "the real WKWebView reading taken while building J4 showed a MathML element with xlink:href does not match :any-link, so it is not a link in this engine; the plain href is the one that is"
+  - finding: "J4's svg and anchor cases also pass when the preview holds no links at all"
+    waived: "each case first asserts the unguarded page holds the link, and the retargeting of an anchor is held by the htmlPreview unit tests; the case's job is that nothing reachable survives"
+  - finding: "the J4 control and negative check use a fixed 2.5 s pause where the control could poll"
+    waived: "the negative check needs a fixed quiet window and the control shares its constant; about 2.5 s of wall time in a suite of minutes"
+  - finding: "a fixed 1.5 s pause asserts that a second open all opens no window"
+    waived: "an absence has no event to wait for; the same pause pattern is the existing data-window spec's"
+verdict: PASS
+date: 2026-11-05
