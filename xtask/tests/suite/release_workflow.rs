@@ -51,6 +51,10 @@ fn bundles(step: &Value) -> bool {
     run_of(step).contains("cargo xtask package") && run_of(step).contains("--bundle-only")
 }
 
+fn signs(step: &Value) -> bool {
+    run_of(step).contains("cargo xtask package") && run_of(step).contains("--sign-only")
+}
+
 fn smokes(step: &Value) -> bool {
     run_of(step).contains("cargo xtask smoke")
 }
@@ -116,28 +120,32 @@ fn every_target_is_built_on_its_runner() {
 }
 
 #[test]
-fn each_build_compiles_then_bundles_then_smokes_then_uploads() {
+fn each_build_compiles_then_bundles_then_smokes_then_signs_then_uploads() {
     let build = job("build");
     let compile = position(&build, builds, "cargo xtask package --build-only");
     let bundle = position(&build, bundles, "cargo xtask package --bundle-only");
     let smoke = position(&build, smokes, "cargo xtask smoke");
+    let sign = position(&build, signs, "cargo xtask package --sign-only");
     let upload = position(&build, uploads, "upload-artifact");
     assert!(
-        compile < bundle && bundle < smoke && smoke < upload,
-        "compile {compile}, bundle {bundle}, smoke {smoke}, upload {upload}"
+        compile < bundle && bundle < smoke && smoke < sign && sign < upload,
+        "compile {compile}, bundle {bundle}, smoke {smoke}, sign {sign}, upload {upload}"
     );
     let packaging =
         steps(&build).iter().filter(|s| run_of(s).contains("cargo xtask package")).count();
-    assert_eq!(packaging, 2, "one compile and one bundle");
+    assert_eq!(packaging, 3, "one compile, one bundle, one sign");
     assert_eq!(steps(&build).iter().filter(|s| uploads(s)).count(), 1);
 }
 
 #[test]
 fn the_smoke_checks_the_bundle_the_package_steps_built() {
     let build = job("build");
-    for (wanted, what) in
-        [(builds as fn(&Value) -> bool, "compile"), (bundles, "bundle"), (smokes, "smoke")]
-    {
+    for (wanted, what) in [
+        (builds as fn(&Value) -> bool, "compile"),
+        (bundles, "bundle"),
+        (smokes, "smoke"),
+        (signs, "sign"),
+    ] {
         let run = run_of(&steps(&build)[position(&build, wanted, what)]);
         assert!(run.contains("matrix.package-args"), "{what}: {run}");
     }
@@ -185,31 +193,36 @@ fn an_upload_without_files_is_red_and_carries_every_installer_kind() {
 }
 
 #[test]
-fn the_signing_key_reaches_the_bundle_step_alone() {
+fn the_signing_key_reaches_the_sign_step_alone() {
     let squeezed: String = text().split_whitespace().collect();
     assert!(
         !squeezed.contains("toJSON(secrets") && !squeezed.contains("secrets["),
         "secrets by name"
     );
-    assert_eq!(squeezed.matches("secrets.").count(), 3, "the presence check and the bundle's two");
+    assert_eq!(squeezed.matches("secrets.").count(), 3, "the presence check and the sign's two");
     assert_eq!(squeezed.matches("secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD").count(), 1);
     let carrying: Vec<(String, Value)> = every_step()
         .into_iter()
         .filter(|(_, step)| serde_yaml::to_string(step).unwrap().contains("secrets."))
         .collect();
     let build = job("build");
-    let bundle = steps(&build)[position(&build, bundles, "bundle")].clone();
+    let sign = steps(&build)[position(&build, signs, "sign")].clone();
     let presence = steps(&build)[0].clone();
     assert_eq!(
         carrying,
-        [("build".to_string(), presence.clone()), ("build".to_string(), bundle.clone())]
+        [("build".to_string(), presence.clone()), ("build".to_string(), sign.clone())]
     );
     assert_eq!(
-        bundle["env"]["TAURI_SIGNING_PRIVATE_KEY"].as_str(),
+        keys(&sign["env"]),
+        ["TAURI_SIGNING_PRIVATE_KEY", "TAURI_SIGNING_PRIVATE_KEY_PASSWORD"]
+    );
+    assert!(sign.get("uses").is_none(), "the key goes to the pinned tauri signer alone");
+    assert_eq!(
+        sign["env"]["TAURI_SIGNING_PRIVATE_KEY"].as_str(),
         Some("${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}")
     );
     assert_eq!(
-        bundle["env"]["TAURI_SIGNING_PRIVATE_KEY_PASSWORD"].as_str(),
+        sign["env"]["TAURI_SIGNING_PRIVATE_KEY_PASSWORD"].as_str(),
         Some("${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}")
     );
     assert_eq!(
@@ -357,7 +370,7 @@ fn each_row_uploads_from_the_bundle_dir_its_package_args_build() {
         };
         let args: Vec<&str> = row["package-args"].as_str().unwrap().split_whitespace().collect();
         let options = package::parse(&args).unwrap();
-        let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS, false).unwrap();
+        let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS).unwrap();
         let built: Vec<String> =
             plan.bundle_dir.iter().map(|part| part.to_string_lossy().into_owned()).collect();
         assert_eq!(

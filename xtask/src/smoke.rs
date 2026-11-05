@@ -254,7 +254,7 @@ pub fn parse(args: &[&str]) -> Result<package::Options, String> {
 pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let options = parse(args)?;
     let os = Os::named(std::env::consts::OS)?;
-    let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS, false)?;
+    let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS)?;
     let artifacts = package::artifacts(&repo.join("target").join(&plan.bundle_dir))?;
     let source = pick(os, &artifacts)?;
 
@@ -307,7 +307,7 @@ mod tests {
     #[test]
     fn the_smoke_takes_the_package_s_flags_but_no_stage() {
         assert!(parse(&["--universal", "--profile", "p"]).unwrap().universal);
-        for staged in ["--build-only", "--bundle-only"] {
+        for staged in ["--build-only", "--bundle-only", "--sign-only"] {
             assert!(parse(&[staged]).unwrap_err().contains("cargo xtask smoke"), "{staged}");
         }
     }
