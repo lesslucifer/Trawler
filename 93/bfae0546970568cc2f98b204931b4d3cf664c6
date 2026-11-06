@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU service-log-ansi -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W18
+branch: wu/prorelease/service-log-ansi
+base: 1bf8162c5838f66fd097d138bdfbfe4cc268c155
+head: 93bfae0546970568cc2f98b204931b4d3cf664c6
+diff_sha256: 678c99affea594a5b6564ad612250880d62750920c2b30bd42330a8ac9e7f7b9
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 3
+  stage_seconds:
+    finders: 16
+    verifiers: 0
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "LogTail strips SGR on every render of every line instead of once at ingestion (efficiency + altitude, same claim)"
+    waived: "a regex over at most 2000 short lines per render is negligible; the strip is a defensive guard, and one place in the view keeps every log source (ring read and live event) covered without touching coreService"
+  - finding: "the SGR strip duplicates the core fix and is dead for the app own core"
+    waived: "kept on purpose as a cheap second layer (plan decision: RUST_LOG-driven or third-party output, a core forced to a pty); the vitest case names and pins it"
+verdict: PASS
+date: 2026-11-06
