@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W2
+branch: HEAD
+tests:
+  unit: { count: 8, covers: "render puts Trawler's licence first, gives each distinct text once with every package it covers, falls back to a standard text a package's expression offers, refuses an AND expression or an unoffered licence by name; licence files are read and .spdx tags skipped; the committed notice is the one the lockfiles generate (red before the notice existed and with one byte off); the notice carries the MPL-2.0, CDLA-Permissive-2.0, Unicode-3.0 and OFL-1.1 texts and the three fonts; tauri.conf.json bundles it as a resource" }
+  integration: { count: 3, covers: "the packaged macOS Trawler.app carries Contents/Resources/THIRD-PARTY-NOTICES.txt byte-equal to the committed file, beside the existing signature, copyright and smoke checks" }
+  e2e: { waived: "no user journey changes; W4 (About and Help → Third-party licences) is the journey that opens the file, and the installed bundle is proven by the integration test" }
