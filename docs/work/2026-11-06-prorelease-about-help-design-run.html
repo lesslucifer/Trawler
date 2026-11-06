@@ -34,12 +34,12 @@
       <h1>Design run — About, Help and the version</h1>
       <p>Where a user on macOS, Windows or Linux finds which Trawler they run, under what licence, how to get help or report
         a problem, what Trawler sends out, and how to stop it asking for updates.</p>
-      <div class="meta">Design run · round 1 · opened 2026-11-06 · Trawler · T3 (docs/work/) · <strong>E-PRORELEASE.W13</strong> ·
+      <div class="meta">Design run · round 2 · opened 2026-11-06 · closed 2026-11-06 on the owner's rulings · Trawler · T3 (docs/work/) · <strong>E-PRORELEASE.W13</strong> ·
         branch <code>wu/prorelease/about-help-design</code> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> ·
         <a href="2026-11-06-prorelease-w13-about-help-design-plan.html">WU plan</a> · built by W4</div>
     </div>
   </header>
-  <main data-artifact="design-run" data-status="open">
+  <main data-artifact="design-run" data-status="archived">
 
     <h2 id="at-a-glance">At a glance</h2>
     <div class="diagram" data-c="routes">
@@ -264,12 +264,11 @@
               <span className="a-off-dev"><Button onClick={noop}>check now</Button></span>
             </div>
             <div className="a-off-dev">
-              <span className="a-off-off"><Checkbox checked onChange={noop}>check for updates when Trawler opens</Checkbox></span>
-              <span className="a-on-off"><Checkbox checked={false} onChange={noop}>check for updates when Trawler opens</Checkbox></span>
-              {caption("At most once a day.")}
+              <span className="a-off-off"><Checkbox checked onChange={noop}>check for updates automatically</Checkbox></span>
+              <span className="a-on-off"><Checkbox checked={false} onChange={noop}>check for updates automatically</Checkbox></span>
             </div>
             <div className="a-on-dev">
-              <Checkbox checked={false} onChange={noop} disabled>check for updates when Trawler opens</Checkbox>
+              <Checkbox checked={false} onChange={noop} disabled>check for updates automatically</Checkbox>
               <div className="pt-chrome-tight"><Notice>updates come with an installed copy of Trawler</Notice></div>
             </div>
             <div className="a-on-failed"><Notice tone="warn">couldn't save — permission denied</Notice></div>
@@ -280,27 +279,31 @@
 
     <h2 id="questions">The owner's calls</h2>
     <table data-c="questions">
-      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommended</th></tr>
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommended</th><th>Owner's ruling</th></tr>
       <tr><td>D1</td><td>What is About on each OS?</td><td>(a) Trawler's own About window everywhere — macOS's About item opens it
         instead of the system panel · (b) macOS keeps the system panel, Windows/Linux get the window · (c) the system's own
         everywhere (Windows: a plain message box, no links, no logo)</td><td><strong>(a)</strong> — one surface, the same
-        content, clickable links, the logo slot on every OS</td></tr>
+        content, clickable links, the logo slot on every OS</td><td>✅ (a) — Trawler's own window on every OS, replacing macOS's system panel</td></tr>
       <tr><td>D2</td><td>Where do the licences and the privacy statement open?</td><td>(a) pages of the About window (drawn) ·
         (b) the browser, on GitHub</td><td><strong>(a)</strong> — works offline and shows the notice this copy ships;
-        a privacy statement that needs the network to read is odd</td></tr>
+        a privacy statement that needs the network to read is odd</td><td>✅ (a) — pages inside the About window</td></tr>
       <tr><td>D3</td><td>Where is the version in Settings?</td><td>(a) General, with check now and the switch (drawn) ·
         (b) a third Settings page, About</td><td><strong>(a)</strong> — the version, the check and its switch are one
-        concern; the About window already is the about page</td></tr>
+        concern; the About window already is the about page</td><td>✅ (a) — the version and check now in Settings → General</td></tr>
       <tr><td>D4</td><td>The switch's words</td><td>(a) <em>check for updates when Trawler opens</em> + <em>At most once a
         day.</em> (drawn) · (b) <em>check for updates automatically</em></td><td><strong>(a)</strong> — says when, which is
-        what the user decides</td></tr>
+        what the user decides</td><td>✅ (b) — <em>check for updates automatically</em>, no helper line; the privacy page still says when the check runs</td></tr>
       <tr><td>D5</td><td>What does Report an Issue fill in?</td><td>(a) version, OS and its version, CPU (arm64/x64), install
         kind (dmg · msi · exe · deb · rpm · AppImage) · (b) version only</td><td><strong>(a)</strong> — the four facts a
-        triage asks first; nothing about traffic or the machine's name</td></tr>
+        triage asks first; nothing about traffic or the machine's name</td><td>✅ (a) — version, OS and its version, CPU, install kind; nothing about traffic or the machine's name</td></tr>
       <tr><td>D6</td><td>F1 opens the user guide on Windows and Linux?</td><td>(a) yes · (b) no shortcut</td>
-        <td><strong>(a)</strong> — the platform's convention; macOS keeps the system's Help search (⇧⌘/)</td></tr>
+        <td><strong>(a)</strong> — the platform's convention; macOS keeps the system's Help search (⇧⌘/)</td><td>✅ (a) — F1 opens the user guide on Windows and Linux</td></tr>
       <tr><td>D7</td><td>The About window's links: words or text links?</td><td>(a) the collection's <code>Button</code> (drawn) ·
-        (b) a new text-link component</td><td><strong>(a)</strong> — no new component for three links</td></tr>
+        (b) a new text-link component</td><td><strong>(a)</strong> — no new component for three links</td><td>✅ (a) — the collection's <code>Button</code></td></tr>
+      <tr><td>D8</td><td>Does Esc close the About window?</td><td>(a) yes, beside ⌘W / Ctrl+W · (b) only ⌘W / Ctrl+W</td>
+        <td><strong>(a)</strong> — a read-only secondary window with nothing to lose</td><td>accepted default (a)</td></tr>
+      <tr><td>D9</td><td>Where does the OS's version come from?</td><td>(a) <code>tauri-plugin-os</code> · (b) a crate · (c) none — OS name only</td>
+        <td><strong>(a)</strong> — the Tauri-native source, one call on every OS</td><td>accepted default (a)</td></tr>
     </table>
 
     <h2 id="given">Given — what the screens are handed</h2>
@@ -317,7 +320,7 @@
       <tr><td>the auto-check switch's read and write, and a refused write (new, W4)</td><td>used</td><td>the Checkbox; a
         refusal is the warn notice and the box returns to what is stored, as General's two switches</td></tr>
       <tr><td>the OS and CPU (<code>std::env::consts</code>) and the install kind (<code>bundle.rs</code>)</td><td>used</td><td>the report's prefill (D5)</td></tr>
-      <tr><td>the OS's version</td><td>blocked</td><td>nothing in the shell reads it today — a blocked-on row</td></tr>
+      <tr><td>the OS's version — <code>tauri-plugin-os</code> (D9, added by W4)</td><td>used</td><td>the report's prefill (D5)</td></tr>
       <tr><td>open a URL in the browser, and its failure (opener, new in W4)</td><td>used</td><td>the three buttons and the
         two browser Help items; a failure shows the About page with the address to copy</td></tr>
       <tr><td>the guide's address (Q6: GUIDE.md at the root)</td><td>used</td><td>user guide · Help → User Guide</td></tr>
@@ -335,15 +338,15 @@
       <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
       <tr><td>click a Help item</td><td>help menu</td><td>the OS's menu keys: macOS ⌃F2 to the menu bar, or ⇧⌘/ to Help
         search · Windows/Linux Alt+H, ↑/↓, Enter</td></tr>
-      <tr><td>click User Guide</td><td>help menu (Windows/Linux)</td><td>proposed: F1 (D6)</td></tr>
+      <tr><td>click User Guide</td><td>help menu (Windows/Linux)</td><td>F1 (D6)</td></tr>
       <tr><td>click About Trawler</td><td>Trawler menu (macOS) · Help (Windows/Linux)</td><td>the OS's menu keys, as above</td></tr>
       <tr><td>click a page name</td><td>pages</td><td>Tab to the page names · ↑ / ↓ moves to a page and shows it, no wrap (PageSidebar)</td></tr>
       <tr><td>click user guide · report an issue · source code</td><td>about page</td><td>Tab · Enter or Space (Button)</td></tr>
       <tr><td>click the version or the address to copy it</td><td>about page · updates</td><td>Tab · Enter or Space (CopyText)</td></tr>
       <tr><td>scroll the licence list</td><td>licences page</td><td>one tab stop · ↑ / ↓ / Page Up / Page Down / Home / End</td></tr>
-      <tr><td>tick check for updates when Trawler opens</td><td>updates</td><td>Tab · Space (Checkbox)</td></tr>
+      <tr><td>tick check for updates automatically</td><td>updates</td><td>Tab · Space (Checkbox)</td></tr>
       <tr><td>click check now</td><td>updates</td><td>Tab · Enter or Space (Button)</td></tr>
-      <tr><td>close the About window</td><td>title bar</td><td>⌘W / Ctrl+W — the app keeps running (close a secondary window)</td></tr>
+      <tr><td>close the About window</td><td>title bar</td><td>⌘W / Ctrl+W, or Esc (D8) — the app keeps running (close a secondary window)</td></tr>
     </table>
     <p class="kd">Accessibility: the About window's first focus is the page names; the licence list is a focusable region
       named "Third-party licences"; the logo slot is decorative (<code>aria-hidden</code>) because the name beside it reads
@@ -352,7 +355,7 @@
     <h2 id="proposals">Proposals</h2>
     <table data-item="proposals" data-c="proposals-table">
       <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
-      <tr><td>key binding</td><td>F1 → User Guide on Windows and Linux</td><td>the keyboard conventions have no help key</td><td>W4 (on D6)</td></tr>
+      <tr><td>key binding</td><td>F1 → User Guide on Windows and Linux</td><td>the keyboard conventions have no help key</td><td>W4 (D6 ruled)</td></tr>
       <tr><td>lexicon</td><td><em>licences</em> (British spelling, as the Help item and the page) · <em>installed copy</em> — a
         copy that came from an installer, the one that updates itself</td><td>neither term is in the lexicon</td><td>W4's distillation</td></tr>
     </table>
@@ -363,7 +366,6 @@
       <tr><td>the signed logo</td><td>W9 (owner)</td><td>a dashed 48 px slot beside the name; W4 mounts the mark there</td></tr>
       <tr><td>the privacy statement's final text</td><td>W11 voice → W5 text (owner)</td><td>a draft that names the update check and the setup test request</td></tr>
       <tr><td>the issue form and its field ids</td><td>W11 → W5 (<code>.github/ISSUE_TEMPLATE</code>)</td><td>D5 fixes what is filled in; W4 maps it to the form's ids</td></tr>
-      <tr><td>a source for the OS's version</td><td>W4 (a crate or tauri-plugin-os)</td><td>D5 (a) assumes one; with none, the report carries the OS name only</td></tr>
     </table>
 
     <h2 id="review">Review</h2>
@@ -374,6 +376,28 @@
           <td>capabilities · mockup · keyboard — the About window with three pages, the Help menu on three OSes, General's
             updates block, the empty and error states; seven calls for the owner (D1–D7)</td>
           <td><code>PageSidebar</code> @use · <code>Checkbox</code> @use · <code>CopyText</code> @use · Q5 · Q6</td></tr>
+        <tr><td>D1 — About is Trawler's own window on every OS, replacing the macOS system panel</td>
+          <td>nothing — as drawn: macOS's About Trawler and Windows/Linux Help → About Trawler both open the window</td>
+          <td><code>taste</code> · the owner's call (D1)</td></tr>
+        <tr><td>D2 — the licences and the privacy statement are pages inside the About window</td>
+          <td>nothing — as drawn: three pages on <code>PageSidebar</code></td><td>the owner's call (D2) · <code>PageSidebar</code> @use</td></tr>
+        <tr><td>D3 — the version and check now live in Settings → General</td>
+          <td>nothing — as drawn: General's updates block</td><td><code>taste</code> · the owner's call (D3)</td></tr>
+        <tr><td>D4 — the switch reads "Check for updates automatically", the short wording, no helper line</td>
+          <td>mockup · keyboard — the label is <em>check for updates automatically</em> in every state (lower case, as General's two
+            switches); the "At most once a day." line is gone; the privacy page keeps saying the check runs when Trawler opens, at
+            most once a day</td>
+          <td>the owner's call (D4) · <code>Checkbox</code> @use · <code>taste</code> · honesty kept on the privacy page</td></tr>
+        <tr><td>D5 — Report an Issue fills version, OS and its version, CPU, install kind; nothing about traffic or the machine's name</td>
+          <td>nothing — as drawn; the report caption already promises nothing is sent until submit</td><td><code>taste</code> · the owner's call (D5)</td></tr>
+        <tr><td>D6 — F1 opens the user guide on Windows and Linux</td>
+          <td>keyboard · proposals — F1 is no longer proposed but ruled</td><td><code>taste</code> · the owner's call (D6) · keyboard-parity</td></tr>
+        <tr><td>D7 — the About window's links are the existing <code>Button</code></td>
+          <td>nothing — as drawn</td><td>the owner's call (D7) · <code>Button</code> @use</td></tr>
+        <tr><td>the run's other open items keep the run's recommendation as accepted defaults</td>
+          <td>questions · keyboard · capabilities · blocked-on — D8 Esc closes the About window; D9 the OS's version comes from
+            <code>tauri-plugin-os</code>, so its Given row is used and its blocked-on row is gone</td>
+          <td><code>taste</code> · the owner's ruling on defaults · keyboard-parity · capabilities·answered</td></tr>
       </tbody>
     </table>
 
