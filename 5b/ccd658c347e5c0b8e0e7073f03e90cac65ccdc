@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-PKG2
+wu: E-PKG2.W5
+base: 7a008d7e93b79d02fc96d997ee994d205a8120af
+tip: 5bccd658c347e5c0b8e0e7073f03e90cac65ccdc
+diff_sha256: 7de511fcba8f71404bf4d2f8f2b9c9225c75f17615e891f80cee4f2c68b622ad
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-06
