@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+branch: 20404642
+tests:
+  unit: { waived: "the commit adds no logic to unit-test: it tightens the window run in a test; the test is the e2e below" }
+  e2e: { count: 3, covers: "the packaged .dmg installed into a temp folder opens its window, re-checking the fixed ports just before launch and waiting for its own CA so a Trawler started during the build fails it; its own core captures through the proxy, mints its CA under a temp HOME, and ending the app frees both fixed ports with no process left (J1, J4)" }
