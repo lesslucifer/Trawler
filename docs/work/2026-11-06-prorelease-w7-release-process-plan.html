@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9ae99f34851f0dfaebc7" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W7 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W7 — release process, notes, checksums, matrix</h1>
+      <p>A written release process, notes that say what changed and how to verify the download, a SHA256SUMS asset, and one hand-check matrix.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W7</span> · branch <code>wu/prorelease/release-process</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">Every release's notes open with "What's new" taken from the version's <code>CHANGELOG.md</code> section and end with how to check the download against <code>SHA256SUMS</code>; <code>release-manifest</code> refuses a version with no section and writes <code>SHA256SUMS</code> for every installer, which <code>release.yml</code> re-checks and attaches; a T1 release doc states the version policy, publish rules, rollback and the final's cut; a T2 hand-check matrix lists each OS × step.</p>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Which section does a pre-release read?</td><td>Its final's: <code>0.1.0-5</code> reads <code>## 0.1.0</code>; refused when absent, no rc exemption</td><td>an rc rehearses the final's notes, so a missing section fails on the rc tag, never on the final's after the hand checks; no per-rc sections to keep</td></tr>
+        <tr><td>Who hashes?</td><td><code>release-manifest</code> (the same <code>dist</code> walk that builds <code>latest.json</code>); <code>release.yml</code> runs <code>sha256sum -c</code> on it before the draft</td><td>one walk names the installers; a second tool proves the file; the release job holds no signing key (DEC-86 rule 4 unchanged)</td></tr>
+        <tr><td>What SHA256SUMS lists</td><td>every installer in <code>dist</code> (all files but <code>.sig</code>), <code>sha256sum</code> format, sorted</td><td><code>shasum -a 256 -c</code> and <code>sha256sum -c</code> read it as is</td></tr>
+        <tr><td>Matrix tier</td><td>T2 <code>docs/backlog/hand-check-matrix.html</code>; a filled copy per rc is T3</td><td>permanent but edited as OSes teach; T1 would need a signed commit per row</td></tr>
+        <tr><td>Root markdown (<code>CHANGELOG.md</code>)</td><td>created (Q4 ruling); CLAUDE.md untouched</td><td>the HTML-docs exemption needs the owner's own CLAUDE.md edit (follow-up)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W7 · audit F (version policy, publishing, rollback, checksums, matrix) and B (CHANGELOG) · UC-INSTALL, UC-UPDATE · DEC-86 amended (rules 5, 6) · <code>xtask/src/release_manifest.rs</code>, <code>.github/release-notes.md</code>, <code>.github/workflows/release.yml</code>, <code>CHANGELOG.md</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td><code>notes.md</code> for <code>0.1.0</code> / <code>0.1.0-5</code></td><td><code># Trawler &lt;v&gt;</code>, "What's new" = CHANGELOG <code>## 0.1.0</code> body, install steps, "Verify your download"</td></tr>
+          <tr><td>A version with no section</td><td><code>release-manifest</code> refuses, naming <code>CHANGELOG.md</code> and the section; no draft</td></tr>
+          <tr><td><code>dist/SHA256SUMS</code></td><td>one <code>&lt;hex&gt;  &lt;file&gt;</code> line per installer, dmg included, no <code>.sig</code></td></tr>
+          <tr><td><code>release.yml</code></td><td><code>sha256sum -c SHA256SUMS</code> before <code>gh release create dist/*</code>; key still only in the sign step; actionlint green</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>release_manifest</code>: section lookup (final, rc → final, absent, empty, next heading ends it); notes carry What's new + verify; a missing section refuses; <code>run</code> writes SHA256SUMS with each installer's digest and no <code>.sig</code>; the repo's CHANGELOG has the workspace version's section</td><td>yes: no section reader, no SHA256SUMS</td></tr>
+          <tr><td>integration</td><td><code>release_workflow</code>: the release job checks <code>SHA256SUMS</code> with <code>sha256sum -c</code> after the manifest and before the create</td><td>yes: no such step</td></tr>
+          <tr><td>e2e</td><td>waived to the next rc tag run (the epic's release run): the draft carries SHA256SUMS and the new notes</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

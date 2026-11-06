@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9eff9f34851f0dfaec92" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W2 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W2 — third-party notice shipped in the app</h1>
+      <p>~560 release crates and ~60 npm packages ship inside every installer; their licences (MIT, Apache-2.0, BSD, MPL-2.0, CDLA, Unicode, OFL fonts) require their text to travel with the app, and nothing generates or bundles it.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W2</span> · branch <code>wu/prorelease/third-party-notice</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement"><code>cargo xtask licenses</code> writes the committed <code>THIRD-PARTY-NOTICES.txt</code>: Trawler's own MIT <code>LICENSE</code> first, then every licence text of the crates the app's release build links (normal dependencies of <code>trawler-ui</code>, every platform) and of the UI's production npm packages, each text once with the packages it covers; a package without a licence file gets the standard text of a licence its expression offers. The app bundles the file as a Tauri resource, never as <code>bundle.licenseFile</code> (DEC-87).</p>
+
+    <h3 id="flow">Flow</h3>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  M["cargo metadata<br/>normal deps of trawler-ui"] --> G["cargo xtask licenses"]
+  P["pnpm licenses list --prod --json"] --> G
+  L["LICENSE (Trawler, MIT)"] --> G
+  F["xtask/licenses/*.txt<br/>standard texts"] --> G
+  G --> N["THIRD-PARTY-NOTICES.txt<br/>(committed)"]
+  N --> R["tauri.conf.json bundle.resources"]
+  R --> A["Trawler.app/Contents/Resources<br/>· MSI/NSIS · deb/AppImage"]
+    </pre></div>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE audit D (third-party licences) · UC-INSTALL, UC-ABOUT (W4 shows this file) · new DEC-88 · <code>xtask/src/licenses.rs</code>, <code>xtask/licenses/</code>, <code>THIRD-PARTY-NOTICES.txt</code>, <code>ui/src-tauri/tauri.conf.json</code>, <code>xtask/tests/package_bundle.rs</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td><code>cargo xtask licenses</code> twice</td><td>the same bytes</td></tr>
+          <tr><td>Cargo.lock or pnpm-lock.yaml moves, notice not regenerated</td><td>the drift test fails naming the command to run</td></tr>
+          <tr><td>A package with no licence text and no standard text for its expression</td><td>the generator refuses, naming the package</td></tr>
+          <tr><td>The notice</td><td>Trawler's MIT first; MPL-2.0, CDLA-Permissive-2.0, Unicode-3.0 and OFL-1.1 texts present</td></tr>
+          <tr><td>The packaged <code>Trawler.app</code></td><td><code>Contents/Resources/THIRD-PARTY-NOTICES.txt</code> equals the committed file</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>licenses</code>: the committed notice is the regenerated one (drift)</td><td>yes: no notice exists</td></tr>
+          <tr><td>unit</td><td><code>licenses</code>: render dedups texts, lists users, falls back to a standard text, refuses a package with none; Trawler's licence first</td><td>yes: no generator</td></tr>
+          <tr><td>unit</td><td><code>licenses</code>: the tree's notice carries MPL-2.0, CDLA-Permissive-2.0, Unicode-3.0, OFL-1.1 texts and every package</td><td>yes</td></tr>
+          <tr><td>integration</td><td><code>package_bundle</code>: the packaged app carries the notice resource</td><td>yes: no resource today</td></tr>
+          <tr><td>e2e</td><td>waived: no user journey changes; W4 (About → Third-party licences) is the journey that opens it</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

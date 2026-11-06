@@ -193,6 +193,7 @@ jobs:
           TAG: ${{ github.ref_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
+          (cd dist && sha256sum --strict -c SHA256SUMS)
           mv dist/notes.md notes.md
           if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null)" = true ]; then
             gh release delete "$TAG" --yes

@@ -7,7 +7,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tauri::utils::config::BundleType;
 use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
-use tauri_plugin_updater::{Update, UpdaterExt};
+use tauri_plugin_updater::{Update, UpdaterBuilder, UpdaterExt};
 
 pub const CHECK_EVERY: Duration = Duration::from_secs(24 * 60 * 60);
 const LAST_CHECK_FILE: &str = "last-update-check";
@@ -37,6 +37,15 @@ pub fn record_check(record: &Path, at: SystemTime) -> std::io::Result<()> {
     }
     let secs = at.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
     std::fs::write(record, secs.to_string())
+}
+
+/// Only a check that reached the channel and got an answer moves the stamp,
+/// so a launch while offline leaves the next launch due.
+pub fn record_outcome(record: &Path, found: &Found, at: SystemTime) -> std::io::Result<()> {
+    match found {
+        Found::Newer { .. } | Found::UpToDate { .. } => record_check(record, at),
+        Found::Failed(_) | Found::NotInstalled => Ok(()),
+    }
 }
 
 /// Only an app installed from one of its bundles can replace itself; a binary
@@ -140,22 +149,17 @@ fn record_path<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
     app.path().app_data_dir().ok().map(|dir| dir.join(LAST_CHECK_FILE))
 }
 
-#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn check_at_launch<R: Runtime>(app: &AppHandle<R>) {
     if !installed(tauri::utils::platform::bundle_type()) {
         return;
     }
     let Some(record) = record_path(app) else { return };
-    let now = SystemTime::now();
-    if !due(last_check(&record), now) {
-        return;
+    if due(last_check(&record), SystemTime::now()) {
+        check(app, Asked::AtLaunch);
     }
-    if let Err(err) = record_check(&record, now) {
-        eprintln!("recording the update check failed: {err}");
-    }
-    check(app, Asked::AtLaunch);
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn check<R: Runtime>(app: &AppHandle<R>, asked: Asked) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -172,14 +176,27 @@ pub fn check<R: Runtime>(app: &AppHandle<R>, asked: Asked) {
         } else {
             (Found::NotInstalled, None)
         };
+        if let Some(record) = record_path(&app) {
+            if let Err(err) = record_outcome(&record, &found, SystemTime::now()) {
+                eprintln!("recording the update check failed: {err}");
+            }
+        }
         if let Some(notice) = notice(asked, &found) {
             present(&app, notice, update);
         }
     });
 }
 
+/// The manifest, the download and every redirect between them travel over
+/// https or not at all; the plugin itself only warns in debug builds and for
+/// the download.
+pub fn https_only(updater: UpdaterBuilder) -> UpdaterBuilder {
+    updater.configure_client(|client| client.https_only(true))
+}
+
 async fn find<R: Runtime>(app: &AppHandle<R>) -> Result<Option<Update>, String> {
-    app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())
+    let updater = https_only(app.updater_builder()).build().map_err(|e| e.to_string())?;
+    updater.check().await.map_err(|e| e.to_string())
 }
 
 fn present<R: Runtime>(app: &AppHandle<R>, notice: Notice, update: Option<Update>) {
@@ -309,6 +326,21 @@ mod tests {
         assert_eq!(last_check(&record), Some(at(1_234)));
         std::fs::write(&record, "yesterday").unwrap();
         assert_eq!(last_check(&record), None);
+    }
+
+    #[test]
+    fn a_failed_check_leaves_the_stamp_and_an_answered_one_moves_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let record = dir.path().join("last-update-check");
+        record_check(&record, at(1_000)).unwrap();
+
+        record_outcome(&record, &Found::Failed("offline".into()), at(2_000)).unwrap();
+        assert_eq!(last_check(&record), Some(at(1_000)), "an offline launch stays due");
+
+        record_outcome(&record, &Found::UpToDate { current: "0.1.0".into() }, at(3_000)).unwrap();
+        assert_eq!(last_check(&record), Some(at(3_000)));
+        record_outcome(&record, &newer(), at(4_000)).unwrap();
+        assert_eq!(last_check(&record), Some(at(4_000)));
     }
 
     #[test]

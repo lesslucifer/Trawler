@@ -489,7 +489,12 @@
     <h2 id="uc-install">UC-INSTALL — Install Trawler from a release</h2>
     <p data-c="uc-install-contract">A user downloads their OS's own artifact from the published GitHub release
       (<span class="badge id">E-PKG2</span>, <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a>).
+      Each package names Vu Luu as publisher and copyright holder and carries the MIT licence
+      (<a href="../decisions/dec-87-one-licence-one-holder-no-crate-published.html">DEC-87</a>).
+      Every installer carries <code>THIRD-PARTY-NOTICES.txt</code>, Trawler's licence and every bundled dependency's
+      (<a href="../decisions/dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a>).
       The installers carry no paid signature, so the first open shows the OS's prompt, and the release notes name the one way past it.
+      The notes open with what is new in that version (<code>CHANGELOG.md</code>) and end with how to check the download against the release's <code>SHA256SUMS</code> (<span class="badge id">E-PRORELEASE.W7</span>).
       From then on the app is UC-4: one launch, an owned core, single instance, the CA in the platform's app data directory
       (<code>dev.trawler.app</code>).</p>
     <table data-c="uc-install-matrix">
@@ -499,7 +504,7 @@
       <tr><td>Linux x64 · arm64 (glibc, WebKitGTK 4.1)</td><td><code>.AppImage</code> · <code>.deb</code> · <code>.rpm</code> (finals only: rpm refuses a pre-release version, DEC-86 rule 7)</td><td>no prompt; GNOME needs the AppIndicator extension for the tray</td></tr>
     </table>
     <p class="kd" data-c="uc-install-proof">Proven by <code>xtask/tests/package_bundle.rs</code> (macOS, <code>--features package-tests</code>):
-      the packaged <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
+      the packaged app's <code>Info.plist</code> carries the copyright and its <code>Resources</code> the committed third-party notice, the <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
       under a temp <code>HOME</code>, and frees both ports when the app ends. Each release job smokes its own installer headless
       (<code>cargo xtask smoke</code>). The OS prompts and the installs in the Windows and Ubuntu VMs are hand checks of the first rc.</p>
 
@@ -512,11 +517,13 @@
       <tr><td>a newer version</td><td>a native dialog names both versions and says the captured list is cleared; <em>Install</em> verifies the signature (which must name that version), then quits as ⌘Q does: the window opens if none is, DEC-64's check runs, the core stops, the app is replaced and relaunches with the same arguments. The CA, settings and login item stay</td></tr>
       <tr><td>a newer version, quit cancelled</td><td>the update is dropped; the next check offers it again</td></tr>
       <tr><td>nothing newer</td><td>silent at launch; asked: “Trawler &lt;version&gt; is up to date.”</td></tr>
-      <tr><td>an unreachable channel or a bad signature</td><td>nothing changes; the user is told why only when they asked, or when an install they chose failed</td></tr>
+      <tr><td>an unreachable channel or a bad signature</td><td>nothing changes, the once-a-day clock included, so the next launch checks again; the user is told why only when they asked, or when an install they chose failed</td></tr>
+      <tr><td>an http manifest, download or redirect</td><td>refused before anything is sent: the updater speaks https only</td></tr>
       <tr><td>a deb or rpm install</td><td>updates in place through the desktop's password prompt (<code>pkexec</code>)</td></tr>
     </table>
     <p class="kd" data-c="uc-update-proof">Proven by <code>ui/src-tauri/tests/suite/updater.rs</code> against a loopback channel with keys made in the
-      test (no update, an update installed with the CA's bytes unchanged, a forged signature, a signature for another version) and by
+      test (no update, an update installed with the CA's bytes unchanged, a forged signature, a signature for another version, an http
+      channel, download or redirect refused) and by
       <code>update.rs</code>'s unit tests. A real update from one published rc to the next is a hand check on each OS, owed on the
       <a href="../backlog/roadmap.html">roadmap</a>.</p>
 
