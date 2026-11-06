@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W14
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html"
+    tier: T2
+    action: updated
+    distills: "rule 5: the Keep a Changelog heading shape under Unreleased, the final's cut dates it, a pre-release's Release candidate line, Check your download, a section with no entry is refused"
+  - path: "docs/work/2026-11-06-prorelease-w14-notes-copy-plan.html"
+    tier: T3
+    action: added
+    distills: "W14 requirement, decisions and test plan"
+  - path: "docs/work/2026-11-06-prorelease-w14-notes-copy-result.html"
+    tier: T3
+    action: added
+    distills: "W14 outcome, evidence and follow-ups (release-process.html wording via mr commit)"
