@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedadc99f34851f0dfaed37" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W14 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W14 — release notes and CHANGELOG copy</h1>
+      <p>The W11 signed voice applied to W7's mechanism: <code>CHANGELOG.md</code> in Keep a Changelog 1.1 shape, the notes template rewritten, an rc line, and a section of headings only refused as empty.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W14</span> · branch <code>wu/prorelease/notes-copy</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · design <a href="2026-11-06-prorelease-w11-public-text-design.html">W11 (signed)</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement"><code>CHANGELOG.md</code> follows Keep a Changelog 1.1 (an <code>## [Unreleased]</code> heading on top, <code>## [0.1.0] - ‹date›</code>, groups Added / Changed / Fixed / Removed / Security, no Known limits group) in the W11 voice; <code>release-manifest</code> reads that section for the final and its rcs, ignores Unreleased, and refuses a missing section or one with headings but no entry; the rendered notes carry the W11 copy: an rc line for a pre-release only, What's new, install, and <em>Check your download</em>.</p>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Empty section</td><td>a body of blank lines and <code>###</code> group headings only is empty → refused</td><td>Keep a Changelog sections carry group headings; a release with headings and no entry says nothing</td></tr>
+        <tr><td>The rc line</td><td>a template line, dropped for a final (the mirror of the <code>.rpm</code> line dropped for a pre-release)</td><td>W11: "Release candidate — for testing; the final follows."; one filter, the copy stays in the template</td></tr>
+        <tr><td>The <code>[0.1.0]</code> date</td><td>today's date now; the final's cut sets it to the release day</td><td>an rc needs the section to exist (DEC-86 rule 5); the notes render the body, never the heading</td></tr>
+        <tr><td>Verify heading</td><td><em>Verify your download</em> → <em>Check your download</em>, <code>Get-FileHash … -Algorithm SHA256</code></td><td>W11 wording, the same as the README's</td></tr>
+        <tr><td>Entries</td><td>the W11 signed sample entry, as signed</td><td>a change after sign-off is a new W11 round</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W14 · W11 rulings Q5, Q6 and the notes voice · UC-INSTALL · DEC-86 rule 5 (wording: heading shape, rc line, <em>Check your download</em>) · <code>xtask/src/release_manifest.rs</code>, <code>.github/release-notes.md</code>, <code>CHANGELOG.md</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td><code>notes.md</code> for <code>0.1.0-5</code></td><td><code># Trawler 0.1.0-5</code>, the rc line, What's new = the <code>[0.1.0]</code> body (<code>### Added</code> …), install without <code>.rpm</code>, Check your download</td></tr>
+          <tr><td><code>notes.md</code> for <code>0.1.0</code></td><td>the same without the rc line, with the <code>.rpm</code> line</td></tr>
+          <tr><td>A section of headings only, or none</td><td><code>release-manifest</code> refuses, naming <code>CHANGELOG.md</code> and the section</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>release_manifest</code>: a <code>[0.1.0] - date</code> section under <code>[Unreleased]</code> is read by <code>0.1.0</code> and <code>0.1.0-5</code>; a headings-only section is refused; an rc's notes open with the rc line and a final's do not; the notes end with <em>Check your download</em> and its <code>-Algorithm SHA256</code>; the repo's CHANGELOG is in the Keep a Changelog shape (Unreleased first, groups only from the five)</td><td>yes: headings-only passes, no rc line, old heading, W7's CHANGELOG has no group</td></tr>
+          <tr><td>integration</td><td>waived: no workflow or contract change; <code>run</code>'s unit tests already render through the real template and CHANGELOG</td><td>—</td></tr>
+          <tr><td>e2e</td><td>waived to the next rc tag run: the draft carries the new notes</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

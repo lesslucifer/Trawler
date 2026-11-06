@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedadca9f34851f0dfaed39" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W14 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W14 result — release notes and CHANGELOG copy</h1>
+      <p>What W14 changed, how it is proven, and what only the next rc tag can prove.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W14</span> · <code>wu/prorelease/notes-copy</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w14-notes-copy-plan.html">W14 plan</a> · design <a href="2026-11-06-prorelease-w11-public-text-design.html">W11 (signed)</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>CHANGELOG shape</td><td><code>CHANGELOG.md</code></td><td>a maintainer note + <code>## 0.1.0</code> feature list → Keep a Changelog 1.1: <code>## [Unreleased]</code>, <code>## [0.1.0] - 2026-11-06</code>, <code>### Added</code> = the W11 signed sample entry</td></tr>
+          <tr><td>Empty section</td><td><code>release_manifest::changes</code></td><td>whitespace only → blank lines and <code>#</code> headings only (a group heading with no entry is empty)</td></tr>
+          <tr><td>rc line</td><td><code>release_manifest::notes</code>, <code>.github/release-notes.md</code></td><td>none → "Release candidate — for testing; the final follows." under the title of a pre-release; a final drops it and keeps one blank line</td></tr>
+          <tr><td>Notes copy</td><td><code>.github/release-notes.md</code></td><td>+ the SHA256SUMS pointer in the intro, macOS 11 / Apple Silicon and Intel line, bold OS labels; <em>Verify your download</em> → <em>Check your download</em>, <code>Get-FileHash … -Algorithm SHA256</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="rulings">Choices made</h2>
+    <table data-c="rulings">
+      <thead><tr><th>Question</th><th>Choice</th></tr></thead>
+      <tbody>
+        <tr><td>Bracketed, dated heading and Unreleased</td><td>already read by W7's parser (first word, brackets trimmed); now pinned by a test on the Keep a Changelog layout</td></tr>
+        <tr><td>The <code>[0.1.0]</code> date</td><td>2026-11-06 now; the final's cut sets the release day (DEC-86 rule 5)</td></tr>
+        <tr><td>Entries</td><td>the W11 sample as signed; each claim was verified in W11 (value window: <code>ui/src-tauri/src/data_window.rs</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">One addition to the plan: a final's notes left a double blank line where the rc line was; the template's triple newline is collapsed (test red first). No workflow change.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Tests red first</td><td>4 new/changed <code>release_manifest</code> tests failed on the old code (headings-only accepted, no rc line, old heading, W7's CHANGELOG shape); the blank-line test failed before its fix; 30/30 green after</td></tr>
+          <tr><td>Hand run</td><td><code>cargo xtask release-manifest</code> on fake dists: <code>v0.1.0-5</code> notes open with the rc line, What's new = the <code>[0.1.0]</code> body, no <code>rpm</code>, <code>shasum -a 256 -c SHA256SUMS</code> OK ×10; <code>v0.1.0</code> notes: no rc line, one <code>.rpm</code> line</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1410 tests)</td></tr>
+          <tr><td>e2e</td><td>waived to the next rc tag (the draft carries the new notes)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">DEC-86 rule 5: the heading shape, Unreleased, the rc line, the final's cut dates the section, <em>Check your download</em>, "no entry" as empty. UC-INSTALL and the DEC-86 index row stay true (generic wording). T1 <code>docs/release-process.html</code> still says <em>Verify your download</em> and <code>## ‹final›</code>: rule-bearing, left for an owner <code>mr commit</code> (follow-up).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td><code>docs/release-process.html</code>: notes table <em>Verify</em> → <em>Check your download</em>, <code>## ‹final›</code> → <code>## [‹final›] - ‹date›</code>, final cut step 2 "set the section's date to the release day", the rc line in the draft review</td><td>router · owner (<code>mr commit</code>)</td></tr>
+          <tr><td>Independent review of <code>.github/release-notes.md</code> (outside the cr gate)</td><td>router</td></tr>
+          <tr><td>First real notes in the new copy: the next rc tag (<code>v0.1.0-5</code>)</td><td>router · owner</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

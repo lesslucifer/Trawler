@@ -29,3 +29,6 @@
 | 25 | Owner already merged/pushed/tagged | E-RCFIX | Read main, origin, tags, runs first |
 | 26 | Router asks the owner for a run id | v0.1.0-1, -3 | `gh run list` yourself |
 | 27 | Watcher fires at once | v0.1.0-2 | One until loop, no inner `&` |
+| 28 | Owner had to say "done" after each action | E-RELFIX, E-RC4 | Watcher per staged action; heartbeat |
+| 29 | Announced worker never started | `command -v claude` empty | Absolute path; announce after `ps` |
+| 30 | Worker dead or stalled unnoticed | reboot, idle exits | Heartbeat relaunches from the brief |
