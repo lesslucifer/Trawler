@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W3
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-89-one-signed-mark-one-source-folder.html"
+    tier: T2
+    action: updated
+    distills: "v3: rule 10 the generated set by cargo xtask icons (pinned tauri icon rasteriser, committed, drift-tested), rule 11 the DMG background as one 144-dpi PNG because the bundler refuses TIFF; Held by names the tests"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-89 row names cargo xtask icons and the 144-dpi DMG PNG"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL: the app icon, tray glyphs (template on macOS, coloured elsewhere), DMG background and NSIS/WiX bitmaps come from the signed sources (DEC-89)"
+  - path: "docs/work/2026-11-06-prorelease-w3-brand-assets-plan.html"
+    tier: T3
+    action: added
+    distills: "W3 requirement, flow, expected result, test plan, hand-check items"
+  - path: "docs/work/2026-11-06-prorelease-w3-brand-assets-result.html"
+    tier: T3
+    action: added
+    distills: "W3 outcome, W10 open items resolved or handed to the owner, evidence, hand-check, follow-ups"
