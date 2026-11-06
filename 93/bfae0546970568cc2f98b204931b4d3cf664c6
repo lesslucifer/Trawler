@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W18
+base: 1bf8162c5838f66fd097d138bdfbfe4cc268c155
+design_sha256: f0786c32c0147aed9d58e55e2f3a747835eb61328bce5daea236ec18470f16d4
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/LogTail.tsx
+    why: "a log line text drops ANSI SGR escape codes before render; same element, classes and layout, so the surface looks as designed with the stray codes gone"
+date: 2026-11-06
