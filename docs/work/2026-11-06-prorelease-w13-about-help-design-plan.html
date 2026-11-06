@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9c0d9f34851f0dfaec02" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W13 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W13 — design: About, Help and the version</h1>
+      <p>One design run: the About window on every OS, the Help menu per OS, the version and the update-check switch in
+        Settings → General. No code.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 (docs/work/) · WU plan · branch <code>wu/prorelease/about-help-design</code>
+        off <code>epic/prorelease</code> · epic plan: <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> ·
+        the run: <a href="2026-11-06-prorelease-about-help-design-run.html">design run</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">A design run per the <a href="../design-flow.html">design flow</a>, closed on the owner's
+      calls, fixes how a user on macOS, Windows and Linux sees Trawler's version, licence, copyright and logo slot, opens the
+      user guide, reports an issue prefilled with the version and OS, reads the third-party licences and the privacy
+      statement, and turns the launch update check off in Settings (Q5: a switch, default on) — with the keyboard path,
+      the empty and error states of each.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <table data-item="maps-to">
+      <tr><th>Serves</th><th>How</th></tr>
+      <tr><td><span class="badge id">E-PRORELEASE</span> · W13 → W4</td><td>the design W4 (About + Help + version) cites in its design/v1 note</td></tr>
+      <tr><td><span class="badge id">UC-ABOUT</span> (new, W4 writes it) · <span class="badge id">UC-UPDATE</span></td>
+        <td>About on every OS · the auto-check switch</td></tr>
+      <tr><td>audit rows C · About, Version display, Help menu / links · D · outbound calls</td><td>each row's gap is a state of the mockup</td></tr>
+      <tr><td>Q5 ✅ · Q6 ✅</td><td>switch, default on · the guide is GUIDE.md at the repo root</td></tr>
+    </table>
+
+    <h2 id="expected">Expected result</h2>
+    <table data-item="expected">
+      <tr><th>#</th><th>Observable</th></tr>
+      <tr><td>1</td><td>the run doc shows the mounted mockup in every state it reaches (three OSes, three About pages, the
+        switch on/off/unavailable/failed, a browser that would not open, a build with no licence list), green under <code>verify-doc</code></td></tr>
+      <tr><td>2</td><td>the owner's calls are on its review item, then it reads <code>data-status="archived"</code></td></tr>
+      <tr><td>3</td><td>a <code>design/v1</code> note on the WU tip from the design-review skill, accounting the run</td></tr>
+    </table>
+
+    <h2 id="test-plan">Test plan</h2>
+    <table data-item="test-plan">
+      <tr><th>Level</th><th>What</th></tr>
+      <tr><td>unit · integration · e2e</td><td>waived: design WU, no code; its build WU (W4) carries the tests. The checks are
+        <code>verify-doc</code> on the run (Tier-1), the owner at the mockup, and the design step's <code>design/v1</code> note at the merge</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
