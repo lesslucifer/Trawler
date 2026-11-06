@@ -40,6 +40,7 @@ import {
   editPair,
   formShape,
   formStructure,
+  labelShape,
   markPairs,
   pairsAsJson,
   readForm,
@@ -410,10 +411,11 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     () => (isModified(settled) ? byteLength(workingText(settled)) : payload.bytes.length),
     [settled, payload.bytes],
   );
-  const shape = useMemo(() => formShape(original), [original]);
+  const shape = useMemo(() => labelShape(reading.label) ?? formShape(original), [reading.label, original]);
   const form = useMemo(() => (kind === "form" ? readForm(text, shape) : NO_FORM), [kind, text, shape]);
   const { parts, pairs } = form;
-  const rowAt = useCallback((index: number) => (index < 0 ? parts[parts.length + index] : pairs[index]), [parts, pairs]);
+  const rows = useMemo(() => new Map([...parts, ...pairs].map((row) => [row.index, row])), [parts, pairs]);
+  const rowAt = useCallback((index: number) => rows.get(index), [rows]);
   const lines = useMemo(() => lineCountOf(workingText(settled)), [settled]);
   const empty = payload.bytes.length === 0;
   const notForm = kind === "form" && shape === "none" && !empty;
@@ -634,7 +636,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       <DecodePeek
         peeked={peek.peeked}
         from={peek.origin.type === "row" ? "value" : "selection"}
-        onReplace={value === null || readOnly || (peek.origin.type === "row" && peek.origin.index < 0) ? null : () => replaceDecoded(peek.origin, value)}
+        onReplace={value === null || readOnly || (peek.origin.type === "row" && rowAt(peek.origin.index)?.part) ? null : () => replaceDecoded(peek.origin, value)}
         onOpen={openDecoded}
         onClose={() => setPeek(null)}
       />
@@ -643,11 +645,11 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
 
   const removeRow = useCallback(
     (index: number) => {
-      if (index < 0) return;
+      if (rowAt(index)?.part) return;
       setHistory((h) => commit(h, removePair(workingText(h), index, shape), `removed pair ${index + 1}`));
       setRow(null);
     },
-    [shape],
+    [rowAt, shape],
   );
 
   useEffect(() => {
@@ -707,7 +709,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         removeRow(row);
       } else if (key === "c" && !typing && asTable && row !== null && rowAt(row) && !window.getSelection()?.toString()) {
         event.preventDefault();
-        copy(rowAt(row).value);
+        copy(rowAt(row)?.value ?? "");
       }
     };
     window.addEventListener("keydown", onKeyDown, true);
@@ -853,7 +855,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
         { label: "decode the value", keys: "⌘⇧D", disabled: !pair.value, why: "empty value", run: () => decodeRow(pair.index) },
         { label: "copy the value", keys: "⌘C", run: () => copy(pair.value) },
       ];
-      if (pair.index < 0) return [reading];
+      if (pair.part) return [reading];
       return [
         reading,
         [

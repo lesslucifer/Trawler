@@ -39,7 +39,7 @@ function Dispatch({ fetched, kind }: { fetched: BodyFetch; kind: ContentKind }) 
     case "html":
       return <XmlRenderer text={bodyText(fetched.bytes)} />;
     case "form":
-      return <FormRenderer text={bodyText(fetched.bytes)} />;
+      return <FormRenderer text={bodyText(fetched.bytes)} label={fetched.contentType} />;
     case "image":
       return <ImageRenderer bytes={fetched.bytes} contentType={fetched.contentType} />;
     case "hex":

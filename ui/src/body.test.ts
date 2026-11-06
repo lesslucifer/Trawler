@@ -5,7 +5,6 @@ import {
   bodyText,
   byteLength,
   decodeBody,
-  formEntries,
   formCut,
   formPairCut,
   hexDump,
@@ -17,6 +16,7 @@ import {
   saveFilename,
 } from "./body";
 import type { FlowView } from "./api";
+import { parsePairs } from "./formPairs";
 
 test("humanBytes reads at a glance: one decimal below 10, integer above", () => {
   expect(humanBytes(0)).toBe("0 B");
@@ -80,14 +80,6 @@ test("hexDump caps output and reports the remainder", () => {
   expect(lines[1]).toBe("… 24 more bytes");
 });
 
-test("formEntries parses url-encoded pairs, decoding and keeping duplicates", () => {
-  expect(formEntries("a=1&b=two%20words&a=2")).toEqual([
-    ["a", "1"],
-    ["b", "two words"],
-    ["a", "2"],
-  ]);
-});
-
 test("formCut cuts header lines on a line; a first line over the cap keeps its name with no value", () => {
   expect(formCut("a: 1\nb: 2\nc: 3", 8, "headers")).toBe(4);
   expect(formCut(`x-big: ${"v".repeat(50)}\nb: 2`, 20, "headers")).toBe(6);
@@ -96,13 +88,20 @@ test("formCut cuts header lines on a line; a first line over the cap keeps its n
   expect(formCut("https://a.example/?a=1&b=2", 23, "url")).toBe(22);
 });
 
+test("formCut never cuts a folded header between its line and its continuation", () => {
+  const text = "a: 1\nb: 2\n  more\nc: 3";
+  expect(formCut(text, 14, "headers")).toBe(4);
+  expect(formCut(text, 17, "headers")).toBe(16);
+  expect(formCut(`x: 1\n\tfold ${"v".repeat(40)}`, 20, "headers")).toBe(2);
+});
+
 test("formPairCut lands on a pair boundary, never inside a percent-escape", () => {
   const body = "a=1&price=%E2%82%AC99&b=2";
 
   for (let at = 0; at <= body.length; at += 1) {
     const kept = body.slice(0, formPairCut(body, at));
     expect(kept).not.toMatch(/%[0-9A-Fa-f]?$/);
-    expect(formEntries(kept).map(([, v]) => v).join("")).not.toContain("�");
+    expect(parsePairs(kept).some((pair) => pair.kept)).toBe(false);
   }
 });
 

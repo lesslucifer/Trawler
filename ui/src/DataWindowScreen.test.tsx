@@ -1628,6 +1628,13 @@ describe("a form reads its text as lines, a URL or pairs", () => {
     expect(footer()).toHaveTextContent("3 pairs");
   });
 
+  it("a body labelled URL-encoded reads as pairs even with raw quotes or a leading slash", async () => {
+    await open(payload({ text: '/a="x"&note: y=<b>', typeHint: FORM_HINT }));
+    expect(keysShown()).toEqual(["/a", "note: y"]);
+    expect(valuesShown()).toEqual(['"x"', "<b>"]);
+    expect(screen.queryByText(/^not a form/)).toBeNull();
+  });
+
   it("decoding a value with nothing to decode still says why", async () => {
     await open(payload({ text: HEADERS, typeHint: "text/rfc822-headers" }));
     fireEvent.contextMenu(rowsShown()[0], { clientX: 5, clientY: 5 });

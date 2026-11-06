@@ -20,7 +20,7 @@ describe("FormRenderer", () => {
   });
 
   it("a URI reads as its parts, then its query's pairs, not as one key up to the first =", () => {
-    render(<FormRenderer text="https://cdn.example/v/a.mp4?_nc_cat=106&efg=eyJ2In0%3D" />);
+    render(<FormRenderer text="https://cdn.example/v/a.mp4?_nc_cat=106&efg=eyJ2In0%3D" label="text/uri-list" />);
     expect(screen.getByText("scheme")).toBeInTheDocument();
     expect(screen.getByText("cdn.example")).toBeInTheDocument();
     expect(screen.getByText("/v/a.mp4")).toBeInTheDocument();
@@ -30,14 +30,22 @@ describe("FormRenderer", () => {
   });
 
   it("name: value lines read one row per line, values verbatim", () => {
-    render(<FormRenderer text={"cache-control: max-age=1209600, no-transform\ntiming-allow-origin: *"} />);
+    render(<FormRenderer text={"cache-control: max-age=1209600, no-transform\ntiming-allow-origin: *"} label="text/rfc822-headers" />);
     expect(screen.getByText("cache-control")).toBeInTheDocument();
     expect(screen.getByText("max-age=1209600, no-transform")).toBeInTheDocument();
     expect(screen.getByText("*")).toBeInTheDocument();
   });
 
+  it("a URL-encoded body is read as pairs whatever it looks like, with the window's decoding", () => {
+    render(<FormRenderer text={'/a="x"&note: y=<b>&bad=%E4&k=v'} label="application/x-www-form-urlencoded" />);
+    expect(screen.getByText("/a")).toBeInTheDocument();
+    expect(screen.getByText('"x"')).toBeInTheDocument();
+    expect(screen.getByText("note: y")).toBeInTheDocument();
+    expect(screen.getByText("%E4")).toBeInTheDocument();
+  });
+
   it("a first header line over the cap still shows its name, with no partial value", () => {
-    render(<FormRenderer text={`x-huge: ${"h".repeat(TEXT_MAX + 10)}\nnext: 1`} />);
+    render(<FormRenderer text={`x-huge: ${"h".repeat(TEXT_MAX + 10)}\nnext: 1`} label="text/rfc822-headers" />);
     expect(screen.getByText("x-huge")).toBeInTheDocument();
     expect(screen.queryByText(/^h+$/)).toBeNull();
   });
@@ -45,7 +53,7 @@ describe("FormRenderer", () => {
   it("long name: value lines are cut on a line, never mid-value", () => {
     const line = `x-pad: ${"p".repeat(1000)}`;
     const text = Array.from({ length: Math.ceil(TEXT_MAX / line.length) + 2 }, () => line).join("\n");
-    render(<FormRenderer text={text} />);
+    render(<FormRenderer text={text} label="text/rfc822-headers" />);
     const values = screen.getAllByText(/^p+$/);
     expect(values.length).toBeLessThan(text.split("\n").length);
     expect(values.every((value) => value.textContent === "p".repeat(1000))).toBe(true);

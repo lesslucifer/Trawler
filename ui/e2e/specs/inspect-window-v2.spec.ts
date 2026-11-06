@@ -73,8 +73,13 @@ async function rowTexts(selector: string): Promise<string[][]> {
 }
 
 async function rightClickRow(selector: string, key: string) {
-  const row = await $$(selector).find(async (candidate) => (await candidate.$("[data-wire=key]").getText()) === key);
-  await row.click({ button: "right" });
+  for (const row of await $$(selector)) {
+    if ((await row.$("[data-wire=key]").getText()) === key) {
+      await row.click({ button: "right" });
+      return;
+    }
+  }
+  throw new Error(`no row keyed "${key}"`);
 }
 
 async function closeEveryDataWindow() {

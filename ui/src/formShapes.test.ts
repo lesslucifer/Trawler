@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPairAfter, editPair, formShape, parsePairs, readForm, removePair, repeats, sortByKey } from "./formPairs";
+import { addPairAfter, editPair, formShape, labelShape, parsePairs, readForm, removePair, repeats, sortByKey } from "./formPairs";
 
 const OWNER_HEADERS = [
   "content-type: image/jpeg",
@@ -226,6 +226,24 @@ describe("a URL reads as labelled parts, then its query's pairs", () => {
     expect(removePair("https://a.example/?a=1#f", 0, "url")).toBe("https://a.example/#f");
     expect(sortByKey(url, "url")).toBe("https://A.example:443/p%20q?a=1&b=2#frag");
     expect(addPairAfter("https://a.example/x#f", -1, "url")).toBe("https://a.example/x?=#f");
+  });
+});
+
+describe("a label that names a form names its shape; bytes are read only without one", () => {
+  it.each([
+    ["application/x-www-form-urlencoded; charset=utf-8", "query"],
+    ["text/rfc822-headers", "headers"],
+    ["TEXT/URI-LIST", "url"],
+    ["text/plain", null],
+    [null, null],
+  ])("%s → %s", (label, shape) => {
+    expect(labelShape(label)).toBe(shape);
+  });
+
+  it("parts carry a part flag, pairs do not", () => {
+    const { parts, pairs } = readForm("https://a.example/?k=v", "url");
+    expect(parts.every((part) => part.part === true)).toBe(true);
+    expect(pairs.every((pair) => pair.part === undefined)).toBe(true);
   });
 });
 

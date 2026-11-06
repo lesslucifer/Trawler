@@ -125,10 +125,6 @@ export function hexDump(bytes: Uint8Array, max: number = HEX_MAX): string {
   return lines.join("\n");
 }
 
-export function formEntries(text: string): [string, string][] {
-  return [...new URLSearchParams(text)];
-}
-
 // A form body is cut on a pair boundary, never at a character offset: an offset
 // can land mid-%XX (decodes to a stray literal) or mid-escape-run (a truncated
 // multi-byte character decodes to U+FFFD), and that half-decoded value is what
@@ -144,8 +140,11 @@ export function formPairCut(text: string, at: number): number {
 
 // Header lines are cut the same way on a line boundary: a first line over the
 // cap keeps its name and drops its value, never a partial one.
+const FOLDED = /[ \t]/;
+
 function headerLineCut(text: string, at: number): number {
-  const boundary = text.lastIndexOf("\n", at);
+  let boundary = text.lastIndexOf("\n", at);
+  while (boundary > 0 && FOLDED.test(text[boundary + 1] ?? "")) boundary = text.lastIndexOf("\n", boundary - 1);
   if (boundary > 0) return boundary;
   const colon = text.indexOf(":", 1);
   return colon > 0 && colon < at ? colon + 1 : 0;

@@ -1,3 +1,4 @@
+import { HEADERS_LABEL, normalizeLabel, URI_LABEL } from "./contentKind";
 import { mergeRanges, MATCH_LIMIT, scanOf, type Scan, type Structure } from "./find";
 import type { FindChip } from "./findGrammar";
 import type { TextRange } from "./components/index";
@@ -8,6 +9,7 @@ export interface FormPair {
   key: string;
   value: string;
   kept: boolean;
+  part?: true;
 }
 
 export type PairPart = "key" | "value";
@@ -24,6 +26,14 @@ const ONE_FIELD = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:[ \t]/;
 const FOLD = /^[ \t]/;
 const URL_START = /^(?:[a-z][a-z0-9+.-]*:\/\/|\/)/i;
 const NEVER_RAW_IN_A_FORM = /["<>]/;
+
+const LABEL_SHAPES: Record<string, FormShape> = {
+  "application/x-www-form-urlencoded": "query",
+  [HEADERS_LABEL]: "headers",
+  [URI_LABEL]: "url",
+};
+
+export const labelShape = (label: string | null | undefined): FormShape | null => LABEL_SHAPES[normalizeLabel(label) ?? ""] ?? null;
 
 export function formShape(text: string): FormShape {
   const body = text.replace(/\r?\n$/, "");
@@ -135,7 +145,7 @@ function urlParts(head: string, tail: string): FormPair[] {
   ).filter(([, raw]) => raw !== "");
   return present.map(([label, raw, decoded], i) => {
     const read = decoded ? decodePart(raw, false) : { text: raw, kept: false };
-    return { index: i - present.length, raw, key: label, value: read.text, kept: read.kept };
+    return { index: i - present.length, raw, key: label, value: read.text, kept: read.kept, part: true };
   });
 }
 
