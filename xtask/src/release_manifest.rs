@@ -135,8 +135,9 @@ pub fn changes(changelog: &str, version: &str) -> Result<String, String> {
 pub fn notes(template: &str, changelog: &str, version: &str) -> Result<String, String> {
     let final_release = crate::package::rpm_takes(version);
     let dropped = if final_release { "Release candidate" } else { ".rpm" };
-    let shipped: String =
+    let kept: String =
         template.split_inclusive('\n').filter(|line| !line.contains(dropped)).collect();
+    let shipped = kept.replace("\n\n\n", "\n\n");
     Ok(shipped.replace("{version}", version).replace("{changes}", &changes(changelog, version)?))
 }
 
@@ -404,7 +405,8 @@ mod tests {
     fn only_a_release_candidate_s_notes_say_so_under_the_title() {
         let text = rendered("0.2.0-1");
         assert!(text.starts_with(&format!("# Trawler 0.2.0-1\n\n{CANDIDATE}\n")), "{text}");
-        assert!(!rendered("0.2.0").contains("Release candidate"));
+        let text = rendered("0.2.0");
+        assert!(text.starts_with("# Trawler 0.2.0\n\n## What's new\n"), "{text}");
     }
 
     #[test]
