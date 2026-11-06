@@ -1,79 +1,39 @@
 # Message templates
 
-## Ask for a sign-off (terminal)
-
+**Sign-off ask (terminal)**
 ```
-**<Item> is ready for you to sign.** I checked it myself: tip `<full sha>` on `<branch>`, tree clean, <notes/gates> on the tip. Only your signature is red.
-
+**<Item> is ready for you to sign.** Checked: tip `<full sha>` on `<branch>`, tree clean, <gates> on the tip; only your signature is red.
 **What you're signing:** <2–5 bullets in user terms>
-**Doc only** | **You can try it in the real app** (steps below)
-**Gate state:** <green list> · **Not independently reviewed:** <paths or "none">
-
-**Read first:**
-cd <abs worktree> && open <doc path>
-
-**Try it** (helper tested by me/the worker; restore steps included):
-1. ...
-
-**Run these in order:**
-1. cd <abs path> && <sign command>
-2. cd <abs path> && <merge command>
-
-**Next:** <what you or the workers do after>
-
-**What you need to do now:**
-1. ...
+**Doc only** | **Try it in the real app** (tested helper; restore steps)
+**Gate state:** <green> · **Not independently reviewed:** <paths | none>
+**Read first:** cd <abs worktree> && open <doc>
+**Run in order:**
+1. cd <abs> && <sign command>
+2. cd <abs> && <merge command>
+**Next:** <what follows>
+**What you need to do now:** 1. ...
 ```
 
-## Ask for a decision
-
+**Decision ask**
 ```
-**<Worker/item> needs one decision.** <one-line context>
-
-| Option | What it means | Cost |
-|---|---|---|
-| **A** (my pick) | ... | ... |
-| B | ... | ... |
-
-**Default if you don't answer:** A. Reply "A" or "B".
+**<Item> needs one decision.** <context>
+| Option | Means | Cost |  — mark **A (my pick)**
+**Default if you don't answer:** A.
 **What you need to do now:** 1. Reply A or B.
 ```
 
-## Status board
+**Status board**: `| Worker | Doing | You'll get |` · **Waiting on you:** … · **Running without you:** … · closing line (promise a push only after arming the watcher).
 
+**Push**: `✍️ Sign-off ready: <item>` / `📄 Doc only | 🧪 Try in app` / one line what / `cd <abs> && <command>` / `Then: <next>`. Plain text, ≤ ~10 lines, same turn as the terminal message, report the id.
+
+**Independent review prompt** (read-only subagent, strongest model, explicit)
 ```
-| Worker | Doing | You'll get |
-|---|---|---|
-**Waiting on you:** <list or nothing> · **Running without you:** <list>
-**What you need to do now:** nothing. I'll message you on <channel> when <event>.  (only after arming the watcher)
-```
-
-## Push (Telegram) message
-
-```
-✍️ Sign-off ready: <item>
-📄 Doc only | 🧪 Try in app
-<one line what it is>
-
-Sign
-cd <abs path> && <command>
-
-Then: <one line next>
-```
-
-≤ ~10 lines, plain text, every command complete. Same turn as the terminal message; report the message id.
-
-## Independent review prompt (read-only subagent, strongest model)
-
-```
-Independent READ-ONLY review (very thorough) of <what>, which the automated review gate does not bind.
-Worktree <abs>, branch <b>, tip <sha>; base <sha>. Do not edit, run <reserved commands>, push, tag,
-or execute downloaded binaries; git/grep/read and read-only gh api only.
-Scope: `git diff <base> HEAD -- <paths>` plus <named files>. Rules to check against: <decision docs>.
-Hunt: (1) <exit/quit paths that skip a safety check> (2) <unsafe/FFI soundness and confinement>
-(3) <secret/key exposure: only in the step that needs it, never logged, not reachable by third-party code>
-(4) <workflow traps: injection via tag/ref in run:, unpinned actions, caches, pipefail, artifact naming>
-(5) <tests that can touch the user's real data, ports, processes; teardown on every failure path>
-Report each finding with file:line, severity, CONFIRMED vs PLAUSIBLE, and a concrete failure scenario;
-list what you checked and found clean. Concise.
+Independent READ-ONLY review (very thorough) of <what>, which the automated gate does not bind.
+Worktree <abs>, branch <b>, tip <sha>; base <sha>. Do not edit, run <reserved commands>, push, tag, or execute
+downloaded binaries; git/grep/read and read-only gh api only. Scope: `git diff <base> HEAD -- <paths>` + <files>.
+Rules: <decision docs>. Already covered by earlier rounds: <list>.
+Hunt: (1) exit paths skipping a safety check (2) unsafe/FFI soundness, confinement (3) secret exposure: only in
+the step that needs it, never logged, unreachable by third-party code (4) workflow traps: ref injection in run:,
+unpinned actions, caches, pipefail, artifact naming (5) tests touching real data/ports/processes; teardown.
+Report file:line, severity, CONFIRMED vs PLAUSIBLE, concrete failure scenario; list what you checked clean. Concise.
 ```
