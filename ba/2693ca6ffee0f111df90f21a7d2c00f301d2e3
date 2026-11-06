@@ -1,0 +1,42 @@
+schema: cr/v5
+scope: "WU about-help -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W4
+branch: wu/prorelease/about-help
+base: c5cc5d192814495b3d35f27d48a788c1c3eb8716
+head: ba2693ca6ffee0f111df90f21a7d2c00f301d2e3
+diff_sha256: 158c93d27ffd81d8820b997183dc60fee27e930c1134f3d2a41cf5cdb090319c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 6
+  stage_seconds:
+    gate0: 1
+    total: 70
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 7, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "About.tsx: the default close callback is a new function each render, so the Esc listener is re-added on every state change"
+    waived: "one keydown listener on a read-only window; re-adding it costs nothing measurable"
+  - finding: "About.tsx: the default initial = shownAtOpen() is evaluated each render though useState reads it once"
+    waived: "a single global property read; negligible"
+  - finding: "About.tsx: the Link names re-declare the shell's Link enum with no pin across the boundary"
+    waived: "three fixed names; About.test.tsx pins the names the page sends and about_help.rs pins what the shell accepts; a shared pin when links grow"
+  - finding: "General.tsx: Updates repeats the write / refusal / re-read pattern of the two switches"
+    waived: "the design run draws it as General's two switches; a helper for three local uses is not earned"
+  - finding: "About.tsx: a rejected about_read leaves the window blank, unhandled"
+    waived: "about_read is infallible in the shell (no Result); only a broken IPC rejects, where every page is blank alike"
+  - finding: "General.tsx: two quick toggles of the update switch can resolve out of order"
+    waived: "same shape as the keep-capturing and login switches; the shell's write replaces the file whole and a reopen reads the stored value"
+verdict: PASS
+date: 2026-11-06
