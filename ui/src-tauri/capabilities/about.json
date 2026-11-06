@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "about",
+  "description": "The About window reads what the shell hands it and can close itself (Esc); it opens links only through open_link, which takes a name, never an address (DEC-90)",
+  "windows": ["about"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close"
+  ]
+}

@@ -11,8 +11,9 @@ function shell({
   tray = true,
   login = { on: false, starts: null } as LoginItem,
   refuse = null as string | null,
+  updates = { version: "0.1.0-5", installed: true, automatic: true },
 } = {}) {
-  const stored = { keepCapturing, login };
+  const stored = { keepCapturing, login, updates };
   const call = vi.fn(async (command: string, args?: Record<string, unknown>) => {
     switch (command) {
       case "keep_capturing_read":
@@ -24,6 +25,14 @@ function shell({
       case "keep_capturing_write":
         if (refuse) throw refuse;
         stored.keepCapturing = args?.on ? "on" : "off";
+        return null;
+      case "update_prefs_read":
+        return stored.updates;
+      case "update_automatic_write":
+        if (refuse) throw refuse;
+        stored.updates = { ...stored.updates, automatic: Boolean(args?.on) };
+        return null;
+      case "check_for_updates":
         return null;
       case "login_item_write":
         if (refuse) throw refuse;
@@ -140,5 +149,44 @@ describe("each OS names its own icon place", () => {
     await keepBox();
     expect(screen.getByText(notice)).toBeInTheDocument();
     expect(screen.getByText("Opens with its window.")).toBeInTheDocument();
+  });
+});
+
+const autoBox = () => screen.findByRole("checkbox", { name: "check for updates automatically" });
+
+describe("updates", () => {
+  test("General shows the running version, check now and the launch check switch, on by default", async () => {
+    const { call, spy } = shell();
+    render(<General call={call} os="macos" />);
+    expect(await autoBox()).toHaveProperty("checked", true);
+    expect(screen.getByRole("button", { name: "copy version" })).toHaveTextContent("0.1.0-5");
+    fireEvent.click(screen.getByRole("button", { name: "check now" }));
+    expect(writes(spy, "check_for_updates")).toHaveLength(1);
+  });
+
+  test("unticking stores the launch check off", async () => {
+    const { call, stored } = shell();
+    render(<General call={call} os="windows" />);
+    fireEvent.click(await autoBox());
+    await waitFor(async () => expect(await autoBox()).toHaveProperty("checked", false));
+    expect(stored.updates.automatic).toBe(false);
+  });
+
+  test("a refused write says why and the box shows what is stored", async () => {
+    const { call } = shell({ refuse: "Permission denied (os error 13)" });
+    render(<General call={call} os="linux" />);
+    fireEvent.click(await autoBox());
+    expect(await screen.findByText("couldn't save — permission denied")).toBeInTheDocument();
+    expect(await autoBox()).toHaveProperty("checked", true);
+  });
+
+  test("a copy that is not installed has no check now and says where updates come from", async () => {
+    const { call } = shell({ updates: { version: "0.1.0-5", installed: false, automatic: true } });
+    render(<General call={call} os="macos" />);
+    const box = await autoBox();
+    expect(box).toBeDisabled();
+    expect(box).toHaveProperty("checked", false);
+    expect(screen.queryByRole("button", { name: "check now" })).not.toBeInTheDocument();
+    expect(screen.getByText("updates come with an installed copy of Trawler")).toBeInTheDocument();
   });
 });

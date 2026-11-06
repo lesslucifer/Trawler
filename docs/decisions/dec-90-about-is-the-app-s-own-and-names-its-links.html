@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedc7189f34851f0dfaef7f">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-90: About is the app's own, and the shell names its links</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-90 — About is the app's own, and the shell names its links</h1>
+      <p>One About window on every OS; the webview asks for a link by name and the shell builds the address; the launch update check obeys a stored switch.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W4</strong> · UC-ABOUT · UC-UPDATE · relates to
+        <a href="dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a> ·
+        <a href="dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="flow">Where each item lands</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  MA["macOS · Trawler → About Trawler"] --> AW["About window: About · Third-party licences · Privacy"]
+  HA["Windows / Linux · Help → About Trawler"] --> AW
+  HL["Help → Third-Party Licences · Privacy"] --> AW
+  HG["Help → User Guide · Report an Issue…"] --> OL["open_link(guide | issue | source)"]
+  AW -- "three buttons" --> OL
+  OL --> BR(["the browser"])
+  OL -. "would not open" .-> AW
+      </pre>
+      <div class="caption">Every Help item lands in the About window or the browser; a browser that would not open lands on the About page with the address to copy.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>About is Trawler's own window (label <code>about</code>) on every OS; the system About panel and the default menu's About items are replaced</td><td>owner ruling D1: one surface with the logo, licences, privacy and working links everywhere</td></tr>
+      <tr><td>2</td><td>The webview opens a link only through <code>open_link</code>, which takes a closed name (<code>guide</code> · <code>issue</code> · <code>source</code>); the addresses are shell constants and no opener permission is granted to any window</td><td>no page, however it got there, can make the shell open an arbitrary address</td></tr>
+      <tr><td>3</td><td>A report carries the version, the OS with its version and CPU, and the install kind — never the capture, a host or the machine's name</td><td>owner ruling D5: what a triage asks first, nothing private</td></tr>
+      <tr><td>4</td><td>The launch check runs only when the copy is installed, <em>check for updates automatically</em> is on and the check is due; a missing or unreadable answer reads on; <em>Check for Updates…</em> and <em>check now</em> always run</td><td>plan Q5: a switch, default on; the user's own check is never silenced</td></tr>
+      <tr><td>5</td><td>The About window's capability is <code>core:default</code> and closing itself; it reads the notice the bundle ships (DEC-88) and nothing else from disk</td><td>a read-only window needs no file or dialog reach</td></tr>
+    </table>
+
+    <h2 id="held">Held by</h2>
+    <p data-c="held"><code>menu.rs</code> (the Help items per OS, each id's action), <code>links.rs</code> (the issue URL's fields and encoding, the install kinds, a link is a name), <code>update.rs</code> (the switch's file, the launch condition), <code>about.rs</code> (the page marks, the bundled notice), <code>About.test.tsx</code>, <code>General.test.tsx</code> and <code>ui/e2e/specs/about.spec.ts</code>.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

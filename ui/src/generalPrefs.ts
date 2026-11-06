@@ -27,6 +27,24 @@ export function writeLoginItem(on: boolean, call: Invoke = invoke): Promise<Logi
   return call<LoginItem>("login_item_write", { on });
 }
 
+export interface UpdatePrefs {
+  version: string;
+  installed: boolean;
+  automatic: boolean;
+}
+
+export function readUpdatePrefs(call: Invoke = invoke): Promise<UpdatePrefs> {
+  return call<UpdatePrefs>("update_prefs_read");
+}
+
+export function writeUpdateAutomatic(on: boolean, call: Invoke = invoke): Promise<void> {
+  return call<void>("update_automatic_write", { on });
+}
+
+export function checkForUpdates(call: Invoke = invoke): Promise<void> {
+  return call<void>("check_for_updates");
+}
+
 export function readTrayAvailable(call: Invoke = invoke): Promise<boolean> {
   return call<boolean>("tray_available");
 }

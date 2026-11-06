@@ -118,6 +118,7 @@ const SPECS = [
   "./specs/query-bar.spec.ts",
   "./specs/query-bar-relaunched.spec.ts",
   "./specs/flows.spec.ts",
+  "./specs/about.spec.ts",
 ];
 
 let harness: ChildProcessWithoutNullStreams | undefined;

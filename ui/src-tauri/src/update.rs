@@ -4,13 +4,17 @@ use std::sync::{Mutex, PoisonError};
 use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use serde::{Deserialize, Serialize};
 use tauri::utils::config::BundleType;
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{AppHandle, Manager, Runtime, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_updater::{Update, UpdaterBuilder, UpdaterExt};
 
+use crate::lifecycle::Lifecycle;
+
 pub const CHECK_EVERY: Duration = Duration::from_secs(24 * 60 * 60);
 const LAST_CHECK_FILE: &str = "last-update-check";
+const AUTOMATIC_FILE: &str = "update-check.json";
 const INSTALL: &str = "Install";
 const LATER: &str = "Later";
 
@@ -46,6 +50,30 @@ pub fn record_outcome(record: &Path, found: &Found, at: SystemTime) -> std::io::
         Found::Newer { .. } | Found::UpToDate { .. } => record_check(record, at),
         Found::Failed(_) | Found::NotInstalled => Ok(()),
     }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredAutomatic {
+    automatic: bool,
+}
+
+/// The launch check is on until the user turns it off; a file that is not
+/// an answer reads as never answered.
+pub fn read_automatic(config_dir: &Path) -> bool {
+    std::fs::read(config_dir.join(AUTOMATIC_FILE))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<StoredAutomatic>(&bytes).ok())
+        .map_or(true, |stored| stored.automatic)
+}
+
+pub fn write_automatic(config_dir: &Path, on: bool) -> std::io::Result<()> {
+    let bytes = serde_json::to_vec(&StoredAutomatic { automatic: on })?;
+    crate::layout::replace_whole(&config_dir.join(AUTOMATIC_FILE), &bytes)
+}
+
+pub fn launch_checks(installed: bool, automatic: bool, due: bool) -> bool {
+    installed && automatic && due
 }
 
 /// Only an app installed from one of its bundles can replace itself; a binary
@@ -149,14 +177,48 @@ fn record_path<R: Runtime>(app: &AppHandle<R>) -> Option<PathBuf> {
     app.path().app_data_dir().ok().map(|dir| dir.join(LAST_CHECK_FILE))
 }
 
+fn automatic<R: Runtime>(app: &AppHandle<R>) -> bool {
+    app.try_state::<Lifecycle>()
+        .and_then(|lifecycle| lifecycle.config_dir().map(read_automatic))
+        .unwrap_or(true)
+}
+
 pub fn check_at_launch<R: Runtime>(app: &AppHandle<R>) {
-    if !installed(tauri::utils::platform::bundle_type()) {
-        return;
-    }
     let Some(record) = record_path(app) else { return };
-    if due(last_check(&record), SystemTime::now()) {
+    if launch_checks(
+        installed(tauri::utils::platform::bundle_type()),
+        automatic(app),
+        due(last_check(&record), SystemTime::now()),
+    ) {
         check(app, Asked::AtLaunch);
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Serialize)]
+pub struct UpdatePrefs {
+    version: String,
+    installed: bool,
+    automatic: bool,
+}
+
+#[tauri::command]
+pub fn update_prefs_read<R: Runtime>(app: AppHandle<R>) -> UpdatePrefs {
+    UpdatePrefs {
+        version: app.package_info().version.to_string(),
+        installed: installed(tauri::utils::platform::bundle_type()),
+        automatic: automatic(&app),
+    }
+}
+
+#[tauri::command]
+pub fn update_automatic_write(lifecycle: State<'_, Lifecycle>, on: bool) -> Result<(), String> {
+    let dir = lifecycle.config_dir().ok_or("the app has no config directory")?;
+    write_automatic(dir, on).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn check_for_updates<R: Runtime>(app: AppHandle<R>) {
+    check(&app, Asked::ByUser);
 }
 
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
@@ -326,6 +388,33 @@ mod tests {
         assert_eq!(last_check(&record), Some(at(1_234)));
         std::fs::write(&record, "yesterday").unwrap();
         assert_eq!(last_check(&record), None);
+    }
+
+    #[test]
+    fn the_launch_check_is_on_until_the_user_turns_it_off() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(read_automatic(&dir.path().join("absent")));
+        assert!(read_automatic(dir.path()));
+        write_automatic(dir.path(), false).unwrap();
+        assert!(!read_automatic(dir.path()));
+        assert_eq!(
+            std::fs::read_to_string(dir.path().join(AUTOMATIC_FILE)).unwrap(),
+            r#"{"automatic":false}"#
+        );
+        write_automatic(dir.path(), true).unwrap();
+        assert!(read_automatic(dir.path()));
+        for bytes in [&b""[..], b"false", b"{}", b"{\"automatic\":\"off\"}", &[0xff, 0xfe]] {
+            std::fs::write(dir.path().join(AUTOMATIC_FILE), bytes).unwrap();
+            assert!(read_automatic(dir.path()), "{}", String::from_utf8_lossy(bytes));
+        }
+    }
+
+    #[test]
+    fn a_launch_asks_only_an_installed_copy_switched_on_and_due() {
+        assert!(launch_checks(true, true, true));
+        assert!(!launch_checks(true, false, true), "the switch off silences the launch");
+        assert!(!launch_checks(false, true, true));
+        assert!(!launch_checks(true, true, false));
     }
 
     #[test]

@@ -45,6 +45,8 @@ tauri-plugin-wdio = { version = "1", optional = true }
 tauri-plugin-wdio-webdriver = { version = "1", optional = true }
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2.14"
+tauri-plugin-opener = "2"
+tauri-plugin-os = "2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 trawler-login-service = { path = "../../login-service" }

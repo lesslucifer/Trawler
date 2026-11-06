@@ -8,6 +8,7 @@ const prefs = vi.fn(async (command: string) => {
   if (command === "keep_capturing_read") return "off";
   if (command === "tray_available") return true;
   if (command === "login_item_read") return { on: false, starts: null };
+  if (command === "update_prefs_read") return { version: "0.1.0-5", installed: true, automatic: true };
   throw new Error(`${command} is not stubbed`);
 }) as unknown as Invoke;
 
@@ -36,4 +37,10 @@ test("a click on a page name shows that page", async () => {
 
   fireEvent.click(screen.getByRole("tab", { name: "Capture service" }));
   expect(await screen.findByRole("heading", { name: "Capture service" })).toBeInTheDocument();
+});
+
+test("Settings → General shows the version the shell reports", async () => {
+  const core = coreStub({ state: RUNNING });
+  render(<Settings call={prefs} bridge={core.bridge} />);
+  expect(await screen.findByRole("button", { name: "copy version" })).toHaveTextContent("0.1.0-5");
 });

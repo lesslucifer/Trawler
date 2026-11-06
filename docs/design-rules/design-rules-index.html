@@ -127,6 +127,8 @@ flowchart LR
         <tr><td><strong>restore original</strong></td><td>make the working copy the original again, as one act (<span class="badge id">E-INSPWIN</span>)</td><td>reset · revert all · discard</td></tr>
         <tr><td><strong>re-indent</strong> · <strong>minified</strong></td><td>rewrite the working copy's indentation · the JSON with no whitespace (<span class="badge id">E-INSPWIN</span>)</td><td>prettify · format · beautify · compact · compress</td></tr>
         <tr><td><strong>decoded as</strong></td><td>the decode peek's label for the decoder that read the value; a decode that changes the working copy is the step <em>replaced … with its decoded form</em> (<span class="badge id">E-INSPWIN</span>)</td><td>parsed as · detected · converted</td></tr>
+        <tr><td><strong>licences</strong></td><td>the licence texts of what Trawler ships, British spelling as the Help item <em>Third-Party Licences</em> and the About window's page (<a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a>)</td><td>licenses · credits · acknowledgements, on screen</td></tr>
+        <tr><td><strong>installed copy</strong></td><td>a Trawler that came from an installer, the one that updates itself; a build run from <code>target/</code> is not one (<span class="badge id">E-PRORELEASE.W4</span>)</td><td>release build · production · bundled app, on screen</td></tr>
       </tbody>
     </table>
 
@@ -145,9 +147,10 @@ flowchart LR
         <tr><td><strong>remove the last filter</strong></td><td>Backspace in an empty draft</td><td><code>ChipBox</code></td></tr>
         <tr><td><strong>focus the query bar</strong></td><td>⌘F — the screen binds it, the bar only takes focus</td><td>the flow list's header</td></tr>
         <tr><td><strong>open Settings</strong></td><td>⌘, — opens the Settings window, or brings it forward</td><td>the app menu's Settings… · the capture menu's settings…</td></tr>
-        <tr><td><strong>close a secondary window</strong></td><td>⌘W — the app keeps running</td><td>the Settings window</td></tr>
+        <tr><td><strong>close a secondary window</strong></td><td>⌘W — the app keeps running; a read-only one also closes on Esc</td><td>the Settings window · the About window (Esc too, <a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a>)</td></tr>
+        <tr><td><strong>open the user guide</strong></td><td>F1 on Windows and Linux; macOS keeps the system's Help search (⇧⌘/)</td><td>Help → User Guide (<span class="badge id">E-PRORELEASE.W4</span>)</td></tr>
         <tr><td><strong>show another page</strong> of a window</td><td>Tab to the page names · ↑ / ↓ moves to a page and shows it, no wrap</td><td><code>PageSidebar</code> · the Settings window (<span class="badge id">E-BGSVC</span>)</td></tr>
-        <tr><td><strong>scroll a region</strong></td><td>one tab stop · ↑ / ↓ / Page Up / Page Down / Home / End</td><td>the Capture service log</td></tr>
+        <tr><td><strong>scroll a region</strong></td><td>one tab stop · ↑ / ↓ / Page Up / Page Down / Home / End</td><td>the Capture service log · the About window's licence list</td></tr>
         <tr><td><strong>resize a split</strong> — the focused line</td><td>← / → (↑ / ↓ across a horizontal line) by 8&nbsp;px, Shift by 48; Home / End to its bounds. No key resets: double-click does (<a href="../decisions/dec-68-a-split-is-a-line-reset-by-the-pointer.html">DEC-68</a>)</td><td><code>Splitter</code> · list ↔ pane · headers ↔ body · column handles</td></tr>
         <tr><td><strong>find</strong> in the data shown</td><td>⌘F to the find field · Enter / ⇧Enter or ⌘G / ⇧⌘G to the next / previous match · Esc clears it</td><td>the data window's find bar (<span class="badge id">E-INSPWIN</span>)</td></tr>
         <tr><td><strong>undo / redo</strong> a working-copy step</td><td>⌘Z / ⇧⌘Z</td><td>the data window</td></tr>
