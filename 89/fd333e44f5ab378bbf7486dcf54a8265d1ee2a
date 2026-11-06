@@ -1,8 +1,0 @@
-schema: test/v2
-level: epic
-epic: E-RELFIX
-branch: HEAD
-tests:
-  unit: { count: 204, covers: "a pre-release bundles Linux as deb and AppImage (rpm refuses its hyphen) and a final adds rpm; release-manifest needs 16 updater keys for a pre-release and 18 for a final; the form reads the owner's 19-line header block and fbcdn URI (scheme, host, path, then _nc_cat = 106 .. bytestart = 1051) as name: value lines and a URL's parts and query, URL-encoded pairs otherwise, not a form for JSON, HTML or prose; repeats, folds, pseudo-headers, mixed line breaks (a final one included) as not a form, + in query vs path, bad escapes kept, a final line break out of the last value and the path; edits keep the rest byte for byte; header names are never percent-decoded for find; the pane never scans a body over its cap for a shape; the openers label text/rfc822-headers and text/uri-list; the pane reads the same shapes" }
-  integration: { count: 141, covers: "release.yml parsed: the build matrix is fail-fast false and the release job still needs every build; the data window over each opener's payload shows the form rows, a picked form on headers text reads the same rows, non-form text says not a form, an edit keeps a URL's head and fragment, find marks a part's value, row decode finds a token inside a value" }
-  e2e: { waived: "the release path's e2e is the owner's v0.1.0-3 tag run on this epic's tip aea42eb3 (run 42162191987: five builds, each smoke on its own installer, sign, upload, a draft with a 16-entry latest.json), which no local session can host; W2 changed ui/src only and did not re-run it. The inspect spec's J1 was updated for the form rows but not run: the attached e2e harness refuses while the owner's keep-capturing.json is on" }
