@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU dialog-texts -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W17
+branch: wu/prorelease/dialog-texts
+base: 2425dd656cf5c514bdd0b0b32251a28a661fb4f2
+head: 892fa69e8fe3eb102875e7232e688f0abd1d0a6e
+diff_sha256: c838519bc6777e7123ff60100fff9bafe529912e64c49591a57707127d0f0f59
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  stage_seconds:
+    gate0: 0
+    finders: 33
+    verifiers: 21
+    total: 93
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "trayPlace/trayIcon/GNOME_TRAY_HINT copy sits in generalPrefs.ts, the prefs I/O module"
+    waived: "generalPrefs.ts already owns the keep-capturing and tray reads these words describe; both callers (General, KeepCapturingDialog) already import it; a copy module for three exports adds a file and moves nothing"
+  - finding: "os = hostOs() default prop re-runs host detection on every render of Menu, General and KeepCapturingDialog"
+    waived: "hostOs is a userAgent substring test on cold UI paths, and the default keeps os injectable for the per-OS tests (the existing pattern of call = invoke)"
+verdict: PASS
+date: 2026-11-06
