@@ -95,8 +95,19 @@ flowchart LR
         <p data-item="wu-expected">Unit: the bundle list per OS and version, the key set per version, rpm's version predicate. Integration: <code>release_workflow</code> pins <code>fail-fast: false</code> and the one version. e2e: the <code>v0.1.0-3</code> tag run.</p>
         <p data-item="wu-deps">main <code>1da1cf41</code> (E-RCFIX).</p>
       </div>
+      <div data-wu="E-RELFIX.W2">
+        <h3 id="w2">W2 · inspect-form-parse — headers and a URI read as the form they are</h3>
+        <p data-item="wu-summary">
+          Owner-named (2026-11-06, screenshots of the data window): a response-headers window reads as <code>text</code>, and picking <code>form</code> on it, or on a URI, splits on <code>&amp;</code>/<code>=</code> only,
+          so a URI's first key is the whole URL up to <code>?_nc_cat</code>. The openers name what they hand over (<code>text/rfc822-headers</code>, <code>text/uri-list</code>, both mapped to <code>form</code>),
+          and the form reads its text in one of three shapes — <code>name: value</code> lines, a URL (labelled parts, then its query's pairs) or URL-encoded pairs — with a stated notice when the text is none of them.
+        </p>
+        <p data-item="wu-maps-to">E-RELFIX (owner-named, outside the release expected results) · UC-9 · DEC-79 (two label rows, the form's shapes) · <code>ui/src/formPairs.ts</code>, <code>contentKind.ts</code>, <code>flowPayload.ts</code>, <code>find.ts</code>, <code>DataWindowScreen.tsx</code>, <code>components/FormTable.tsx</code>, <code>components/FormRenderer.tsx</code> · WU plan <code>docs/work/2026-11-06-release-fixes-w2-inspect-form-parse-plan.html</code></p>
+        <p data-item="wu-expected">Unit: the shape reader, the three parses and their edits over the owner's real header block and URI plus edge cases (red on the old parser). Integration: the data window opened by each opener shows the form rows; picking form on non-form text states why. e2e: J1's open-all and open-on-URI windows show the form.</p>
+        <p data-item="wu-deps">epic tip <code>200005e7</code>; independent of W1 (no shared file but this plan).</p>
+      </div>
     </div>
-    <p data-c="wu-more">W2 onward: added here when the owner names them; none invented.</p>
+    <p data-c="wu-more">W3 onward: added here when the owner names them; none invented.</p>
 
     <h3 id="tags">Tag log</h3>
     <table data-c="tags">
