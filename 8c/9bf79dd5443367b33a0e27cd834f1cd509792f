@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: HEAD
+tests:
+  unit: { count: 15, covers: "every relative link, image and markdown anchor in README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, PRIVACY, CHANGELOG, the release notes, the PR template and the issue forms resolves (a not-yet-written GUIDE.md is listed and must leave the list once it exists); the README install table names exactly the installer kinds package.rs bundles per host, rpm marked final-only; no published file names another tool; the issue forms and their config parse with GitHub's required keys; a screenshot run is green only when every listed shot is a PNG and the spec takes exactly the listed shots" }
+  integration: { waived: "text files and a test-only script: no new runtime contract between components; the screenshot run below drives the real app" }
+  e2e: { count: 9, covers: "cargo xtask ui screenshots drives the real window (scenario build) through setup this machine and iPhone, the list from a reserved-host HAR fixture, the inspector, chips, the ⋮ menu, a replay with an edited header, Settings General, and the owned core's Capture service, writing S1-S7, S10, S11" }
