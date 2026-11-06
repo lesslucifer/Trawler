@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU dialog-texts -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W17
+branch: wu/prorelease/dialog-texts
+base: 2425dd656cf5c514bdd0b0b32251a28a661fb4f2
+head: 1f4540403197d71de60defea7faa8b0866335a81
+diff_sha256: c838519bc6777e7123ff60100fff9bafe529912e64c49591a57707127d0f0f59
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 1
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+  stage_seconds:
+    total: 54
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "trayPlace/trayIcon/GNOME_TRAY_HINT copy sits in generalPrefs.ts, the prefs I/O module"
+    waived: "generalPrefs.ts already owns the keep-capturing and tray reads these words describe and both callers import it; a copy module for three exports adds a file and moves nothing"
+verdict: PASS
+date: 2026-11-06
