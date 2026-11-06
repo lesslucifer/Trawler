@@ -1,3 +1,4 @@
+#![cfg(unix)]
 //! E-SIMPWF.W5 integration — the severity rule at the merge gate, over a real
 //! temp repo driven through the real `xtask` binary and the real merge hook.
 //!

@@ -105,7 +105,7 @@ mod tests {
     async fn empty_body_is_empty() {
         let (rec, fwd) = capture(&HeaderMap::new(), body(b""), 100).await;
         assert!(matches!(rec, BodyRec::Empty));
-        assert!(drain(fwd).await.is_empty());
+        assert_eq!(drain(fwd).await.len(), 0);
     }
 
     #[tokio::test]

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="0ab9ed91107b6e994ac360e5">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-85: the Rust toolchain is pinned, and Windows has its own rules</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-85 — the Rust toolchain is pinned, and Windows has its own rules</h1>
+      <p>One compiler everywhere, and the rules the first green three-OS run taught.</p>
+      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W3</strong> · no use case
+        (infrastructure) · relates to <a href="dec-83-ci-is-a-signal-on-main-not-a-gate.html">DEC-83</a> ·
+        <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="pin">The pin</h2>
+    <table data-c="pin">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td><code>rust-toolchain.toml</code> pins an exact version (<code>1.99.0</code>, with clippy and
+        rustfmt), and every <code>ci.yml</code> job installs the same version</td><td>CI floated to the newest stable
+        while the Mac ran 1.97, so clippy lints differed between the two and a tree green locally went red on CI</td></tr>
+      <tr><td>2</td><td>A bump is one commit that changes <code>rust-toolchain.toml</code> and every
+        <code>toolchain:</code> line in <code>ci.yml</code> and <code>release.yml</code> together, with the tree clean under the new clippy</td><td>the
+        <code>ci_workflow</code> and <code>release_workflow</code> suites fail when the file and any job disagree, or when the version is not exact</td></tr>
+    </table>
+
+    <h2 id="windows">Windows rules</h2>
+    <table data-c="windows">
+      <tr><th>Rule</th><th>Holds because</th></tr>
+      <tr><td><code>tauri-plugin-wdio-webdriver</code> stays locked at 1.5.1, and <code>Cargo.lock</code> holds one
+        <code>webview2-com</code> and one <code>windows</code></td><td>two versions made the plugin's COM types
+        incompatible with webview2-com's; <code>ci_workflow</code> checks the lock</td></tr>
+      <tr><td>The app build script launches <code>pnpm.cmd</code> on Windows</td><td>a bare <code>pnpm</code> is a shell shim
+        <code>Command</code> cannot spawn</td></tr>
+      <tr><td>The build script embeds the Common Controls v6 manifest into test executables on MSVC</td><td>tauri-build
+        passes the manifest link argument to binaries only; an integration test without it dies at start with
+        <code>0xc0000139</code></td></tr>
+      <tr><td>Test helpers and imports used only by Unix tests are <code>cfg(unix)</code></td><td>Windows clippy runs
+        <code>-D warnings</code>, so dead code and unused imports are errors there. Tests that need <code>sh</code>, hooks
+        or <code>/tmp</code> are Unix-only</td></tr>
+      <tr><td>Mock-runtime invoke tests send the platform's local app origin: <code>tauri://localhost</code>, and
+        <code>http://tauri.localhost</code> on Windows</td><td>tauri treats any other origin as remote and refuses the app
+        commands</td></tr>
+      <tr><td><code>.gitattributes</code> holds <code>* text=auto eol=lf</code></td><td>fixtures and snapshots are LF
+        bytes; a CRLF checkout fails them. <code>ci_workflow</code> checks the line</td></tr>
+    </table>
+
+    <h2 id="held-by">Held by</h2>
+    <p data-c="held-by"><code>xtask/tests/suite/ci_workflow.rs</code> pins the toolchain agreement, the lock and the
+      attributes line. The rest is held by the Windows job of <code>ci.yml</code> (DEC-83): a signal, not a gate.</p>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

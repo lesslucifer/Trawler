@@ -11,7 +11,7 @@
       <h1>DEC-81 — one version, a release-only bundle, one package command</h1>
       <p>What every Trawler installer is built from: one committed version, a front-end bundle that can never be the e2e
         one, and one command that builds and checks the host's installers.</p>
-      <div class="meta">v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG.W1</strong> from the owner's
+      <div class="meta">v2 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PKG.W1</strong> from the owner's
         rulings Q2, Q3, Q8, Q15 and Q18 on the E-PKG plan · UC-INSTALL (the artifact; the release itself is E-PKG2's) ·
         <strong>active</strong> · numbered DEC-81 because DEC-77 to DEC-80 are held by epics still open</div>
     </div>
@@ -84,7 +84,8 @@
         case 1 (a plain build after an e2e bundle)</td></tr>
       <tr><td>3–5</td><td><code>xtask/src/package.rs</code> plan and refusal tests; <code>package_bundle</code> case 2
         (a package built with <code>VITE_E2E=1</code> set, verified, and captured through under a launcher's
-        environment), run with <code>--features package-tests</code></td></tr>
+        environment; then its <code>.dmg</code> installed into a temp folder opens its window, whose own core captures
+        and frees the fixed ports, E-PKG2.W6), run with <code>--features package-tests</code></td></tr>
     </table>
 
   </main>

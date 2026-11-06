@@ -20,7 +20,10 @@ pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 pub mod supervisor;
+#[cfg(test)]
+mod test_manifest;
 pub mod tray;
+pub mod update;
 pub mod view_prefs;
 pub mod window_geometry;
 
@@ -69,6 +72,9 @@ pub fn run() {
     let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::Pending::<update::Staged>::default())
+        .manage(update::Telling::default())
         .on_window_event(window_geometry::track)
         .on_window_event(data_window::on_window_event)
         .menu(menu::build)
@@ -77,7 +83,7 @@ pub fn run() {
             if matches!(event, tauri::WindowEvent::Destroyed)
                 && lifecycle::on_window_destroyed(window.app_handle(), window.label())
             {
-                window.app_handle().exit(0);
+                update::end(window.app_handle());
             }
         })
         .setup(move |app| {
@@ -85,6 +91,7 @@ pub fn run() {
             login_item::install(app.handle());
             core::setup(app, mode, background)?;
             window_geometry::install(app.handle());
+            update::check_at_launch(app.handle());
             Ok(())
         });
     let builder = data_window::install(builder);
@@ -129,7 +136,8 @@ pub fn run() {
         #[cfg(feature = "e2e")]
         lifecycle::e2e_request_quit,
         data_window::open_data_window,
-        data_window::take_data_payload
+        data_window::take_data_payload,
+        update::quit_cancelled
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);
@@ -147,10 +155,20 @@ pub fn run() {
     );
 }
 
+/// An exit Tauri asks for once the last window is gone waits while a failed
+/// install is told, and while a windowless app with a tray keeps running.
+pub fn holds_exit_request(asked_by_app: bool, telling: bool, windowless_held: bool) -> bool {
+    update::holds_exit(asked_by_app, telling) || (!asked_by_app && windowless_held)
+}
+
 pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri::RunEvent) {
     match event {
-        tauri::RunEvent::ExitRequested { code: None, api, .. }
-            if lifecycle::holds_last_window_exit(app) =>
+        tauri::RunEvent::ExitRequested { code, api, .. }
+            if holds_exit_request(
+                code.is_some(),
+                update::telling(app),
+                lifecycle::holds_last_window_exit(app),
+            ) =>
         {
             api.prevent_exit();
         }
@@ -170,11 +188,19 @@ pub fn on_run_event<R: tauri::Runtime>(app: &tauri::AppHandle<R>, event: &tauri:
 
 #[cfg(test)]
 mod tests {
-    use super::{background_launch, core_args, second_launch_opens_window};
+    use super::{background_launch, core_args, holds_exit_request, second_launch_opens_window};
     use std::ffi::OsString;
 
     fn os(args: &[&str]) -> std::vec::IntoIter<OsString> {
         args.iter().map(OsString::from).collect::<Vec<_>>().into_iter()
+    }
+
+    #[test]
+    fn the_last_window_s_exit_waits_for_a_told_failed_install_and_for_a_windowless_app() {
+        assert!(holds_exit_request(false, true, false), "a failed install is being told");
+        assert!(holds_exit_request(false, false, true), "a windowless app with a tray stays");
+        assert!(!holds_exit_request(false, false, false), "nothing holds it");
+        assert!(!holds_exit_request(true, true, true), "the app's own exit always goes through");
     }
 
     #[test]

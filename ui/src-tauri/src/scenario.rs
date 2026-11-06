@@ -560,7 +560,8 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             crate::lifecycle::take_quit_request,
             crate::lifecycle::quit_app,
             crate::data_window::open_data_window,
-            crate::data_window::take_data_payload
+            crate::data_window::take_data_payload,
+            crate::update::quit_cancelled
         ],
     )
 }
@@ -662,7 +663,7 @@ mod tests {
             r#"{"android":{"adb":false,"sdk":null,"avd":null},"emulators":[{"name":"Pixel 7 API 35","trust":"absent","proxy":"none"}]}"#,
         );
         assert!(!no_adb.emulator_read().adb);
-        assert!(no_adb.emulator_read().emulators.is_empty());
+        assert_eq!(no_adb.emulator_read().emulators.len(), 0);
         assert!(Scenario::default().emulator_read().adb);
     }
 

@@ -74,7 +74,7 @@ pub fn take_quit_request(lifecycle: tauri::State<'_, Lifecycle>) -> bool {
 
 #[tauri::command]
 pub fn quit_app<R: Runtime>(app: AppHandle<R>) {
-    app.exit(0);
+    crate::update::end(&app);
 }
 
 // What ⌘Q and the menu-bar Quit do natively, which WebDriver cannot press.
@@ -213,8 +213,8 @@ pub fn request_quit<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<()> {
 
 // The first attempt can meet a main window that is mid-destroy; the second finds
 // it gone and builds. When even that fails the app neither exits (DEC-64's check
-// never ran, the proxy may point at this process) nor keeps the request, which a
-// window opened later for another reason would answer by quitting unasked.
+// never ran, the proxy may point at this process) nor keeps the request or an
+// update staged for it, which a later quit would act on unasked.
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 fn quit_in_window<R: Runtime>(app: &AppHandle<R>) {
     match attempt_twice(|| reopen_main(app)) {
@@ -227,6 +227,9 @@ fn quit_in_window<R: Runtime>(app: &AppHandle<R>) {
             eprintln!("opening the main window for Quit failed, still running: {err}");
             if let Some(lifecycle) = lifecycle(app) {
                 lifecycle.take_quit_request();
+            }
+            if let Some(update) = app.try_state::<crate::update::Pending>() {
+                update.take();
             }
         }
     }

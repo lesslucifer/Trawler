@@ -1,5 +1,7 @@
 #[path = "src/bundle.rs"]
 mod bundle;
+#[path = "src/test_manifest.rs"]
+mod test_manifest;
 
 use std::path::Path;
 
@@ -17,6 +19,16 @@ fn main() {
         if let Some(problem) = bundle::ensure_fresh(&ui, wanted) {
             println!("cargo::error={problem}");
             return;
+        }
+    }
+    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+        let out_dir =
+            std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR for every build script run");
+        let manifest = Path::new(&out_dir).join("test-executables.manifest");
+        std::fs::write(&manifest, test_manifest::COMMON_CONTROLS_V6)
+            .expect("the build script writes into OUT_DIR");
+        for directive in test_manifest::link_directives(&manifest) {
+            println!("{directive}");
         }
     }
     tauri_build::build();

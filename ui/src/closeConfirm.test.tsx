@@ -205,6 +205,26 @@ test("Cancel dismisses the prompt and does not quit", async () => {
   expect(f.destroy).not.toHaveBeenCalled();
 });
 
+test("a cancelled quit tells the shell, which drops an update waiting on it", async () => {
+  const f = fakeDeps("ours");
+  const { result } = confirmFor(f);
+  await closeAndWait(f);
+  expect(f.invoke).not.toHaveBeenCalledWith("quit_cancelled");
+  act(() => result.current.cancel());
+  expect(f.invoke).toHaveBeenCalledWith("quit_cancelled");
+});
+
+test("a quit that goes ahead never says it was cancelled", async () => {
+  const f = fakeDeps("ours");
+  const { result } = confirmFor(f);
+  await closeAndWait(f);
+  await act(async () => {
+    await result.current.quit(false);
+  });
+  expect(f.destroy).toHaveBeenCalledOnce();
+  expect(f.invoke).not.toHaveBeenCalledWith("quit_cancelled");
+});
+
 // The user is never trapped, but a failed unset must not quit: quitting on a
 // proxy that is still up is the stranding this dialog exists to prevent. The
 // rejection reaches the dialog, which offers the manual route and keeps `quit`

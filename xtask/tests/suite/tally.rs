@@ -159,7 +159,7 @@ fn a_green_wu_tip_records_the_review_rounds_it_paid() {
     assert_eq!(entry.tip, tip);
     assert_eq!(entry.epic.as_deref(), Some("E9"));
     assert_eq!(entry.wu.as_deref(), Some("E9.W1"));
-    assert!(entry.checks.is_empty());
+    assert_eq!(entry.checks.len(), 0);
     assert_eq!(entry.branch.as_deref(), Some("wu/x/one"));
     assert_eq!(entry.rounds, Some(2), "a FAIL round and a PASS round were paid: {entry:?}");
 }

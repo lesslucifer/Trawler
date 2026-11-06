@@ -9,5 +9,6 @@ mod quit_stops_core;
 mod restart_command;
 mod supervisor;
 mod tray;
+mod updater;
 mod view_prefs_store;
 mod window_geometry_store;

@@ -390,7 +390,7 @@ mod tests {
     fn enumerating_this_machine_offers_nothing_it_would_refuse_to_bind() {
         for interface in interfaces() {
             assert!(routable(interface.address), "offered {interface:?}");
-            assert!(!interface.name.is_empty());
+            assert_ne!(interface.name.len(), 0);
         }
     }
 

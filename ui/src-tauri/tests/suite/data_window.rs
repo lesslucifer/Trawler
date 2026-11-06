@@ -1,3 +1,4 @@
+use crate::common::LOCAL_URL;
 use tauri::ipc::{CallbackFn, InvokeBody, InvokeResponseBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, MockRuntime};
 use tauri::webview::InvokeRequest;
@@ -33,7 +34,7 @@ fn invoke(
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body,
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),
@@ -86,7 +87,7 @@ fn ten_mebibytes_reach_the_data_window_byte_identical_and_only_once() {
     let data = window(&app, "flow-7:response");
 
     assert_eq!(unframe(&claim(&data)), Ok(handed));
-    assert!(claim(&data).is_empty());
+    assert_eq!(claim(&data).len(), 0);
 }
 
 #[test]
@@ -129,7 +130,7 @@ fn another_key_opens_a_second_window() {
 fn the_main_window_claims_nothing() {
     let (_app, main) = app();
     open(&main, &payload("k", "t", b"x".to_vec()));
-    assert!(claim(&main).is_empty());
+    assert_eq!(claim(&main).len(), 0);
 }
 
 #[test]
@@ -137,7 +138,7 @@ fn a_body_that_is_not_a_frame_opens_nothing() {
     let (app, main) = app();
     assert!(invoke(&main, "open_data_window", InvokeBody::Raw(vec![0, 0, 0, 8])).is_err());
     assert!(invoke(&main, "open_data_window", InvokeBody::Json(serde_json::json!({}))).is_err());
-    assert!(data_labels(&app).is_empty());
+    assert_eq!(data_labels(&app).len(), 0);
 }
 
 #[test]
@@ -159,9 +160,9 @@ fn a_data_window_destroyed_takes_only_its_unclaimed_payload() {
     open(&main, &payload("a", "a", b"1".to_vec()));
     open(&main, &payload("b", "b", b"2".to_vec()));
 
-    assert!(data_window::on_destroyed(app.handle(), &label_for("a")).is_empty());
+    assert_eq!(data_window::on_destroyed(app.handle(), &label_for("a")).len(), 0);
 
-    assert!(claim(&window(&app, "a")).is_empty());
+    assert_eq!(claim(&window(&app, "a")).len(), 0);
     assert_eq!(unframe(&claim(&window(&app, "b"))).expect("b's payload").bytes, b"2");
 }
 

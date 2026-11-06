@@ -91,8 +91,10 @@ pub fn missing_dependencies_message(ui: &Path) -> String {
     )
 }
 
+pub const PNPM: &str = if cfg!(windows) { "pnpm.cmd" } else { "pnpm" };
+
 pub fn build_command(ui: &Path, flavour: Flavour) -> Command {
-    let mut command = Command::new("pnpm");
+    let mut command = Command::new(PNPM);
     command.arg("build").current_dir(ui);
     match flavour {
         Flavour::E2e => command.env("VITE_E2E", "1"),
@@ -201,6 +203,13 @@ mod tests {
             Some((_, None)) => "removed".to_string(),
             Some((_, Some(value))) => value.to_string_lossy().into_owned(),
         }
+    }
+
+    #[test]
+    fn the_rebuild_launches_the_pnpm_shim_the_platform_resolves() {
+        let program = build_command(Path::new("ui"), Flavour::Release);
+        let program = program.get_program().to_string_lossy().into_owned();
+        assert_eq!(program, if cfg!(windows) { "pnpm.cmd" } else { "pnpm" });
     }
 
     #[test]

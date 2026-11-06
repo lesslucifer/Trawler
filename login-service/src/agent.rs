@@ -1,7 +1,7 @@
 #![allow(unsafe_code)]
 
 use objc2::rc::Retained;
-use objc2_foundation::NSString;
+use objc2_foundation::{NSOperatingSystemVersion, NSProcessInfo, NSString};
 use objc2_service_management::{SMAppService, SMAppServiceStatus};
 
 pub struct AgentService {
@@ -16,9 +16,20 @@ fn is_registered(status: SMAppServiceStatus) -> bool {
     status != SMAppServiceStatus::NotRegistered && status != SMAppServiceStatus::NotFound
 }
 
+const SMAPPSERVICE_SINCE: NSOperatingSystemVersion =
+    NSOperatingSystemVersion { majorVersion: 13, minorVersion: 0, patchVersion: 0 };
+
 impl AgentService {
-    pub fn new(plist_name: &str) -> Self {
-        Self { plist_name: plist_name.to_owned() }
+    // Before macOS 13 the class does not exist and objc2 panics at its first use,
+    // so no service is handed out where it could be reached.
+    pub fn new(plist_name: &str) -> Option<Self> {
+        Self::on_hosts_since(plist_name, SMAPPSERVICE_SINCE)
+    }
+
+    fn on_hosts_since(plist_name: &str, since: NSOperatingSystemVersion) -> Option<Self> {
+        NSProcessInfo::processInfo()
+            .isOperatingSystemAtLeastVersion(since)
+            .then(|| Self { plist_name: plist_name.to_owned() })
     }
 
     fn service(&self) -> Retained<SMAppService> {
@@ -47,6 +58,23 @@ impl AgentService {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn version(major: isize) -> NSOperatingSystemVersion {
+        NSOperatingSystemVersion { majorVersion: major, minorVersion: 0, patchVersion: 0 }
+    }
+
+    #[test]
+    fn the_service_is_handed_out_only_from_macos_13() {
+        assert_eq!(SMAPPSERVICE_SINCE, version(13));
+        assert!(AgentService::new("dev.trawler.app.plist").is_some(), "this host runs macOS 13+");
+    }
+
+    #[test]
+    fn a_host_older_than_the_class_gets_no_service() {
+        assert!(
+            AgentService::on_hosts_since("dev.trawler.app.plist", version(isize::MAX)).is_none()
+        );
+    }
 
     #[test]
     fn only_enabled_reads_as_on() {

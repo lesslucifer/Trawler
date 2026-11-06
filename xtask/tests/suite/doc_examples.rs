@@ -158,7 +158,7 @@ fn a_fence_never_spans_two_doc_blocks() {
 #[test]
 fn every_workspace_lib_skips_the_doc_test_pass() {
     let libs = workspace_libs();
-    assert!(!libs.is_empty());
+    assert_ne!(libs.len(), 0);
     let running: Vec<_> =
         libs.iter().filter(|(_, doctest, _)| *doctest).map(|(name, ..)| name).collect();
     assert!(

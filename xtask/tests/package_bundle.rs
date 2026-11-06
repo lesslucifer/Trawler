@@ -2,19 +2,18 @@
 #![allow(clippy::unwrap_used)] // test code - panicking on setup failure is the assertion
 
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Stdio};
-use std::sync::mpsc;
-use std::time::{Duration, Instant};
+use std::process::{Child, Command};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 const PROFILE: &str = "package-test";
-const LAUNCHD_PATH: &str = "/usr/bin:/bin:/usr/sbin:/sbin";
 const WEBDRIVER_MARK: &str = "wdioTauri";
-const CAPTURED_PATH: &str = "/packaged-capture";
-// macOS assesses a freshly signed binary before its first run.
-const PATIENCE: Duration = Duration::from_mins(2);
+const LOGIN_AGENT: &str = "Contents/Library/LaunchAgents/dev.trawler.app.plist";
+const LAUNCHD_PATH: &str = "/usr/bin:/bin:/usr/sbin:/sbin";
+const APP_DATA: &str = "Library/Application Support/dev.trawler.app";
+const PROXY: &str = "127.0.0.1:7420";
+const API: &str = "127.0.0.1:7421";
 
 fn repo() -> PathBuf {
     xtask::repo_root().unwrap()
@@ -62,12 +61,113 @@ fn a_plain_build_after_an_e2e_bundle_embeds_a_release_bundle() {
     assert!(!carries_webdriver(&ui), "the release bundle carries {WEBDRIVER_MARK}");
 }
 
+fn wait_for(what: &str, within: Duration, mut holds: impl FnMut() -> bool) {
+    let deadline = Instant::now() + within;
+    while !holds() {
+        assert!(Instant::now() < deadline, "timed out waiting for {what}");
+        std::thread::park_timeout(Duration::from_millis(200));
+    }
+}
+
+fn free(port: SocketAddr) -> bool {
+    TcpListener::bind(port).is_ok()
+}
+
+// The release app owns the fixed ports and the machine's single-instance socket,
+// so a Trawler already running here would answer in its place.
+fn refuse_a_running_trawler() {
+    for port in [PROXY, API] {
+        assert!(free(port.parse().unwrap()), "{port} is taken: quit Trawler, then run this test");
+    }
+}
+
+struct Window(Child);
+
+impl Drop for Window {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+fn install_from_the_dmg(dmg: &Path, into: &Path) -> PathBuf {
+    let mount = into.join("mnt");
+    let attached = Command::new("hdiutil")
+        .args(["attach", "-nobrowse", "-readonly", "-mountpoint"])
+        .arg(&mount)
+        .arg(dmg)
+        .output()
+        .unwrap();
+    assert!(attached.status.success(), "hdiutil attach: {attached:?}");
+    let installed = into.join("Applications/Trawler.app");
+    std::fs::create_dir_all(installed.parent().unwrap()).unwrap();
+    let copied = Command::new("ditto").arg(mount.join("Trawler.app")).arg(&installed).status();
+    let detached = Command::new("hdiutil").args(["detach", "-quiet"]).arg(&mount).status();
+    assert!(copied.unwrap().success(), "ditto Trawler.app out of {}", dmg.display());
+    assert!(detached.unwrap().success(), "hdiutil detach {}", mount.display());
+    installed
+}
+
+// Today's check is on record, so the launch never asks the public release channel.
+fn mark_the_update_check_done(home: &Path) {
+    let data = home.join(APP_DATA);
+    std::fs::create_dir_all(&data).unwrap();
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    std::fs::write(data.join("last-update-check"), now.to_string()).unwrap();
+}
+
+fn launch_window(app: &Path, home: &Path) -> Window {
+    let binary = app.join("Contents/MacOS/trawler-ui");
+    let child = Command::new(&binary)
+        .env_clear()
+        .env("PATH", LAUNCHD_PATH)
+        .env("HOME", home)
+        .current_dir(home)
+        .spawn()
+        .unwrap();
+    Window(child)
+}
+
+fn left_running(installed: &Path) -> String {
+    let found = Command::new("pgrep").arg("-fl").arg(installed).output().unwrap();
+    String::from_utf8_lossy(&found.stdout).into_owned()
+}
+
+fn the_installed_window_owns_a_core_that_captures_and_frees_its_ports(dmg: &Path) {
+    let home = tempfile::tempdir().unwrap();
+    let app = install_from_the_dmg(dmg, home.path());
+    mark_the_update_check_done(home.path());
+    let (proxy, api): (SocketAddr, SocketAddr) = (PROXY.parse().unwrap(), API.parse().unwrap());
+
+    refuse_a_running_trawler();
+    let mut window = launch_window(&app, home.path());
+    let ca = home.path().join(APP_DATA).join("ca/trawler-ca.pem");
+    wait_for(
+        "the app's own core to mint its CA and answer on 7421",
+        Duration::from_secs(60),
+        || ca.is_file() && TcpStream::connect(api).is_ok(),
+    );
+    xtask::smoke::capture_through_the_proxy(proxy, api).unwrap();
+    assert_eq!(window.0.try_wait().unwrap(), None, "the window app is still running");
+
+    let ended = Command::new("kill").arg(window.0.id().to_string()).status();
+    assert!(ended.unwrap().success());
+    window.0.wait().unwrap();
+    wait_for("both ports to be released", Duration::from_secs(15), || free(proxy) && free(api));
+    wait_for("no process from the install", Duration::from_secs(5), || {
+        left_running(&app).is_empty()
+    });
+}
+
 #[test]
-fn a_package_is_ad_hoc_signed_and_its_binary_captures_under_a_launcher_env() {
+fn a_package_is_ad_hoc_signed_and_passes_the_release_smoke() {
     let repo = repo();
+    refuse_a_running_trawler();
     let _turn = exclusive(&repo);
     let ui = repo.join("ui");
     e2e_bundle(&ui);
+    let bundle = repo.join("target").join(PROFILE).join("bundle");
+    let _ = std::fs::remove_dir_all(bundle.join("dmg"));
 
     let packaged = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(["package", "--profile", PROFILE])
@@ -78,26 +178,40 @@ fn a_package_is_ad_hoc_signed_and_its_binary_captures_under_a_launcher_env() {
     assert_eq!(flavour(&ui), "release");
     assert!(!carries_webdriver(&ui), "the packaged bundle carries {WEBDRIVER_MARK}");
 
-    let bundle = repo.join("target").join(PROFILE).join("bundle");
     let app = bundle.join("macos/Trawler.app");
     let verified =
         Command::new("codesign").args(["--verify", "--deep", "--strict"]).arg(&app).status();
     assert!(verified.unwrap().success(), "codesign --verify --deep --strict {}", app.display());
-    assert!(app.join("Contents/Library/LaunchAgents/dev.trawler.app.plist").is_file());
-    let dmgs = std::fs::read_dir(bundle.join("dmg")).unwrap().flatten();
-    assert!(dmgs.into_iter().any(|e| e.path().extension().is_some_and(|ext| ext == "dmg")));
-
-    let home = tempfile::tempdir().unwrap();
-    let mut core = CoreProcess::launch(&only_executable(&app), home.path());
-    let (proxy, api) = core.ready();
-    let origin = serve_once();
-    let through_proxy = http(
-        proxy,
-        &format!("GET http://{origin}{CAPTURED_PATH} HTTP/1.1\r\nHost: {origin}\r\nConnection: close\r\n\r\n"),
+    assert!(app.join(LOGIN_AGENT).is_file());
+    let archived = Command::new("tar")
+        .arg("-tzf")
+        .arg(bundle.join("macos/Trawler.app.tar.gz"))
+        .output()
+        .unwrap();
+    assert!(
+        String::from_utf8_lossy(&archived.stdout).contains(&format!("Trawler.app/{LOGIN_AGENT}")),
+        "an update installs the login agent with the app, so the registered login item survives it"
     );
-    assert!(through_proxy.starts_with("HTTP/1.1 200"), "{through_proxy}");
-    assert!(captured(api), "GET /flows never listed {CAPTURED_PATH}");
-    core.stop();
+    let dmg = std::fs::read_dir(bundle.join("dmg"))
+        .unwrap()
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| path.extension().is_some_and(|ext| ext == "dmg"))
+        .expect("a .dmg in the bundle");
+
+    let smoked = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["smoke", "--profile", PROFILE])
+        .current_dir(&repo)
+        .output()
+        .unwrap();
+    assert!(
+        smoked.status.success(),
+        "cargo xtask smoke --profile {PROFILE}: {}{}",
+        String::from_utf8_lossy(&smoked.stdout),
+        String::from_utf8_lossy(&smoked.stderr)
+    );
+
+    the_installed_window_owns_a_core_that_captures_and_frees_its_ports(&dmg);
 }
 
 // The registering half is the user's step: SMAppService answers only to the running .app.
@@ -110,100 +224,4 @@ fn after_the_login_item_is_unticked_background_task_management_lists_nothing() {
     assert!(dump.status.success(), "sfltool dumpbtm");
     let dump = String::from_utf8_lossy(&dump.stdout);
     assert!(!dump.contains("dev.trawler.app"), "sfltool dumpbtm still lists dev.trawler.app");
-}
-
-fn only_executable(app: &Path) -> PathBuf {
-    let mut binaries: Vec<PathBuf> = std::fs::read_dir(app.join("Contents/MacOS"))
-        .unwrap()
-        .flatten()
-        .map(|entry| entry.path())
-        .collect();
-    assert_eq!(binaries.len(), 1, "one executable in the .app: {binaries:?}");
-    binaries.remove(0)
-}
-
-struct CoreProcess {
-    child: Child,
-}
-
-impl CoreProcess {
-    fn launch(binary: &Path, home: &Path) -> Self {
-        let child = Command::new(binary)
-            .env_clear()
-            .env("PATH", LAUNCHD_PATH)
-            .env("HOME", home)
-            .current_dir("/")
-            .arg("--core")
-            .arg("--ca-dir")
-            .arg(home.join("ca"))
-            .args(["--proxy-port", "0", "--api-port", "0"])
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .spawn()
-            .unwrap();
-        Self { child }
-    }
-
-    fn ready(&mut self) -> (SocketAddr, SocketAddr) {
-        let stdout = self.child.stdout.take().unwrap();
-        let (sent, line) = mpsc::channel();
-        std::thread::spawn(move || {
-            let mut first = String::new();
-            let _ = BufReader::new(stdout).read_line(&mut first);
-            let _ = sent.send(first);
-        });
-        let line = line.recv_timeout(PATIENCE).expect("the core printed its ready line");
-        let ready: serde_json::Value = serde_json::from_str(&line).expect("a ready line");
-        let addr = |key: &str| ready[key].as_str().unwrap().parse().unwrap();
-        (addr("proxy"), addr("api"))
-    }
-
-    fn stop(mut self) {
-        let _ = self.child.kill();
-        let _ = self.child.wait();
-    }
-}
-
-impl Drop for CoreProcess {
-    fn drop(&mut self) {
-        let _ = self.child.kill();
-    }
-}
-
-fn serve_once() -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-    let addr = listener.local_addr().unwrap();
-    std::thread::spawn(move || {
-        let (mut stream, _) = listener.accept().unwrap();
-        let mut request = BufReader::new(stream.try_clone().unwrap());
-        let mut line = String::new();
-        while request.read_line(&mut line).is_ok_and(|n| n > 0) && line != "\r\n" {
-            line.clear();
-        }
-        let _ = stream
-            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok");
-    });
-    addr
-}
-
-fn http(to: SocketAddr, request: &str) -> String {
-    let mut stream = TcpStream::connect(to).unwrap();
-    stream.set_read_timeout(Some(Duration::from_secs(10))).unwrap();
-    stream.write_all(request.as_bytes()).unwrap();
-    let mut response = String::new();
-    let _ = stream.read_to_string(&mut response);
-    response
-}
-
-fn captured(api: SocketAddr) -> bool {
-    let deadline = Instant::now() + Duration::from_secs(10);
-    while Instant::now() < deadline {
-        let flows =
-            http(api, &format!("GET /flows HTTP/1.1\r\nHost: {api}\r\nConnection: close\r\n\r\n"));
-        if flows.contains(CAPTURED_PATH) {
-            return true;
-        }
-        std::thread::park_timeout(Duration::from_millis(100));
-    }
-    false
 }

@@ -17,6 +17,7 @@ use crate::settings;
 
 pub const QUIT_ID: &str = "trawler-quit";
 pub const SETTINGS_ID: &str = "trawler-settings";
+pub const CHECK_UPDATES_ID: &str = "trawler-check-updates";
 pub const RESET_LAYOUT_ID: &str = "trawler-reset-layout";
 pub const RESET_LAYOUT_EVENT: &str = "layout-reset";
 const RESET_LAYOUT_LABEL: &str = "Reset Layout";
@@ -28,6 +29,7 @@ const SETTINGS_ACCELERATOR: &str = "CmdOrCtrl+,";
 pub enum MenuAction {
     RequestQuit,
     OpenSettings,
+    CheckForUpdates,
     ResetLayout,
     Ignore,
 }
@@ -36,6 +38,7 @@ pub fn action_for(id: &str) -> MenuAction {
     match id {
         QUIT_ID => MenuAction::RequestQuit,
         SETTINGS_ID => MenuAction::OpenSettings,
+        CHECK_UPDATES_ID => MenuAction::CheckForUpdates,
         RESET_LAYOUT_ID => MenuAction::ResetLayout,
         _ => MenuAction::Ignore,
     }
@@ -46,6 +49,7 @@ pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     match action_for(id) {
         MenuAction::RequestQuit => drop(crate::lifecycle::request_quit(app)),
         MenuAction::OpenSettings => drop(settings::open_in_background(app)),
+        MenuAction::CheckForUpdates => crate::update::check(app, crate::update::Asked::ByUser),
         MenuAction::ResetLayout => {
             if let Err(err) = app.emit(RESET_LAYOUT_EVENT, ()) {
                 eprintln!("announcing Reset Layout failed: {err}");
@@ -63,6 +67,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         }
         menu.insert(&app_submenu(app)?, 0)?;
     } else if let Some(MenuItemKind::Submenu(first)) = menu.items()?.first() {
+        first.prepend(&check_updates_item(app)?)?;
         first.prepend(&settings_item(app)?)?;
     }
     add_reset_layout(app, &menu)?;
@@ -71,6 +76,10 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
 fn settings_item<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<MenuItem<R>> {
     MenuItem::with_id(app, SETTINGS_ID, "Settings…", true, Some(SETTINGS_ACCELERATOR))
+}
+
+fn check_updates_item<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<MenuItem<R>> {
+    MenuItem::with_id(app, CHECK_UPDATES_ID, "Check for Updates…", true, None::<&str>)
 }
 
 fn add_reset_layout<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<()> {
@@ -121,6 +130,7 @@ fn app_submenu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
         true,
         &[
             &PredefinedMenuItem::about(app, None, Some(about))?,
+            &check_updates_item(app)?,
             &PredefinedMenuItem::separator(app)?,
             &settings_item(app)?,
             &PredefinedMenuItem::separator(app)?,
@@ -154,6 +164,11 @@ mod tests {
     #[test]
     fn settings_opens_settings() {
         assert_eq!(action_for(SETTINGS_ID), MenuAction::OpenSettings);
+    }
+
+    #[test]
+    fn check_for_updates_asks_the_channel() {
+        assert_eq!(action_for(CHECK_UPDATES_ID), MenuAction::CheckForUpdates);
     }
 
     #[test]

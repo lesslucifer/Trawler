@@ -470,7 +470,7 @@ mod tests {
     fn a_ring_with_no_room_keeps_nothing() {
         let mut ring = LogRing::new(0);
         ring.push(line("line"));
-        assert!(ring.entries().is_empty());
+        assert_eq!(ring.entries().len(), 0);
     }
 
     #[test]

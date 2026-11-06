@@ -271,7 +271,7 @@ async fn export_reads_as_har(h: &Harness) -> Vec<u8> {
     assert_eq!(echo_entry["response"]["content"]["text"], "eyJwaW5nIjp0cnVlfQ==");
     assert!(echo_entry["request"]["httpVersion"].as_str().unwrap().starts_with("HTTP/"));
     assert!(echo_entry["timings"]["wait"].as_i64().unwrap() >= 0);
-    assert!(!echo_entry["startedDateTime"].as_str().unwrap().is_empty());
+    assert_ne!(echo_entry["startedDateTime"].as_str().unwrap().len(), 0);
 
     let secure_entry = entry_for(&document, "/secure");
     assert_eq!(secure_entry["response"]["content"]["text"], "top-secret");
@@ -311,7 +311,7 @@ async fn clear_empties_and_announces(h: &Harness, captured_ids: &[String], conne
     for id in captured_ids {
         assert!(cleared.contains(id.as_str()), "the clear must name every flow it removed");
     }
-    assert!(h.get_json("/flows").await.as_array().unwrap().is_empty());
+    assert_eq!(h.get_json("/flows").await.as_array().unwrap().len(), 0);
     assert_eq!(h.connections().await, connections, "a cleared store is empty, not restarted");
 }
 
@@ -327,7 +327,7 @@ async fn import_brings_it_back_marked(h: &Harness, captured: &Value, exported_by
     for flow in imported.as_array().unwrap() {
         assert_eq!(flow["source"], "imported");
     }
-    assert!(h.get_json("/flows?source=captured").await.as_array().unwrap().is_empty());
+    assert_eq!(h.get_json("/flows?source=captured").await.as_array().unwrap().len(), 0);
     assert_eq!(h.get_json("/flows?source=imported").await.as_array().unwrap().len(), 4);
 
     for needle in ["/ok", "/echo", "/sse", "/secure"] {

@@ -258,9 +258,14 @@ export function useProxyCloseConfirm(
         dontShowAgain && key !== null ? dismissNotice(key, deps.invoke).catch(() => {}) : Promise.resolve();
       return remembered.then(end);
     },
+    // A quit the user called off also calls off an update waiting on it, so the
+    // update never installs on some later, unrelated quit (E-PKG2, Q21).
     cancel: () => {
       quitPromptShown.current = false;
       setPrompt(null);
+      deps.invoke("quit_cancelled").catch((err: unknown) => {
+        console.error("dropping a pending update failed:", err);
+      });
     },
     // While the answer is being stored the question's other answers wait: a
     // cancel or a quit racing the write would leave the stored switch and the

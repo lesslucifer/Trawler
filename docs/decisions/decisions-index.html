@@ -1011,6 +1011,18 @@
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
+          <td><a href="dec-82-an-update-asks-is-signed-and-quits-through-the-check.html"><code>dec-82-an-update-asks-is-signed-and-quits-through-the-check.html</code></a></td>
+          <td><span class="badge id">DEC-82</span></td>
+          <td><strong>An update asks, is signed, and quits through the check.</strong> The channel is the public release's
+            <code>latest.json</code>. A launch checks at most once a day and only when installed from a bundle, and says
+            nothing unless it offers; <em>Check for Updates…</em> always answers. The offer names both versions and says the
+            captured list is cleared. An update installs only if the owner's key signed that exact version. It installs by
+            making ⌘Q's quit request (DEC-64; a windowless app reopens its window to ask), then the core stops and the app relaunches. A cancelled quit drops it.
+            Every bundle type updates in place, deb and rpm through <code>pkexec</code>. Only the release workflow holds the
+            key. Known limit: the plugin's deb/rpm root install reads a temp file a same-user process could swap (upstream). Rejected: deb/rpm via the release page, a pending update outliving its quit, unversioned signatures</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
           <td><a href="dec-83-ci-is-a-signal-on-main-not-a-gate.html"><code>dec-83-ci-is-a-signal-on-main-not-a-gate.html</code></a></td>
           <td><span class="badge id">DEC-83</span></td>
           <td><strong>CI is a signal on <code>main</code>, not a gate.</strong> <code>ci.yml</code> runs on a push to
@@ -1026,8 +1038,29 @@
           <td><strong>Unsafe is confined to the login-service crate.</strong> The workspace keeps
             <code>unsafe_code = "forbid"</code>; the macOS-only <code>login-service</code> member sets <code>deny</code> and
             holds the one <code>#[allow(unsafe_code)]</code> module that wraps SMAppService, exposing a safe API
-            <code>trawler-ui</code> uses on macOS. A test fails on a second allow. Rejected: lowering the workspace lint,
+            <code>trawler-ui</code> uses on macOS, and none below macOS 13. A test fails on a second allow. Rejected: lowering the workspace lint,
             <code>launchctl</code> or a plist write</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-85-the-rust-toolchain-is-pinned-and-windows-has-its-own-rules.html"><code>dec-85-the-rust-toolchain-is-pinned-and-windows-has-its-own-rules.html</code></a></td>
+          <td><span class="badge id">DEC-85</span></td>
+          <td><strong>The Rust toolchain is pinned, and Windows has its own rules.</strong> <code>rust-toolchain.toml</code>
+            and every CI job name one exact version (1.99.0); a bump is one commit changing both, held by
+            <code>ci_workflow</code>. Windows: the wdio plugin locked at 1.5.1 (one webview2-com), <code>pnpm.cmd</code>,
+            the Common Controls v6 manifest on test executables, <code>cfg(unix)</code> dead code, the local app origin in
+            mock-runtime tests, <code>eol=lf</code></td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-86-a-tag-ships-every-platform-as-a-draft.html"><code>dec-86-a-tag-ships-every-platform-as-a-draft.html</code></a></td>
+          <td><span class="badge id">DEC-86</span></td>
+          <td><strong>A tag ships every platform, as a draft the owner publishes.</strong> <code>release.yml</code> runs on a
+            <code>v*</code> tag and fails unless it equals the workspace version. Five targets build with
+            <code>cargo xtask package</code>, each is smoke-tested (<code>cargo xtask smoke</code>) before it uploads, and
+            <code>cargo xtask release-manifest</code> writes <code>latest.json</code> (every target and install kind) and the
+            first-open notes for a draft, never a prerelease. The key reaches only a sign step after a keyless build and bundle (the lockfile's <code>tauri signer sign --app-version</code>, never through pnpm);
+            rcs are numeric (<code>0.1.0-1</code>, an MSI refuses <code>rc.1</code>); actions pinned to SHAs, no caches</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

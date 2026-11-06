@@ -12,7 +12,7 @@ use trawler_ui_lib::settings::{self, SETTINGS_WINDOW};
 use trawler_ui_lib::supervisor::Supervisor;
 use trawler_ui_lib::window_geometry::{tracked_records, Records};
 
-use crate::common::{launch, PATIENCE};
+use crate::common::{launch, LOCAL_URL, PATIENCE};
 
 fn app() -> App<MockRuntime> {
     mock_builder()
@@ -32,7 +32,7 @@ fn invoke(window: &WebviewWindow<MockRuntime>, cmd: &str) -> Result<Value, Value
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::default(),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: INVOKE_KEY.to_string(),
