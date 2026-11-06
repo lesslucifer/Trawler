@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9b329f34851f0dfaebd2" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W8 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W8 — updater F4 and F7</h1>
+      <p>An offline launch no longer silences the update check for a day, and the updater only ever speaks https, redirects included.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W8</span> · branch <code>wu/prorelease/updater-f4-f7</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The last-check stamp is written only after a check completes (newer or up to date), so a failed check leaves it unchanged; every updater request (manifest, download and any redirect hop) is refused unless it is https.</p>
+
+    <h2 id="evidence">Evidence (epic tip 856ba1ce)</h2>
+    <table data-c="evidence">
+      <thead><tr><th>Finding</th><th>Where</th><th>What happens today</th></tr></thead>
+      <tbody>
+        <tr><td>F4</td><td><code>ui/src-tauri/src/update.rs:153-156</code></td><td><code>check_at_launch</code> calls <code>record_check</code> before <code>check</code> spawns the request; an offline launch stamps "checked" and <code>due</code> stays false for 24 h</td></tr>
+        <tr><td>F7 endpoint</td><td>tauri-plugin-updater 2.14.1 <code>config.rs:198-221</code></td><td>an http endpoint is refused only in release builds; debug builds warn</td></tr>
+        <tr><td>F7 download</td><td>tauri-plugin-updater 2.14.1 <code>updater.rs:824-834</code></td><td>an http <code>download_url</code> from the manifest is only logged, then fetched</td></tr>
+        <tr><td>F7 redirect</td><td>reqwest 0.13.4 default policy</td><td>up to 10 redirects followed, an https → http hop included (the GitHub endpoint redirects)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Where the stamp is written</td><td>in <code>check</code>, after <code>find</code> answers, through <code>record_outcome</code></td><td>the one place every check (launch and menu) routes through</td></tr>
+        <tr><td>Does a menu check stamp?</td><td>yes, when it completes</td><td>a completed check is a check; the next launch need not repeat it</td></tr>
+        <tr><td>How https is enforced</td><td><code>update::https_only</code> sets reqwest <code>https_only(true)</code> via the plugin's <code>configure_client</code>; <code>find</code> builds its updater through it</td><td>the plugin reuses that client hook for the download, and reqwest applies it to every redirect hop; no config flag can loosen it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W8 · audit G (F4, F7) · UC-UPDATE · DEC-82 amended · <code>ui/src-tauri/src/update.rs</code>, <code>ui/src-tauri/tests/suite/updater.rs</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td>Offline launch, then online launch</td><td>the second launch checks (no stamp from the failure)</td></tr>
+          <tr><td>http endpoint</td><td>check fails, no connection made</td></tr>
+          <tr><td>https manifest naming an http download</td><td>offer found, download fails, no connection made</td></tr>
+          <tr><td>https endpoint redirecting to http</td><td>check fails, the http target never contacted</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>update.rs</code>: a failed check leaves the stamp unchanged; a newer or up-to-date answer moves it</td><td>yes: the stamp is written before the check</td></tr>
+          <tr><td>integration</td><td><code>tests/suite/updater.rs</code> on loopback (local https origin from <code>trawler::test_support::tls_origin</code>, plain listeners that must see no connection): http endpoint, http download, https → http redirect</td><td>yes: each request reaches the http listener</td></tr>
+          <tr><td>e2e</td><td>waived: the update path runs only from an installed bundle; the W7 hand-check matrix covers rc → rc</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
