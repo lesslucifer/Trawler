@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "epic rc4 -> main"
+epic: E-RC4
+branch: epic/rc4
+base: 060399c5df0d40ce710ebd6355846c43689cf5f5
+head: 48d85fcaa27b9aedeb2805d7be10553ade2e5c49
+diff_sha256: ae8e0ee704a563f3043ec7f163ca98cf3967b63797ada3806677da17483c1538
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 30
+    total: 48
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
