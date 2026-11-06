@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU about-help -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W4
+branch: wu/prorelease/about-help
+base: c5cc5d192814495b3d35f27d48a788c1c3eb8716
+head: b7e543f706ef58cf4753fac0d948bdb230921957
+diff_sha256: 158c93d27ffd81d8820b997183dc60fee27e930c1134f3d2a41cf5cdb090319c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 5
+  stage_seconds:
+    total: 64
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 4, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "About.tsx: a rejected about_read leaves the window blank, unhandled"
+    waived: "about_read is infallible in the shell (no Result); only a broken IPC rejects, where every page is blank alike"
+  - finding: "General.tsx: check now is fire-and-forget, a rejection would be unhandled"
+    waived: "check_for_updates returns () and always answers through DEC-82's native dialogs; only a broken IPC rejects"
+  - finding: "General.tsx: an unreadable update_prefs_read hides the updates block instead of saying so"
+    waived: "update_prefs_read is infallible in the shell; hiding the block on a broken IPC avoids showing a version nobody read"
+  - finding: "About.tsx: the licence line 'MIT licence · © 2026 Vu Luu' is a literal, not a shell fact"
+    waived: "the design run fixes this line; DEC-87 fixes the licence and holder; the year moves with a release edit"
+  - finding: "About.tsx: the Link names and page ids re-declare the shell's names with no cross-boundary pin"
+    waived: "About.test.tsx pins the names the page sends, about_help.rs pins what open_link accepts and refuses, about.rs pins the page marks; a shared pin when links grow"
+verdict: PASS
+date: 2026-11-06
