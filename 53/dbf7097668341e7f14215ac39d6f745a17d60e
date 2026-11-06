@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W16
+branch: HEAD
+tests:
+  unit: { count: 289, covers: "windows_held reads the machine and the user ROOT store by thumbprint and refuses to plan when a store did not answer; windows_remove_commands: a machine copy is one UAC Start-Process certutil -delstore ROOT <thumb> built by elevated_argv, a user-only copy is an unelevated certutil -user -delstore, both stores remove the machine copy first, nothing held runs nothing; the Windows by-hand undo leads with Manage computer certificates and the administrator's certutil -delstore, the user store's command last" }
+  integration: { count: 441, covers: "the walkthrough's mock runtime: a UAC refusal's stderr goes through the shell's classifier as the real command's NO_REMOVE_DETAIL error and leaves the certificate trusted; App on a Mac and on a PC host invokes remove_ca with the PEM the core serves and the re-read clears task 1; Onboarding on Windows offers remove the certificate with do it by hand under it and names the approval when it is cancelled; the per-OS layout reading keeps one do it by hand in task 1 on both hosts" }
+  e2e: { count: 0, covers: "the ca-removed chapter and the trust-back line now cover the Windows host (script only, not run: port 4445 is shared by parallel WUs); real UAC elevation is an owner hand-check on a Windows VM, recipe in the result report" }
