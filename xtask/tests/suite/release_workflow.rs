@@ -112,11 +112,16 @@ fn every_target_is_built_on_its_runner() {
         ("linux-arm64", "ubuntu-22.04-arm"),
     ];
     assert_eq!(rows, expected.map(|(n, o)| (n.to_string(), o.to_string())));
-    assert_eq!(job("build")["strategy"]["fail-fast"], Value::Bool(true));
     let mac = &matrix[0];
     assert_eq!(mac["package-args"].as_str(), Some("--universal"));
     assert!(mac["targets"].as_str().unwrap().contains("aarch64-apple-darwin"));
     assert!(mac["targets"].as_str().unwrap().contains("x86_64-apple-darwin"));
+}
+
+#[test]
+fn a_red_row_lets_the_others_finish_but_the_release_still_needs_every_build() {
+    assert_eq!(job("build")["strategy"]["fail-fast"], Value::Bool(false));
+    assert_eq!(job("release")["needs"].as_str(), Some("build"));
 }
 
 #[test]
@@ -388,7 +393,7 @@ fn each_row_uploads_from_the_bundle_dir_its_package_args_build() {
         };
         let args: Vec<&str> = row["package-args"].as_str().unwrap().split_whitespace().collect();
         let options = package::parse(&args).unwrap();
-        let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS).unwrap();
+        let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS, "0.1.0").unwrap();
         let built: Vec<String> =
             plan.bundle_dir.iter().map(|part| part.to_string_lossy().into_owned()).collect();
         assert_eq!(

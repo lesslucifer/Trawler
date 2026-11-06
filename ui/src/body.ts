@@ -124,10 +124,6 @@ export function hexDump(bytes: Uint8Array, max: number = HEX_MAX): string {
   return lines.join("\n");
 }
 
-export function formEntries(text: string): [string, string][] {
-  return [...new URLSearchParams(text)];
-}
-
 // A form body is cut on a pair boundary, never at a character offset: an offset
 // can land mid-%XX (decodes to a stray literal) or mid-escape-run (a truncated
 // multi-byte character decodes to U+FFFD), and that half-decoded value is what

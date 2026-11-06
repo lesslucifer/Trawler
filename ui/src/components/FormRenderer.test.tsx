@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { TEXT_MAX } from "../body";
+import * as formPairs from "../formPairs";
 import { FormRenderer } from "./FormRenderer";
+
+vi.mock("../formPairs", async (importOriginal) => {
+  const actual = await importOriginal<typeof formPairs>();
+  return { ...actual, shapeOf: vi.fn(actual.shapeOf) };
+});
 
 const BODY = "grant_type=authorization_code&client_id=app_8f3a91c2&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback";
 
@@ -17,6 +23,52 @@ describe("FormRenderer", () => {
   it("decodes + as a space, as URL encoding means it", () => {
     render(<FormRenderer text="q=two+words" />);
     expect(screen.getByText("two words")).toBeInTheDocument();
+  });
+
+  it("a URI reads as its parts, then its query's pairs, not as one key up to the first =", () => {
+    render(<FormRenderer text="https://cdn.example/v/a.mp4?_nc_cat=106&efg=eyJ2In0%3D" label="text/uri-list" />);
+    expect(screen.getByText("scheme")).toBeInTheDocument();
+    expect(screen.getByText("cdn.example")).toBeInTheDocument();
+    expect(screen.getByText("/v/a.mp4")).toBeInTheDocument();
+    expect(screen.getByText("_nc_cat")).toBeInTheDocument();
+    expect(screen.getByText("106")).toBeInTheDocument();
+    expect(screen.getByText("eyJ2In0=")).toBeInTheDocument();
+  });
+
+  it("name: value lines read one row per line, values verbatim", () => {
+    render(<FormRenderer text={"cache-control: max-age=1209600, no-transform\ntiming-allow-origin: *"} label="text/rfc822-headers" />);
+    expect(screen.getByText("cache-control")).toBeInTheDocument();
+    expect(screen.getByText("max-age=1209600, no-transform")).toBeInTheDocument();
+    expect(screen.getByText("*")).toBeInTheDocument();
+  });
+
+  it("a URL-encoded body is read as pairs whatever it looks like, with the window's decoding", () => {
+    render(<FormRenderer text={'/a="x"&note: y=<b>&bad=%E4&k=v'} label="application/x-www-form-urlencoded" />);
+    expect(screen.getByText("/a")).toBeInTheDocument();
+    expect(screen.getByText('"x"')).toBeInTheDocument();
+    expect(screen.getByText("note: y")).toBeInTheDocument();
+    expect(screen.getByText("%E4")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["header lines over the cap", `x-huge: ${"h".repeat(TEXT_MAX + 10)}\nnext: 1`, "text/rfc822-headers"],
+    ["a URL over the cap with no & or =", `https://a.example/${"p".repeat(TEXT_MAX + 10)}`, "text/uri-list"],
+    ["a list of two URIs", "https://a.example/1\nhttps://a.example/2", "text/uri-list"],
+    ["header lines with mixed line breaks", "a: 1\r\nb: 2\nc: 3", "text/rfc822-headers"],
+  ])("%s show as text, never a cut or misread table", (_, text, label) => {
+    render(<FormRenderer text={text} label={label} />);
+    expect(screen.queryByTestId("body-form")).toBeNull();
+    expect(screen.getByTestId("body-text")).toBeInTheDocument();
+  });
+
+  it("a body over the cap is never read whole for its shape: only pairs have a cut", () => {
+    const shapeOf = vi.mocked(formPairs.shapeOf);
+    shapeOf.mockClear();
+    render(<FormRenderer text={`x-huge: ${"h".repeat(TEXT_MAX + 10)}`} label="text/rfc822-headers" />);
+    render(<FormRenderer text={`a=${"h".repeat(TEXT_MAX + 10)}`} />);
+    expect(shapeOf.mock.calls.filter(([text]) => text.length > TEXT_MAX)).toEqual([]);
+    expect(screen.getByTestId("body-text")).toBeInTheDocument();
+    expect(screen.getByTestId("body-form")).toBeInTheDocument();
   });
 
   it("composes KeyValueRow — the value cell's copy affordance is not re-drawn here", () => {

@@ -25,7 +25,7 @@ import {
 } from "./decoders";
 import { decidedBy, readKind } from "./contentKind";
 import { DATA_KINDS, READ_ONLY_KINDS, type DataKind } from "./dataKind";
-import { formStructure, jsonStructure, markBytes, markText, structureNames, type HexQueryMode, type Structure } from "./find";
+import { jsonStructure, markBytes, markText, structureNames, type HexQueryMode, type Structure } from "./find";
 import {
   findLabel,
   hasOpenQuote,
@@ -38,12 +38,15 @@ import {
 import {
   addPairAfter,
   editPair,
+  formStructure,
   markPairs,
   pairsAsJson,
-  parsePairs,
+  readForm,
   removePair,
+  shapeOf,
   SORT_BY_KEY_STEP,
   sortByKey,
+  type FormRead,
   type PairMatches,
   type PairPart,
 } from "./formPairs";
@@ -106,7 +109,7 @@ import {
 } from "./components/index";
 
 type OpenMenu = { type: "more" } | { type: "context"; at: MenuPoint; row: number | null; offset?: number };
-type PeekOrigin = { type: "selection"; range: TextRange; line: number } | { type: "row"; index: number; key: string };
+type PeekOrigin = { type: "selection"; range: TextRange; line: number } | { type: "row"; index: number; key: string; value: string; range: TextRange };
 type Open = (payload: DataPayload) => Promise<void>;
 
 interface Peek {
@@ -149,6 +152,7 @@ const PREVIEW_STATEMENT = "scripts, forms and anything remote are not run or loa
 const NEEDS_JSON = "needs valid JSON";
 const REPLACED_SELECTION = "replaced the selection with its decoded form";
 const SHOWN_ENCODED = "shown encoded";
+const NO_FORM: FormRead = { parts: [], pairs: [] };
 const REPLACE_LABEL: Record<DecoderId, string> = {
   jwt: "replace with the payload",
   time: "replace with local time",
@@ -406,11 +410,19 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     () => (isModified(settled) ? byteLength(workingText(settled)) : payload.bytes.length),
     [settled, payload.bytes],
   );
-  const pairs = useMemo(() => (kind === "form" ? parsePairs(text) : []), [kind, text]);
+  const shape = useMemo(
+    () => (picked === "form" ? shapeOf(original, reading.label) : "none"),
+    [picked, reading.label, original],
+  );
+  const form = useMemo(() => (kind === "form" ? readForm(text, shape) : NO_FORM), [kind, text, shape]);
+  const { parts, pairs } = form;
+  const rows = useMemo(() => new Map([...parts, ...pairs].map((row) => [row.index, row])), [parts, pairs]);
+  const rowAt = useCallback((index: number) => rows.get(index), [rows]);
   const lines = useMemo(() => lineCountOf(workingText(settled)), [settled]);
   const empty = payload.bytes.length === 0;
+  const notForm = kind === "form" && shape === "none" && !empty;
   const previewing = kind === "html" && preview && !empty;
-  const editableForm = kind === "form" && !lossy && !mixed;
+  const editableForm = kind === "form" && !lossy && !mixed && !notForm;
   const asTable = editableForm && !encoded;
   const onText = !empty && kind !== "image" && kind !== "hex" && !asTable;
   const searchable = !empty && kind !== "image" && !previewing;
@@ -426,11 +438,15 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   const scoped = marking.some((chip) => chip.key === "key" || chip.key === "value");
   const structure = useMemo((): Structure | null => {
     if (!(scoped || wantsNames) || (kind !== "json" && kind !== "form")) return null;
-    if (kind === "form") return formStructure(flat);
+    if (kind === "form") return formStructure(flat, shape);
     const parsed = parseJson(flat);
     return parsed.ok ? jsonStructure(parsed.root) : null;
-  }, [scoped, wantsNames, kind, flat]);
-  const names = useMemo(() => (wantsNames && structure ? structureNames(structure, flat, asTable) : NO_NAMES), [wantsNames, structure, flat, asTable]);
+  }, [scoped, wantsNames, kind, flat, shape]);
+  const names = useMemo(
+    () => (wantsNames && structure ? structureNames(structure, flat, asTable) : NO_NAMES),
+    [wantsNames, structure, flat, asTable],
+  );
+  const markable = useMemo(() => [...parts.map((part) => ({ ...part, key: "" })), ...pairs], [parts, pairs]);
   const found = useMemo((): Search => {
     if (!hasQuery) return NOTHING_FOUND;
     if (onText) {
@@ -438,7 +454,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       return { ...NOTHING_FOUND, ranges, total: ranges.length, capped };
     }
     if (asTable) {
-      const { byPair, total: count, capped } = markPairs(pairs, marking);
+      const { byPair, total: count, capped } = markPairs(markable, marking);
       return { ...NOTHING_FOUND, byPair, total: count, capped };
     }
     if (kind === "hex" && shownBytes) {
@@ -446,7 +462,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       return { ...NOTHING_FOUND, ranges, total: ranges.length, capped, as };
     }
     return NOTHING_FOUND;
-  }, [asTable, hasQuery, kind, marking, onText, pairs, shownBytes, structure, flat]);
+  }, [asTable, hasQuery, kind, marking, onText, markable, shownBytes, structure, flat]);
   const total = found.total;
   const current = total ? at % total : -1;
   const settledJson = useMemo(
@@ -520,7 +536,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       const result = reformatJson(working, indentOf(working), true, breakWith);
       return result.ok ? commit(h, result.text, SORT_STEP) : h;
     });
-  const sortPairs = () => setHistory((h) => commit(h, sortByKey(workingText(h)), SORT_BY_KEY_STEP));
+  const sortPairs = () => setHistory((h) => commit(h, sortByKey(workingText(h), shape), SORT_BY_KEY_STEP));
   const reindent = useCallback(
     () =>
       setHistory((h) => {
@@ -585,10 +601,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   );
   const decodeRow = useCallback(
     (index: number) => {
-      const pair = pairs[index];
-      if (pair?.value) setPeek({ origin: { type: "row", index, key: pair.key }, peeked: decode(pair.value) });
+      const pair = rowAt(index);
+      if (!pair?.value) return;
+      const whole = { from: 0, to: pair.value.length };
+      const found = decodeAround(pair.value, whole) ?? { range: whole, peeked: decode(pair.value) };
+      setPeek({ origin: { type: "row", index, key: pair.key, value: pair.value, range: found.range }, peeked: found.peeked });
     },
-    [pairs],
+    [rowAt],
   );
   const decodeNow = useCallback(() => {
     if (asTable && row !== null) decodeRow(row);
@@ -596,7 +615,8 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   }, [asTable, decodeAt, decodeRow, onText, readOnly, row]);
   const replaceDecoded = (origin: PeekOrigin, value: string) => {
     if (origin.type === "row") {
-      step(editPair(text, origin.index, "value", value), `replaced the value of “${origin.key}” with its decoded form`);
+      const spliced = origin.value.slice(0, origin.range.from) + value + origin.value.slice(origin.range.to);
+      step(editPair(text, origin.index, "value", spliced, shape), `replaced the value of “${origin.key}” with its decoded form`);
       return;
     }
     const surface = surfaceText(text);
@@ -617,7 +637,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       <DecodePeek
         peeked={peek.peeked}
         from={peek.origin.type === "row" ? "value" : "selection"}
-        onReplace={value === null || readOnly ? null : () => replaceDecoded(peek.origin, value)}
+        onReplace={value === null || readOnly || (peek.origin.type === "row" && rowAt(peek.origin.index)?.part) ? null : () => replaceDecoded(peek.origin, value)}
         onOpen={openDecoded}
         onClose={() => setPeek(null)}
       />
@@ -626,10 +646,11 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
 
   const removeRow = useCallback(
     (index: number) => {
-      setHistory((h) => commit(h, removePair(workingText(h), index), `removed pair ${index + 1}`));
+      if (rowAt(index)?.part) return;
+      setHistory((h) => commit(h, removePair(workingText(h), index, shape), `removed pair ${index + 1}`));
       setRow(null);
     },
-    [],
+    [rowAt, shape],
   );
 
   useEffect(() => {
@@ -687,14 +708,14 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
       } else if (event.key === "Backspace" && !typing && asTable && row !== null) {
         event.preventDefault();
         removeRow(row);
-      } else if (key === "c" && !typing && asTable && row !== null && pairs[row] && !window.getSelection()?.toString()) {
+      } else if (key === "c" && !typing && asTable && row !== null && rowAt(row) && !window.getSelection()?.toString()) {
         event.preventDefault();
-        copy(pairs[row].value);
+        copy(rowAt(row)?.value ?? "");
       }
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [asTable, codeKind, copy, copyNode, decodeNow, empty, kind, menu, onText, pairs, peek, previewing, readOnly, reformatSource, reindent, removeRow, row, save, searchable, showPreview, stepFind]);
+  }, [asTable, codeKind, copy, copyNode, decodeNow, empty, kind, menu, onText, rowAt, peek, previewing, readOnly, reformatSource, reindent, removeRow, row, save, searchable, showPreview, stepFind]);
 
   useEffect(() => {
     if (previewing || !findAfterPreview.current) return;
@@ -829,15 +850,17 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
   };
 
   const contextSections = (target: number | null, offset: number | undefined): MenuItem[][] => {
-    const pair = target === null ? undefined : pairs[target];
+    const pair = target === null ? undefined : rowAt(target);
     if (asTable && pair) {
+      const reading: MenuItem[] = [
+        { label: "decode the value", keys: "⌘⇧D", disabled: !pair.value, why: "empty value", run: () => decodeRow(pair.index) },
+        { label: "copy the value", keys: "⌘C", run: () => copy(pair.value) },
+      ];
+      if (pair.part) return [reading];
       return [
+        reading,
         [
-          { label: "decode the value", keys: "⌘⇧D", disabled: !pair.value, why: "empty value", run: () => decodeRow(pair.index) },
-          { label: "copy the value", keys: "⌘C", run: () => copy(pair.value) },
-        ],
-        [
-          { label: "add a pair below", run: () => step(addPairAfter(text, pair.index), `added a pair after pair ${pair.index + 1}`) },
+          { label: "add a pair below", run: () => step(addPairAfter(text, pair.index, shape), `added a pair after pair ${pair.index + 1}`) },
           { label: "remove the pair", keys: "⌘⌫", run: () => removeRow(pair.index) },
         ],
       ];
@@ -900,14 +923,15 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     }
     if (asTable) {
       const edit = (index: number, part: PairPart, value: string) =>
-        step(editPair(text, index, part, value), `edited the ${part} of pair ${index + 1}`);
+        step(editPair(text, index, part, value, shape), `edited the ${part} of pair ${index + 1}`);
       return (
         <FormTable
           pairs={pairs}
+          parts={parts}
           selected={row}
           onSelect={setRow}
           onEdit={edit}
-          onAdd={(after) => step(addPairAfter(text, after), after < 0 ? "added a pair" : `added a pair after pair ${after + 1}`)}
+          onAdd={(after) => step(addPairAfter(text, after, shape), after < 0 ? "added a pair" : `added a pair after pair ${after + 1}`)}
           onRemove={removeRow}
           onContext={(index, at) => setMenu({ type: "context", at, row: index })}
           matches={found.byPair}
@@ -934,6 +958,13 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     }
     return (
       <div className="flex min-h-0 flex-1 flex-col" onContextMenu={onContext}>
+        {notForm && (
+          <div className="border-b border-hairline px-4 py-chrome-y">
+            <Notice tone="warn" detail="shown as text: pick the kind that fits">
+              not a form: no name: value lines, URL or name=value pairs
+            </Notice>
+          </div>
+        )}
         {mixed && !lossy && (
           <div className="border-b border-hairline px-4 py-chrome-y">
             <Notice tone="warn" detail="an edit would rewrite every break to one kind, so it stays read-only; hex shows every byte">

@@ -1,22 +1,34 @@
-import { byteLength, formEntries, formPairCut, TEXT_MAX } from "../body";
+import { useMemo } from "react";
+import { byteLength, formPairCut, TEXT_MAX } from "../body";
+import { labelShape, readForm, shapeOf } from "../formPairs";
 import { CutMarker } from "./CutMarker";
 import { KeyValueRow } from "./KeyValueRow";
+import { TextRenderer } from "./TextRenderer";
 
 /**
- * FormRenderer — a URL-encoded body decoded into its key/value pairs.
- * @tier T2 — owns the percent-decoding (URLSearchParams) and the pair-count cap
+ * FormRenderer — a form body decoded into its key/value pairs: URL-encoded pairs, name: value lines, or a URL's parts then its query's pairs.
+ * @tier T2 — owns the pair-count cap and when a form falls back to text; the shape is formPairs' shapeOf over the served label, the decoding its readForm, the data window's own
  * @anatomy KeyValueRow× in a two-column grid this component supplies (KeyValueRow is display:contents, so column sizing is the parent's job): key mute and nowrap, value a CopyText — click copies the whole value, drag-select stays native · 4px row gap · a CutMarker when the raw text exceeds TEXT_MAX
- * @use a body dispatched to "form" — application/x-www-form-urlencoded — and anywhere URL-encoded pairs must be presented
+ * @use a body dispatched to "form" — application/x-www-form-urlencoded, text/rfc822-headers, text/uri-list — and anywhere URL-encoded pairs must be presented
  * @avoid an inline <dl> that re-draws the pair: the value cell's click-to-copy is KeyValueRow's, not this member's · showing the raw encoded string when the decoded pairs are what the user reads
- * @states rendered · rendered+cut (over TEXT_MAX) — no empty state; a zero-byte body never reaches a member
- * @madeof KeyValueRow×
+ * @states rendered · rendered+cut (URL-encoded pairs over TEXT_MAX) · as text (no form shape, or name: value lines or a URL over TEXT_MAX: only pairs have a safe cut, so an unlabelled text over it is read as pairs unscanned) — no empty state; a zero-byte body never reaches a member
+ * @madeof KeyValueRow× · TextRenderer (T2) — the fallback
  */
-export function FormRenderer({ text }: { text: string }) {
+export function FormRenderer({ text, label = null }: { text: string; label?: string | null }) {
   // Cut on a pair boundary, never at a character offset into the raw text: an
   // offset can land mid-%XX or inside an escape run, and the half-decoded value
   // — a stray "%E" or U+FFFD — is what CopyText hands to the clipboard.
   const cut = text.length > TEXT_MAX;
-  const shown = cut ? text.slice(0, formPairCut(text, TEXT_MAX)) : text;
+  const shape = useMemo(() => (cut ? ((labelShape(label) ?? "query") === "query" ? "query" : "none") : shapeOf(text, label)), [cut, text, label]);
+  const asText = shape === "none";
+  const shown = cut && !asText ? text.slice(0, formPairCut(text, TEXT_MAX)) : text;
+  const entries = useMemo(() => {
+    if (asText) return [];
+    const { parts, pairs } = readForm(shown, shape);
+    return [...parts, ...pairs].map((row): [string, string] => [row.key, row.value]);
+  }, [asText, shown, shape]);
+
+  if (asText) return <TextRenderer text={text} />;
 
   return (
     <>
@@ -27,7 +39,7 @@ export function FormRenderer({ text }: { text: string }) {
           "grid grid-cols-[auto_1fr] gap-x-grid-gap-x gap-y-grid-gap-y"
         }
       >
-        {formEntries(shown).map(([key, value], i) => (
+        {entries.map(([key, value], i) => (
           <KeyValueRow key={i} name={key} value={value} />
         ))}
       </dl>

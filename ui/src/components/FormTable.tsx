@@ -21,6 +21,7 @@ const MARK = "rounded-button bg-wash-select text-ink";
 const CURRENT = "rounded-button bg-wash-active text-ink outline outline-focus outline-ink-mute";
 
 const NO_MATCHES = new Map<number, PairMatches>();
+const NO_PARTS: FormPair[] = [];
 
 function Marked({ text, ranges, first, current }: { text: string; ranges: TextRange[]; first: number; current: number }) {
   if (!ranges.length) return <>{text}</>;
@@ -47,16 +48,17 @@ function rowOf(matches: Map<number, PairMatches>, current: number): number | nul
 }
 
 /**
- * FormTable — every pair of a URL-encoded form, uncapped, each key and value whole and wrapped, edited in place.
- * @tier T2 — owns display decoding, the duplicate-key count and the never-cut rule; the pairs, their order and what an edit means are the caller's
- * @anatomy sticky uppercase-mute label row (# · key · value) · number ink-mute · key mono syn-key, "N of M “key”" under a repeat · value mono ink, wrapped whole, "none" when empty, "kept as sent" under a bad escape · IconButton add + and close × per row, invisible until the row is hovered or selected — focus in a row selects it · selected row canvas-soft · the edited cell a multiline verbatim Field · a new-pair row (new key · new value, ink-mute) after the last · an inset block under one row
+ * FormTable — every pair of a form, uncapped, each key and value whole and wrapped, edited in place; a URL's parts read above its pairs.
+ * @tier T2 — owns the duplicate-key count and the never-cut rule; the pairs, the parts, their order, their decoding and what an edit means are the caller's
+ * @anatomy sticky uppercase-mute label row (# · key · value) · number ink-mute · key mono syn-key, "N of M “key”" under a repeat · value mono ink, wrapped whole, "none" when empty, "kept as sent" under a bad escape · IconButton add + and close × per row, invisible until the row is hovered or selected — focus in a row selects it · selected row canvas-soft · the edited cell a multiline verbatim Field · a new-pair row (new key · new value, ink-mute) after the last · an inset block under one row · read-only part rows before the pairs (no number, label uppercase-mute, value mono ink, "kept as sent" under a bad escape, no acts, not editable; selectable)
  * @use the data window's form surface, decoded (DEC-76)
  * @avoid the body pane (FormRenderer, capped and read-only) · truncating, clamping or fixing a row's height (DEC-34's escape is not taken here: rows are measured, so a 3 KiB value wraps whole) · re-encoding pairs nobody edited · sorting or finding inside it: the caller hands the order and the marks · hiding a row's acts from the keyboard: focus shows them as hover does · a Field in every cell: one cell is edited at a time, the rest stay a reading surface · KeyValueRow's clamped, read-only rows
- * @states rest · row hovered or focused (acts shown) · selected row · editing one cell · with find marks (the caller's, per pair; the current one's row scrolled to only when the caller bumps reveal, so an edit that moves the marks leaves the view where the user is) · with an inset under one row. No empty, collapsed or loading state
+ * @states rest · row hovered or focused (acts shown) · selected row · editing one cell · with find marks (the caller's, per pair or part; the current one's row scrolled to only when the caller bumps reveal, so an edit that moves the marks leaves the view where the user is) · with an inset under one row · with parts (a URL). No empty, collapsed or loading state
  * @madeof Field (T1) — the edited cell · IconButton (T1) — add and remove · @tanstack/react-virtual (T0)
  */
 export function FormTable({
   pairs,
+  parts = NO_PARTS,
   selected = null,
   onSelect,
   onEdit,
@@ -70,6 +72,7 @@ export function FormTable({
   testId,
 }: {
   pairs: FormPair[];
+  parts?: FormPair[];
   selected?: number | null;
   onSelect?: (index: number) => void;
   onEdit: (index: number, part: PairPart, text: string) => void;
@@ -95,17 +98,19 @@ export function FormTable({
   const counted = useMemo(() => repeats(pairs), [pairs]);
 
   const virtualizer = useVirtualizer({
-    count: pairs.length + 1,
+    count: parts.length + pairs.length + 1,
     getScrollElement: () => scroller.current,
     estimateSize: () => 28,
     overscan: 8,
   });
 
+  const partCount = useRef(parts.length);
+  partCount.current = parts.length;
   const shownMarks = useRef({ matches, current });
   shownMarks.current = { matches, current };
   useEffect(() => {
     const row = rowOf(shownMarks.current.matches, shownMarks.current.current);
-    if (reveal && row !== null) virtualizer.scrollToIndex(row, { align: "center" });
+    if (reveal && row !== null) virtualizer.scrollToIndex(row + partCount.current, { align: "center" });
   }, [reveal, virtualizer]);
 
   useEffect(() => {
@@ -234,6 +239,44 @@ export function FormTable({
     );
   };
 
+  const partRow = (part: FormPair) => {
+    const found = matches.get(part.index);
+    return (
+      <Fragment>
+        <div
+          data-testid="form-part"
+          onClick={() => onSelect?.(part.index)}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            onSelect?.(part.index);
+            onContext?.(part.index, { x: event.clientX, y: event.clientY });
+          }}
+          style={COLUMNS}
+          className={`grid items-start gap-3 border-b border-hairline px-4 py-chrome-y ${selected === part.index ? "bg-canvas-soft" : ""}`}
+        >
+          <span />
+          <span className="pt-chrome-tight font-ui text-label uppercase tracking-label text-ink-mute">{part.key}</span>
+          <div>
+            <div className="whitespace-pre-wrap break-all font-mono text-body leading-normal text-ink">
+              <Marked text={part.value} ranges={found?.value ?? []} first={found?.first ?? 0} current={current} />
+            </div>
+            {part.kept && <span className="font-ui text-chrome text-ink-mute">kept as sent: not a valid percent-escape</span>}
+          </div>
+          <span />
+        </div>
+        {inset && inset.afterIndex === part.index && (
+          <div className="border-b border-hairline py-chrome-y pl-12 pr-4">{inset.node}</div>
+        )}
+      </Fragment>
+    );
+  };
+
+  const item = (index: number) => {
+    if (index < parts.length) return partRow(parts[index]);
+    const pair = pairs[index - parts.length];
+    return pair ? row(pair) : newPair;
+  };
+
   const newPair = (
     <div
       role="button"
@@ -268,15 +311,15 @@ export function FormTable({
         <span />
       </div>
       <div data-wire="collection" data-order="wire" style={{ height: virtualizer.getTotalSize(), position: "relative" }}>
-        {virtualizer.getVirtualItems().map((item) => (
+        {virtualizer.getVirtualItems().map((entry) => (
           <div
-            key={item.key}
-            data-index={item.index}
+            key={entry.key}
+            data-index={entry.index}
             ref={virtualizer.measureElement}
             className="absolute left-0 top-0 w-full"
-            style={{ transform: `translateY(${item.start}px)` }}
+            style={{ transform: `translateY(${entry.start}px)` }}
           >
-            {item.index < pairs.length ? row(pairs[item.index]) : newPair}
+            {item(entry.index)}
           </div>
         ))}
       </div>

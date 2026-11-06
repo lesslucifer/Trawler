@@ -496,7 +496,7 @@
       <tr><th>OS</th><th>Artifact</th><th>First open</th></tr>
       <tr><td>macOS 11+ (universal)</td><td><code>.dmg</code></td><td>ad-hoc signed · Privacy &amp; Security → Open Anyway</td></tr>
       <tr><td>Windows 10/11 x64 · arm64</td><td><code>-setup.exe</code> · <code>.msi</code></td><td>SmartScreen → More info → Run anyway</td></tr>
-      <tr><td>Linux x64 · arm64 (glibc, WebKitGTK 4.1)</td><td><code>.AppImage</code> · <code>.deb</code> · <code>.rpm</code></td><td>no prompt; GNOME needs the AppIndicator extension for the tray</td></tr>
+      <tr><td>Linux x64 · arm64 (glibc, WebKitGTK 4.1)</td><td><code>.AppImage</code> · <code>.deb</code> · <code>.rpm</code> (finals only: rpm refuses a pre-release version, DEC-86 rule 7)</td><td>no prompt; GNOME needs the AppIndicator extension for the tray</td></tr>
     </table>
     <p class="kd" data-c="uc-install-proof">Proven by <code>xtask/tests/package_bundle.rs</code> (macOS, <code>--features package-tests</code>):
       the packaged <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
@@ -1522,7 +1522,8 @@ flowchart LR
           the status bar says what decided it and <em>treat the data as</em> overrides it. Data windows share one remembered size and place, the last
           moved one's</td></tr>
         <tr><td>edits</td><td>JSON, XML, HTML, JavaScript, CSS and text edit freely on a virtualised surface with a fold gutter; a form is a table
-          of every pair, values whole and wrapped, each key and value editable, pairs added and removed; hex and image
+          of every pair — URL-encoded pairs, <code>name: value</code> lines (a leg's headers), or a URL's labelled parts then its
+          query's pairs (the URI); text that is none of them is shown as text under <em>not a form</em> — values whole and wrapped, each key and value editable, pairs added and removed; hex and image
           are read-only. Every change is a step: ⌘Z / ⇧⌘Z, <em>modified · N edits</em> while it differs, <em>restore
           original</em> in ⋯</td></tr>
         <tr><td>reformats</td><td>JSON: indent 2 / 4 / tab or minified, sort keys, fold to depth 1 / 2 / 3 / all / none;

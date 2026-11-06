@@ -22,11 +22,12 @@ impl Os {
         }
     }
 
-    fn bundles(self) -> &'static str {
+    fn bundles(self, version: &str) -> &'static str {
         match self {
             Self::MacOs => "app,dmg",
             Self::Windows => "msi,nsis",
-            Self::Linux => "deb,rpm,appimage",
+            Self::Linux if rpm_takes(version) => "deb,rpm,appimage",
+            Self::Linux => "deb,appimage",
         }
     }
 
@@ -99,11 +100,11 @@ pub struct Plan {
     pub installs: bool,
 }
 
-pub fn plan(os: Os, options: &Options, installed: &[&str]) -> Result<Plan, String> {
+pub fn plan(os: Os, options: &Options, installed: &[&str], version: &str) -> Result<Plan, String> {
     let mut args: Vec<String> = match options.stage {
-        Stage::BuildAndBundle => vec!["tauri", "build", "--bundles", os.bundles()],
+        Stage::BuildAndBundle => vec!["tauri", "build", "--bundles", os.bundles(version)],
         Stage::BuildOnly => vec!["tauri", "build", "--no-bundle"],
-        Stage::BundleOnly => vec!["tauri", "bundle", "--bundles", os.bundles()],
+        Stage::BundleOnly => vec!["tauri", "bundle", "--bundles", os.bundles(version)],
         Stage::SignOnly => vec!["signer", "sign"],
     }
     .into_iter()
@@ -148,10 +149,11 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let options = parse(args)?;
     let os = Os::named(std::env::consts::OS)?;
     let installed = if options.universal { installed_targets()? } else { String::new() };
-    let plan = plan(os, &options, &installed.lines().collect::<Vec<_>>())?;
+    let version = version_of(repo)?;
+    let plan = plan(os, &options, &installed.lines().collect::<Vec<_>>(), &version)?;
     let ui = repo.join("ui");
     if options.stage == Stage::SignOnly {
-        return sign(&plan, &ui, &repo.join("target").join(&plan.bundle_dir), repo);
+        return sign(&plan, &ui, &repo.join("target").join(&plan.bundle_dir), &version);
     }
     if plan.installs {
         spawn_in(&ui, os.pnpm(), &["install".to_string(), "--frozen-lockfile".to_string()])?;
@@ -215,18 +217,17 @@ pub fn updater_targets(artifacts: &[PathBuf]) -> Result<Vec<PathBuf>, String> {
     Ok(targets)
 }
 
-fn sign(plan: &Plan, ui: &Path, bundle_dir: &Path, repo: &Path) -> Result<(i32, String), String> {
+fn sign(plan: &Plan, ui: &Path, bundle_dir: &Path, version: &str) -> Result<(i32, String), String> {
     if std::env::var_os(SIGNING_KEY_VAR).is_none_or(|key| key.is_empty()) {
         return Err(format!("--sign-only signs with {SIGNING_KEY_VAR}, which is not set"));
     }
-    let version = shipped_version(&workspace_members(repo)?)?.to_string();
     let targets = updater_targets(&artifacts(bundle_dir)?)?;
     if targets.is_empty() {
         return Err(format!("{} holds no updater target to sign", bundle_dir.display()));
     }
     let signer = installed_tauri(ui, plan);
     for target in &targets {
-        spawn_in(ui, &signer.to_string_lossy(), &sign_args(plan, &version, target))?;
+        spawn_in(ui, &signer.to_string_lossy(), &sign_args(plan, version, target))?;
     }
     let listed: Vec<String> =
         targets.iter().map(|path| format!("  {}.sig", path.display())).collect();
@@ -351,6 +352,10 @@ pub fn shipped_version(members: &[Member]) -> Result<&str, String> {
         .ok_or_else(|| format!("the workspace has no {SHIPPED} crate"))
 }
 
+pub fn version_of(repo: &Path) -> Result<String, String> {
+    Ok(shipped_version(&workspace_members(repo)?)?.to_string())
+}
+
 /// Every version source that disagrees with the shipped one, one line each.
 pub fn drift_of(
     members: &[Member],
@@ -378,6 +383,11 @@ pub fn drift_of(
         drift.push(format!("ui/package.json: version {ui_version:?}, the app ships {shipped}"));
     }
     Ok(drift)
+}
+
+/// rpm's version field refuses `-`, which every numeric pre-release carries.
+pub fn rpm_takes(version: &str) -> bool {
+    !version.contains('-')
 }
 
 fn msi_takes(version: &str) -> bool {
@@ -420,6 +430,8 @@ mod tests {
         assert!(conf.contains(&format!("\"{placed}\":")), "{conf}");
     }
 
+    const FINAL: &str = "0.1.0";
+
     fn options(universal: bool, profile: Option<&str>) -> Options {
         Options { universal, profile: profile.map(str::to_string), stage: Stage::BuildAndBundle }
     }
@@ -446,7 +458,7 @@ mod tests {
 
     #[test]
     fn each_host_builds_its_own_installers() {
-        let built = |os| plan(os, &Options::default(), &[]).expect("a plan");
+        let built = |os| plan(os, &Options::default(), &[], FINAL).expect("a plan");
         assert_eq!(argv(&built(Os::MacOs)), "pnpm tauri build --bundles app,dmg");
         assert_eq!(argv(&built(Os::Windows)), "pnpm.cmd tauri build --bundles msi,nsis");
         assert_eq!(argv(&built(Os::Linux)), "pnpm tauri build --bundles deb,rpm,appimage");
@@ -454,33 +466,52 @@ mod tests {
     }
 
     #[test]
+    fn a_pre_release_bundles_linux_without_rpm_which_refuses_its_hyphen() {
+        for stage in [Stage::BuildAndBundle, Stage::BundleOnly] {
+            let linux =
+                |version| argv(&plan(Os::Linux, &staged(stage, false), &[], version).unwrap());
+            assert!(linux("0.1.0-3").ends_with("--bundles deb,appimage"), "{}", linux("0.1.0-3"));
+            assert!(linux(FINAL).ends_with("--bundles deb,rpm,appimage"), "{}", linux(FINAL));
+            for os in [Os::MacOs, Os::Windows] {
+                let pre = argv(&plan(os, &staged(stage, false), &[], "0.1.0-3").unwrap());
+                assert_eq!(pre, argv(&plan(os, &staged(stage, false), &[], FINAL).unwrap()));
+            }
+        }
+        assert!(rpm_takes("0.1.0") && rpm_takes("255.255.65535"));
+        assert!(!rpm_takes("0.1.0-2") && !rpm_takes("0.1.0-65535"));
+    }
+
+    #[test]
     fn a_profile_goes_to_cargo_and_names_the_bundle_dir() {
-        let built = plan(Os::MacOs, &options(false, Some("package-test")), &[]).expect("a plan");
+        let built =
+            plan(Os::MacOs, &options(false, Some("package-test")), &[], FINAL).expect("a plan");
         assert_eq!(argv(&built), "pnpm tauri build --bundles app,dmg -- --profile package-test");
         assert_eq!(built.bundle_dir, Path::new("package-test/bundle"));
     }
 
     #[test]
     fn build_and_bundle_never_ask_tauri_to_sign_and_the_sign_stage_only_signs() {
-        let build = plan(Os::Windows, &staged(Stage::BuildOnly, false), &[]).unwrap();
+        let build = plan(Os::Windows, &staged(Stage::BuildOnly, false), &[], FINAL).unwrap();
         assert_eq!(argv(&build), "pnpm.cmd tauri build --no-bundle");
-        let bundle = plan(Os::Windows, &staged(Stage::BundleOnly, false), &[]).unwrap();
+        let bundle = plan(Os::Windows, &staged(Stage::BundleOnly, false), &[], FINAL).unwrap();
         assert_eq!(argv(&bundle), "pnpm.cmd tauri bundle --bundles msi,nsis");
         assert_eq!(bundle.bundle_dir, Path::new("release/bundle"));
         for os in [Os::MacOs, Os::Windows, Os::Linux] {
             for stage in [Stage::BuildAndBundle, Stage::BuildOnly, Stage::BundleOnly] {
-                let argv = argv(&plan(os, &staged(stage, false), &[]).unwrap());
+                let argv = argv(&plan(os, &staged(stage, false), &[], FINAL).unwrap());
                 assert!(!argv.contains("createUpdaterArtifacts"), "{argv}");
             }
         }
-        let sign = plan(Os::MacOs, &staged(Stage::SignOnly, true), &UNIVERSAL_PARTS).unwrap();
+        let sign =
+            plan(Os::MacOs, &staged(Stage::SignOnly, true), &UNIVERSAL_PARTS, FINAL).unwrap();
         assert_eq!(argv(&sign), "tauri signer sign");
         assert_eq!(sign.bundle_dir, Path::new("universal-apple-darwin/release/bundle"));
         let universal =
-            plan(Os::MacOs, &staged(Stage::BundleOnly, true), &UNIVERSAL_PARTS).unwrap();
+            plan(Os::MacOs, &staged(Stage::BundleOnly, true), &UNIVERSAL_PARTS, FINAL).unwrap();
         assert!(argv(&universal).ends_with("--target universal-apple-darwin"));
         assert_eq!(universal.bundle_dir, Path::new("universal-apple-darwin/release/bundle"));
-        let universal = plan(Os::MacOs, &staged(Stage::BuildOnly, true), &UNIVERSAL_PARTS).unwrap();
+        let universal =
+            plan(Os::MacOs, &staged(Stage::BuildOnly, true), &UNIVERSAL_PARTS, FINAL).unwrap();
         assert_eq!(
             argv(&universal),
             "pnpm tauri build --no-bundle --target universal-apple-darwin"
@@ -490,10 +521,10 @@ mod tests {
     #[test]
     fn only_the_build_stages_install_and_the_sign_stage_never_runs_pnpm() {
         for os in [Os::MacOs, Os::Windows, Os::Linux] {
-            let installs = |stage| plan(os, &staged(stage, false), &[]).unwrap().installs;
+            let installs = |stage| plan(os, &staged(stage, false), &[], FINAL).unwrap().installs;
             assert!(installs(Stage::BuildAndBundle) && installs(Stage::BuildOnly));
             assert!(!installs(Stage::BundleOnly) && !installs(Stage::SignOnly));
-            let sign = plan(os, &staged(Stage::SignOnly, false), &[]).unwrap();
+            let sign = plan(os, &staged(Stage::SignOnly, false), &[], FINAL).unwrap();
             assert!(!argv(&sign).contains("pnpm"), "{}", argv(&sign));
         }
     }
@@ -501,9 +532,9 @@ mod tests {
     #[test]
     fn the_sign_stage_runs_the_locked_tauri_cli_on_each_target_with_its_version() {
         let ui = Path::new("/repo/ui");
-        let mac = plan(Os::MacOs, &staged(Stage::SignOnly, false), &[]).unwrap();
+        let mac = plan(Os::MacOs, &staged(Stage::SignOnly, false), &[], FINAL).unwrap();
         assert_eq!(installed_tauri(ui, &mac), Path::new("/repo/ui/node_modules/.bin/tauri"));
-        let windows = plan(Os::Windows, &staged(Stage::SignOnly, false), &[]).unwrap();
+        let windows = plan(Os::Windows, &staged(Stage::SignOnly, false), &[], FINAL).unwrap();
         assert_eq!(installed_tauri(ui, &windows), ui.join("node_modules/.bin/tauri.cmd"));
         assert_eq!(
             sign_args(&mac, "0.1.0-1", Path::new("/b/Trawler.app.tar.gz")),
@@ -515,7 +546,7 @@ mod tests {
     fn a_bundle_only_or_sign_only_run_refuses_a_profile() {
         for stage in [Stage::BundleOnly, Stage::SignOnly] {
             let options = Options { profile: Some("x".into()), ..staged(stage, false) };
-            assert!(plan(Os::Linux, &options, &[]).unwrap_err().contains("drop --profile"));
+            assert!(plan(Os::Linux, &options, &[], FINAL).unwrap_err().contains("drop --profile"));
         }
     }
 
@@ -603,7 +634,7 @@ mod tests {
 
     #[test]
     fn universal_targets_both_mac_architectures() {
-        let built = plan(Os::MacOs, &options(true, None), &UNIVERSAL_PARTS).expect("a plan");
+        let built = plan(Os::MacOs, &options(true, None), &UNIVERSAL_PARTS, FINAL).expect("a plan");
         assert_eq!(
             argv(&built),
             "pnpm tauri build --bundles app,dmg --target universal-apple-darwin"
@@ -613,19 +644,19 @@ mod tests {
 
     #[test]
     fn universal_without_a_mac_target_names_the_rustup_line() {
-        let refused = plan(Os::MacOs, &options(true, None), &["aarch64-apple-darwin"]);
+        let refused = plan(Os::MacOs, &options(true, None), &["aarch64-apple-darwin"], FINAL);
         assert!(
             refused.unwrap_err().ends_with("rustup target add x86_64-apple-darwin"),
             "the refusal names only the missing target"
         );
-        let refused = plan(Os::MacOs, &options(true, None), &[]).unwrap_err();
+        let refused = plan(Os::MacOs, &options(true, None), &[], FINAL).unwrap_err();
         assert!(refused.ends_with("rustup target add aarch64-apple-darwin x86_64-apple-darwin"));
     }
 
     #[test]
     fn universal_off_macos_is_refused() {
         for os in [Os::Windows, Os::Linux] {
-            let refused = plan(os, &options(true, None), &UNIVERSAL_PARTS).unwrap_err();
+            let refused = plan(os, &options(true, None), &UNIVERSAL_PARTS, FINAL).unwrap_err();
             assert!(refused.contains("macOS"), "{refused}");
         }
     }

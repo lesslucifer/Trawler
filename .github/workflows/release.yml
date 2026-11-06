@@ -45,7 +45,7 @@ jobs:
       run:
         shell: bash
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - name: macos-universal
