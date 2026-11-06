@@ -1,0 +1,28 @@
+schema: cr/v5
+scope: "WU settings-modal -> epic/prorelease (round 3 tip, after the independent-review fixes and the shared listen-then-take rule)"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W19
+branch: wu/prorelease/settings-modal
+base: e515acc17cc046df39a4c5e358ea68e20de29a1d
+head: 78018638d23fa190ea6ac0ae8514ca08f65be5a8
+diff_sha256: 824bd6a26897410bc6e8e808679b0ad6e616fd528e900c2cbf3437ab7ff104ad
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 3
+    nit: 4
+  stage_seconds:
+    total: 149
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 4, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
