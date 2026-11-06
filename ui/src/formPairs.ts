@@ -1,4 +1,5 @@
-import { HEADERS_LABEL, normalizeLabel, URI_LABEL } from "./contentKind";
+import { formPairCut } from "./body";
+import { FORM_LABEL_SHAPES, normalizeLabel } from "./contentKind";
 import { mergeRanges, MATCH_LIMIT, scanOf, type Scan, type Structure } from "./find";
 import type { FindChip } from "./findGrammar";
 import type { TextRange } from "./components/index";
@@ -23,17 +24,12 @@ export interface FormRead {
 
 const FIELD_NAME = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:/;
 const ONE_FIELD = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:[ \t]/;
+const PSEUDO_NAME = /^:[!#$%&'*+.^_`|~0-9A-Za-z-]+:/;
 const FOLD = /^[ \t]/;
 const URL_START = /^(?:[a-z][a-z0-9+.-]*:\/\/|\/)/i;
 const NEVER_RAW_IN_A_FORM = /["<>]/;
 
-const LABEL_SHAPES: Record<string, FormShape> = {
-  "application/x-www-form-urlencoded": "query",
-  [HEADERS_LABEL]: "headers",
-  [URI_LABEL]: "url",
-};
-
-export const labelShape = (label: string | null | undefined): FormShape | null => LABEL_SHAPES[normalizeLabel(label) ?? ""] ?? null;
+export const labelShape = (label: string | null | undefined): FormShape | null => FORM_LABEL_SHAPES.get(normalizeLabel(label) ?? "") ?? null;
 
 export function formShape(text: string): FormShape {
   const body = text.replace(/\r?\n$/, "");
@@ -57,6 +53,7 @@ function decodePart(part: string, plusIsSpace = true): { text: string; kept: boo
 interface Frame {
   head: string;
   opener: string;
+  queried: boolean;
   raws: string[];
   join: string;
   tail: string;
@@ -77,7 +74,7 @@ function frameOf(text: string, shape: FormShape): Frame {
   if (shape === "headers") {
     const lineBreak = text.includes("\r\n") ? "\r\n" : "\n";
     const tail = text.endsWith(lineBreak) ? lineBreak : "";
-    return { head: "", opener: "", raws: headerRaws(text.slice(0, text.length - tail.length), lineBreak), join: lineBreak, tail };
+    return { head: "", opener: "", queried: false, raws: headerRaws(text.slice(0, text.length - tail.length), lineBreak), join: lineBreak, tail };
   }
   if (shape === "url") {
     const hash = text.indexOf("#");
@@ -86,16 +83,31 @@ function frameOf(text: string, shape: FormShape): Frame {
     return {
       head: question < 0 ? beforeHash : beforeHash.slice(0, question),
       opener: "?",
+      queried: question >= 0,
       raws: ampersandRaws(question < 0 ? "" : beforeHash.slice(question + 1)),
       join: "&",
       tail: hash < 0 ? "" : text.slice(hash),
     };
   }
-  return { head: "", opener: "", raws: ampersandRaws(text), join: "&", tail: "" };
+  return { head: "", opener: "", queried: false, raws: ampersandRaws(text), join: "&", tail: "" };
 }
 
-const rebuild = ({ head, opener, join, tail }: Frame, raws: string[]) =>
-  head + (raws.length > 0 ? opener + raws.join(join) : "") + tail;
+function rebuild(frame: Frame, raws: string[]): string {
+  const { head, opener, join, tail } = frame;
+  const keepsEmptyQuery = frame.queried && raws.length === frame.raws.length;
+  return head + (raws.length > 0 || keepsEmptyQuery ? opener + raws.join(join) : "") + tail;
+}
+
+function headerLineCut(text: string, at: number): number {
+  let boundary = text.lastIndexOf("\n", at);
+  while (boundary > 0 && FOLD.test(text.slice(boundary + 1))) boundary = text.lastIndexOf("\n", boundary - 1);
+  if (boundary > 0) return boundary;
+  const colon = text.indexOf(":", 1);
+  return colon > 0 && colon < at ? colon + 1 : 0;
+}
+
+export const formCut = (text: string, at: number, shape: FormShape) =>
+  shape === "headers" ? headerLineCut(text, at) : formPairCut(text, at);
 
 function splitRaw(raw: string): [key: string, value: string] {
   const eq = raw.indexOf("=");
@@ -103,7 +115,8 @@ function splitRaw(raw: string): [key: string, value: string] {
 }
 
 function splitField(raw: string): [name: string, rest?: string] {
-  const colon = raw.startsWith(":") && raw.indexOf(":", 1) > 0 ? raw.indexOf(":", 1) : raw.indexOf(":");
+  const pseudo = PSEUDO_NAME.exec(raw);
+  const colon = pseudo ? pseudo[0].length - 1 : raw.indexOf(":");
   return colon < 0 ? [raw] : [raw.slice(0, colon), raw.slice(colon + 1)];
 }
 

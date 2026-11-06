@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { byteLength, formCut, TEXT_MAX } from "../body";
-import { labelShape, readForm } from "../formPairs";
+import { byteLength, TEXT_MAX } from "../body";
+import { formCut, labelShape, readForm } from "../formPairs";
 import { CutMarker } from "./CutMarker";
 import { KeyValueRow } from "./KeyValueRow";
 

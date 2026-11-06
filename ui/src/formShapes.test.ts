@@ -122,6 +122,16 @@ describe("headers read as name: value lines", () => {
     expect(editPair("no-colon", 0, "key", "a b", "headers")).toBe("ab");
   });
 
+  it("a row with no name keeps a value holding a colon whole", () => {
+    const valued = editPair(addPairAfter("a: 1", 0, "headers"), 1, "value", "http://x", "headers");
+    expect(valued).toBe("a: 1\n: http://x");
+    expect(parsePairs(valued, "headers")[1]).toMatchObject({ key: "", value: "http://x" });
+    expect(parsePairs(":status: 200\n:: x", "headers").map((p) => [p.key, p.value])).toEqual([
+      [":status", "200"],
+      ["", ": x"],
+    ]);
+  });
+
   it("a new pair's key and value land on its own line", () => {
     const added = addPairAfter("a: 1", 0, "headers");
     const keyed = editPair(added, 1, "key", "x-new", "headers");
@@ -226,6 +236,8 @@ describe("a URL reads as labelled parts, then its query's pairs", () => {
     expect(removePair("https://a.example/?a=1#f", 0, "url")).toBe("https://a.example/#f");
     expect(sortByKey(url, "url")).toBe("https://A.example:443/p%20q?a=1&b=2#frag");
     expect(addPairAfter("https://a.example/x#f", -1, "url")).toBe("https://a.example/x?=#f");
+    expect(sortByKey("https://a.example/x?#f", "url")).toBe("https://a.example/x?#f");
+    expect(editPair("https://a.example/x?", 3, "value", "v", "url")).toBe("https://a.example/x?");
   });
 });
 
@@ -235,6 +247,7 @@ describe("a label that names a form names its shape; bytes are read only without
     ["text/rfc822-headers", "headers"],
     ["TEXT/URI-LIST", "url"],
     ["text/plain", null],
+    ["constructor", null],
     [null, null],
   ])("%s → %s", (label, shape) => {
     expect(labelShape(label)).toBe(shape);

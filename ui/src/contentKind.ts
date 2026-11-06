@@ -1,5 +1,6 @@
 import { rawKind } from "./body";
 import { kindLabel, signatureOf } from "./dataKind";
+import type { FormShape } from "./formPairs";
 
 export type ContentKind = "json" | "form" | "xml" | "html" | "javascript" | "css" | "text" | "hex" | "image";
 
@@ -11,6 +12,12 @@ export interface KindReading {
 
 export const HEADERS_LABEL = "text/rfc822-headers";
 export const URI_LABEL = "text/uri-list";
+
+export const FORM_LABEL_SHAPES: ReadonlyMap<string, FormShape> = new Map([
+  ["application/x-www-form-urlencoded", "query"],
+  [HEADERS_LABEL, "headers"],
+  [URI_LABEL, "url"],
+]);
 
 const JAVASCRIPT = new Set([
   "application/javascript",
@@ -29,7 +36,7 @@ export function labelKind(label: string | null | undefined): ContentKind | null 
   const mime = normalizeLabel(label);
   if (mime === null) return null;
   if (mime === "application/json" || mime === "text/json" || mime.endsWith("+json")) return "json";
-  if (mime === "application/x-www-form-urlencoded" || mime === HEADERS_LABEL || mime === URI_LABEL) return "form";
+  if (FORM_LABEL_SHAPES.has(mime)) return "form";
   if (mime === "text/html" || mime === "application/xhtml+xml") return "html";
   if (mime === "application/xml" || mime === "text/xml" || mime.endsWith("+xml")) return "xml";
   if (JAVASCRIPT.has(mime)) return "javascript";

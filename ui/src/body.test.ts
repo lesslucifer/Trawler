@@ -5,7 +5,6 @@ import {
   bodyText,
   byteLength,
   decodeBody,
-  formCut,
   formPairCut,
   hexDump,
   hexRows,
@@ -16,7 +15,7 @@ import {
   saveFilename,
 } from "./body";
 import type { FlowView } from "./api";
-import { parsePairs } from "./formPairs";
+import { formCut, parsePairs } from "./formPairs";
 
 test("humanBytes reads at a glance: one decimal below 10, integer above", () => {
   expect(humanBytes(0)).toBe("0 B");

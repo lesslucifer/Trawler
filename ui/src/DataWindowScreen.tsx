@@ -411,7 +411,10 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     () => (isModified(settled) ? byteLength(workingText(settled)) : payload.bytes.length),
     [settled, payload.bytes],
   );
-  const shape = useMemo(() => labelShape(reading.label) ?? formShape(original), [reading.label, original]);
+  const shape = useMemo(
+    () => (picked === "form" ? (labelShape(reading.label) ?? formShape(original)) : "none"),
+    [picked, reading.label, original],
+  );
   const form = useMemo(() => (kind === "form" ? readForm(text, shape) : NO_FORM), [kind, text, shape]);
   const { parts, pairs } = form;
   const rows = useMemo(() => new Map([...parts, ...pairs].map((row) => [row.index, row])), [parts, pairs]);
