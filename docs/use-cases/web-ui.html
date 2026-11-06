@@ -490,6 +490,7 @@
     <p data-c="uc-install-contract">A user downloads their OS's own artifact from the published GitHub release
       (<span class="badge id">E-PKG2</span>, <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a>).
       The installers carry no paid signature, so the first open shows the OS's prompt, and the release notes name the one way past it.
+      The notes open with what is new in that version (<code>CHANGELOG.md</code>) and end with how to check the download against the release's <code>SHA256SUMS</code> (<span class="badge id">E-PRORELEASE.W7</span>).
       From then on the app is UC-4: one launch, an owned core, single instance, the CA in the platform's app data directory
       (<code>dev.trawler.app</code>).</p>
     <table data-c="uc-install-matrix">

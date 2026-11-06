@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9aed9f34851f0dfaebcd">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Hand-check matrix</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Hand-check matrix</h1>
+      <p>What a person checks on each OS before an rc becomes a final: what CI cannot run (OS prompts, real installs, real updates, uninstall).</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T2 backlog · written by <span class="badge id">E-PRORELEASE.W7</span> · process: <code>docs/release-process.html</code> · UC-INSTALL, UC-UPDATE, UC-ONBOARD, UC-BG · <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="how">How a run uses it</h2>
+    <div class="diagram" data-c="how-flow"><pre class="mermaid">
+flowchart LR
+  A["rc draft green"] --> B["copy the matrix to docs/work/‹date›-v‹version›-hand-checks.html"]
+  B --> C["walk every row × OS: ✅ · ❌ + what was seen · n/a"]
+  C -- any ❌ --> D["fix · next rc"]
+  D --> A
+  C -- all ✅ or n/a --> E["the final's cut may start"]
+</pre><div class="caption">This page is the template; a filled copy is T3 and is archived with its epic.</div></div>
+
+    <h2 id="machines">Machines</h2>
+    <table data-c="machines">
+      <thead><tr><th>Column</th><th>Machine</th><th>Installers to try</th></tr></thead>
+      <tbody>
+        <tr><td>macOS</td><td>Apple silicon Mac, macOS 13+ (one row also on macOS 11 or 12 when one is at hand)</td><td><code>.dmg</code> (universal)</td></tr>
+        <tr><td>Win x64</td><td>Windows 11 x64 VM</td><td><code>-setup.exe</code>, then <code>.msi</code> on a clean VM</td></tr>
+        <tr><td>Win arm64</td><td>Windows 11 arm64 VM</td><td><code>arm64-setup.exe</code></td></tr>
+        <tr><td>Ubuntu x64</td><td>Ubuntu 22.04+ x64 VM, GNOME</td><td><code>.AppImage</code>, <code>.deb</code>; <code>.rpm</code> on a Fedora VM for a final only</td></tr>
+        <tr><td>Ubuntu arm64</td><td>Ubuntu 22.04+ arm64 VM</td><td><code>.AppImage</code>, <code>.deb</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="matrix">The matrix</h2>
+    <table data-c="matrix">
+      <thead><tr><th>#</th><th>Step</th><th>Passes when</th><th>macOS</th><th>Win x64</th><th>Win arm64</th><th>Ubuntu x64</th><th>Ubuntu arm64</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Download + verify</td><td>the notes' <em>Verify your download</em> command says OK for the installer</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>2</td><td>Install</td><td>the installer finishes; the app is where the OS keeps apps</td><td>☐</td><td>☐ exe · ☐ msi</td><td>☐</td><td>☐ AppImage · ☐ deb</td><td>☐ AppImage · ☐ deb</td></tr>
+        <tr><td>3</td><td>First-open prompt</td><td>exactly the prompt the notes name, and their steps get past it (macOS: Privacy &amp; Security → Open Anyway · Windows: SmartScreen → More info → Run anyway · Linux: none)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>4</td><td>First window</td><td>the window opens on setup; Settings shows the core running; About names this version</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>5</td><td>Setup: this machine</td><td>the setup steps trust the CA and route the proxy; setup ends on its own on a captured https row</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>6</td><td>Capture</td><td>a browser page's requests list live, https decrypted; a filter chip narrows them; a flow opens in the inspector</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>7</td><td>Keep capturing</td><td>the first ✕ asks; with it on the window closes and capture continues behind the menu-bar/tray icon; the icon's menu opens and quits</td><td>☐</td><td>☐</td><td>☐</td><td>☐ needs AppIndicator</td><td>☐</td></tr>
+        <tr><td>8</td><td>Open at login</td><td>switch on, log out and in: the app runs with no window (macOS 11/12: reads unavailable; AppImage: the file's own path)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>9</td><td>Update rc → rc</td><td>with the previous rc installed and this rc published as latest: the dialog names both versions, DEC-64's check runs, the app relaunches as this rc, the CA's SHA-256 and settings unchanged</td><td>☐</td><td>☐</td><td>☐</td><td>☐ AppImage · ☐ deb</td><td>☐ AppImage · ☐ deb</td></tr>
+        <tr><td>10</td><td>Update with keep capturing</td><td>row 9 with keep capturing and open at login on and the window closed: the window opens to ask; the login item survives</td><td>☐</td><td>☐</td><td>n/a</td><td>☐</td><td>n/a</td></tr>
+        <tr><td>11</td><td>Update rc → final</td><td>(the final's own run) the last rc installed is offered the final and becomes it, as row 9; an rpm install of the final on Fedora installs and opens</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>12</td><td>Uninstall</td><td>the app is gone, then the CA trust and the data dir removed by hand as listed below leave no Trawler certificate and no <code>dev.trawler.app</code> folder</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="uninstall">Uninstall per OS (row 12)</h2>
+    <table data-c="uninstall">
+      <thead><tr><th>OS</th><th>App</th><th>CA trust (“Trawler Proxy CA”)</th><th>Data</th></tr></thead>
+      <tbody>
+        <tr><td>macOS</td><td>drag Trawler from Applications to the Bin</td><td>Keychain Access → System → delete “Trawler Proxy CA”</td><td><code>~/Library/Application Support/dev.trawler.app</code></td></tr>
+        <tr><td>Windows</td><td>Settings → Apps → Trawler → Uninstall</td><td><code>certmgr.msc</code> → Trusted Root Certification Authorities → delete “Trawler Proxy CA”</td><td><code>%APPDATA%\dev.trawler.app</code></td></tr>
+        <tr><td>Ubuntu</td><td>deb: <code>sudo apt remove trawler</code> · AppImage: delete the file and <code>~/.config/autostart/</code>'s Trawler entry</td><td><code>sudo rm /usr/local/share/ca-certificates/trawler-ca.crt &amp;&amp; sudo update-ca-certificates --fresh</code>; browsers: <code>certutil -D -n trawler</code> on the NSS db setup used</td><td><code>~/.local/share/dev.trawler.app</code>, <code>~/.config/dev.trawler.app</code></td></tr>
+      </tbody>
+    </table>
+    <p class="kd" data-c="uninstall-note">The app offers no “remove CA trust” action today; these steps are what the user guide (E-PRORELEASE W6) repeats.</p>
+
+    <h2 id="not-here">Not on the matrix</h2>
+    <table data-c="not-here">
+      <thead><tr><th>Check</th><th>Proven by</th></tr></thead>
+      <tbody>
+        <tr><td>Each installer builds, installs headless, captures and frees its ports</td><td><code>cargo xtask smoke</code> in every release row (DEC-86 rule 3)</td></tr>
+        <tr><td><code>latest.json</code> entries, signatures, <code>SHA256SUMS</code> digests</td><td><code>release-manifest</code> refusals and the release job's <code>sha256sum -c</code></td></tr>
+        <tr><td>Another device (phone, Simulator) setup</td><td>UC-ONBOARD's own tests; by hand only when a release changes it</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
