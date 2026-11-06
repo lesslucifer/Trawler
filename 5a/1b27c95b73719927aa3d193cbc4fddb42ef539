@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU inspect-form-parse -> epic/release-fixes"
+epic: E-RELFIX
+wu: E-RELFIX.W2
+branch: wu/release-fixes/inspect-form-parse
+base: 200005e742d49bf0c70a99e99f306f692947476a
+head: 5a1b27c95b73719927aa3d193cbc4fddb42ef539
+diff_sha256: bf8dbd14b1f66cd99fadc8acac4db5023930a92ac2ee0644e49ee61114c59530
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 5
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 5
+    nit: 6
+  stage_seconds:
+    gate0: 22
+    finders: 70
+    verifiers: 34
+    total: 185
+  by_finder:
+    correctness: { found: 5, verified: 1 }
+    efficiency: { found: 1, verified: 1 }
+    altitude: { found: 5, verified: 2 }
+findings: { found: 10, verified: 5, waived: 0 }
+waivers: []
+nits:
+  - finding: "text/rfc822-headers and text/uri-list are shared as string labels between the openers and labelKind, and a real response with either type reads as form"
+    waived: "deliberate: DEC-76 rule 1 makes typeHint a media type, and DEC-79 v2 maps both registered types to form; exported constants keep the producer and the dispatcher from drifting, and text that is no form shape says not a form"
+important:
+  - "FormRenderer runs formShape over the whole uncut body on every render, unmemoised"
+  - "FormRenderer holds the header cut inline instead of beside formPairCut in body.ts"
+  - "FormRenderer's header cut is 0 when the first line exceeds TEXT_MAX: the pane shows no rows"
+  - "editField writes a header key with ':' or whitespace unchecked, so the line reads back as another name"
+verdict: FAIL
+date: 2026-11-06
