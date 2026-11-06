@@ -8,9 +8,9 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-PRORELEASE.W11 result — public text design, round 1</h1>
-      <p>What the design WU produced, what it rests on, and what waits on the owner's review.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W11</span> · <code>wu/prorelease/public-text-design</code> → <code>epic/prorelease</code> · design <a href="2026-11-06-prorelease-w11-public-text-design.html">W11 public text design</a> · epic <a href="2026-11-06-prorelease-plan.html#w11">E-PRORELEASE</a></div>
+      <h1>E-PRORELEASE.W11 result — public text design, signed (round 2)</h1>
+      <p>What the design WU produced, the owner's rulings applied in round 2, and the sign-off.</p>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W11</span> · <code>wu/prorelease/public-text-design</code> → <code>epic/prorelease</code> · design <a href="2026-11-06-prorelease-w11-public-text-design.html">W11 public text design</a> · epic <a href="2026-11-06-prorelease-plan.html#w11">E-PRORELEASE</a></div>
     </div>
   </header>
   <main>
@@ -28,13 +28,15 @@
           <tr><td>Privacy statement draft, every claim verified in code</td><td><code>#facts</code>, <code>#privacy</code></td></tr>
           <tr><td>Community files outlines: CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, issue forms, PR template</td><td><code>#community</code></td></tr>
           <tr><td>Release notes / CHANGELOG voice + sample 0.1.0 entry</td><td><code>#notes-voice</code>, <code>#notes-sample</code></td></tr>
-          <tr><td>Owner questions with recommendations</td><td><code>#owner-questions</code> Q1–Q10; exit = "signed: W11" in <code>#sign-off</code></td></tr>
+          <tr><td>Owner questions with recommendations</td><td><code>#owner-questions</code> Q1–Q10, each with its ruling</td></tr>
+          <tr><td>Round 2: rulings applied (pitch A, CoC contact, best-effort SECURITY, root PRIVACY, no competitor names, Keep a Changelog groups, issues only at 0.1.0)</td><td><code>#how-to-review</code> lists each ruling and where it landed</td></tr>
+          <tr><td>Sign-off: "signed: W11 (owner rulings Q1-Q10, recorded 2026-11-06 in the terminal)"</td><td><code>#sign-off</code></td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="deviations">Deviations</h2>
-    <p data-item="deviations">None in scope. Additions the plan did not name: a <code>PRIVACY.md</code> root file (Q4, so Help → Privacy has one target) and hand-captured OS-prompt screenshots S8/S9 (Q8), since W5's e2e script cannot show OS dialogs. Docs-only WU: the test layer is waived ("design WU, no code; its build WUs W5, W12, W14 carry the tests").</p>
+    <p data-item="deviations">None in scope. Additions the plan did not name: a <code>PRIVACY.md</code> root file (Q4, so Help → Privacy has one target) and hand-captured OS-prompt screenshots S8/S9 (Q8), since W5's e2e script cannot show OS dialogs. Round 2: the owner ruled in the terminal rather than by doc comments; the sign-off records that. W7's existing <code>CHANGELOG.md</code> predates Q6 and is not edited here; W14 restyles it to Keep a Changelog. Docs-only WU: the test layer is waived ("design WU, no code; its build WUs W5, W12, W14 carry the tests").</p>
 
     <h2 id="evidence">Evidence</h2>
     <div data-item="evidence">
@@ -43,7 +45,7 @@
         <tbody>
           <tr><td>Privacy and limit claims are true of the tree</td><td>file:line per claim in the design doc's <code>#facts</code>: <code>src/ca.rs:66-78</code>, <code>ui/src-tauri/src/update.rs:12,144-157</code>, <code>ui/src/ownRequest.ts:12-29</code>, <code>src/config.rs:6-35,56</code>, <code>src/capture.rs:125</code>, <code>ui/src-tauri/src/setup.rs:1337-1340</code>, <code>tauri.conf.json:28-32</code></td></tr>
           <tr><td>Competitor openings quoted verbatim</td><td>fetched 2026-11-06 from the five linked pages and mitmproxy's security policy</td></tr>
-          <tr><td>Doc renders and is commentable</td><td>htmldoc id minted, baseline snapshot <code>2026-11-06T09-24-15-559Z</code> on the server; <code>cargo xtask verify-doc</code> run on both docs</td></tr>
+          <tr><td>Doc renders and is commentable</td><td>htmldoc id minted, baseline snapshot <code>2026-11-06T09-24-15-559Z</code>, round-2 snapshot <code>2026-11-06T10-30-09-709Z</code> on the server (<code>?diff=latest</code>); <code>cargo xtask verify-doc</code> run on both docs</td></tr>
           <tr><td>e2e / integration / unit</td><td>waived: no code changes</td></tr>
         </tbody>
       </table>
@@ -57,7 +59,7 @@
       <table data-c="follow-ups">
         <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
         <tbody>
-          <tr><td>Owner rulings Q1–Q10 and the "signed: W11" comment</td><td>owner, relayed by the router</td></tr>
+          <tr><td>Restyle W7's <code>CHANGELOG.md</code> to Keep a Changelog groups and <code>## [0.1.0] - date</code> (Q6)</td><td>W14</td></tr>
           <tr><td>Exact per-OS app-data paths on real installs (Linux <code>$XDG_DATA_HOME</code>, Windows Roaming)</td><td>W12</td></tr>
           <tr><td>UI labels the terms table must match ("Send again", "Settings → service", flow vs request)</td><td>W5 link/label check</td></tr>
           <tr><td>Windows minimum version for the install table</td><td>W5 (not stated anywhere in the tree)</td></tr>

@@ -9,20 +9,25 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-PRORELEASE.W11 — public text design</h1>
-      <p>One voice for every GitHub-facing text, the README's shape and pitch, the screenshot list, the community files and the release-notes voice. Proposals for the owner to review through comments; nothing here ships until signed.</p>
-      <div class="meta">Round 1 · 2026-11-06 · Trawler · T3 design · <span class="badge id">E-PRORELEASE.W11</span> · <code>wu/prorelease/public-text-design</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-plan.html#w11">E-PRORELEASE W11</a> · feeds W5 (README + community), W12 (guide), W14 (notes + CHANGELOG)</div>
+      <p>One voice for every GitHub-facing text, the README's shape and pitch, the screenshot list, the community files and the release-notes voice. Signed by the owner in round 2 (rulings Q1–Q10); W5, W12 and W14 build from it.</p>
+      <div class="meta">Round 2 · signed · 2026-11-06 · Trawler · T3 design · <span class="badge id">E-PRORELEASE.W11</span> · <code>wu/prorelease/public-text-design</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-plan.html#w11">E-PRORELEASE W11</a> · feeds W5 (README + community), W12 (guide), W14 (notes + CHANGELOG)</div>
     </div>
   </header>
   <main>
 
-    <h2 id="how-to-review">How to review</h2>
+    <h2 id="how-to-review">Round 2 — what changed</h2>
     <table data-c="how-to-review">
-      <tr><th>Step</th><th>You</th><th>Then</th></tr>
-      <tr><td>1</td><td>Pick a pitch in <a href="#pitch">Pitch</a> (comment "pick A/B/C" or rewrite it)</td><td>Round 2 rewrites the README mock with it</td></tr>
-      <tr><td>2</td><td>Answer <a href="#owner-questions">Owner questions</a> Q1–Q10 (comment "as proposed" or your ruling)</td><td>Rulings recorded in the table</td></tr>
-      <tr><td>3</td><td>Comment on any draft line: tone, facts, missing items</td><td>Each comment resolved with what changed; <code>?diff=latest</code> shows it</td></tr>
-      <tr><td>4</td><td>Comment <strong>"signed: W11"</strong> on <a href="#sign-off">Sign-off</a></td><td>W5, W12, W14 may start (plan waves 2 and 4)</td></tr>
+      <tr><th>Ruling</th><th>Applied in</th></tr>
+      <tr><td>Q1 pitch A</td><td><a href="#pitch">Pitch</a> (A chosen, B/C struck) · <a href="#readme-mock">mock</a> · <a href="#voice-examples">README line 1</a></td></tr>
+      <tr><td>Q2 Contributor Covenant 2.1, contact <code>quangvu.luu92@gmail.com</code></td><td><a href="#community">CODE_OF_CONDUCT.md</a></td></tr>
+      <tr><td>Q3 best-effort acknowledgement, no number</td><td><a href="#community">SECURITY.md</a></td></tr>
+      <tr><td>Q4 root <code>PRIVACY.md</code></td><td><a href="#privacy">Privacy</a></td></tr>
+      <tr><td>Q5 competitors never named</td><td><a href="#voice">Voice</a> rule · <a href="#faq">FAQ</a> line without names · <a href="#survey">survey</a> marked internal · <a href="#pitch">pitch</a> note</td></tr>
+      <tr><td>Q6 Keep a Changelog groups</td><td><a href="#notes-voice">Notes voice</a> + <a href="#notes-sample">sample</a>; Known limits stay in the README</td></tr>
+      <tr><td>Q7 three badges · Q8 S8/S9 by hand on the last rc · Q9 2 lines + link</td><td><a href="#readme-order">Section order</a> · <a href="#screenshots">Screenshots</a> (unchanged: already as ruled)</td></tr>
+      <tr><td>Q10 issues only at 0.1.0</td><td><a href="#community">CONTRIBUTING · PR template</a> · <a href="#faq">FAQ</a> · README row 11</td></tr>
     </table>
+    <div class="callout warn" data-c="w7-changelog">W7's <code>CHANGELOG.md</code> (a feature list under <code>## 0.1.0</code>) predates Q6. It is left as is here; W14 restyles it to Keep a Changelog groups and heading shape.</div>
 
     <h2 id="facts">Facts the text may claim (verified in code)</h2>
     <p>Every public claim below is backed by a line in the tree at <code>8b24b74e</code>. A sentence that cannot point here is not written.</p>
@@ -47,7 +52,7 @@
       <div class="card"><h4>To you</h4><p>Second person, present tense, active voice. No "we" in user text; Trawler is "Trawler" or "it".</p></div>
       <div class="card"><h4>Step, not theory</h4><p>Say what to click, exactly as the OS labels it, in <strong>bold</strong>. Why comes after, in one line, if at all.</p></div>
       <div class="card"><h4>Honest</h4><p>Limits are stated where they bite, not hidden. Never claim what the code can't show (see <a href="#facts">Facts</a>).</p></div>
-      <div class="card"><h4>Calm</h4><p>No hype: no "best-in-class", "blazing", "100×", emojis in prose, exclamation marks, user counts or awards.</p></div>
+      <div class="card"><h4>Calm</h4><p>No hype: no "best-in-class", "blazing", "100×", emojis in prose, exclamation marks, user counts or awards. No other tool is ever named (Q5).</p></div>
       <div class="card"><h4>No futures</h4><p>No "coming soon", dates or roadmap promises in public text. What ships is what's described.</p></div>
     </div>
 
@@ -66,7 +71,7 @@
     <h3 id="voice-examples">Before → after</h3>
     <table data-c="voice-examples">
       <tr><th>Where</th><th>Before (today)</th><th>After (proposed)</th><th>Rule</th></tr>
-      <tr><td>README line 1</td><td>A native HTTP(S) debugging proxy written in Rust — a lightweight, hackable take on Charles and Proxyman.</td><td>See every HTTP and HTTPS request your apps make, and read what's inside.</td><td>Plain · to you · no competitor in line 1</td></tr>
+      <tr><td>README line 1</td><td>A native HTTP(S) debugging proxy written in Rust — a lightweight, hackable take on Charles and Proxyman.</td><td>See every HTTP and HTTPS request your apps make.</td><td>Plain · to you · no competitor named (Q5)</td></tr>
       <tr><td>README feature</td><td><strong>Self-managed CA</strong> — generates and persists a local Certificate Authority on first run; downloadable at <code>/ca.crt</code>.</td><td>Trawler makes its own certificate the first time it runs. The setup screen walks you through trusting it.</td><td>Step, not theory · terms</td></tr>
       <tr><td>README feature</td><td><strong>Body capture</strong> — buffer-then-forward up to a 10 MB per-request cap, with a streaming (SSE) fast-path that is never buffered.</td><td>Live streams pass straight through. Bodies up to 10 MB are kept for you to read; a larger one still reaches the app, unread.</td><td>Plain · honest</td></tr>
       <tr><td>README warning</td><td>⚠️ <strong>For debugging your own traffic only.</strong> Intercepting TLS traffic requires installing a custom root CA. Only run this against devices and services you own or are authorized to inspect.</td><td>Use Trawler on your own devices, or on traffic you're allowed to inspect. Trusting its certificate lets Trawler read HTTPS on this machine; remove it when you're done.</td><td>Calm · step</td></tr>
@@ -75,6 +80,7 @@
     </table>
 
     <h2 id="survey">Competitor survey</h2>
+    <div class="callout warn" data-c="survey-internal"><strong>Internal research, never published (Q5).</strong> No name in this table may appear in any public text; only the borrowed patterns travel.</div>
     <p>Read-only, 2026-11-06. What their public text does above the fold and what Trawler takes or leaves.</p>
     <table data-c="survey">
       <tr><th>Tool</th><th>Opening line (verbatim)</th><th>Shape</th><th>Borrow</th><th>Leave</th></tr>
@@ -86,14 +92,14 @@
     </table>
     <div class="callout" data-c="survey-takeaway"><strong>Pattern across all five:</strong> a verb-led line saying what you do with your traffic → download with requirements → one big screenshot → features → FAQ. Trawler's differentiators to lead with, true today: free and open source (MIT) · native on all three desktops · local-only, no account, no telemetry · phones, simulators and emulators from one setup screen.</div>
 
-    <h2 id="pitch">Pitch — pick one</h2>
+    <h2 id="pitch">Pitch — A chosen (Q1)</h2>
     <table data-c="pitch">
       <tr><th></th><th>Tagline (H1 subtitle)</th><th>Second line</th><th>Leans on</th></tr>
-      <tr><td><strong>A</strong> (recommended)</td><td>See every HTTP and HTTPS request your apps make.</td><td>A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</td><td>Outcome first (the HTTP Toolkit/Charles pattern), privacy as the closer</td></tr>
-      <tr><td><strong>B</strong></td><td>A native HTTPS debugging proxy. Free, open source, local.</td><td>Capture, inspect and replay traffic from your machine, simulators and phones. No account, no telemetry.</td><td>Category first (the mitmproxy pattern); three adjectives as the differentiator</td></tr>
-      <tr><td><strong>C</strong></td><td>Capture. Inspect. Send again.</td><td>Trawler shows the HTTP and HTTPS traffic between your apps and the Internet — on macOS, Windows and Linux, free and open source.</td><td>Verb triplet (Fiddler/HTTP Toolkit); shortest, least specific</td></tr>
+      <tr><td><strong>A</strong> ✅ chosen</td><td>See every HTTP and HTTPS request your apps make.</td><td>A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</td><td>Outcome first, privacy as the closer</td></tr>
+      <tr><td><s>B</s></td><td>A native HTTPS debugging proxy. Free, open source, local.</td><td>Capture, inspect and replay traffic from your machine, simulators and phones. No account, no telemetry.</td><td>Category first; three adjectives as the differentiator</td></tr>
+      <tr><td><s>C</s></td><td>Capture. Inspect. Send again.</td><td>Trawler shows the HTTP and HTTPS traffic between your apps and the Internet — on macOS, Windows and Linux, free and open source.</td><td>Verb triplet; shortest, least specific</td></tr>
     </table>
-    <p>Not offered: naming Charles or Proxyman in the pitch (their names are trademarks and invite a feature comparison Trawler loses on breakpoints and rewrite rules). The repo description (Q11 in the plan) gets the same line as the chosen pitch.</p>
+    <p>No other tool is named in the pitch or anywhere public (Q5). The repo description (Q11 in the plan) is pitch A's first line.</p>
 
     <h3 id="readme-mock">Above the fold — mock (pitch A)</h3>
     <div data-c="readme-mock" style="border:1px solid var(--line);border-radius:6px;padding:16px 20px;background:var(--paper);max-width:860px">
@@ -134,7 +140,7 @@
       <tr><td>8</td><td>Known limits</td><td>The <a href="#known-limits">short table</a></td><td>GUIDE → Troubleshooting</td></tr>
       <tr><td>9</td><td>FAQ</td><td><a href="#faq">FAQ</a>, each a collapsed <code>&lt;details&gt;</code></td><td>—</td></tr>
       <tr><td>10</td><td>Scripting</td><td>2 lines + one <code>curl</code>: the local API on <code>127.0.0.1:7421</code>; the headless core (<code>cargo run -p trawler</code>)</td><td>CONTRIBUTING → API</td></tr>
-      <tr><td>11</td><td>Contributing · Security · Licence</td><td>One line each, linking the file; "MIT © 2026 Vu Luu"</td><td>the three files</td></tr>
+      <tr><td>11</td><td>Contributing · Security · Licence</td><td>One line each, linking the file; contributing = "bug reports and ideas welcome as issues" (Q10); "MIT © 2026 Vu Luu"</td><td>the three files</td></tr>
     </table>
 
     <h3 id="fact-owners">Which fact lives where</h3>
@@ -187,8 +193,9 @@
       <tr><td>Why don't I see an app's traffic?</td><td>The app ignores the system proxy, pins its own certificates, or uses HTTP/3. See Known limits.</td></tr>
       <tr><td>Can I capture my phone, a simulator or an emulator?</td><td>Yes: iPhone, Android, the iOS Simulator and the Android emulator, from the setup screen.</td></tr>
       <tr><td>How do updates work?</td><td>Trawler checks GitHub when it starts (at most once a day) and when you choose Check for Updates…. It asks before installing, and only installs a release signed by the project.</td></tr>
-      <tr><td>How is it different from Charles, Proxyman, mitmproxy or HTTP Toolkit?</td><td>Trawler is native on all three desktops, open source and local-only. It doesn't have breakpoints, rewrite rules or scripting yet.</td></tr>
+      <tr><td>What can't it do?</td><td>Trawler has no breakpoints, rewrite rules or scripting language. It is native on macOS, Windows and Linux, open source and local-only.</td></tr>
       <tr><td>Can I script it?</td><td>Yes: a local HTTP API on <code>127.0.0.1:7421</code> lists, streams, exports and replays requests (CONTRIBUTING → API).</td></tr>
+      <tr><td>Can I send a pull request?</td><td>Not yet. Bug reports and ideas are welcome as issues; see CONTRIBUTING.</td></tr>
       <tr><td>How do I remove it completely?</td><td>Remove the app, the certificate's trust and the app data folder (GUIDE → Uninstall).</td></tr>
     </table>
 
@@ -207,7 +214,7 @@
       <tr><td><code>.rpm</code> is built for final releases only.</td><td>DEC-86 rule 7</td></tr>
     </table>
 
-    <h2 id="privacy">Privacy statement — draft (PRIVACY.md)</h2>
+    <h2 id="privacy">Privacy statement — <code>PRIVACY.md</code> at the root (Q4)</h2>
     <div data-c="privacy-draft" style="border:1px solid var(--line);border-radius:6px;padding:12px 20px;background:var(--paper)">
       <p><strong>Trawler keeps your traffic on your machine.</strong> It has no account, no analytics, no crash reporting and no telemetry.</p>
       <table>
@@ -226,31 +233,31 @@
     <h2 id="community">Community files — outlines</h2>
     <table data-c="community">
       <tr><th>File</th><th>Sections</th></tr>
-      <tr><td><code>CONTRIBUTING.md</code></td><td>Welcome + what helps most (bug reports with version/OS, docs fixes) · open an issue before a feature · build from source (Rust stable, Node + pnpm, <code>cargo xtask hooks install</code>, <code>cargo run</code>, <code>cargo test</code>) · project layout (moved from today's README) · control API table (moved) · tests required with every change (link <code>docs/testing-strategy.html</code>) · lints: clippy pedantic, no <code>unsafe</code> · contributions are MIT, no CLA · how a PR lands: the maintainer takes it through the project's gates (link <code>docs/workflow.html</code>)</td></tr>
-      <tr><td><code>SECURITY.md</code></td><td>Supported: the latest release only · report privately via GitHub "Report a vulnerability" (private vulnerability reporting, plan Q11), never a public issue · include version, OS, install type, steps · in scope: certificate key handling, the local API or proxy answering beyond this machine without an allow, the updater accepting an unsigned or downgraded release, data leaving the machine · out of scope: slowing or crashing the local proxy with local traffic (an ordinary bug, as mitmproxy does), the documented risk of a trusted certificate · acknowledgment target (Q3) · the certificate-key note from PRIVACY</td></tr>
-      <tr><td><code>CODE_OF_CONDUCT.md</code></td><td>Contributor Covenant 2.1, verbatim, with the enforcement contact (Q2)</td></tr>
+      <tr><td><code>CONTRIBUTING.md</code></td><td>Welcome · <strong>at 0.1.0 Trawler takes issues, not pull requests</strong> (Q10): "Bug reports and ideas are very welcome as issues. Pull requests aren't open yet; this may change in a later release." · what helps most in a report (version, OS, install type, steps) · build from source (Rust stable, Node + pnpm, <code>cargo xtask hooks install</code>, <code>cargo run</code>, <code>cargo test</code>) · project layout (moved from today's README) · control API table (moved) · tests required with every change (link <code>docs/testing-strategy.html</code>) · lints: clippy pedantic, no <code>unsafe</code> · how changes land: the maintainer takes each through the project's gates (link <code>docs/workflow.html</code>)</td></tr>
+      <tr><td><code>SECURITY.md</code></td><td>Supported: the latest release only · report privately via GitHub "Report a vulnerability" (private vulnerability reporting, plan Q11), never a public issue · include version, OS, install type, steps · in scope: certificate key handling, the local API or proxy answering beyond this machine without an allow, the updater accepting an unsigned or downgraded release, data leaving the machine · out of scope: slowing or crashing the local proxy with local traffic (an ordinary bug), the documented risk of a trusted certificate · acknowledgement: "reports are answered on a best-effort basis by one maintainer" — no number promised (Q3) · the certificate-key note from PRIVACY</td></tr>
+      <tr><td><code>CODE_OF_CONDUCT.md</code></td><td>Contributor Covenant 2.1, verbatim; enforcement contact <code>quangvu.luu92@gmail.com</code> (public in the file, Q2)</td></tr>
       <tr><td><code>.github/ISSUE_TEMPLATE/bug_report.yml</code></td><td>Issue form: Trawler version (required; Settings or About) · OS + version (required) · install type dropdown (dmg · setup.exe · msi · AppImage · deb · rpm · from source) · what you did · what you expected · what happened · does <code>curl -x http://127.0.0.1:7420 https://example.com</code> show up? · service log (Settings → service) · reminder: remove tokens and cookies</td></tr>
       <tr><td><code>.github/ISSUE_TEMPLATE/feature_request.yml</code></td><td>The problem you hit · what you'd like · how you do it today (another tool, a workaround)</td></tr>
       <tr><td><code>.github/ISSUE_TEMPLATE/config.yml</code></td><td>Blank issues off · contact links: Report a vulnerability (security advisory) · Questions (Discussions, plan Q11)</td></tr>
-      <tr><td><code>.github/pull_request_template.md</code></td><td>What and why · linked issue · how you tested (which tests) · checklist: tests added, <code>cargo test</code>, <code>cargo clippy</code> green</td></tr>
+      <tr><td><code>.github/pull_request_template.md</code></td><td>Opens with: "Trawler doesn't take outside pull requests yet — please open an issue instead." (Q10) · then, for the maintainer's own PRs: what and why · linked issue · how tested · checklist: tests added, <code>cargo test</code>, <code>cargo clippy</code> green</td></tr>
     </table>
 
     <h2 id="notes-voice">Release notes and CHANGELOG voice</h2>
     <table data-c="notes-rules">
       <tr><th>Rule</th><th>Why</th></tr>
-      <tr><td><code>CHANGELOG.md</code> in Keep a Changelog 1.1 shape, newest first, <code>## 0.1.0 — 2026-MM-DD</code></td><td>One familiar format; W7's renderer reads the section by version</td></tr>
-      <tr><td>Groups in user words: <strong>New</strong> · <strong>Improved</strong> · <strong>Fixed</strong> · <strong>Known limits</strong> (Q6)</td><td>Readers scan by what matters to them</td></tr>
+      <tr><td><code>CHANGELOG.md</code> in Keep a Changelog 1.1 shape, newest first, <code>## [0.1.0] - 2026-MM-DD</code></td><td>One familiar format; W7's renderer reads the section by version</td></tr>
+      <tr><td>Keep a Changelog groups, only those with entries: <strong>Added</strong> · <strong>Changed</strong> · <strong>Fixed</strong> · <strong>Removed</strong> · <strong>Security</strong> (Q6). Known limits are not a group: they live in the README's Known limits section</td><td>The standard readers and tools already know</td></tr>
       <tr><td>Each line starts with what the user can now do or no longer hits; one line each</td><td>Voice: to you, step not theory</td></tr>
       <tr><td>No internal ids (DEC, UC, WU, epic), no file names, no PR numbers in text</td><td>The reader is a user, not a maintainer</td></tr>
       <tr><td>Release notes = the version's CHANGELOG section + install + "Check your download" (W7 mechanism, W14 copy)</td><td>One fact, one place</td></tr>
       <tr><td>Release candidates get a one-line header: "Release candidate — for testing; the final follows."</td><td>Honest about what an rc is</td></tr>
     </table>
     <h3 id="notes-sample">Sample entry</h3>
-    <pre data-c="notes-sample">## 0.1.0 — 2026-MM-DD
+    <pre data-c="notes-sample">## [0.1.0] - 2026-MM-DD
 
 The first public release.
 
-### New
+### Added
 - Capture HTTP and HTTPS from this machine, an iPhone or Android phone,
   the iOS Simulator and the Android emulator, set up from one screen.
 - Filter the list with chips such as `status:4xx` or `-method:OPTIONS`.
@@ -259,38 +266,31 @@ The first public release.
 - Send a request again, edited, or write one from scratch.
 - Export what you captured to HAR, and open a HAR file.
 - Keep capturing with the window closed, from the menu-bar or tray icon.
-- Update from inside the app. Every update is signed.
+- Update from inside the app. Every update is signed.</pre>
+    <p>The release notes add, after this section, the install table and "Check your download" (<code>shasum -a 256 -c SHA256SUMS --ignore-missing</code> · <code>Get-FileHash .\&lt;file&gt; -Algorithm SHA256</code>); W7 renders, W14 writes the copy.</p>
 
-### Known limits
-- HTTP/3 traffic isn't captured.
-- On Windows and Linux, remove Trawler's certificate by hand (see the guide).
-
-### Check your download
-macOS / Linux:  shasum -a 256 -c SHA256SUMS --ignore-missing
-Windows:        Get-FileHash .\&lt;file&gt; -Algorithm SHA256  (compare with SHA256SUMS)</pre>
-
-    <h2 id="owner-questions">Owner questions</h2>
+    <h2 id="owner-questions">Owner questions — ruled</h2>
     <table data-c="owner-questions">
       <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th><th>Ruling</th></tr>
-      <tr><td>Q1</td><td>Pitch</td><td>A · B · C (<a href="#pitch">Pitch</a>) · your own</td><td><strong>A</strong></td><td>⏳</td></tr>
-      <tr><td>Q2</td><td>Code of conduct</td><td>Contributor Covenant 2.1 · a short custom one · none</td><td>Contributor Covenant 2.1; contact = an email you choose (needed in the file)</td><td>⏳</td></tr>
-      <tr><td>Q3</td><td>SECURITY acknowledgment target</td><td>48 h (mitmproxy) · 7 days · no number</td><td>"within 7 days" — honest for one maintainer</td><td>⏳</td></tr>
-      <tr><td>Q4</td><td>Privacy statement home</td><td><code>PRIVACY.md</code> at the root · a GUIDE section</td><td><code>PRIVACY.md</code>: a stable target for Help → Privacy and the README link</td><td>⏳</td></tr>
-      <tr><td>Q5</td><td>Name competitors anywhere?</td><td>FAQ line only · a comparison table · never</td><td>FAQ line only (honest, no feature claims about them)</td><td>⏳</td></tr>
-      <tr><td>Q6</td><td>CHANGELOG groups</td><td>New/Improved/Fixed/Known limits · Keep a Changelog's Added/Changed/Deprecated/Removed/Fixed/Security</td><td>New/Improved/Fixed/Known limits (+ Security when needed)</td><td>⏳</td></tr>
-      <tr><td>Q7</td><td>README badges</td><td>3 (release, licence, platforms) · CI too · none</td><td>3; CI status is for contributors</td><td>⏳</td></tr>
-      <tr><td>Q8</td><td>OS prompt screenshots (S8, S9)</td><td>hand-captured once, committed · skipped (text only)</td><td>Hand-captured once on the last rc; CI cannot show OS dialogs</td><td>⏳</td></tr>
-      <tr><td>Q9</td><td>Scripting section in the README</td><td>2 lines + link · full API table (today) · none</td><td>2 lines + link; the table moves to CONTRIBUTING</td><td>⏳</td></tr>
-      <tr><td>Q10</td><td>Outside pull requests at 0.1.0</td><td>welcome, issue first for features · issues only</td><td>Welcome, issue first for features</td><td>⏳</td></tr>
+      <tr><td>Q1</td><td>Pitch</td><td>A · B · C (<a href="#pitch">Pitch</a>) · your own</td><td><strong>A</strong></td><td>✅ <strong>A</strong></td></tr>
+      <tr><td>Q2</td><td>Code of conduct</td><td>Contributor Covenant 2.1 · a short custom one · none</td><td>Contributor Covenant 2.1; contact = an email you choose (needed in the file)</td><td>✅ Contributor Covenant 2.1; contact <code>quangvu.luu92@gmail.com</code>, public in the file</td></tr>
+      <tr><td>Q3</td><td>SECURITY acknowledgment target</td><td>48 h (mitmproxy) · 7 days · no number</td><td>"within 7 days" — honest for one maintainer</td><td>✅ Best effort, <strong>no number</strong> promised</td></tr>
+      <tr><td>Q4</td><td>Privacy statement home</td><td><code>PRIVACY.md</code> at the root · a GUIDE section</td><td><code>PRIVACY.md</code>: a stable target for Help → Privacy and the README link</td><td>✅ <code>PRIVACY.md</code> at the root</td></tr>
+      <tr><td>Q5</td><td>Name competitors anywhere?</td><td>FAQ line only · a comparison table · never</td><td>FAQ line only (honest, no feature claims about them)</td><td>✅ <strong>Never</strong>: no name in any public text; FAQ keeps the facts without names; the survey stays internal</td></tr>
+      <tr><td>Q6</td><td>CHANGELOG groups</td><td>New/Improved/Fixed/Known limits · Keep a Changelog's Added/Changed/Deprecated/Removed/Fixed/Security</td><td>New/Improved/Fixed/Known limits (+ Security when needed)</td><td>✅ Keep a Changelog: Added / Changed / Fixed / Removed / Security; Known limits stay a README section</td></tr>
+      <tr><td>Q7</td><td>README badges</td><td>3 (release, licence, platforms) · CI too · none</td><td>3; CI status is for contributors</td><td>✅ 3 (release, licence, platforms)</td></tr>
+      <tr><td>Q8</td><td>OS prompt screenshots (S8, S9)</td><td>hand-captured once, committed · skipped (text only)</td><td>Hand-captured once on the last rc; CI cannot show OS dialogs</td><td>✅ Hand-captured once on the last rc</td></tr>
+      <tr><td>Q9</td><td>Scripting section in the README</td><td>2 lines + link · full API table (today) · none</td><td>2 lines + link; the table moves to CONTRIBUTING</td><td>✅ 2 lines + link; the API table moves to CONTRIBUTING</td></tr>
+      <tr><td>Q10</td><td>Outside pull requests at 0.1.0</td><td>welcome, issue first for features · issues only</td><td>Welcome, issue first for features</td><td>✅ <strong>Issues only</strong> at 0.1.0; CONTRIBUTING says so politely; PRs may open later</td></tr>
     </table>
 
     <h2 id="sign-off">Sign-off</h2>
     <table data-c="sign-off">
       <tr><th>Round</th><th>Shown</th><th>Owner returns</th><th>State</th></tr>
-      <tr><td>R1</td><td>this doc</td><td>Q1–Q10, comments</td><td>⏳ waiting</td></tr>
-      <tr><td>R2</td><td>rulings applied; README mock in the chosen pitch</td><td>"signed: W11" or more comments</td><td>—</td></tr>
+      <tr><td>R1</td><td>this doc</td><td>Q1–Q10, comments</td><td>✅ answered</td></tr>
+      <tr><td>R2</td><td>rulings applied; README mock in pitch A</td><td>sign-off</td><td>✅ signed</td></tr>
     </table>
-    <p>Exit: the comment <strong>"signed: W11"</strong> here. A change after sign-off is a new round in this doc, not a reopened build.</p>
+    <div class="callout" data-c="signed"><strong>signed: W11</strong> (owner rulings Q1–Q10, recorded 2026-11-06 in the terminal). A change after sign-off is a new round in this doc, not a reopened build.</div>
 
   </main>
   <script type="module">
