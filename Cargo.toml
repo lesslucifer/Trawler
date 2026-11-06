@@ -3,7 +3,7 @@ members = ["xtask", "ui/src-tauri", "login-service"]
 default-members = [".", "ui/src-tauri"]
 
 [workspace.package]
-version = "0.1.0-2"
+version = "0.1.0-3"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

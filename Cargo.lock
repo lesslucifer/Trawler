@@ -5592,7 +5592,7 @@ dependencies = [
 
 [[package]]
 name = "trawler"
-version = "0.1.0-2"
+version = "0.1.0-3"
 dependencies = [
  "axum",
  "axum-server",
@@ -5629,7 +5629,7 @@ dependencies = [
 
 [[package]]
 name = "trawler-login-service"
-version = "0.1.0-2"
+version = "0.1.0-3"
 dependencies = [
  "objc2",
  "objc2-foundation",
@@ -5638,7 +5638,7 @@ dependencies = [
 
 [[package]]
 name = "trawler-ui"
-version = "0.1.0-2"
+version = "0.1.0-3"
 dependencies = [
  "base64 0.22.1",
  "flate2",
@@ -6645,7 +6645,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0-2"
+version = "0.1.0-3"
 dependencies = [
  "quick-xml 0.37.5",
  "serde",
