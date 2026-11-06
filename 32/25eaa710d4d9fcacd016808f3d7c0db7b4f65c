@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU readme-community -> epic/prorelease (tip D: the owner's signed CLAUDE.md mr commit, fresh pass)"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: wu/prorelease/readme-community
+base: 1bf8162c5838f66fd097d138bdfbfe4cc268c155
+head: 3225eaa710d4d9fcacd016808f3d7c0db7b4f65c
+diff_sha256: ed47fcbec047906070c5c26a187e5ce3ddf23c31019a9083b87e34219f9f2868
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 4
+  stage_seconds:
+    total: 80
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "cargo xtask ui screenshots deletes the committed shots before launch, so an aborted run leaves them deleted"
+    waived: "deliberate (the run is green only on shots it took itself); git restores the tracked PNGs; the run fails loudly"
+  - finding: "a harness that exits before printing its ports stalls the screenshots run until the 120s timeout"
+    waived: "the run still fails, with the timeout; same shape as the walkthrough and e2e confs"
+  - finding: "public_text.rs is test-support logic in the xtask library and reaches into package.rs, privacy.ts and links.rs"
+    waived: "cfg(test) checks that pin published text to the source that backs it (DEC-91); the reach is the point"
+  - finding: "pnpm and required are borrowed from walkthrough.rs by screenshots.rs instead of a neutral helper module"
+    waived: "two callers of pub(crate) helpers; a move buys nothing until a third"
+verdict: PASS
+date: 2026-11-06
