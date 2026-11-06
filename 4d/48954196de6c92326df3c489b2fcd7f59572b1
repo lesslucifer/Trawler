@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 4d48954196de6c92326df3c489b2fcd7f59572b1
+base: 1da1cf4170031de57b9d2ba5f6ef8e21f70366ef
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-06-router-skills-epic-result.html
+report_sha256: a1941398559f5838bb7978b1b857a7f07e34c4f5ecedc19c2c1cf3d2c1411cf2
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAWW9c3YnxUVda6MDVNsPSZs84V+Dnz0qWxJAcL4fMqik78NnuS2tX+sL
+  Z4Cn/s1EUqxRvRIxhddy0nyg8NRKII
+  -----END SSH SIGNATURE-----
