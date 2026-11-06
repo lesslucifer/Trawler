@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+branch: 1a6c01b9
+tests:
+  unit: { count: 20, covers: "closes_its_pipe_early's own assertions: a pipe into grep -q or head is caught, a sed reader and an || are not; no_pipe_feeds_a_reader_that_stops_early_under_pipefail and every_build_proves_its_rustc_host_is_the_row_s_architecture were red on the old grep -qx step (exit 141 reproduced locally under bash -eo pipefail) and are green on the sed capture + [ ] comparison" }
+  integration: { count: 20, covers: "the release workflow's contract: every run: line in every job is free of early-exiting pipe readers, and the host check captures, compares against matrix.host and exits 1 before the compile; the tree-wide one-version tests hold 0.1.0-2" }
+  e2e: { waived: "the release's e2e is the owner's v0.1.0-2 tag run on GitHub runners; the tray.rs change only moves macOS-only imports into the macOS-only test" }
