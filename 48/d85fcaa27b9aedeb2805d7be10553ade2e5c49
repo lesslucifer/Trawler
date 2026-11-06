@@ -1,0 +1,8 @@
+schema: dod/v1
+level: epic
+epic: E-RC4
+base: 060399c5df0d40ce710ebd6355846c43689cf5f5
+tip: 48d85fcaa27b9aedeb2805d7be10553ade2e5c49
+diff_sha256: 4cc790977f084604dbe66db57fbb9b14cde885f4aef5762acf0fe66a8abe6343
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, components-unbuilt, manual-review, walk]
+date: 2026-11-06
