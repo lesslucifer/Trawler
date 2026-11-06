@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9d8c9f34851f0dfaec36" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W15 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W15 result — router watches, 10-minute heartbeat</h1>
+      <p>What the router skills now say about watching owner actions and checking up on a schedule, and how the commands were proven.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W15</span> · <code>wu/prorelease/router-watch</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w15-router-watch-plan.html">W15 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>File</th><th>Lines before → after</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>router-agent/SKILL.md</code></td><td>66 → 70</td><td>"Watch, never wait to be told" (replaces the old one-clause watcher line); heartbeat bullet; heartbeat in session start; owner queue: one current task in full, <code>Up next</code> one line each, next task sent when its watcher fires, mid-task findings absorbed unless urgent</td></tr>
+          <tr><td><code>router-agent/references/messages.md</code></td><td>39 → 39</td><td>sign-off ask ends with <code>Watching</code> + <code>Up next</code>; status board names one current task</td></tr>
+          <tr><td><code>router-agent/references/worker-ops.md</code></td><td>39 → 46</td><td>watch table (sign, commit, merge, push, tag, draft, comments → probe); heartbeat cron + self-contained prompt; spawn confirmed <code>RUNNING</code>/<code>DEAD</code> before announcing; claude path guidance</td></tr>
+          <tr><td><code>router-agent/references/lessons.md</code></td><td>75 → 78</td><td>C10 owner had to say "done"; C11 announced worker never started; A13 several tasks in one message; top-10 rules 2 and 5 updated</td></tr>
+          <tr><td><code>trawler-router/SKILL.md</code></td><td>67 → 68</td><td>absolute claude path; owner queue grouping (WU confirm + merge = one task; epic close one task; a tag its own) with watcher + heartbeat; stale facts: <code>fail-fast: false</code> is on main, pre-release notes drop rpm (E-RC4), v0.1.0-4 from main is the latest rc</td></tr>
+          <tr><td><code>trawler-router/references/commands.md</code></td><td>40 → 51</td><td>watch commands with real refs (<code>mr</code> note, commit, merge, push, tag, draft, htmldoc open comments); heartbeat Trawler probes</td></tr>
+          <tr><td><code>trawler-router/references/failure-modes.md</code></td><td>31 → 34</td><td>rows 28–30: missed owner action, worker never started, dead/stalled worker</td></tr>
+          <tr><td>Both folders</td><td>435 → 464</td><td>+29, under the ~40 budget</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">Added mid-WU at the owner's request (via the router): the one-task-at-a-time owner queue. A stalled worker is pinged before it is relaunched (a live worker may hold uncommitted work); a dead one is relaunched at once.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Templates parse</td><td><code>zsh -n</code> on both files' <code>sh</code> blocks (placeholders substituted): green, except one pre-existing nested placeholder line in the tag template</td></tr>
+          <tr><td>Probes run on this repo</td><td>mr note on an unsigned tip → rc 1; <code>merge-base --is-ancestor</code> → 0; push probe equal on main; tag probe finds <code>v0.1.0-4</code>; draft probe <code>isDraft=true</code>; htmldoc open-comment count → 0; worker <code>ps</code> list shows names + <code>--model</code>; spawn check reports <code>DEAD</code> for a missing name</td></tr>
+          <tr><td>Push/draft probes need a repo cwd</td><td>first run failed outside a checkout ("origin does not appear to be a git repository"); fixed with <code>git -C $M/Trawler</code> and <code>cd $M/Trawler &amp;&amp;</code></td></tr>
+          <tr><td>Cron semantics</td><td>CronCreate: session-only, fires only while idle, recurring jobs expire after 7 days</td></tr>
+          <tr><td>Tests</td><td>waived: skill files only, no code path</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">None: skills are infrastructure (T0-adjacent, not tiered docs); no T1/T2 rule changes.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Where it closes</th></tr></thead>
+        <tbody>
+          <tr><td>The epic plan does not list W15</td><td>the epic plan's next revision</td></tr>
+          <tr><td>The v0.1.0-4 draft reports <code>isPrerelease=false</code></td><td>router check before the owner publishes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

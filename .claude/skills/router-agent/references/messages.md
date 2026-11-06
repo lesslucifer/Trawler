@@ -10,8 +10,8 @@
 **Run in order:**
 1. cd <abs> && <sign command>
 2. cd <abs> && <merge command>
-**Next:** <what follows>
-**What you need to do now:** 1. ...
+**Watching:** <probe that detects done> · **Up next:** <one line per queued task>
+**What you need to do now:** <this one task>
 ```
 
 **Decision ask**
@@ -22,7 +22,7 @@
 **What you need to do now:** 1. Reply A or B.
 ```
 
-**Status board**: `| Worker | Doing | You'll get |` · **Waiting on you:** … · **Running without you:** … · closing line (promise a push only after arming the watcher).
+**Status board**: `| Worker | Doing | You'll get |` · **Your current task:** one, in full · **Up next:** one line each · **Running without you:** … · closing line (promise a push only after arming the watcher).
 
 **Push**: `✍️ Sign-off ready: <item>` / `📄 Doc only | 🧪 Try in app` / one line what / `cd <abs> && <command>` / `Then: <next>`. Plain text, ≤ ~10 lines, same turn as the terminal message, report the id.
 
