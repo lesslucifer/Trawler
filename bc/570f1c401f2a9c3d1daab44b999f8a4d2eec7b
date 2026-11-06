@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W1
+branch: HEAD
+tests:
+  unit: { count: 31, covers: "metadata_drift_of names each crate off MIT, publishable, without Vu Luu as author or without the homepage; a package.json off MIT; each missing or wrong bundle field and a set licenseFile; an absent or non-MIT LICENSE; the tree has none (red before the metadata landed)" }
+  integration: { count: 3, covers: "the packaged macOS Trawler.app's Info.plist carries NSHumanReadableCopyright = Copyright © 2026 Vu Luu, and the .dmg still mounts without a licence-agreement prompt" }
+  e2e: { waived: "no user journey changes; the metadata is proven in the packaged bundle by the integration test, and the Windows/Linux installers' fields are the next rc's hand checks (W7 matrix)" }
