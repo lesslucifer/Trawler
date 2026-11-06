@@ -514,11 +514,13 @@
       <tr><td>a newer version</td><td>a native dialog names both versions and says the captured list is cleared; <em>Install</em> verifies the signature (which must name that version), then quits as ⌘Q does: the window opens if none is, DEC-64's check runs, the core stops, the app is replaced and relaunches with the same arguments. The CA, settings and login item stay</td></tr>
       <tr><td>a newer version, quit cancelled</td><td>the update is dropped; the next check offers it again</td></tr>
       <tr><td>nothing newer</td><td>silent at launch; asked: “Trawler &lt;version&gt; is up to date.”</td></tr>
-      <tr><td>an unreachable channel or a bad signature</td><td>nothing changes; the user is told why only when they asked, or when an install they chose failed</td></tr>
+      <tr><td>an unreachable channel or a bad signature</td><td>nothing changes, the once-a-day clock included, so the next launch checks again; the user is told why only when they asked, or when an install they chose failed</td></tr>
+      <tr><td>an http manifest, download or redirect</td><td>refused before anything is sent: the updater speaks https only</td></tr>
       <tr><td>a deb or rpm install</td><td>updates in place through the desktop's password prompt (<code>pkexec</code>)</td></tr>
     </table>
     <p class="kd" data-c="uc-update-proof">Proven by <code>ui/src-tauri/tests/suite/updater.rs</code> against a loopback channel with keys made in the
-      test (no update, an update installed with the CA's bytes unchanged, a forged signature, a signature for another version) and by
+      test (no update, an update installed with the CA's bytes unchanged, a forged signature, a signature for another version, an http
+      channel, download or redirect refused) and by
       <code>update.rs</code>'s unit tests. A real update from one published rc to the next is a hand check on each OS, owed on the
       <a href="../backlog/roadmap.html">roadmap</a>.</p>
 

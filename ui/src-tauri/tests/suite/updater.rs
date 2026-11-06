@@ -1,6 +1,8 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpListener};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
 
 use base64::Engine;
 use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
@@ -98,28 +100,78 @@ fn channel(version: &str, signature: &str, archive: Vec<u8>) -> SocketAddr {
     .into_bytes();
     std::thread::spawn(move || {
         for stream in listener.incoming() {
-            let mut stream = stream.unwrap();
-            let mut request = BufReader::new(stream.try_clone().unwrap());
-            let mut first = String::new();
-            request.read_line(&mut first).unwrap();
-            let mut line = String::new();
-            while request.read_line(&mut line).is_ok_and(|n| n > 2) {
-                line.clear();
-            }
-            let path = first.split(' ').nth(1).unwrap_or_default();
-            let body = match path {
-                MANIFEST_PATH => manifest.as_slice(),
-                ARCHIVE_PATH => archive.as_slice(),
-                _ => &[],
-            };
-            let head = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                body.len()
-            );
-            let _ = stream.write_all(head.as_bytes()).and_then(|()| stream.write_all(body));
+            answer(stream.unwrap(), |path| match path {
+                MANIFEST_PATH => ok(&manifest),
+                ARCHIVE_PATH => ok(&archive),
+                _ => ok(&[]),
+            });
         }
     });
     origin
+}
+
+fn answer(mut stream: impl Read + Write, respond: impl FnOnce(&str) -> Vec<u8>) {
+    let mut request = BufReader::new(&mut stream);
+    let mut first = String::new();
+    if request.read_line(&mut first).is_err() {
+        return;
+    }
+    let mut line = String::new();
+    while request.read_line(&mut line).is_ok_and(|n| n > 2) {
+        line.clear();
+    }
+    let reply = respond(first.split(' ').nth(1).unwrap_or_default());
+    let _ = stream.write_all(&reply).and_then(|()| stream.flush());
+}
+
+fn ok(body: &[u8]) -> Vec<u8> {
+    let head =
+        format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+    [head.as_bytes(), body].concat()
+}
+
+fn redirect(to: &str) -> Vec<u8> {
+    format!(
+        "HTTP/1.1 302 Found\r\nLocation: {to}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    )
+    .into_bytes()
+}
+
+/// A loopback https origin answering every request with `respond`.
+fn https_channel(respond: impl Fn(&str) -> Vec<u8> + Send + 'static) -> SocketAddr {
+    let (_, config) = trawler::test_support::tls_origin(&["http/1.1"]);
+    let config = Arc::new(config);
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let origin = listener.local_addr().unwrap();
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let tls = rustls::ServerConnection::new(Arc::clone(&config)).unwrap();
+            let mut stream = rustls::StreamOwned::new(tls, stream.unwrap());
+            answer(&mut stream, &respond);
+            stream.conn.send_close_notify();
+            let _ = stream.flush();
+        }
+    });
+    origin
+}
+
+/// A plain http origin that must never be reached; the kernel completes a
+/// connection into its backlog even though nothing accepts it.
+struct Untouched(TcpListener);
+
+impl Untouched {
+    fn new() -> Self {
+        Self(TcpListener::bind("127.0.0.1:0").unwrap())
+    }
+
+    fn url(&self, path: &str) -> String {
+        format!("http://{}{path}", self.0.local_addr().unwrap())
+    }
+
+    fn was_contacted(&self) -> bool {
+        self.0.set_nonblocking(true).unwrap();
+        self.0.accept().is_ok()
+    }
 }
 
 fn app() -> App<MockRuntime> {
@@ -127,17 +179,49 @@ fn app() -> App<MockRuntime> {
 }
 
 fn app_with(adjust: impl FnOnce(&mut tauri::Context<MockRuntime>)) -> App<MockRuntime> {
-    let mut context = mock_context(noop_assets());
-    adjust(&mut context);
-    context.config_mut().plugins.0.insert(
-        "updater".into(),
+    app_configured(
         serde_json::json!({
             "pubkey": "",
             "dangerousInsecureTransportProtocol": true,
             "requireSignedVersion": true
         }),
-    );
+        adjust,
+    )
+}
+
+fn app_configured(
+    updater: serde_json::Value,
+    adjust: impl FnOnce(&mut tauri::Context<MockRuntime>),
+) -> App<MockRuntime> {
+    let mut context = mock_context(noop_assets());
+    adjust(&mut context);
+    context.config_mut().plugins.0.insert("updater".into(), updater);
     mock_builder().plugin(tauri_plugin_updater::Builder::new().build()).build(context).unwrap()
+}
+
+/// As shipped (no insecure transport allowed), trusting the loopback origin's
+/// test certificate.
+fn shipped_transport_app() -> App<MockRuntime> {
+    app_configured(
+        serde_json::json!({
+            "pubkey": "",
+            "dangerousAcceptInvalidCerts": true,
+            "requireSignedVersion": true
+        }),
+        |_| {},
+    )
+}
+
+fn shipped_updater(app: &App<MockRuntime>, key: &Key, endpoint: &str, at: &Path) -> Updater {
+    update::https_only(app.updater_builder())
+        .pubkey(key.public())
+        .target(TARGET)
+        .executable_path(at)
+        .timeout(Duration::from_secs(5))
+        .endpoints(vec![endpoint.parse().unwrap()])
+        .unwrap()
+        .build()
+        .unwrap()
 }
 
 fn updater(app: &App<MockRuntime>, key: &Key, origin: SocketAddr, at: &Path) -> Updater {
@@ -235,6 +319,75 @@ fn a_genuine_archive_announced_as_another_version_is_refused() {
         "a signature for 0.2.0 cannot install as 0.3.0, got {refused:?}"
     );
     assert_eq!(installed.binary(), CURRENT);
+}
+
+#[test]
+fn an_http_channel_is_refused_before_any_connection() {
+    let app = shipped_transport_app();
+    let untouched = Untouched::new();
+    let installed = Installed::new();
+
+    let found = tauri::async_runtime::block_on(
+        shipped_updater(&app, &Key::new(), &untouched.url(MANIFEST_PATH), &installed.executable)
+            .check(),
+    );
+
+    assert!(found.is_err(), "an http manifest is refused");
+    assert!(!untouched.was_contacted(), "nothing is sent over http");
+}
+
+#[test]
+fn an_https_manifest_naming_an_http_download_is_refused_before_it_downloads() {
+    let app = shipped_transport_app();
+    let key = Key::new();
+    let untouched = Untouched::new();
+    let installed = Installed::new();
+    let manifest = serde_json::json!({
+        "version": "0.2.0",
+        "platforms": { TARGET: {
+            "signature": key.sign(&archive(NEXT), "0.2.0"),
+            "url": untouched.url(ARCHIVE_PATH)
+        } }
+    })
+    .to_string();
+    let origin = https_channel(move |_| ok(manifest.as_bytes()));
+
+    let downloaded = tauri::async_runtime::block_on(async {
+        let endpoint = format!("https://{origin}{MANIFEST_PATH}");
+        let mut update = shipped_updater(&app, &key, &endpoint, &installed.executable)
+            .check()
+            .await
+            .unwrap()
+            .expect("0.2.0 is offered over https");
+        update.timeout = Some(Duration::from_secs(5));
+        update.download(|_, _| {}, || {}).await
+    });
+
+    assert!(downloaded.is_err(), "an http download is refused");
+    assert!(!untouched.was_contacted(), "the archive is never fetched over http");
+    assert_eq!(installed.binary(), CURRENT);
+}
+
+#[test]
+fn an_https_channel_redirecting_to_http_is_refused_at_the_hop() {
+    let app = shipped_transport_app();
+    let untouched = Untouched::new();
+    let installed = Installed::new();
+    let downgrade = untouched.url(MANIFEST_PATH);
+    let origin = https_channel(move |_| redirect(&downgrade));
+
+    let found = tauri::async_runtime::block_on(
+        shipped_updater(
+            &app,
+            &Key::new(),
+            &format!("https://{origin}{MANIFEST_PATH}"),
+            &installed.executable,
+        )
+        .check(),
+    );
+
+    assert!(found.is_err(), "a redirect to http is refused");
+    assert!(!untouched.was_contacted(), "the http hop is never followed");
 }
 
 fn windowless(config_dir: &Path, windows: serde_json::Value) -> App<MockRuntime> {

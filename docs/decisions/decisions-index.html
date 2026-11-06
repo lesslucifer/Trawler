@@ -1015,12 +1015,13 @@
           <td><a href="dec-82-an-update-asks-is-signed-and-quits-through-the-check.html"><code>dec-82-an-update-asks-is-signed-and-quits-through-the-check.html</code></a></td>
           <td><span class="badge id">DEC-82</span></td>
           <td><strong>An update asks, is signed, and quits through the check.</strong> The channel is the public release's
-            <code>latest.json</code>. A launch checks at most once a day and only when installed from a bundle, and says
+            <code>latest.json</code>. A launch checks at most once a day and only when installed from a bundle (the day counts from the last check
+            that completed, so an offline launch stays due), and says
             nothing unless it offers; <em>Check for Updates…</em> always answers. The offer names both versions and says the
             captured list is cleared. An update installs only if the owner's key signed that exact version. It installs by
             making ⌘Q's quit request (DEC-64; a windowless app reopens its window to ask), then the core stops and the app relaunches. A cancelled quit drops it.
             Every bundle type updates in place, deb and rpm through <code>pkexec</code>. Only the release workflow holds the
-            key. Known limit: the plugin's deb/rpm root install reads a temp file a same-user process could swap (upstream). Rejected: deb/rpm via the release page, a pending update outliving its quit, unversioned signatures</td>
+            key. Every updater request (manifest, download, redirect) is https only. Known limit: the plugin's deb/rpm root install reads a temp file a same-user process could swap (upstream). Rejected: deb/rpm via the release page, a pending update outliving its quit, unversioned signatures</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
