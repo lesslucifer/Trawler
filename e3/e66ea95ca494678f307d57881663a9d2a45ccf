@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-RELFIX
+wu: E-RELFIX.W2
+base: 200005e742d49bf0c70a99e99f306f692947476a
+design_sha256: 492927404fa93f0654eaf965d81c252f4784292d26a4a4c25a37e1c610da85a5
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/BodyViewer.tsx
+    why: "one prop: the pane hands FormRenderer the served content type it already holds; nothing drawn changes"
+  - path: ui/src/DataWindowScreen.tsx
+    why: "behaviour inside the existing form surface: the form reads its shape, rows decode a token inside a value, and text that is no form shows the window's existing warn Notice above its existing text surface; no new region, control or token"
+  - path: ui/src/components/FormTable.tsx
+    why: "read-only part rows reuse the table's own grid, the uppercase-mute label and mono wire-value styles and its kept-as-sent note; no acts, no new tokens; TSDoc @anatomy and @states amended"
+  - path: ui/src/components/FormRenderer.tsx
+    why: "reads the served label's shape and falls back to the existing TextRenderer where a form has no safe cut; TSDoc @states and @madeof amended; no new visual"
+date: 2026-11-06
