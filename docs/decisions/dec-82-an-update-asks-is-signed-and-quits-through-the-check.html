@@ -11,7 +11,7 @@
       <h1>DEC-82 — an update asks, is signed, and quits through the check</h1>
       <p>How an installed Trawler takes a new version: never silently, only when the owner's key signed that exact
         version, and only through the same quit every other quit goes through.</p>
-      <div class="meta">v2 · 2026-11-05 (rule 4: a failed install is told — W1 review round 1) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W1</strong> from the owner's
+      <div class="meta">v3 · 2026-11-06 (rule 4: install is the quit request, so a windowless app asks — E-PKG2.W5) · v2 · 2026-11-05 (rule 4: a failed install is told — W1 review round 1) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W1</strong> from the owner's
         rulings Q4, Q6, Q7 and Q20–Q22 · UC-UPDATE (written when a release exists, E-PKG2's close) · relates to
         <a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>,
         <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a>,
@@ -55,9 +55,11 @@ flowchart LR
         key and holds both halves. The private half exists only as repository secrets, and no agent ever sees it
         (Q7, Q22)</td><td>a channel that serves an old, genuine archive as a new version cannot downgrade anyone. Tauri
         CLI 2.12 writes the version into the signature</td></tr>
-      <tr><td>4</td><td>Install stages the verified update and closes the main window the way ⌘Q does, so DEC-64's check
-        runs. Only that window's destruction installs: the shell stops the core it owns (DEC-69), installs and relaunches.
-        A quit the user cancels drops the update, and the next check offers it again (Q21). An install that fails
+      <tr><td>4</td><td>Install stages the verified update and makes ⌘Q's quit request (DEC-77), so DEC-64's check
+        runs, a windowless app reopening its window to ask. Only the app's end installs (<code>quit_app</code> or the
+        main window's destruction): the shell stops the core it owns (DEC-69), installs and relaunches with the launch's
+        arguments, so a <code>--background</code> launch comes back windowless. A quit request that cannot open its
+        window drops the update. A quit the user cancels drops the update, and the next check offers it again (Q21). An install that fails
         (a read-only app folder, a declined password prompt) is told in a native dialog, and the app holds its exit
         until that dialog closes. The next check offers the update again</td><td>an update is a quit,
         and leaving the machine routed through a stopped proxy is what DEC-64 prevents. An update must never install on

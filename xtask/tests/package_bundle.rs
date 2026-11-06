@@ -7,6 +7,7 @@ use std::process::Command;
 
 const PROFILE: &str = "package-test";
 const WEBDRIVER_MARK: &str = "wdioTauri";
+const LOGIN_AGENT: &str = "Contents/Library/LaunchAgents/dev.trawler.app.plist";
 
 fn repo() -> PathBuf {
     xtask::repo_root().unwrap()
@@ -75,7 +76,16 @@ fn a_package_is_ad_hoc_signed_and_passes_the_release_smoke() {
     let verified =
         Command::new("codesign").args(["--verify", "--deep", "--strict"]).arg(&app).status();
     assert!(verified.unwrap().success(), "codesign --verify --deep --strict {}", app.display());
-    assert!(app.join("Contents/Library/LaunchAgents/dev.trawler.app.plist").is_file());
+    assert!(app.join(LOGIN_AGENT).is_file());
+    let archived = Command::new("tar")
+        .arg("-tzf")
+        .arg(bundle.join("macos/Trawler.app.tar.gz"))
+        .output()
+        .unwrap();
+    assert!(
+        String::from_utf8_lossy(&archived.stdout).contains(&format!("Trawler.app/{LOGIN_AGENT}")),
+        "an update installs the login agent with the app, so the registered login item survives it"
+    );
     let dmgs = std::fs::read_dir(bundle.join("dmg")).unwrap().flatten();
     assert!(dmgs.into_iter().any(|e| e.path().extension().is_some_and(|ext| ext == "dmg")));
 

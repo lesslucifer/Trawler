@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aecb9ff9f34851f0dfaeaea" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PKG2.W5 result: bg-service sync</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PKG2.W5 result — an installed, windowless Trawler updates the way a windowed one does</h1>
+      <p>main (E-BGSVC, E-INSPWIN2) merged into the epic; the update goes through the quit request; the login item has a macOS 13 floor, names the AppImage file and ships in the updater archive.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PKG2.W5</span> · branch
+      <code>wu/packaging-v2/bg-service-sync</code> off <code>epic/packaging-v2</code> at <code>7a008d7e</code> · <a href="2026-11-06-packaging-v2-w5-bg-service-sync-plan.html">plan</a> · <a href="2026-11-05-packaging-v2-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="outcome">Outcome</h2>
+    <p class="callout" data-item="outcome" data-c="outcome">Every gap in the plan (G1 to G6) is closed or recorded. Each fix has a test that fails without it. The install, relaunch and a registered login item on real machines are W6's rc hand checks.</p>
+
+    <h2 id="merge">The back-merge (7a008d7e)</h2>
+    <table data-c="merge">
+      <tr><th>File</th><th>Resolution</th></tr>
+      <tr><td>decisions index</td><td>every record kept: DEC-77 and 84 (bg-service), 78 to 80 (inspect), 81 to 83, 85 and 86 (packaging)</td></tr>
+      <tr><td><code>lib.rs</code> run event</td><td>main's <code>match</code>, with the update's held exit (a failed install being told) beside the windowless hold</td></tr>
+      <tr><td><code>closeConfirm.ts</code></td><td>main's prompt <code>cancel</code> also calls <code>quit_cancelled</code></td></tr>
+      <tr><td>test helpers</td><td>main's <code>common</code> helpers with the Windows variants (<code>alive</code>, <code>kill_hard</code>, <code>HARD_KILLED</code>) kept</td></tr>
+      <tr><td><code>package.rs</code> · <code>package_bundle.rs</code></td><td>the login agent check on every built <code>.app</code>; the BTM check beside the smoke-driven test</td></tr>
+      <tr><td><code>menu.rs</code></td><td><code>close_main_window</code> kept for the merge only; W5 removed it</td></tr>
+    </table>
+    <p data-c="merge-proof">The merged tree passed <code>cargo test --workspace --no-fail-fast</code>. Two core reach tests failed once under load in the first run and passed alone twice. The core's sources equal main's.</p>
+
+    <h2 id="changes">What changed</h2>
+    <table data-item="evidence" data-c="changes">
+      <tr><th>#</th><th>Change</th><th>Test (red without it)</th></tr>
+      <tr><td>G1</td><td><code>update::stage_and_quit</code> stages the update and calls <code>lifecycle::request_quit</code>. <code>quit_app</code> ends through <code>update::end</code> (renamed from <code>on_main_window_destroyed</code>), which installs a staged update</td><td><code>updater::a_windowless_app_told_to_install_opens_its_window_to_quit_with_the_update_staged</code> (no such seam before; the old path exited the windowless app without installing)</td></tr>
+      <tr><td>G2</td><td>a quit request that cannot open its window drops the staged update</td><td><code>updater::an_update_whose_quit_cannot_open_a_window_is_dropped_not_kept_for_a_later_quit</code>, shown red with the line removed</td></tr>
+      <tr><td>G3</td><td><code>AgentService::new</code> returns <code>None</code> below macOS 13. <code>minimumSystemVersion</code> stays 11.0</td><td><code>agent::tests::a_host_older_than_the_class_gets_no_service</code>, <code>the_service_is_handed_out_only_from_macos_13</code></td></tr>
+      <tr><td>G4</td><td><code>login_item::program_at_login</code>: an absolute <code>$APPIMAGE</code> on Linux</td><td><code>an_appimage_is_started_at_login_from_its_file_not_its_mount</code></td></tr>
+      <tr><td>G5</td><td>Linux notes: GNOME's AppIndicator extension; open Trawler again where no icon shows. macOS: open at login needs 13</td><td><code>the_notes_carry_the_version_and_every_os_s_first_open_steps</code></td></tr>
+      <tr><td>R1</td><td>review round 1 (FAIL on <code>d134e067</code>): the back-merge had dropped <code>update::holds_exit</code> from <code>on_run_event</code>, so a failed install's notice could be cut off by the last window's exit; its message wrongly says it was kept. <code>lib::holds_exit_request</code> now combines both holds, and <code>update::end</code> does not exit while the notice is told</td><td><code>the_last_window_s_exit_waits_for_a_told_failed_install_and_for_a_windowless_app</code>; <code>a_window_closed_under_the_failed_install_notice_leaves_the_notice_to_end_the_app</code>, shown red without the guard (the mock runtime's exit panics)</td></tr>
+      <tr><td>R2</td><td>review round 2 (FAIL on <code>eefd7841</code>): any absolute <code>$APPIMAGE</code> was trusted, so a deb or rpm Trawler that inherited it from an AppImage-launched parent would write that other file into autostart. <code>program_at_login</code> now takes it only when the binary is inside <code>$APPDIR</code></td><td><code>an_appimage_variable_inherited_by_another_install_is_ignored</code></td></tr>
+      <tr><td>G6</td><td>the <code>.app.tar.gz</code> carries the agent; <code>ci.yml</code> tests <code>trawler-login-service</code> on every OS</td><td><code>package_bundle</code> (green, 84 s); <code>ci_workflow</code>; actionlint green</td></tr>
+    </table>
+
+    <h2 id="not-taken">Planned by the epic, not taken</h2>
+    <table data-item="deviations" data-c="not-taken">
+      <tr><th>Item</th><th>Why</th></tr>
+      <tr><td>the e2e smoke's background-mode case</td><td><code>xtask smoke</code> runs <code>--core</code>, which has no window or tray: nothing new to assert</td></tr>
+      <tr><td><code>update::end</code>'s install-and-restart under the mock runtime</td><td><code>restart</code> re-executes the test binary. The path is W1's, unchanged; only its callers changed</td></tr>
+      <tr><td>detecting a missing StatusNotifier host</td><td>recorded as a release note (plan G5)</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-item="distillation" data-c="distillation">
+      <tr><th>Tier</th><th>Doc</th><th>Now carries</th></tr>
+      <tr><td>T2</td><td>DEC-82 rule 4 (v3)</td><td>install is ⌘Q's quit request; a windowless app reopens its window to ask; the relaunch keeps the launch's arguments; a quit that cannot open its window drops the update</td></tr>
+      <tr><td>T2</td><td>DEC-77 rule 9 (v5)</td><td>the macOS 13 floor; Linux autostart names <code>$APPIMAGE</code> for a binary inside its <code>$APPDIR</code></td></tr>
+      <tr><td>T2</td><td>DEC-84 rule 4 (v2)</td><td>no service below macOS 13; the app's minimum stays 11; CI runs the crate</td></tr>
+      <tr><td>T2</td><td>decisions index · roadmap</td><td>the two rows above; the owed-hardware row's AppImage half done, the tray-host half a release note</td></tr>
+    </table>
+
+    <h2 id="gates">Gates</h2>
+    <table data-c="gates">
+      <tr><th>Gate</th><th>State</th></tr>
+      <tr><td>tests</td><td><code>cargo test --workspace</code>, <code>package_bundle</code> and vitest green; clippy pedantic clean</td></tr>
+      <tr><td>test/v2 · doc/v1</td><td>on the tip</td></tr>
+      <tr><td>cr</td><td>round 1 on <code>d134e067</code>: FAIL, one verified important (R1) and two nits, now fixed or waived in its note; three altitude and coupling candidates refuted. Round 2 on <code>eefd7841</code>: FAIL, one verified important (R2); four candidates refuted. Round 3 on the tip: the code-review skill's note. <code>ui/src-tauri/</code> and <code>login-service/</code> are outside its code paths (roadmap, workflow tooling), so the finders were pointed at them and an independent review of both is asked for</td></tr>
+      <tr><td>design/v1</td><td>not owed: no file under <code>ui/src/</code> renders differently</td></tr>
+    </table>
+
+    <h2 id="owed">Owed</h2>
+    <table data-item="follow-ups" data-c="owed">
+      <tr><th>Check</th><th>Where</th></tr>
+      <tr><td>an installed rc with keep capturing and open at login on, window closed, then the next rc: the window opens to ask, the app relaunches, Login Items unchanged</td><td>W6, macOS and the VMs</td></tr>
+      <tr><td>Settings → General on a macOS 11 or 12 Mac reads unavailable</td><td>roadmap (no such Mac here)</td></tr>
+      <tr><td>an AppImage's autostart entry after a login</td><td>W6, Ubuntu VM</td></tr>
+    </table>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

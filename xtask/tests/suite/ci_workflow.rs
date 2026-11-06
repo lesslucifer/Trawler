@@ -134,9 +134,9 @@ fn every_job_installs_the_ui_from_its_lockfile_then_lints_and_tests_the_core_and
         let clippy =
             position(&runs, "cargo clippy --workspace --all-targets --all-features -- -D warnings");
         let tests_command = if os == "ubuntu-22.04" {
-            "xvfb-run cargo test -p trawler -p trawler-ui"
+            "xvfb-run cargo test -p trawler -p trawler-ui -p trawler-login-service"
         } else {
-            "cargo test -p trawler -p trawler-ui"
+            "cargo test -p trawler -p trawler-ui -p trawler-login-service"
         };
         let tests = position(&runs, tests_command);
         assert!(

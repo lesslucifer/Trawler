@@ -11,9 +11,9 @@
 use tauri::menu::{
     AboutMetadata, Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu, WINDOW_SUBMENU_ID,
 };
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Runtime};
 
-use crate::settings::{self, MAIN_WINDOW};
+use crate::settings;
 
 pub const QUIT_ID: &str = "trawler-quit";
 pub const SETTINGS_ID: &str = "trawler-settings";
@@ -56,18 +56,6 @@ pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
             }
         }
         MenuAction::Ignore => {}
-    }
-}
-
-#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
-pub(crate) fn close_main_window<R: Runtime>(app: &AppHandle<R>) {
-    match app.get_webview_window(MAIN_WINDOW) {
-        Some(window) => {
-            if let Err(err) = window.close() {
-                eprintln!("closing the window for Quit failed: {err}");
-            }
-        }
-        None => app.exit(0),
     }
 }
 

@@ -44,7 +44,7 @@ jobs:
 
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-      - run: cargo test -p trawler -p trawler-ui
+      - run: cargo test -p trawler -p trawler-ui -p trawler-login-service
 
   ubuntu:
     name: Ubuntu · clippy + core and app tests
@@ -80,7 +80,7 @@ jobs:
 
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-      - run: xvfb-run cargo test -p trawler -p trawler-ui
+      - run: xvfb-run cargo test -p trawler -p trawler-ui -p trawler-login-service
 
   windows:
     name: Windows · clippy + core and app tests
@@ -111,4 +111,4 @@ jobs:
 
       - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
-      - run: cargo test -p trawler -p trawler-ui
+      - run: cargo test -p trawler -p trawler-ui -p trawler-login-service

@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
+use std::thread::JoinHandle;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tauri::utils::config::BundleType;
@@ -201,19 +202,21 @@ fn present<R: Runtime>(app: &AppHandle<R>, notice: Notice, update: Option<Update
 }
 
 /// Downloading verifies the signature against the configured public key, so
-/// only a verified update is ever staged. The quit then runs the window's
-/// close, and DEC-64's check with it.
+/// only a verified update is ever staged. The quit is ⌘Q's request, so a
+/// windowless app opens its window to run DEC-64's check too.
 async fn install_on_quit<R: Runtime>(app: AppHandle<R>, update: Update) {
     match update.download(|_, _| {}, || {}).await {
-        Ok(bytes) => {
-            app.state::<Pending>().stage((update, bytes));
-            crate::menu::close_main_window(&app);
-        }
+        Ok(bytes) => drop(stage_and_quit(&app, (update, bytes))),
         Err(err) => {
             let current = app.package_info().version.to_string();
             present(&app, not_installed(&current, &err.to_string()), None);
         }
     }
+}
+
+pub fn stage_and_quit<R: Runtime>(app: &AppHandle<R>, staged: Staged) -> JoinHandle<()> {
+    app.state::<Pending>().stage(staged);
+    crate::lifecycle::request_quit(app)
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -246,11 +249,13 @@ pub fn telling<R: Runtime>(app: &AppHandle<R>) -> bool {
     app.try_state::<Telling>().is_some_and(|t| t.0.load(Ordering::SeqCst))
 }
 
-/// The main window is gone. With an update staged, the core stops, the update
-/// installs and the app opens again as the new version; otherwise the app ends.
-pub fn on_main_window_destroyed<R: Runtime>(app: &AppHandle<R>) {
+/// The app ends, by its last window or by a quit. With an update staged, the
+/// core stops, the update installs and the app opens again as the new version.
+pub fn end<R: Runtime>(app: &AppHandle<R>) {
     let Some((update, bytes)) = app.state::<Pending>().take() else {
-        app.exit(0);
+        if !telling(app) {
+            app.exit(0);
+        }
         return;
     };
     if let Some(core) = app.try_state::<crate::core::Core>() {
@@ -396,6 +401,15 @@ mod tests {
             ending("0.1.0", Err("the app folder is read-only".into())),
             Ending::TellThenExit(not_installed("0.1.0", "the app folder is read-only"))
         );
+    }
+
+    // The mock runtime's exit panics, so an end that exits fails here.
+    #[test]
+    fn a_window_closed_under_the_failed_install_notice_leaves_the_notice_to_end_the_app() {
+        let app = tauri::test::mock_app();
+        app.manage(Pending::<Staged>::default());
+        app.manage(Telling(AtomicBool::new(true)));
+        end(app.handle());
     }
 
     #[test]
