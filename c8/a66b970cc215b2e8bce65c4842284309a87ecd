@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU inspect-form-parse -> epic/release-fixes (round 4)"
+epic: E-RELFIX
+wu: E-RELFIX.W2
+branch: wu/release-fixes/inspect-form-parse
+base: 200005e742d49bf0c70a99e99f306f692947476a
+head: c8a66b970cc215b2e8bce65c4842284309a87ecd
+diff_sha256: fd0f45c9eeddc20afb33d376c1fc158a9908909d094993a1f50d0c5f2721e6a4
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 6
+  stage_seconds:
+    gate0: 20
+    finders: 65
+    verifiers: 34
+    total: 182
+  by_finder:
+    correctness: { found: 4, verified: 3 }
+    efficiency: { found: 1, verified: 1 }
+    altitude: { found: 4, verified: 2 }
+findings: { found: 8, verified: 6, waived: 0 }
+waivers: []
+nits:
+  - finding: "FORM_LABEL_SHAPES lives in contentKind and contentKind imports the FormShape type from formPairs"
+    waived: "one table serves the kind and the shape; the type import is erased, so there is no runtime cycle"
+  - finding: "formCut dispatches to formPairCut still defined in body.ts"
+    waived: "voids with this FAIL; the fix round removes formCut"
+  - finding: "headerLineCut tests the fold on a slice of the rest of the text"
+    waived: "voids with this FAIL; the fix round removes headerLineCut"
+verdict: FAIL
+date: 2026-11-06
