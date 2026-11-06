@@ -6,8 +6,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::thread::JoinHandle;
 
+use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewWindow, WebviewWindowBuilder};
 
+use crate::about::Show;
 use crate::keep_capturing::{read_keep_capturing, KeepCapturing};
 use crate::settings::MAIN_WINDOW;
 use crate::window_geometry;
@@ -17,9 +19,19 @@ pub struct Lifecycle {
     tray: AtomicBool,
     reopening: Mutex<()>,
     quit_requested: AtomicBool,
+    dialog_requests: Mutex<Vec<DialogRequest>>,
 }
 
 pub const QUIT_REQUEST_EVENT: &str = "quit-requested";
+pub const DIALOG_REQUEST_EVENT: &str = "dialog-requested";
+
+/// A dialog only the main window shows (W19): asked for anywhere, it opens there.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(tag = "dialog", rename_all = "lowercase")]
+pub enum DialogRequest {
+    Settings,
+    About(Show),
+}
 const RETRY_AFTER: std::time::Duration = std::time::Duration::from_millis(150);
 
 impl Lifecycle {
@@ -29,6 +41,7 @@ impl Lifecycle {
             tray: AtomicBool::new(false),
             reopening: Mutex::new(()),
             quit_requested: AtomicBool::new(false),
+            dialog_requests: Mutex::new(Vec::new()),
         }
     }
 
@@ -60,6 +73,14 @@ impl Lifecycle {
     pub fn stays_windowless(&self) -> bool {
         stays_windowless(self.keep_capturing(), self.tray_available())
     }
+
+    pub fn request_dialog(&self, request: DialogRequest) {
+        self.dialog_requests.lock().unwrap_or_else(PoisonError::into_inner).push(request);
+    }
+
+    pub fn take_dialog_requests(&self) -> Vec<DialogRequest> {
+        std::mem::take(&mut *self.dialog_requests.lock().unwrap_or_else(PoisonError::into_inner))
+    }
 }
 
 #[tauri::command]
@@ -70,6 +91,18 @@ pub fn tray_available(lifecycle: tauri::State<'_, Lifecycle>) -> bool {
 #[tauri::command]
 pub fn take_quit_request(lifecycle: tauri::State<'_, Lifecycle>) -> bool {
     lifecycle.take_quit_request()
+}
+
+#[tauri::command]
+pub fn take_dialog_requests(lifecycle: tauri::State<'_, Lifecycle>) -> Vec<DialogRequest> {
+    lifecycle.take_dialog_requests()
+}
+
+// The ✕'s close request, which runs the page's close flow; the main window's
+// capability set holds no close of its own.
+#[tauri::command]
+pub fn close_window<R: Runtime>(window: WebviewWindow<R>) -> Result<(), String> {
+    window.close().map_err(|err| err.to_string())
 }
 
 #[tauri::command]
@@ -211,31 +244,55 @@ pub fn request_quit<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<()> {
     std::thread::spawn(move || quit_in_window(&app))
 }
 
-// The first attempt can meet a main window that is mid-destroy; the second finds
-// it gone and builds. When even that fails the app neither exits (DEC-64's check
-// never ran, the proxy may point at this process) nor keeps the request or an
-// update staged for it, which a later quit would act on unasked.
-#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
-fn quit_in_window<R: Runtime>(app: &AppHandle<R>) {
-    match attempt_twice(|| reopen_main(app)) {
-        Ok(window) => {
-            if let Err(err) = window.emit(QUIT_REQUEST_EVENT, ()) {
-                eprintln!("announcing the quit request failed: {err}");
+// The quit request's flag and event, for a dialog the main window shows. With no
+// main window to show it in, a request kept would pop up on some later open.
+pub fn request_dialog<R: Runtime>(app: &AppHandle<R>, request: DialogRequest) -> JoinHandle<()> {
+    if let Some(lifecycle) = lifecycle(app) {
+        lifecycle.request_dialog(request);
+    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        if !announce_in_main(&app, DIALOG_REQUEST_EVENT) {
+            if let Some(lifecycle) = lifecycle(&app) {
+                lifecycle.take_dialog_requests();
             }
         }
-        Err(err) => {
-            eprintln!("opening the main window for Quit failed, still running: {err}");
-            if let Some(lifecycle) = lifecycle(app) {
-                lifecycle.take_quit_request();
-            }
-            if let Some(update) = app.try_state::<crate::update::Pending>() {
-                update.take();
-            }
+    })
+}
+
+// When even that fails the app neither exits (DEC-64's check never ran, the
+// proxy may point at this process) nor keeps the request or an update staged
+// for it, which a later quit would act on unasked.
+fn quit_in_window<R: Runtime>(app: &AppHandle<R>) {
+    if !announce_in_main(app, QUIT_REQUEST_EVENT) {
+        if let Some(lifecycle) = lifecycle(app) {
+            lifecycle.take_quit_request();
+        }
+        if let Some(update) = app.try_state::<crate::update::Pending>() {
+            update.take();
         }
     }
 }
 
-// Runs on the thread `request_quit` spawned, never a tokio worker.
+// The first attempt can meet a main window that is mid-destroy; the second finds
+// it gone and builds.
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
+fn announce_in_main<R: Runtime>(app: &AppHandle<R>, event: &str) -> bool {
+    match attempt_twice(|| reopen_main(app)) {
+        Ok(window) => {
+            if let Err(err) = window.emit(event, ()) {
+                eprintln!("announcing {event} failed: {err}");
+            }
+            true
+        }
+        Err(err) => {
+            eprintln!("opening the main window for {event} failed, still running: {err}");
+            false
+        }
+    }
+}
+
+// Runs on the thread `request_quit` or `request_dialog` spawned, never a tokio worker.
 #[allow(clippy::disallowed_methods)]
 fn attempt_twice<T, E>(mut attempt: impl FnMut() -> Result<T, E>) -> Result<T, E> {
     attempt().or_else(|_| {
@@ -286,7 +343,7 @@ mod tests {
     fn only_the_main_window_ends_the_app_and_only_when_it_may_not_stay() {
         assert!(ends_the_app(MAIN_WINDOW, false));
         assert!(!ends_the_app(MAIN_WINDOW, true));
-        for label in [crate::settings::SETTINGS_WINDOW, "data-6162"] {
+        for label in ["other", "data-6162"] {
             assert!(!ends_the_app(label, false), "{label}");
             assert!(!ends_the_app(label, true), "{label}");
         }
@@ -324,6 +381,32 @@ mod tests {
         lifecycle.request_quit();
         assert!(lifecycle.take_quit_request());
         assert!(!lifecycle.take_quit_request());
+    }
+
+    #[test]
+    fn dialog_requests_queue_in_order_and_are_taken_once() {
+        let lifecycle = Lifecycle::new(None);
+        assert_eq!(lifecycle.take_dialog_requests(), []);
+        let licences = DialogRequest::About(Show::page(crate::about::Page::Licences));
+        lifecycle.request_dialog(DialogRequest::Settings);
+        lifecycle.request_dialog(licences.clone());
+        assert_eq!(lifecycle.take_dialog_requests(), [DialogRequest::Settings, licences]);
+        assert_eq!(lifecycle.take_dialog_requests(), []);
+    }
+
+    #[test]
+    fn a_dialog_request_names_its_dialog_for_the_page() {
+        assert_eq!(
+            serde_json::to_value(DialogRequest::Settings).unwrap(),
+            serde_json::json!({ "dialog": "settings" })
+        );
+        let unopened = Show { page: crate::about::Page::About, unopened: Some("https://x".into()) };
+        assert_eq!(
+            serde_json::to_value(DialogRequest::About(unopened)).unwrap(),
+            serde_json::json!({ "dialog": "about", "page": "about", "unopened": "https://x" })
+        );
+        let page = include_str!("../../src/shellDialogs.ts");
+        assert!(page.contains(&format!("\"{DIALOG_REQUEST_EVENT}\"")));
     }
 
     #[test]

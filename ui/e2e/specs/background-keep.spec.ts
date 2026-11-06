@@ -5,6 +5,7 @@ import { theAppExits } from "./quit.ts";
 import {
   appOf,
   askToCloseTheWindow,
+  dialogShown,
   everythingStopped,
   forgetTheAnswer,
   invoke,
@@ -18,8 +19,11 @@ import {
   type Running,
 } from "./app.ts";
 
-// J1: the answer that makes the app outlive its window. Starts unanswered, ends
-// with quit_app from the Settings window, the one window left to ask from.
+// J1: the answer that makes the app outlive its window. Starts unanswered; the
+// menu-bar icon's Settings… then rebuilds the main window with Settings over it
+// (W19), the window quit_app is asked from.
+const TRAY_SETTINGS = "tray-settings";
+const WINDOWLESS_MS = 5_000;
 describe("UC-BG — keep capturing with no window", () => {
   let origin: Server;
   let core: Running;
@@ -40,10 +44,8 @@ describe("UC-BG — keep capturing with no window", () => {
     origin?.close();
   });
 
-  it("Keep capturing stores on and closes only the main window", async () => {
-    await invoke("open_settings");
-    await onWindow("settings");
-    await browser.switchToWindow("main");
+  it("Keep capturing stores on, closes the main window, and a request is still captured", async () => {
+    await invoke("e2e_tray_when_windowless", { id: TRAY_SETTINGS, afterMs: WINDOWLESS_MS });
     await askToCloseTheWindow();
     await $('[data-testid="keep-capturing-dialog"]').waitForDisplayed({ timeout: 15_000 });
     expect(await pressButton("keep-capturing", "keep capturing")).toBe(true);
@@ -54,20 +56,11 @@ describe("UC-BG — keep capturing with no window", () => {
     expect(storedKeepCapturing()).toBe(true);
     expect(isAlive(appPid)).toBe(true);
     expect(isAlive(core.pid)).toBe(true);
-  });
 
-  it("General, still driven, reads keep capturing on", async () => {
-    await browser.switchToWindow("settings");
-    await $('[role="tab"]=Capture service').click();
-    await $('[role="tab"]=General').click();
-    await $("h1=General").waitForDisplayed({ timeout: 15_000 });
-    expect((await switchesRead())[0].on).toBe(true);
-  });
-
-  it("a request through the proxy is captured with no window open", async () => {
     const { port } = origin.address() as AddressInfo;
     const url = `http://127.0.0.1:${port}/background`;
     expect(await sendThroughProxy(core.proxy, url)).toBe(200);
+    expect(await browser.getWindowHandles()).toEqual([]);
     await browser.waitUntil(
       async () => {
         const flows = (await (await fetch(`http://${core.api}/flows`)).json()) as { uri: string }[];
@@ -75,6 +68,14 @@ describe("UC-BG — keep capturing with no window", () => {
       },
       { timeout: 15_000, timeoutMsg: `${url} never reached GET /flows` },
     );
+  });
+
+  it("the menu-bar Settings… rebuilds the main window with Settings over it, reading keep capturing on", async () => {
+    await onWindow("main");
+    await dialogShown("settings");
+    expect(await browser.getWindowHandles()).toEqual(["main"]);
+    await $("h1=General").waitForDisplayed({ timeout: 15_000 });
+    expect((await switchesRead())[0].on).toBe(true);
   });
 
   it("quit_app ends the app and frees both ports", async () => {

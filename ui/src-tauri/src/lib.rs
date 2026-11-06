@@ -13,7 +13,7 @@ pub mod layout;
 pub mod lifecycle;
 pub mod links;
 pub mod login_item;
-mod menu;
+pub mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
@@ -58,6 +58,7 @@ fn second_launch_opens_window(argv: Vec<String>) -> bool {
     !background_launch(argv.into_iter().map(std::ffi::OsString::from))
 }
 
+#[allow(clippy::too_many_lines)] // the command registry is one flat list
 pub fn run() {
     let background = background_launch(std::env::args_os().skip(1));
     let mode = core::mode(std::env::var(core::ATTACH_VAR).ok().as_deref());
@@ -134,9 +135,15 @@ pub fn run() {
         login_item::login_item_write,
         lifecycle::tray_available,
         lifecycle::take_quit_request,
+        lifecycle::take_dialog_requests,
+        lifecycle::close_window,
         lifecycle::quit_app,
         #[cfg(feature = "e2e")]
         lifecycle::e2e_request_quit,
+        #[cfg(feature = "e2e")]
+        tray::e2e_tray_when_windowless,
+        #[cfg(feature = "e2e")]
+        menu::e2e_menu,
         data_window::open_data_window,
         data_window::take_data_payload,
         update::quit_cancelled,

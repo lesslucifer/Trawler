@@ -1,10 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useState } from "react";
 import { Button, CopyText, Notice, PageSidebar } from "./components/index";
 import type { Invoke } from "./coreService";
-import { ABOUT_SHOW_EVENT, ABOUT_SHOW_GLOBAL } from "./page";
+import { ModalShell } from "./ModalShell";
 import { PRIVACY_CLOSE, PRIVACY_LEAD, PRIVACY_ROWS } from "./privacy";
 
 const PAGES = [
@@ -15,7 +13,7 @@ const PAGES = [
 
 export type AboutPage = (typeof PAGES)[number]["value"];
 
-/** What the shell asks the window to show: a page, and the address of a link the browser would not open. */
+/** What the shell asks About to show: a page, and the address of a link the browser would not open. */
 export interface AboutShow {
   page: AboutPage;
   unopened: string | null;
@@ -33,19 +31,6 @@ const LINKS: readonly { link: Link; label: string }[] = [
   { link: "issue", label: "report an issue" },
   { link: "source", label: "source code" },
 ];
-
-export function shownAtOpen(scope: Record<string, unknown> = window as unknown as Record<string, unknown>): AboutShow {
-  const show = scope[ABOUT_SHOW_GLOBAL] as Partial<AboutShow> | undefined;
-  const page = PAGES.some((p) => p.value === show?.page) ? (show?.page as AboutPage) : "about";
-  return { page, unopened: show?.unopened ?? null };
-}
-
-export type ShowListener = (onShow: (show: AboutShow) => void) => () => void;
-
-const listenToShell: ShowListener = (onShow) => {
-  const unlisten = listen<AboutShow>(ABOUT_SHOW_EVENT, (event) => onShow(event.payload));
-  return () => void unlisten.then((stop) => stop());
-};
 
 function Caption({ children }: { children: string }) {
   return <p className="pt-chrome-tight font-ui text-chrome text-ink-mute">{children}</p>;
@@ -129,19 +114,9 @@ function PrivacyPage() {
   );
 }
 
-/** The About window (E-PRORELEASE.W13's design run): About · Third-party licences · Privacy, on every OS (DEC-90). */
-export function About({
-  call = invoke,
-  initial = shownAtOpen(),
-  subscribe = listenToShell,
-  close = () => void getCurrentWindow().close(),
-}: {
-  call?: Invoke;
-  initial?: AboutShow;
-  subscribe?: ShowListener;
-  close?: () => void;
-}) {
-  const [shown, setShown] = useState<AboutShow>(initial);
+/** About (E-PRORELEASE.W13's design run): About · Third-party licences · Privacy, on every OS (DEC-90). */
+export function About({ call = invoke, show }: { call?: Invoke; show: AboutShow }) {
+  const [shown, setShown] = useState<AboutShow>(show);
   const [facts, setFacts] = useState<AboutFacts | null>(null);
 
   useEffect(() => {
@@ -152,15 +127,7 @@ export function About({
     };
   }, [call]);
 
-  useEffect(() => subscribe(setShown), [subscribe]);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
+  useEffect(() => setShown(show), [show]);
 
   const open = (link: Link) => {
     setShown((now) => ({ ...now, unopened: null }));
@@ -170,7 +137,7 @@ export function About({
   };
 
   return (
-    <div className="flex h-full gap-4 bg-canvas p-4 font-ui text-body text-ink">
+    <div className="flex min-h-0 flex-1 gap-4 font-ui text-body text-ink">
       <PageSidebar
         pages={PAGES}
         value={shown.page}
@@ -191,5 +158,14 @@ export function About({
         )}
       </div>
     </div>
+  );
+}
+
+/** About as the main window's dialog (W19), opened on the page the shell asked for. */
+export function AboutDialog({ show, onClose, call }: { show: AboutShow; onClose: () => void; call?: Invoke }) {
+  return (
+    <ModalShell title="About Trawler" testId="about" size="pages" onCancel={onClose} dismissLabel="close">
+      <About call={call} show={show} />
+    </ModalShell>
   );
 }

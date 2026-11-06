@@ -8,17 +8,18 @@
 // capture's. `Menu::default` builds a View submenu on macOS only, so elsewhere
 // the item brings its own, placed where macOS puts it: before Window.
 //
-// About is Trawler's own window on every OS (DEC-90): the default menu's
-// About items, the system panel on macOS, are replaced.
+// About is Trawler's own dialog on every OS (DEC-90): the default menu's
+// About items, the system panel on macOS, are replaced. So is Close Window: its
+// native item closes the window under an open dialog, which the page never sees.
 
 use tauri::menu::{
     Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu, HELP_SUBMENU_ID, WINDOW_SUBMENU_ID,
 };
-use tauri::{AppHandle, Emitter, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 
 use crate::about::{self, Page, Show};
 use crate::links::{self, Link};
-use crate::settings;
+use crate::settings::{self, MAIN_WINDOW};
 
 pub const QUIT_ID: &str = "trawler-quit";
 pub const SETTINGS_ID: &str = "trawler-settings";
@@ -30,6 +31,9 @@ pub const GUIDE_ID: &str = "trawler-guide";
 pub const REPORT_ID: &str = "trawler-report-issue";
 pub const LICENCES_ID: &str = "trawler-licences";
 pub const PRIVACY_ID: &str = "trawler-privacy";
+pub const CLOSE_WINDOW_ID: &str = "trawler-close-window";
+pub const CLOSE_WINDOW_EVENT: &str = "close-window-requested";
+const CLOSE_WINDOW_ACCELERATOR: &str = "CmdOrCtrl+W";
 const ABOUT_LABEL: &str = "About Trawler";
 const HELP_SUBMENU: &str = "Help";
 const RESET_LAYOUT_LABEL: &str = "Reset Layout";
@@ -45,7 +49,25 @@ pub enum MenuAction {
     ResetLayout,
     OpenAbout(Page),
     OpenLink(Link),
+    CloseWindow,
     Ignore,
+}
+
+/// What Close Window acts on: the main window's page closes its topmost dialog
+/// before the window; any other window simply closes.
+#[derive(Debug, PartialEq, Eq)]
+pub enum CloseTarget {
+    MainPage,
+    Window,
+    Nothing,
+}
+
+pub fn close_target(focused: Option<&str>) -> CloseTarget {
+    match focused {
+        Some(MAIN_WINDOW) => CloseTarget::MainPage,
+        Some(_) => CloseTarget::Window,
+        None => CloseTarget::Nothing,
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -90,6 +112,7 @@ pub fn action_for(id: &str) -> MenuAction {
         PRIVACY_ID => MenuAction::OpenAbout(Page::Privacy),
         GUIDE_ID => MenuAction::OpenLink(Link::Guide),
         REPORT_ID => MenuAction::OpenLink(Link::Issue),
+        CLOSE_WINDOW_ID => MenuAction::CloseWindow,
         _ => MenuAction::Ignore,
     }
 }
@@ -98,21 +121,44 @@ pub fn action_for(id: &str) -> MenuAction {
 pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     match action_for(id) {
         MenuAction::RequestQuit => drop(crate::lifecycle::request_quit(app)),
-        MenuAction::OpenSettings => drop(settings::open_in_background(app)),
+        MenuAction::OpenSettings => drop(settings::open(app)),
         MenuAction::CheckForUpdates => crate::update::check(app, crate::update::Asked::ByUser),
         MenuAction::ResetLayout => {
             if let Err(err) = app.emit(RESET_LAYOUT_EVENT, ()) {
                 eprintln!("announcing Reset Layout failed: {err}");
             }
         }
-        MenuAction::OpenAbout(page) => drop(about::open_in_background(app, Show::page(page))),
+        MenuAction::OpenAbout(page) => drop(about::open(app, Show::page(page))),
         MenuAction::OpenLink(link) => {
             if let Err(address) = links::open(app, link) {
-                let show = Show { page: Page::About, unopened: Some(address) };
-                drop(about::open_in_background(app, show));
+                drop(about::open(app, Show { page: Page::About, unopened: Some(address) }));
             }
         }
+        MenuAction::CloseWindow => close_focused(app),
         MenuAction::Ignore => {}
+    }
+}
+
+// A menu click, which WebDriver cannot make.
+#[cfg(feature = "e2e")]
+#[tauri::command]
+pub fn e2e_menu<R: Runtime>(app: AppHandle<R>, id: String) {
+    handle(&app, &id);
+}
+
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
+fn close_focused<R: Runtime>(app: &AppHandle<R>) {
+    let focused =
+        app.webview_windows().into_values().find(|window| window.is_focused().unwrap_or(false));
+    let closed = match (close_target(focused.as_ref().map(tauri::WebviewWindow::label)), focused) {
+        (CloseTarget::MainPage, Some(window)) => {
+            window.emit_to(MAIN_WINDOW, CLOSE_WINDOW_EVENT, ())
+        }
+        (CloseTarget::Window, Some(window)) => window.close(),
+        _ => Ok(()),
+    };
+    if let Err(err) = closed {
+        eprintln!("Close Window failed: {err}");
     }
 }
 
@@ -129,7 +175,39 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     }
     add_reset_layout(app, &menu)?;
     fill_help(app, &menu)?;
+    own_close_window(app, &menu)?;
     Ok(menu)
+}
+
+// The default menu holds the native item once per OS menu that lists it (File
+// and Window off Linux); the first place keeps Trawler's own, the rest go.
+fn own_close_window<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<()> {
+    let native = PredefinedMenuItem::close_window(app, None)?.text()?;
+    let mut found = Vec::new();
+    for item in menu.items()? {
+        let MenuItemKind::Submenu(submenu) = item else { continue };
+        for (index, entry) in submenu.items()?.into_iter().enumerate() {
+            if let MenuItemKind::Predefined(predefined) = entry {
+                if predefined.text()? == native {
+                    found.push((submenu.clone(), index));
+                }
+            }
+        }
+    }
+    for (submenu, index) in found.iter().rev() {
+        submenu.remove_at(*index)?;
+    }
+    let own = MenuItem::with_id(
+        app,
+        CLOSE_WINDOW_ID,
+        "Close Window",
+        true,
+        Some(CLOSE_WINDOW_ACCELERATOR),
+    )?;
+    match found.first() {
+        Some((submenu, index)) => submenu.insert(&own, *index),
+        None => Ok(()),
+    }
 }
 
 fn fill_help<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<()> {
@@ -301,6 +379,16 @@ mod tests {
         assert_eq!(action_for(PRIVACY_ID), MenuAction::OpenAbout(Page::Privacy));
         assert_eq!(action_for(GUIDE_ID), MenuAction::OpenLink(Link::Guide));
         assert_eq!(action_for(REPORT_ID), MenuAction::OpenLink(Link::Issue));
+    }
+
+    #[test]
+    fn close_window_closes_the_main_window_s_dialog_first_and_any_other_window_outright() {
+        assert_eq!(action_for(CLOSE_WINDOW_ID), MenuAction::CloseWindow);
+        assert_eq!(close_target(Some(MAIN_WINDOW)), CloseTarget::MainPage);
+        assert_eq!(close_target(Some("data-6162")), CloseTarget::Window);
+        assert_eq!(close_target(None), CloseTarget::Nothing);
+        let page = include_str!("../../src/shellDialogs.ts");
+        assert!(page.contains(&format!("\"{CLOSE_WINDOW_EVENT}\"")));
     }
 
     #[test]

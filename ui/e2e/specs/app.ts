@@ -1,4 +1,4 @@
-import { browser } from "@wdio/globals";
+import { browser, $ } from "@wdio/globals";
 import { execFileSync } from "node:child_process";
 import { request } from "node:http";
 import { createServer as createListener } from "node:net";
@@ -119,6 +119,22 @@ export function sendThroughProxy(proxy: string, url: string): Promise<number> {
     sent.once("error", failed);
     sent.end();
   });
+}
+
+// Settings and About are dialogs of the main window (W19): every entry raises it
+// and asks it for the dialog, whose three parts carry the dialog's test id.
+export async function dialogShown(testId: "settings" | "about") {
+  await $(`[data-testid="${testId}-dialog"]`).waitForDisplayed({ timeout: 15_000 });
+}
+
+export async function openSettings() {
+  await invoke("open_settings");
+  await dialogShown("settings");
+}
+
+export async function closeTheDialog(testId: "settings" | "about") {
+  await $(`[data-testid="${testId}-panel"] [aria-label="close"]`).click();
+  await $(`[data-testid="${testId}-dialog"]`).waitForExist({ reverse: true, timeout: 15_000 });
 }
 
 export async function onWindow(label: string) {

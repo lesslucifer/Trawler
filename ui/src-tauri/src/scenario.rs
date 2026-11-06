@@ -558,6 +558,8 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             crate::login_item::login_item_write,
             crate::lifecycle::tray_available,
             crate::lifecycle::take_quit_request,
+            crate::lifecycle::take_dialog_requests,
+            crate::lifecycle::close_window,
             crate::lifecycle::quit_app,
             crate::data_window::open_data_window,
             crate::data_window::take_data_payload,

@@ -2,11 +2,9 @@ import { browser, $, $$, expect } from "@wdio/globals";
 import { execFileSync } from "node:child_process";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { appOf, everythingStopped, invoke, onWindow, portOf, runningCore, sendThroughProxy, type Running } from "./app.ts";
+import { appOf, everythingStopped, openSettings, portOf, runningCore, sendThroughProxy, type Running } from "./app.ts";
 import { quitTheApp } from "./quit.ts";
 
-const MAIN = "main";
-const SETTINGS = "settings";
 const ORIGIN_PATH = "/one-app";
 
 const commandOf = (pid: number) => execFileSync("ps", ["-o", "comm=", "-p", String(pid)]).toString().trim();
@@ -74,8 +72,7 @@ describe("E-ONEAPP — one launch is the whole app", () => {
   });
 
   it("J2 · the Capture service page shows the running core", async () => {
-    await invoke("open_settings");
-    await onWindow(SETTINGS);
+    await openSettings();
     await $("button=Capture service").click();
     await $("h1=Capture service").waitForDisplayed({ timeout: 15_000 });
     await statusReads("running");
@@ -88,9 +85,8 @@ describe("E-ONEAPP — one launch is the whole app", () => {
   it("J2 · a killed core reads as killed, and the window survives it", async () => {
     process.kill(first.pid, "SIGKILL");
     await statusReads("killed (signal 9)");
-    await browser.switchToWindow(MAIN);
     expect(await $("header").isExisting()).toBe(true);
-    await browser.switchToWindow(SETTINGS);
+    expect(await browser.getWindowHandles()).toEqual(["main"]);
   });
 
   it("J2 · restart brings the API back on the same address", async () => {
@@ -108,7 +104,6 @@ describe("E-ONEAPP — one launch is the whole app", () => {
   });
 
   it("J3 · quitting from the window stops the core and frees its ports", async () => {
-    await browser.switchToWindow(MAIN);
     await quitTheApp();
     expect(await everythingStopped(second, appPid)).toBe(true);
   });

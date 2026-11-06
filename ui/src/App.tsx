@@ -61,6 +61,9 @@ import { Composer } from "./Composer";
 import { BackToFlows, Onboarding, useRouteMemory } from "./Onboarding";
 import { KeepCapturingDialog } from "./KeepCapturingDialog";
 import { ProxyCloseDialog } from "./ProxyCloseDialog";
+import { AboutDialog } from "./About";
+import { SettingsDialog } from "./Settings";
+import { closeThisWindow, topmost, useCloseWindowRequest, useShellDialogs } from "./shellDialogs";
 import { CaptureControls } from "./CaptureControls";
 import {
   deviceEvidenceSince,
@@ -151,7 +154,7 @@ export default function App({
   const service = useCoreService(core);
   return (
     <CoreServiceContext.Provider value={service}>
-      <Shell api={api} initialState={initialState} />
+      <Shell api={api} initialState={initialState} core={core} />
     </CoreServiceContext.Provider>
   );
 }
@@ -159,9 +162,11 @@ export default function App({
 function Shell({
   api,
   initialState,
+  core,
 }: {
   api?: TrawlerApi;
   initialState?: OnbState;
+  core: CoreBridge;
 }) {
   const client = useMemo(() => api ?? createApi(), [api]);
   const service = useContext(CoreServiceContext);
@@ -858,6 +863,24 @@ function Shell({
       quitStops={quitStopsCore(service?.state ?? null)}
     />
   );
+  // Settings and About wait behind the quit and keep-capturing questions: a
+  // quit asked over Settings shows its check, and a cancelled one finds
+  // Settings again (W19, DEC-64).
+  const shell = useShellDialogs();
+  const over = topmost({ prompt: close.prompt !== null, asking: close.asking, shell: shell.current !== null });
+  const shellDialog =
+    over === "shell-dialog" &&
+    (shell.current?.dialog === "settings" ? (
+      <SettingsDialog onClose={shell.dismiss} bridge={core} />
+    ) : shell.current?.dialog === "about" ? (
+      <AboutDialog show={shell.current} onClose={shell.dismiss} />
+    ) : null);
+  useCloseWindowRequest(() => {
+    if (over === "quit-prompt") close.cancel();
+    else if (over === "keep-ask") close.cancelAsk();
+    else if (over === "shell-dialog") shell.dismiss();
+    else void closeThisWindow();
+  });
 
   // A move between the list and setup leaves focus on a control that no longer
   // exists, so the shell places it on the new screen's main area (S7). Only the
@@ -1014,6 +1037,7 @@ function Shell({
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
         {keepDialog}
+        {shellDialog}
         {launchUnanswered && (
           <div
             data-testid="empty"
@@ -1038,6 +1062,7 @@ function Shell({
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
         {keepDialog}
+        {shellDialog}
         <div
           data-testid="empty"
           className="flex h-full flex-col items-center justify-center gap-6 p-12"
@@ -1061,6 +1086,7 @@ function Shell({
       <Layout mainRef={mainRef} header={setupHeader}>
         {closeDialog}
         {keepDialog}
+        {shellDialog}
         <Onboarding
           state={state}
           dispatch={go}
@@ -1184,6 +1210,7 @@ function Shell({
     >
       {closeDialog}
       {keepDialog}
+      {shellDialog}
       <FlowList
         split={split}
         flows={flows}
