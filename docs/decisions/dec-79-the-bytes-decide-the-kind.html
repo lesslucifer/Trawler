@@ -76,7 +76,9 @@ flowchart TB
         <em>served as …</em></td><td>the evidence rule (UC-5): the pane still shows the captured bytes, so a reader must see that
         the renderer choice moved</td></tr>
       <tr><td>8</td><td>The data window's kind picker still overrides</td><td>the user knows the bytes better than any rule</td></tr>
-      <tr><td>9</td><td>A form reads the bytes handed in as one shape, each a whole parse:
+      <tr><td>9</td><td>A form's label names its shape: <code>application/x-www-form-urlencoded</code> URL-encoded pairs,
+        <code>text/rfc822-headers</code> name: value lines, <code>text/uri-list</code> a URL, in the pane and the window alike. Picked
+        without such a label, a form reads the bytes handed in as one shape, each a whole parse:
         <strong>URL</strong> (one line, no whitespace, <code>scheme://</code> or a leading <code>/</code>) — scheme, user, host, port,
         path and fragment as read-only labelled rows, then its query's pairs; <strong>name: value lines</strong> (every line a
         field name and a colon, a leading <code>:</code> for a pseudo-header, an indented line folding into the one above) — one row
