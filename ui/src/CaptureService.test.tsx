@@ -126,6 +126,13 @@ test("each core's lines begin under its start mark", async () => {
   expect(mark).toHaveTextContent("started 14:10:04 · process 48207");
 });
 
+test("a log line's ANSI colour codes render as plain text", async () => {
+  await shown(RUNNING, [line(0, "\u001b[2m2026-11-06T10:00:00Z\u001b[0m \u001b[32m INFO\u001b[0m trawler: proxy listening")]);
+  const log = await screen.findByRole("log");
+  expect(log).toHaveTextContent("2026-11-06T10:00:00Z INFO trawler: proxy listening");
+  expect(log.textContent).not.toContain("\u001b");
+});
+
 test("the log follows new lines only while it is at the bottom", async () => {
   const stub = await shown(RUNNING);
   const log = await screen.findByRole("log");

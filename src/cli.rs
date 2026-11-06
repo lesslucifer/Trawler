@@ -1,6 +1,6 @@
 use std::ffi::OsString;
 use std::future::Future;
-use std::io::{Read, Write};
+use std::io::{IsTerminal, Read, Write};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
@@ -97,6 +97,7 @@ where
 {
     let _ = tracing_subscriber::fmt()
         .with_writer(std::io::stderr)
+        .with_ansi(std::io::stderr().is_terminal())
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
                 .add_directive("trawler=info".parse().expect("valid tracing directive")),
