@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 00776fac6bedf1a3a12b68e6a33789b46307b537
+base: 847712f3cc215f47778960b042f1c12a688eadd7
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-06-packaging-v2-epic-result.html
+report_sha256: 84a150f2438e09225bc3809185e9c31e27ece12cf443be63a423c7f559afacaa
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDRDI5jVeUvMNxbByukJH7rKGmJXntlS8g5Rf6VT8yixraaw0EIyzs3sR
+  /AIW6AUZY1YsQUVm8XUpbKfUqYUuQH
+  -----END SSH SIGNATURE-----
