@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W3
+branch: HEAD
+tests:
+  unit: { count: 17, covers: "every manifest source exists with its viewBox and no var()/<text>/external reference; SOURCES.sha256 equals the sources; a regeneration equals every committed brand asset (drift); the icon set, icns/ico layers, tray pairs (template black+alpha 36 px, coloured 32 px), installer BMPs (exact size, 24-bit BI_RGB) and the 144-dpi DMG PNG have their consumers' formats; tauri.conf names the installer art; index.html links the favicon; the BMP writer and viewBox reader; a hidden file in the source folder is not a source; the tray is a template on macOS only and loads the per-OS glyph pair" }
+  integration: { count: 3, covers: "the packaged Trawler.app's icon.icns equals the generated one, its binary embeds both generated tray glyphs, and the dmg's .background holds the generated DMG PNG" }
+  e2e: { waived: "no user journey changes; the per-OS look of the icon, tray and installer art is the owner's hand-check in the result report" }
