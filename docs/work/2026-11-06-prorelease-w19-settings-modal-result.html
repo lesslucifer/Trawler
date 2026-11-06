@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PRORELEASE.W19 result: Settings and About are dialogs of the main window</h1>
       <p>What W19 built from the owner's rulings, how each layer proves it, and what stays open.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W19</span> · <code>wu/prorelease/settings-modal</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w19-settings-modal-plan.html">W19 plan</a> · design <a href="2026-11-06-prorelease-w19-settings-modal-design.html#rulings">W19 design (ruled)</a></div>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W19</span> · <code>wu/prorelease/settings-modal</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w19-settings-modal-plan.html">W19 plan</a> · design <a href="2026-11-06-prorelease-w19-settings-modal-design.html#rulings">W19 design (ruled)</a></div>
     </div>
   </header>
   <main>
@@ -64,6 +64,19 @@ flowchart LR
       </table>
     </div>
 
+    <h2 id="round-3">Round 3: independent review of ui/src-tauri</h2>
+    <div>
+      <table data-c="round-3">
+        <thead><tr><th>#</th><th>Finding (verified in muda 0.20.0 / tauri 2.12.5)</th><th>Resolution</th><th>Proof (red first)</th></tr></thead>
+        <tbody>
+          <tr><td>1 · important</td><td>macOS: the native Close Window item reads "Close Window" (muda strips the <code>&amp;</code> once the item has a native twin), a fresh item reads "C&amp;lose Window": no match, so ⌘W stayed native and closed main under an open dialog</td><td>labels compared with mnemonics stripped (Tauri gives a predefined item neither a kind nor a stable id; a position would break on any default-menu change); no item found is logged, the native one stays so ⌘W still closes</td><td><code>tests/menu.rs</code> (harness off, main thread: muda builds macOS items there only) builds the shipped menu: one Trawler Close Window, no native close item — red 0 own items before the fix; unit <code>same_label</code> with "Close Window", "C&amp;lose Window", "Close"</td></tr>
+          <tr><td>2 · important</td><td>a tray Settings… met by a main window mid-destroy (keep capturing on) stayed queued and popped up on a later Open</td><td>on main destroyed without ending the app, a pending dialog request rebuilds main and is announced, as a pending quit already was</td><td><code>outlive_window.rs</code>: the request is taken once in the rebuilt window, nothing left after — red (no window) before the fix</td></tr>
+          <tr><td>3 · nit</td><td>Windows/Linux: the Close item shows Ctrl+W, not Alt+F4; Alt+F4 runs the close flow without closing a dialog first</td><td>accepted: Ctrl+W is the owner's ruled key; Alt+F4 is the window manager's close of the whole window, which runs DEC-64's flow (the ✕ path) — a dialog over a window being closed goes with it</td><td>—</td></tr>
+          <tr><td>gates</td><td colspan="3">epic <code>e515acc1</code> (W18) merged in first; gate0 green (1,486 tests, the menu test run by nextest through libtest's <code>--list</code>); <code>cr</code> and <code>design</code> notes rebound on this round's tip. No T2 truth moved: the design rules already promise Trawler's own Close Window</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <h2 id="distillation">Distillation</h2>
     <p data-item="distillation">UC-BG, UC-SVC, UC-ABOUT and the use-case index; DEC-90 amended (rules 1, 5), DEC-77 rule 4's example, DEC-69 and DEC-70 notes, the decisions index; the design rules (open Settings, Close Window, page and scroll rows); the roadmap's stale-switch row is gone.</p>
 
@@ -73,7 +86,7 @@ flowchart LR
         <thead><tr><th>Item</th><th>Owner</th></tr></thead>
         <tbody>
           <tr><td>Independent review of <code>ui/src-tauri</code> (settings.rs, about.rs, menu.rs, tray.rs, lifecycle.rs, lib.rs, scenario.rs, capabilities, <code>tauri.conf.e2e.json</code>, tests/suite) — outside the cr gate</td><td>router</td></tr>
-          <tr><td>Hand check per OS: menus as drawn, ⌘W / Ctrl+W (the native Close Window replaced in File and Window), tray Settings… while windowless, minimised and fullscreen main</td><td>owner</td></tr>
+          <tr><td>Hand check per OS: menus as drawn, ⌘W / Ctrl+W (the native Close Window replaced in File and Window), tray Settings… while windowless, minimised and fullscreen main. macOS: with Settings open ⌘W closes Settings and Trawler stays; with no dialog ⌘W closes the window as before</td><td>owner</td></tr>
           <tr><td><code>inspect-window-v2</code> JWT decode e2e fails on the epic (pre-existing)</td><td>router</td></tr>
           <tr><td>htmldoc refused snapshots of <code>web-ui.html</code>, <code>decisions-index.html</code>, <code>use-cases-index.html</code> (413): read their git diff</td><td>router</td></tr>
         </tbody>
