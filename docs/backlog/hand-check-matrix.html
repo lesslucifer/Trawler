@@ -50,7 +50,7 @@ flowchart LR
         <tr><td>8</td><td>Open at login</td><td>switch on, log out and in: the app runs with no window (macOS 11/12: reads unavailable; AppImage: the file's own path)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
         <tr><td>9</td><td>Update rc → rc</td><td>with the previous rc installed and this rc published as latest: the dialog names both versions, DEC-64's check runs, the app relaunches as this rc, the CA's SHA-256 and settings unchanged</td><td>☐</td><td>☐</td><td>☐</td><td>☐ AppImage · ☐ deb</td><td>☐ AppImage · ☐ deb</td></tr>
         <tr><td>10</td><td>Update with keep capturing</td><td>row 9 with keep capturing and open at login on and the window closed: the window opens to ask; the login item survives</td><td>☐</td><td>☐</td><td>n/a</td><td>☐</td><td>n/a</td></tr>
-        <tr><td>11</td><td>Update rc → final</td><td>(the final's own run) the last rc installed is offered the final and becomes it, as row 9; an rpm install of the final on Fedora installs and opens</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>11</td><td>Update rc → final</td><td>(the final's own run) the last rc installed, and the previous final if there is one, is offered the final and becomes it, as row 9; an rpm install of the final on Fedora installs and opens</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
         <tr><td>12</td><td>Uninstall</td><td>the app is gone, then the CA trust and the data dir removed by hand as listed below leave no Trawler certificate and no <code>dev.trawler.app</code> folder</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
       </tbody>
     </table>

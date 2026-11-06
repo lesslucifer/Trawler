@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9aeb9f34851f0dfaebc9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W7 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W7 result — release process, notes, checksums, matrix</h1>
+      <p>What W7 changed, how it is proven, and what only the next rc tag can prove.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W7</span> · <code>wu/prorelease/release-process</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w7-release-process-plan.html">W7 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>What's new</td><td><code>xtask/src/release_manifest.rs</code> (<code>changes</code>, <code>notes</code>), <code>CHANGELOG.md</code> (new, <code>## 0.1.0</code>)</td><td>install steps only → the version's CHANGELOG section first; an rc reads its final's; a missing or empty section refuses the tag before anything is written</td></tr>
+          <tr><td>Verify section</td><td><code>.github/release-notes.md</code></td><td>none → <em>Verify your download</em> (macOS <code>shasum -a 256 -c</code>, Linux <code>sha256sum -c</code>, Windows <code>Get-FileHash</code>); install steps under <em>Install</em>, OSes as <code>###</code></td></tr>
+          <tr><td>SHA256SUMS</td><td><code>release_manifest::run</code> (<code>checksums</code>)</td><td>none → one <code>sha256sum</code>-format line per installer (every non-<code>.sig</code> file, dmg included), sorted</td></tr>
+          <tr><td>Release job</td><td><code>.github/workflows/release.yml</code></td><td><code>(cd dist &amp;&amp; sha256sum --strict -c SHA256SUMS)</code> before <code>gh release create dist/*</code>, which attaches it; no secret added, the key still reaches only the sign step</td></tr>
+          <tr><td>Process</td><td><code>docs/release-process.html</code> (T1, staged for <code>mr commit</code>)</td><td>none → version policy, notes sources, draft review, publish ticks, the final's cut (both shapes), rollback, the unsigned consequence</td></tr>
+          <tr><td>Hand checks</td><td><code>docs/backlog/hand-check-matrix.html</code> (T2)</td><td>a roadmap prose row → 12 steps × 5 machines, uninstall per OS</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="rulings">Choices made</h2>
+    <table data-c="rulings">
+      <thead><tr><th>Question</th><th>Choice</th></tr></thead>
+      <tbody>
+        <tr><td>rc exemption from the CHANGELOG refusal</td><td>none: an rc reads its final's section, so a missing section fails on the rc tag, never on the final's after the hand checks; a unit test reds a workspace version without one before any tag</td></tr>
+        <tr><td>Publish rule vs DEC-86 rule 6</td><td>the workflow still never passes <code>--prerelease</code>; the owner ticks at publish: rcs before the first final as latest (update test), a final as latest, every rc after the first final as pre-release (off the channel; also closes the rpm-final limit)</td></tr>
+        <tr><td>Q9 final cut</td><td>both shapes documented (cut epic · epic's last commit); the router picks</td></tr>
+        <tr><td>Matrix tier</td><td>T2 <code>docs/backlog/</code>; a filled copy per rc is T3</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">None from the plan. The T1 release doc lands as an owner-signed <code>mr commit</code> after this report (rule-bearing), so the WU confirm's tip is that commit.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Tests red first</td><td>the new <code>release_manifest</code> tests failed to compile (no <code>changes</code>, three-argument <code>notes</code>), then 5 failed (no CHANGELOG, no template sections, no SHA256SUMS); <code>the_checksums_are_rechecked_by_another_tool_and_ship_with_the_draft</code> failed on the old <code>release.yml</code>; all green after</td></tr>
+          <tr><td>Hand run</td><td><code>cargo xtask release-manifest</code> on a fake 0.1.0-5 dist: <code>shasum -a 256 -c SHA256SUMS</code> OK on all ten files; notes open with the 0.1.0 section; <code>v0.2.0-1</code> refused: <code>CHANGELOG.md has no ## 0.2.0 section for 0.2.0-1</code></td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1390 tests)</td></tr>
+          <tr><td>Workflow lint</td><td><code>actionlint .github/workflows/release.yml</code> green</td></tr>
+          <tr><td>e2e</td><td>waived to the next rc tag (the draft carries SHA256SUMS and the new notes)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">DEC-86 rules 5 and 6, the rpm-final limit's reason, Held by, and its index row. UC-INSTALL and its index row (notes say what's new and how to verify). Roadmap row "Release hand checks" points at the new matrix; backlog index lists it. T1 <code>docs/release-process.html</code> via <code>mr commit</code>.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td><code>CHANGELOG.md</code> is root markdown: the Q4 exemption from the HTML-docs rule needs the owner's own CLAUDE.md edit</td><td>owner</td></tr>
+          <tr><td>First real SHA256SUMS and notes: the next rc tag (<code>v0.1.0-5</code>) — the version bump and its tag are the epic's, not this WU's</td><td>router · owner</td></tr>
+          <tr><td>Independent review of <code>.github/workflows/release.yml</code> and <code>.github/release-notes.md</code> (outside the cr gate)</td><td>router</td></tr>
+          <tr><td>Matrix row 4 "About names this version" needs W4 on Windows/Linux</td><td>W4</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
