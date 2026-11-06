@@ -471,7 +471,7 @@
     <h2 id="uc-bg">UC-BG — Keep capturing after the window closes</h2>
     <p data-c="uc-bg-contract">The first ✕ that would quit asks once, <em>keep capturing after the window closes?</em>, and the answer is the
       switch (<span class="badge id">E-BGSVC</span>, <a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a> rule 10).
-      Settings → General holds it and <em>open Trawler at login</em>; nothing else does.</p>
+      Settings → General holds it and <em>open Trawler at login</em>; nothing else does. The icon is the menu-bar icon on macOS and the tray icon on Windows (system tray, notification area) and Linux (system tray; GNOME needs the AppIndicator extension), and every text names it that way (<span class="badge id">E-PRORELEASE.W17</span>).</p>
     <table data-c="uc-bg-states">
       <tr><th>The user</th><th>Happens</th></tr>
       <tr><td>✕, switch unanswered, menu-bar icon present</td><td>asks; <em>keep capturing</em> stores on and closes the window with no proxy read, the app and its core keep capturing; <em>quit</em> stores off and then runs <a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>'s check; ✕ or Esc cancels, stores nothing, the next ✕ asks again</td></tr>
@@ -479,7 +479,7 @@
       <tr><td>✕, switch off, or no icon</td><td>quits as before DEC-77, through DEC-64's check</td></tr>
       <tr><td>⌘Q, or Quit from the menu-bar icon</td><td>always a quit: the main window is opened if none is, DEC-64's check runs, then the app exits and stops its core. It never asks the keep-capturing question</td></tr>
       <tr><td>Open Trawler, Settings…, the Dock, a second launch</td><td>rebuilds or focuses the main window; the list reloads from the core</td></tr>
-      <tr><td>Open Trawler at login</td><td>macOS: registers the bundled launch agent with <code>SMAppService</code>, so “Trawler” shows in Login Items; an unbundled build refuses with its reason and the switch stays off. Linux and Windows write their own entry. A login launch starts with <code>--background</code> and opens no window</td></tr>
+      <tr><td>Open Trawler at login</td><td>macOS: registers the bundled launch agent with <code>SMAppService</code>, so “Trawler” shows in Login Items; an unbundled build refuses with its reason and the switch stays off. Linux and Windows write their own entry. A login launch starts with <code>--background</code> and opens no window, unless there is no icon to reach it from</td></tr>
     </table>
     <p class="kd" data-c="uc-bg-proof">Proven by <code>background-asked</code>, <code>-off</code>, <code>-keep</code> and <code>-quit</code>
       <code>.spec.ts</code> in the owned e2e suite: the ask and its cancel, the stored answers, ✕ ending the app, capture with no window,

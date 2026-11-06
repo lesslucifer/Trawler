@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedb2239f34851f0dfaeda5" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W17 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W17 result: texts that say what the app does</h1>
+      <p>What W17 changed, how it is proven, and the audit of the same bug class.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W17</span> · <code>wu/prorelease/dialog-texts</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w17-dialog-texts-plan.html">W17 plan</a> · voice <a href="2026-11-06-prorelease-w11-public-text-design.html">W11 (signed)</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>G3 replace-proxy ask</td><td><code>ui/src-tauri/src/reach.rs</code> <code>replace_message</code></td><td>"replace it for as long as Trawler runs. When Trawler quits it turns the proxy off" → "replace it, and this machine routes through Trawler until you stop routing through Trawler. When you quit, Trawler asks first. Stopping turns the proxy off — it does not put ‹address› back…"</td></tr>
+          <tr><td>G3b setup notice</td><td><code>ui/src/verdicts.ts</code> <code>foreignProxyNotice</code></td><td>"replaces it while Trawler runs, and restores nothing when it quits" → "replaces it, and Trawler never puts it back"</td></tr>
+          <tr><td>G4 keep-capturing ask</td><td><code>ui/src/KeepCapturingDialog.tsx</code></td><td>"stays in the menu bar" everywhere → macOS: the menu bar · Windows: the system tray (notification area) · Linux: the system tray, "on GNOME, the AppIndicator extension shows it"</td></tr>
+          <tr><td>A1 General quit line + notice</td><td><code>ui/src/General.tsx</code></td><td>"menu-bar icon" everywhere → menu-bar icon (macOS) / tray icon; the Linux no-icon notice adds the AppIndicator hint</td></tr>
+          <tr><td>A2 General login line</td><td><code>ui/src/General.tsx</code></td><td>"Opens in the menu bar, with no window." even with no icon → per OS place; with no icon "Opens with its window." (<code>lifecycle.rs:101-102</code>)</td></tr>
+          <tr><td>A3 menu shortcuts</td><td><code>ui/src/components/Menu.tsx</code> <code>keysFor</code></td><td>⌘ ⌥ ⇧ ⌫ on every OS → <code>Ctrl+Alt+Shift+K</code>, <code>Ctrl+Backspace</code> on Windows and Linux; glyphs kept on macOS</td></tr>
+          <tr><td>Shared words</td><td><code>ui/src/generalPrefs.ts</code></td><td><code>trayPlace(os)</code>, <code>trayIcon(os)</code>, <code>GNOME_TRAY_HINT</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="audit">Audit: same bug class</h2>
+    <table data-c="audit">
+      <thead><tr><th>Text</th><th>Where</th><th>Finding</th></tr></thead>
+      <tbody>
+        <tr><td>"until Trawler quits" (reach)</td><td><code>ui/src/Onboarding.tsx:782,834</code></td><td>true: the extra listeners live in the core, which stops on exit</td></tr>
+        <tr><td>Reach confirm "whenever it quits"</td><td><code>ui/src-tauri/src/reach.rs:15-22</code></td><td>true, same reason</td></tr>
+        <tr><td>Quit-time dialog</td><td><code>ui/src/ProxyCloseDialog.tsx</code></td><td>true per OS: button only where <code>canAutoSetup</code>, "approve the prompt" on macOS only</td></tr>
+        <tr><td>Tray menu labels</td><td><code>ui/src-tauri/src/tray.rs</code></td><td>OS-neutral (Open Trawler, Settings…, Quit Trawler)</td></tr>
+        <tr><td>"menu-bar icon" in comments and stderr logs</td><td><code>tray.rs:108-180</code>, <code>lifecycle.rs:1,138</code>, <code>lib.rs:48</code></td><td>not user text; left</td></tr>
+        <tr><td>Windows certificate removal steps</td><td><code>ui/src/setup.ts</code></td><td>W16 owns; untouched</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">Beyond G3/G4 the audit fixes A1–A3 and G3b (same class, small). The replace ask stays one text: it is reached only where <code>set_proxy</code> exists (macOS, Windows; <code>setup.rs:1101-1115</code>), both of which offer the stop button.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Tests red first</td><td>13 vitest cases failed on the old code (per-OS keep text, General per OS and no tray, Menu labels, foreign notice ×4); the new <code>reach.rs</code> test failed; all green after</td></tr>
+          <tr><td>Suite</td><td>vitest 106 files green · <code>tsc --noEmit</code> clean · <code>cargo xtask gate0</code> green (1411 tests)</td></tr>
+          <tr><td>Review</td><td><code>cr/v5</code> PASS (3 finders, 1 verifier; 0 verified; 2 nits waived) · <code>design/v1</code> PASS (copy-only, 3 files declared)</td></tr>
+          <tr><td>Integration / e2e</td><td>waived: text only, no contract moves; no spec asserts these strings</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">UC-BG (<code>docs/use-cases/web-ui.html</code>): the icon is the menu-bar icon on macOS and the tray icon on Windows and Linux (GNOME needs AppIndicator), named that way in every text; a login launch with no icon opens its window. No DEC changes (copy only).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Independent review of <code>ui/src-tauri/src/reach.rs</code> (outside the cr gate)</td><td>router</td></tr>
+          <tr><td>W12 guide: G3/G4 now match the app; quote the new wording</td><td>W12</td></tr>
+          <tr><td>UC-BG snapshot: the htmldoc server refused <code>web-ui.html</code> (413, too large), so its <code>?diff=latest</code> has no baseline for this edit; read the git diff</td><td>router</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

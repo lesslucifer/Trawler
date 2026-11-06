@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { Invoke } from "./coreService";
+import type { HostOs } from "./setup";
 
 export type KeepCapturing = "unanswered" | "on" | "off";
 
@@ -34,3 +35,14 @@ export function refusalWords(error: unknown): string {
   const text = error instanceof Error ? error.message : String(error);
   return text.replace(/\s*\(os error \d+\)$/, "").toLowerCase();
 }
+
+export function trayPlace(os: HostOs): string {
+  if (os === "macos") return "the menu bar";
+  return os === "windows" ? "the system tray (notification area)" : "the system tray";
+}
+
+export function trayIcon(os: HostOs): string {
+  return os === "macos" ? "menu-bar icon" : "tray icon";
+}
+
+export const GNOME_TRAY_HINT = "on GNOME, the AppIndicator extension shows";
