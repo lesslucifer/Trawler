@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: ea79805c21a7f4adb4b0997f720b04569c6a6b6b
+base: 200005e742d49bf0c70a99e99f306f692947476a
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-release-fixes-w1-rpm-prerelease-result.html
+report_sha256: 52304d0e6b374ee133bf9848da9277b18916452727e40f3983e680fb571c439a
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDMHdeFsF+QlXvycXJQ1vfScNvR0mnBRCyu6UTcLdCJUrZzNRPC0A9fjE
+  PZzMl27fsEzSkPdffyT0bDHwNAxVkK
+  -----END SSH SIGNATURE-----
