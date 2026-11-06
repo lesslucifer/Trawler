@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedc6f39f34851f0dfaef73" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W5 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W5 result — README and community files</h1>
+      <p>What W5 changed, how it is proven, and what the owner still does by hand.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W5</span> · <code>wu/prorelease/readme-community</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w5-readme-community-plan.html">W5 plan</a> · design <a href="2026-11-06-prorelease-w11-public-text-design.html">W11</a> · <a href="2026-11-06-prorelease-w12-guide-design.html">W12</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <table data-c="outcome" data-item="outcome">
+      <tr><th>Change</th><th>Where</th><th>Before → after</th></tr>
+      <tr><td>README</td><td><code>README.md</code></td><td>developer note naming two other tools → W11's eleven sections, pitch A, wordmark <code>&lt;picture&gt;</code> (W3 PNGs), three badges, S1 hero, install table per host, first-open and checksum <code>&lt;details&gt;</code>, S2·S3·S5 row, privacy in three lines, known limits, FAQ, scripting in two lines</td></tr>
+      <tr><td>Community files</td><td><code>CONTRIBUTING.md</code> · <code>SECURITY.md</code> · <code>CODE_OF_CONDUCT.md</code> · <code>PRIVACY.md</code></td><td>none → issues only at 0.1.0, build, layout and the control API (moved from the README, every route of <code>src/api/mod.rs</code>); private advisories, scope, best-effort, CA-key note; Contributor Covenant 2.1 verbatim with quangvu.luu92@gmail.com; W11's privacy table</td></tr>
+      <tr><td>GitHub forms</td><td><code>.github/ISSUE_TEMPLATE/</code> bug_report · feature_request · config · <code>.github/PULL_REQUEST_TEMPLATE.md</code></td><td>none → W11's outlines; blank issues off; PRs politely turned to issues</td></tr>
+      <tr><td>Screenshot script</td><td><code>cargo xtask ui screenshots</code> · <code>xtask/src/screenshots.rs</code> · <code>ui/e2e/screenshots/</code> (conf, spec, HAR fixture)</td><td>none → the walkthrough's scenario build (its build extracted to <code>walkthrough::scenario_build</code>), an attached launch (harness core, reserved-host HAR fixture) for S1–S6, S10, S11 and an owned launch for S7, each under a temp <code>HOME</code>; red unless every listed PNG is written</td></tr>
+      <tr><td>Screenshots</td><td><code>.github/screenshots/</code></td><td>none → 9 PNGs, 1440×800 main window, dark</td></tr>
+      <tr><td>Checks</td><td><code>xtask/src/public_text.rs</code></td><td>none → links + anchors resolve; install table = <code>Os::bundles</code> (made <code>pub(crate)</code>); deny list; forms parse</td></tr>
+      <tr><td>Docs</td><td>DEC-91 + index row · UC-INSTALL contract line</td><td>new</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-c="deviations" data-item="deviations">
+      <tr><th>Planned</th><th>Done</th><th>Why</th></tr>
+      <tr><td>screenshots in <code>docs/screenshots/</code></td><td><code>.github/screenshots/</code></td><td>every file under flat <code>docs/</code> is T1 to the gate (<code>notes::tier_of</code>), so a PNG there is rule-bearing and needs <code>mr commit</code>; the design named no path</td></tr>
+      <tr><td>S1 "one pending" row</td><td>none</td><td>the fixture is an imported HAR (hermetic, reserved hosts); an import cannot be pending. Rows carry the small ↑ imported mark</td></tr>
+      <tr><td>S5 "response shown"</td><td>status and duration in the send zone</td><td>the composer shows the answer's status; the body is one click on "open the new flow". The replayed row is the harness origin (<code>localhost:&lt;port&gt;</code>): a replay to a reserved host would reach the public network</td></tr>
+      <tr><td>S7 ports 7420/7421</td><td>ephemeral ports</td><td>the e2e/scenario build's owned core takes OS-chosen ports so a run never collides</td></tr>
+      <tr><td>S11 with W4's update switch</td><td>today's two switches</td><td>W4 is not merged; re-run <code>cargo xtask ui screenshots</code> after it</td></tr>
+      <tr><td>DEC-90</td><td>DEC-91</td><td>W4's plan claims DEC-90</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-c="evidence" data-item="evidence">
+      <tr><th>Claim</th><th>Proof</th></tr>
+      <tr><td>The checks were red on the old tree</td><td>4 repo tests failed before the files existed: links (no CONTRIBUTING), install table (no table), deny list (the old README named two tools), forms (none)</td></tr>
+      <tr><td>The checks are green</td><td><code>cargo test -p xtask --lib</code>: 466 passed; 13 <code>public_text</code> + 2 <code>screenshots</code> tests</td></tr>
+      <tr><td>The script drives the real window</td><td><code>cargo xtask ui screenshots</code> on macOS: attached launch 8 passing, owned launch 1 passing, "ui screenshots complete"; port 4445 was free, no other e2e ran</td></tr>
+      <tr><td>Facts match the code</td><td>re-read at this tree: <code>update.rs</code> <code>CHECK_EVERY</code> 24 h; <code>ownRequest.ts</code> example.com on click; <code>tauri.conf.json</code> updater endpoint + <code>requireSignedVersion</code>; plugins dialog, fs, single-instance, updater only; <code>config.rs</code> loopback + 10 MB cap; <code>setup.rs</code> removal on macOS and Windows (W16 merged). The settings switch for the launch check is W4's: PRIVACY and README word the app as it ships after W4</td></tr>
+      <tr><td>e2e</td><td>the screenshot run is the WU's e2e: no user journey changes</td></tr>
+    </table>
+
+    <h2 id="owner-todo">Owner TODO — hand-captured screenshots (W11 Q8)</h2>
+    <table data-c="owner-todo">
+      <tr><th>File to add</th><th>Shows</th><th>When</th><th>Used by</th></tr>
+      <tr><td><code>.github/screenshots/s8-macos-open-anyway.png</code></td><td>System Settings → Privacy &amp; Security, the Trawler message with <strong>Open Anyway</strong></td><td>first open of the last rc's <code>.dmg</code></td><td>GUIDE.md § Install · macOS (W6)</td></tr>
+      <tr><td><code>.github/screenshots/s9-windows-smartscreen.png</code></td><td><strong>Windows protected your PC</strong> after <strong>More info</strong>, with <strong>Run anyway</strong></td><td>first run of the last rc's <code>-setup.exe</code></td><td>GUIDE.md § Install · Windows (W6)</td></tr>
+    </table>
+    <p data-c="owner-todo-note">No published file links either yet, so nothing is broken; W6 links them once they exist (the link test then holds them).</p>
+
+    <h2 id="rule-bearing">Staged apart: CLAUDE.md</h2>
+    <p data-c="rule-bearing">Plan Q4 (root GitHub markdown allowed) needs one CLAUDE.md line under Documentation rules. It is staged alone for the owner's <code>mr commit</code> after this WU's commits; a step-between session then gates that tip.</p>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-c="distillation" data-item="distillation">DEC-91 (new) carries W11's rulings that outlive the archive (one fact per file, no tool named, install table = <code>package.rs</code>, links resolve, issues only, screenshots by script) and its index row; UC-INSTALL names the README's install table and PRIVACY. Pre-edit snapshots of <code>decisions-index.html</code> and <code>web-ui.html</code> were refused by the htmldoc server (413); their diff is in git only.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-c="follow-ups" data-item="follow-ups">
+      <tr><th>Open</th><th>Where it closes</th></tr>
+      <tr><td>The Capture service log shows raw ANSI colour codes (<code>␛[2m…␛[0m</code>) and the core's full CA path (S7)</td><td>a fix WU: the core's log should not colour a pipe (or the log view strips SGR); then re-run the screenshots</td></tr>
+      <tr><td>Privacy text kept twice (PRIVACY.md and W4's in-app page)</td><td>W4 / the epic close: one source, or a test that they match</td></tr>
+      <tr><td>Re-run <code>cargo xtask ui screenshots</code> after W4 (S11 with the update switch, About in menus)</td><td>W6 or the epic close</td></tr>
+      <tr><td>GUIDE.md is in <code>NOT_YET_WRITTEN</code></td><td>W6 removes it (a test fails once GUIDE.md exists) so every <code>GUIDE.md#…</code> anchor the README uses is then checked: install, first-run, troubleshooting, uninstall</td></tr>
+      <tr><td>Repo settings (plan Q11): private vulnerability reporting and Discussions must be on, or SECURITY's and config.yml's links 404; the topics list in plan Q11 names two other tools (conflicts with W11 Q5)</td><td>the owner, after W5 merges</td></tr>
+      <tr><td>Screenshots are macOS-only and 1× (the WebDriver capture's size)</td><td>accepted; a Retina capture needs the window's device-pixel ratio</td></tr>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
