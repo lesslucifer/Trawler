@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 21c4b111131d2db8e5281ee0ae3c56a32ff73391
+base: d75288ef655847141d8f7bbb927d55b6fdbba383
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w3-brand-assets-result.html
+report_sha256: 3e7015a022468159d17075b2f0d40200e2790b18fdeab7fbb44760186db21953
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAiHpTGwCOSLY5VRiqG+h48AoeezBXFbuY0DanT17sdxy9Pe4LQltKOSa
+  aYIQ2MYveI1unznLliTPqpiRqt+m0A
+  -----END SSH SIGNATURE-----
