@@ -1,0 +1,40 @@
+schema: cr/v5
+scope: "WU inspect-form-parse -> epic/release-fixes (round 5)"
+epic: E-RELFIX
+wu: E-RELFIX.W2
+branch: wu/release-fixes/inspect-form-parse
+base: 200005e742d49bf0c70a99e99f306f692947476a
+head: e3e66ea95ca494678f307d57881663a9d2a45ccf
+diff_sha256: 33d85955aa95a286da61e08066ffc68aeb64330bcbe40da035a4856270d0c98f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 6
+  stage_seconds:
+    gate0: 22
+    finders: 52
+    verifiers: 31
+    total: 149
+  by_finder:
+    correctness: { found: 3, verified: 2 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 5, verified: 2 }
+findings: { found: 8, verified: 4, waived: 0 }
+waivers: []
+nits:
+  - finding: "formStructure's header value range runs to the end of the raw line, trailing spaces included, while the table value is trimmed"
+    waived: "only a value: find with an anchor or a space on a header line ending in spaces, shown encoded, differs; the encoded view is literal text by design"
+  - finding: "repeats() counts header names case-sensitively, so Set-Cookie and set-cookie are not one repeat"
+    waived: "pairsAsJson groups the same way, HTTP/2 names arrive lowercase, and only a badge is missed; recorded as a follow-up"
+  - finding: "FORM_LABEL_SHAPES lives in contentKind while contentKind imports the FormShape type from formPairs"
+    waived: "one table serves both the kind and the shape; the type import is erased, so the runtime dependency is one way"
+  - finding: "DataWindowScreen derives the form's view policy (shape, notForm, editableForm, decodeNames, markable) inline"
+    waived: "one consumer; the pane's rule is a deliberately smaller one (DEC-76 rule 7), so nothing is duplicated"
+verdict: PASS
+date: 2026-11-06
