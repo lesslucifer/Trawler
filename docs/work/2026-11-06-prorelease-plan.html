@@ -135,6 +135,7 @@
 
     <h2 id="brand-kit">Brand kit — what you prepare, what is generated</h2>
     <p>#1–#5 are signed in W9, #6–#9 in W10; W3 then generates everything in the second table from the signed sources, and you approve the rendered set at real size on each OS before it merges.</p>
+    <div class="callout" data-c="brand-kit-signed">#1–#5 signed (W9): 7b2 Sonar, ink + amber, DM Mono wordmark. The files, viewBoxes and consumers are <code>ui/src-tauri/icons/source/MANIFEST.json</code>; the rules are <a href="../decisions/dec-89-one-signed-mark-one-source-folder.html">DEC-89</a>, which supersedes this table where they differ (#2 16 grid, #3 18 grid, #5 DM Mono).</div>
     <table data-c="brand-kit-supply">
       <tr><th>#</th><th>Deliverable</th><th>Format · size</th><th>Platform rules</th><th>You</th></tr>
       <tr><td>1</td><td>Master app icon</td><td>SVG, 1024×1024 viewBox (or PNG 1024×1024 RGBA, sRGB)</td><td>macOS grid: body 824×824 centred (100 px margin), continuous corner ≈185 px, transparent outside, no baked shadow. Windows/Linux reuse it as is (padding is fine there)</td><td>supply or approve</td></tr>
@@ -247,7 +248,7 @@ flowchart LR
         <tr><td>W6</td><td>build</td><td>user guide</td><td>W4, W5, W12, W16, W17</td><td>—</td><td>5</td><td>planned</td><td>—</td><td>—</td></tr>
         <tr><td>W7</td><td>build</td><td>release process, notes, checksums, matrix</td><td>Q8 ✅ Q9 ✅</td><td>—</td><td>1</td><td>merged</td><td>yes (<code>.github/workflows</code>)</td><td>—</td></tr>
         <tr><td>W8</td><td>build</td><td>updater F4 + F7</td><td>Q8 ✅</td><td>—</td><td>1</td><td>merged</td><td>yes (<code>update.rs</code>)</td><td>—</td></tr>
-        <tr><td>W9</td><td>design</td><td>logo + brand system</td><td>Q3</td><td>taste brief, picks per round, <strong>signs the mark</strong></td><td>1</td><td>in progress</td><td>—</td><td>—</td></tr>
+        <tr><td>W9</td><td>design</td><td>logo + brand system</td><td>Q3</td><td>taste brief, picks per round, <strong>signs the mark</strong></td><td>1</td><td>signed 7b2 (DEC-89)</td><td>—</td><td>—</td></tr>
         <tr><td>W10</td><td>design</td><td>installer art + social preview</td><td>W9 signed</td><td>picks, sign-off</td><td>2</td><td>in progress</td><td>—</td><td>—</td></tr>
         <tr><td>W11</td><td>design</td><td>public text: voice, README, community, notes voice</td><td>—</td><td>pitch + tone pick, sign-off</td><td>1</td><td>merged</td><td>—</td><td>—</td></tr>
         <tr><td>W12</td><td>design</td><td>user guide</td><td>W11 signed</td><td>outline review, sign-off</td><td>2</td><td>signed</td><td>—</td><td>—</td></tr>

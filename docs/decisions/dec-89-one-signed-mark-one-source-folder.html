@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedb6099f34851f0dfaee06">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-89: one signed mark, one source folder</title>
+  <style>
+    .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; border: 1px solid #8884; }
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-89 — one signed mark, one source folder</h1>
+      <p>The owner signed 7b2 Sonar, ink + amber, DM Mono wordmark; its hand-authored SVGs in one folder are the only source every icon, tray glyph and brand image is made from.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W9</strong> · UC-INSTALL · relates to
+        <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · <a href="dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="mark">The mark</h2>
+    <div class="cards" data-c="mark">
+      <div class="card"><img src="../../ui/src-tauri/icons/source/icon.svg" width="128" height="128" alt="7b2 Sonar app icon"><br>app icon</div>
+      <div class="card"><img src="../../ui/src-tauri/icons/source/tray-running-template.svg" width="36" height="36" alt="tray running"> <img src="../../ui/src-tauri/icons/source/tray-stopped-template.svg" width="36" height="36" alt="tray stopped"><br>macOS tray running · stopped</div>
+      <div class="card"><img src="../../ui/src-tauri/icons/source/wordmark-light.svg" width="296" height="67" alt="wordmark"><br>wordmark</div>
+    </div>
+    <p class="caption">A fish-finder ring, its sweep lit, one blip found: Trawler reading the traffic it catches.</p>
+
+    <h2 id="flow">One source</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  S["ui/src-tauri/icons/source/*.svg + MANIFEST.json (signed, hand-authored)"] --> X["cargo xtask icons (W3)"]
+  X --> I["icon set: .icns · .ico · PNGs (bundle.icon)"]
+  X --> T["tray PNGs: macOS template pair · coloured pair"]
+  X --> F["favicon · README / About lockups"]
+  S --> W["W10 installer art + social preview"]
+  W --> X
+      </pre>
+      <div class="caption">Nothing downstream is drawn by hand; a change to the mark is a design WU that edits the source folder.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td><code>ui/src-tauri/icons/source/</code> is the single source of truth; <code>MANIFEST.json</code> names each file, its viewBox, purpose and consumer. Every generated asset comes from it; an edit goes back through a design WU and the owner</td><td>the old icon set had no source and could not be reproduced</td></tr>
+      <tr><td>2</td><td>Sources are plain SVG: literal fills, no CSS <code>var()</code>, no <code>&lt;text&gt;</code> (the wordmark is outlines), no external references</td><td>librsvg and <code>tauri icon</code> ignore <code>var()</code>; an outlined wordmark ships no font</td></tr>
+      <tr><td>3</td><td>The viewBoxes are the manifest's: master 1024 (824 body, 185 corner), <code>icon-small</code> on a 16 grid, macOS templates on an 18 grid, coloured tray on 16. <code>icon.svg</code> feeds sizes above 32 px, <code>icon-small.svg</code> the 16–32 layers</td><td>each glyph snaps to the pixel grid it is shown at; the master's thin ring blurs at 16</td></tr>
+      <tr><td>4</td><td>Tray states differ by shape only: running = ring + lit sweep + blip, stopped = empty ring + centre dot</td><td>macOS tints a template, so colour cannot carry state</td></tr>
+      <tr><td>5</td><td>Template images (black + alpha) on macOS only; Windows and Linux get the coloured pair (running: dark tile, amber sweep; stopped: muted tile)</td><td>a black glyph disappears on a dark taskbar</td></tr>
+      <tr><td>6</td><td>Amber is a brand colour (icon, tray, lockups, installer art, social preview), never a UI colour; <code>icon-ink.svg</code> is the fallback where colour is not allowed</td><td>DEC-19 keeps the app UI free of a chromatic accent; the owner's signature overrides plan Q3's “ink-only mark”</td></tr>
+      <tr><td>7</td><td>The wordmark is lowercase <code>trawler</code> in DM Mono; <code>wordmark-light</code> / <code>-dark</code> name the theme it sits on</td><td>the face the owner signed; DM Mono is OFL-1.1, already in the notice (DEC-88)</td></tr>
+    </table>
+
+    <h2 id="palette">Palette</h2>
+    <table data-c="palette">
+      <tr><th>Role</th><th>Value</th></tr>
+      <tr><td>tile (warm dark, the UI canvas)</td><td><span class="sw" style="background:#2b2622"></span> <code>#2b2622</code></td></tr>
+      <tr><td>ink strokes</td><td><span class="sw" style="background:#f7f5f0"></span> <code>#f7f5f0</code></td></tr>
+      <tr><td>amber: sweep (45–55 % opacity) and blip</td><td><span class="sw" style="background:#e0a43a"></span> <code>#e0a43a</code></td></tr>
+      <tr><td>stopped tray tile</td><td><span class="sw" style="background:#6f6a64"></span> <code>#6f6a64</code></td></tr>
+      <tr><td>wordmark on light · on dark</td><td><span class="sw" style="background:#1f1c19"></span> <code>#1f1c19</code> · <span class="sw" style="background:#f2efe8"></span> <code>#f2efe8</code></td></tr>
+      <tr><td>social canvas · tagline</td><td><span class="sw" style="background:#1b1916"></span> <code>#1b1916</code> · <span class="sw" style="background:#aea69c"></span> <code>#aea69c</code></td></tr>
+      <tr><td>tile edge</td><td><code>#ffffff</code> at 10–14 % opacity</td></tr>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <p data-c="rejected">Drafts A/B/C (net, serif T, hook and packet); the terminal fish <code>&gt;&lt;&gt;</code> family and every hybrid (R2); finalists 5b4 Aperture (recommended) and 1b2 Wake; the ink-only treatment; sans and serif wordmarks — rounds in <code>docs/work/2026-11-06-prorelease-w9-logo-round-{1,2,3}.html</code>.</p>
+
+    <h2 id="held">Held by</h2>
+    <p data-c="held">W3's unit test (planned): every manifest file exists, its viewBox matches, no <code>var()</code>, and the generated set's recorded source hash matches. Until W3: the W9 render check (rsvg-convert of every source).</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

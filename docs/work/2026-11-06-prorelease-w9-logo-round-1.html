@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9c5a9f34851f0dfaec08">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Logo round 1: directions</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono&amp;family=Instrument+Serif:ital@1&amp;family=Inter:wght@400;600&amp;display=swap">
+  <style>
+    .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+    .ic { display: inline-block; vertical-align: middle; flex: none; }
+    .cands { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px; margin: 8px 0 24px; }
+    .cand { flex: 1 1 380px; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--paper); }
+    .cand-head { margin-bottom: 10px; }
+    .cand-body { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+    .hero-icon { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .hero-icon span, .strip span, .menubar span { font-size: 11px; color: var(--muted); }
+    .strips { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 220px; }
+    .strip, .menubar { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; flex-wrap: wrap; }
+    .strip.light { background: #f4f1ea; } .strip.dark { background: #1b1916; }
+    .menubar.light { background: #e8e8e8; } .menubar.dark { background: #2c2c2e; }
+    .strip.light span, .menubar.light span { color: #555; }
+    .opts { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0 20px; }
+    .opt { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: var(--paper); min-width: 170px; max-width: 260px; }
+    .opt-art { display: flex; gap: 6px; align-items: center; min-height: 60px; margin-bottom: 6px; }
+    .sw { display: inline-block; width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--line); }
+    .sw.wide { width: 56px; }
+    .wm { font-size: 30px; color: var(--ink); }
+    .wm.serif { font-family: "Instrument Serif", serif; font-style: italic; }
+    .wm.sans { font-family: Inter, sans-serif; font-weight: 600; letter-spacing: -0.02em; }
+    .wm.mono { font-family: "DM Mono", monospace; }
+    .wm.caps { font-family: Inter, sans-serif; font-size: 20px; letter-spacing: 0.3em; }
+  </style>
+</head>
+<body>
+<svg class="sprite" aria-hidden="true" width="0" height="0"><defs>
+<linearGradient id="gd-deep" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b5b8c"/><stop offset=".55" stop-color="#1d2f4a"/><stop offset="1" stop-color="#0f3b3a"/></linearGradient>
+<linearGradient id="gd-ember" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e0a43a"/><stop offset="1" stop-color="#b8403a"/></linearGradient>
+<symbol id="g-hull" viewBox="0 0 24 24"><path fill="currentColor" d="M2.5 14.5H21.5L18.5 20H5.5Z"/><rect style="fill:var(--acc,currentColor)" x="7" y="9.5" width="6" height="5"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M16 14.5V4.5M16 5.5L21 11" stroke-width="2"/></symbol>
+<symbol id="g-wake" viewBox="0 0 24 24"><path style="fill:var(--acc,currentColor)" d="M12 2C14.2 4.5 15 8 15 12.5H9C9 8 9.8 4.5 12 2Z"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M5.5 17.5L12 14.5L18.5 17.5" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" opacity=".55" d="M3 21.5L12 17.5L21 21.5" stroke-width="2"/></symbol>
+<symbol id="g-tarrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.6" d="M12 6V21"/><path fill="none" style="stroke:var(--acc,currentColor)" stroke-linecap="round" stroke-linejoin="round" d="M12 6H3.5M6.5 3L3.5 6L6.5 9M12 6H20.5M17.5 3L20.5 6L17.5 9" stroke-width="2"/></symbol>
+<symbol id="g-tr" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M7 3.5V16.5C7 19 8.5 20.5 11 20.5M3.5 9H11M15 20.5V14C15 11 16.8 9 19.5 9H20.5"/></symbol>
+<symbol id="g-gull" viewBox="0 0 24 24"><path fill="currentColor" d="M2 10.5C5.5 7 9 7.5 12 11.5C15 7.5 18.5 7 22 10.5C18.5 9.6 15 10.6 12 14.2C9 10.6 5.5 9.6 2 10.5Z"/><path fill="none" style="stroke:var(--acc,currentColor)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 19C5 17.4 7 17.4 9 19S13 20.6 15 19S19 17.4 21 19"/></symbol>
+<symbol id="g-fish" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M2.5 12C5.5 6 13.5 5.2 18.5 12C13.5 18.8 5.5 18 2.5 12ZM9.4 10.8A1.4 1.4 0 1 0 6.6 10.8A1.4 1.4 0 1 0 9.4 10.8Z"/><path style="fill:var(--acc,currentColor)" d="M18 12L22.5 7.5V16.5Z"/></symbol>
+<symbol id="g-relay" viewBox="0 0 24 24"><circle fill="currentColor" cx="3.8" cy="12" r="2.2"/><circle fill="currentColor" cx="20.2" cy="12" r="2.2"/><circle fill="none" style="stroke:var(--acc,currentColor)" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="12" r="4.8" stroke-width="2"/><circle fill="currentColor" cx="12" cy="12" r="1.6"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M6.5 12H7M17 12H17.5" stroke-width="2"/></symbol>
+<symbol id="g-lens" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" cx="9" cy="12" r="6" stroke-width="2"/><circle fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" cx="15" cy="12" r="6" stroke-width="2"/><path style="fill:var(--acc,currentColor)" d="M12 6.8A6 6 0 0 1 12 17.2A6 6 0 0 1 12 6.8Z"/></symbol>
+<symbol id="g-lanes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M3 8H18.5M15.5 5L18.5 8L15.5 11M21 16H5.5M8.5 13L5.5 16L8.5 19" stroke-width="2"/><rect style="fill:var(--acc,currentColor)" x="10.25" y="2.5" width="3.5" height="19" rx="1.75"/></symbol>
+<symbol id="g-funnel" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M3 7H11M6 12H11M4 17H11M18.5 12H21.5" stroke-width="2"/><rect style="fill:var(--acc,currentColor)" x="13" y="3.5" width="3.5" height="17" rx="1.75"/></symbol>
+<symbol id="g-loupe" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" cx="10" cy="10" r="6.8" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15.2 15.2L21 21"/><path fill="none" style="stroke:var(--acc,currentColor)" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M8.6 7.6L6.6 10L8.6 12.4M11.4 7.6L13.4 10L11.4 12.4"/></symbol>
+<symbol id="g-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M2 12C6 5.5 18 5.5 22 12C18 18.5 6 18.5 2 12Z" stroke-width="2"/><rect style="fill:var(--acc,currentColor)" x="9.3" y="9.3" width="5.4" height="5.4" rx="1.2"/></symbol>
+<symbol id="g-loop" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M2 17.5H8.5C12.5 17.5 15.5 14 15.5 10A4 4 0 0 0 7.5 10C7.5 14 10.5 17.5 14.5 17.5H22"/></symbol>
+<symbol id="g-sonar" viewBox="0 0 24 24"><circle fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="12" r="9" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M12 12L18.4 5.6" stroke-width="2"/><circle fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" cx="12" cy="12" r="4.5" opacity=".55"/><circle style="fill:var(--acc,currentColor)" cx="7.5" cy="8.6" r="1.5"/><circle style="fill:var(--acc,currentColor)" cx="15.5" cy="16" r="1.5"/></symbol>
+<symbol id="g-orb" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M2.5 15C5.5 11 8.5 11 12 15S18.5 19 21.5 15"/><circle fill="currentColor" cx="9" cy="8" r="1.6"/><circle fill="currentColor" cx="13.2" cy="5" r="1.1"/><circle fill="currentColor" cx="15.5" cy="9.2" r="2"/></symbol>
+<symbol id="g-prism" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L3 12H12Z"/><path fill="currentColor" opacity=".7" d="M12 2L21 12H12Z"/><path fill="currentColor" opacity=".45" d="M3 12L12 22V12Z"/><path fill="currentColor" opacity=".25" d="M21 12L12 22V12Z"/></symbol>
+<symbol id="g-sail" viewBox="0 0 24 24"><path fill="currentColor" fill-rule="evenodd" d="M6 3.5H18A2.5 2.5 0 0 1 20.5 6V18A2.5 2.5 0 0 1 18 20.5H6A2.5 2.5 0 0 1 3.5 18V6A2.5 2.5 0 0 1 6 3.5ZM13.5 5.8C11.2 9 9.4 12.4 8.2 15.6H13.5ZM15.2 8.6L17.6 15.6H15.2ZM7.4 17.2H17.6L16.5 18.6H8.5Z"/></symbol>
+<symbol id="g-horizon" viewBox="0 0 24 24"><circle style="fill:var(--acc,currentColor)" cx="12" cy="8.5" r="5"/><rect fill="currentColor" x="3" y="15" width="18" height="2.4" rx="1.2"/><rect fill="currentColor" x="6.5" y="19.4" width="11" height="2.4" rx="1.2"/></symbol>
+<symbol id="g-ascii" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M2.5 7L7.5 12L2.5 17M14.5 7L9.5 12L14.5 17M16.5 7L21.5 12L16.5 17"/></symbol>
+<symbol id="g-prompt" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M3.5 6.5L9 12L3.5 17.5"/><path fill="none" style="stroke:var(--acc,currentColor)" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.4" d="M12 16C13.5 14 15 14 16.5 16S19.5 18 21 16"/></symbol>
+<symbol id="a-1a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#1d2f4a"/><use href="#g-hull" x="25" y="25" width="50" height="50" style="color:#f4efe4;--acc:#e0a43a"/></symbol>
+<symbol id="a-1b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#2b2622"/><use href="#g-wake" x="25" y="25" width="50" height="50" style="color:#f7f5f0;--acc:#e0a43a"/></symbol>
+<symbol id="a-2a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#f4efe4"/><use href="#g-tarrow" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#e0664a"/></symbol>
+<symbol id="a-2b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#e0664a"/><use href="#g-tr" x="25" y="25" width="50" height="50" style="color:#f4efe4;--acc:#f4efe4"/></symbol>
+<symbol id="a-3a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#2f7f78"/><use href="#g-gull" x="25" y="25" width="50" height="50" style="color:#f4efe4;--acc:#9fd3cc"/></symbol>
+<symbol id="a-3b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#e0a43a"/><use href="#g-fish" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#2b2622"/></symbol>
+<symbol id="a-4a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#2b2622"/><use href="#g-relay" x="25" y="25" width="50" height="50" style="color:#f7f5f0;--acc:#2f7f78"/></symbol>
+<symbol id="a-4b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#f4efe4"/><use href="#g-lens" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#e0664a"/></symbol>
+<symbol id="a-5a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#1d2f4a"/><use href="#g-lanes" x="25" y="25" width="50" height="50" style="color:#f4efe4;--acc:#e0a43a"/></symbol>
+<symbol id="a-5b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#2b2622"/><use href="#g-funnel" x="25" y="25" width="50" height="50" style="color:#f7f5f0;--acc:#e0664a"/></symbol>
+<symbol id="a-6a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#2f7f78"/><use href="#g-loupe" x="25" y="25" width="50" height="50" style="color:#f4efe4;--acc:#f4efe4"/></symbol>
+<symbol id="a-6b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#2b2622"/><use href="#g-eye" x="25" y="25" width="50" height="50" style="color:#f7f5f0;--acc:#e0a43a"/></symbol>
+<symbol id="a-7a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#f4efe4"/><use href="#g-loop" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#2b2622"/></symbol>
+<symbol id="a-7b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#14201f"/><use href="#g-sonar" x="25" y="25" width="50" height="50" style="color:#9fd3cc;--acc:#e0a43a"/></symbol>
+<symbol id="a-8a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="url(#gd-deep)"/><use href="#g-orb" x="25" y="25" width="50" height="50" style="color:#ffffff;--acc:#ffffff"/></symbol>
+<symbol id="a-8b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="url(#gd-ember)"/><use href="#g-prism" x="25" y="25" width="50" height="50" style="color:#ffffff;--acc:#ffffff"/></symbol>
+<symbol id="a-9a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#e0a43a"/><use href="#g-sail" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#2b2622"/></symbol>
+<symbol id="a-9b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#e0664a"/><use href="#g-horizon" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#f4efe4"/></symbol>
+<symbol id="a-10a" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#141210"/><use href="#g-ascii" x="25" y="25" width="50" height="50" style="color:#e0a43a;--acc:#e0a43a"/></symbol>
+<symbol id="a-10b" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#2b2622"/><use href="#g-prompt" x="25" y="25" width="50" height="50" style="color:#f7f5f0;--acc:#e0a43a"/></symbol>
+</defs></svg>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Logo round 1 — directions</h1>
+      <p>Ten directions, twenty fresh marks, eight quick picks. Look, then point — no need to put taste into words yet.</p>
+      <div class="meta">Round 1 · 2026-11-06 · Trawler · T3 (docs/work/) · <span class="badge id">E-PRORELEASE.W9</span> · <a href="2026-11-06-prorelease-w9-logo-design-plan.html">WU plan</a> · <a href="2026-11-06-prorelease-plan.html">epic plan</a></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="how-to-answer">How to answer</h2>
+    <div class="callout" data-c="how-to-answer-steps">
+      <table>
+        <tr><th>Step</th><th>Where</th><th>What to write</th></tr>
+        <tr><td>1</td><td><a href="#questionnaire">Questionnaire</a> — 💬 on each question</td><td>the letter(s) you lean to, e.g. <code>B</code> or <code>A, D</code>; "none" is an answer too</td></tr>
+        <tr><td>2</td><td>any candidate card in <a href="#map">the map</a> — 💬 on the card</td><td>👍 / 👎 and, if you can, one word why ("too cute", "this but bolder")</td></tr>
+        <tr><td>3</td><td>anywhere — select text and comment</td><td>anything you hate; a logo you love from any other product</td></tr>
+      </table>
+    </div>
+
+    <h2 id="product">What the mark must carry</h2>
+    <div class="cards" data-c="product-cards">
+      <div class="card"><h4>What Trawler is</h4><p>A native MITM debugging proxy: it sits between your apps and the network, decrypts HTTPS with a local CA, and shows every request and response. It <em>trawls</em> traffic.</p></div>
+      <div class="card"><h4>Its UI today</h4><p>Warm dark, zero accent (DEC-19): <span class="sw" style="background:#2b2622;width:14px;height:14px"></span> canvas <code>#2b2622</code>, <span class="sw" style="background:#f7f5f0;width:14px;height:14px"></span> ink <code>#f7f5f0</code>, mute <code>#aea69c</code>. Inter, DM Mono, and the title <span class="wm serif" style="font-size:18px">Trawler</span> in Instrument Serif italic.</p></div>
+      <div class="card"><h4>Rejected round 0</h4><p>Net (A), serif T (B), hook + packet with a green dot (C). None of those motifs come back here.</p></div>
+    </div>
+    <table data-c="surfaces">
+      <tr><th>Surface</th><th>Size</th><th>Constraint</th></tr>
+      <tr><td>Dock / Finder / taskbar / Start</td><td>16 → 1024</td><td>one master; a small-size variant may simplify below 32</td></tr>
+      <tr><td>macOS tray</td><td>16 (18/36 rendered)</td><td>template: black + alpha only; running vs stopped by <em>shape</em></td></tr>
+      <tr><td>Windows / Linux tray</td><td>16–32</td><td>coloured allowed; running = accent, stopped = muted; reads on dark and light bars</td></tr>
+      <tr><td>README header · About · onboarding</td><td>~48–128 + wordmark</td><td>light and dark lockups</td></tr>
+      <tr><td>Social preview · installer art</td><td>1280×640, DMG, MSI/NSIS</td><td>W10, built around the signed mark</td></tr>
+    </table>
+
+    <h2 id="map">Direction map</h2>
+    <p>Each row is a direction; the two marks on the right are its candidates, drawn below at every size.</p>
+    <table data-c="direction-table">
+      <tr><th>#</th><th>Direction · why</th><th>Signals to</th><th>Risks</th><th>Borrows in spirit</th><th>Candidates</th></tr>
+      <tr><td><span class="badge id">1</span></td><td><strong>Geometric mark</strong><br>Trawler's own name drawn from circles, triangles and straight cuts — nautical, calm, timeless.</td><td>Mac-native users who pick tools by polish</td><td>boats read as 'shipping' or 'Docker-adjacent'; the 1a gantry is fine detail at 16 px</td><td>Proxyman's native-app restraint</td><td><svg class="ic" width="56" height="56" data-cand="1a"><use href="#a-1a"/></svg><svg class="ic" width="56" height="56" data-cand="1b"><use href="#a-1b"/></svg></td></tr><tr><td><span class="badge id">2</span></td><td><strong>Lettermark</strong><br>One letter carries the brand, as many dev tools do; the letter itself says something (two-way arrow, ligature).</td><td>developers, CLI users; scales well into favicons</td><td>letters are generic and hard to own; the rejected serif T lived here — these are sans, monoline</td><td>Postman / Insomnia: one flat glyph in one colour</td><td><svg class="ic" width="56" height="56" data-cand="2a"><use href="#a-2a"/></svg><svg class="ic" width="56" height="56" data-cand="2b"><use href="#a-2b"/></svg></td></tr><tr><td><span class="badge id">3</span></td><td><strong>Mascot / animal</strong><br>A creature people remember and talk about; warmth for a tool that otherwise feels clinical.</td><td>a community, stickers, a friendly README</td><td>can feel unserious for a security-adjacent tool; mascots age; Wireshark already owns 'sea animal'</td><td>Wireshark's fin, Go's gopher, Docker's whale (spirit, not shape)</td><td><svg class="ic" width="56" height="56" data-cand="3a"><use href="#a-3a"/></svg><svg class="ic" width="56" height="56" data-cand="3b"><use href="#a-3b"/></svg></td></tr><tr><td><span class="badge id">4</span></td><td><strong>Abstract node / relay</strong><br>The architecture as a sign: Trawler is the thing in the middle of a connection.</td><td>engineers who think in diagrams</td><td>abstract node marks are everywhere; needs exact proportions to not look like a stock icon</td><td>HTTP Toolkit's technical, diagrammatic feel</td><td><svg class="ic" width="56" height="56" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="56" height="56" data-cand="4b"><use href="#a-4b"/></svg></td></tr><tr><td><span class="badge id">5</span></td><td><strong>Packet / flow</strong><br>Traffic as lanes and streams passing a checkpoint — what the app literally shows.</td><td>people debugging APIs daily</td><td>arrows read as 'sync' or 'transfer' apps; 5b's thin bars blur at 16 px</td><td>Fiddler / Charles: the proxy as a pipe you sit on</td><td><svg class="ic" width="56" height="56" data-cand="5a"><use href="#a-5a"/></svg><svg class="ic" width="56" height="56" data-cand="5b"><use href="#a-5b"/></svg></td></tr><tr><td><span class="badge id">6</span></td><td><strong>Magnifier / inspection</strong><br>The verb, not the noun: Trawler is for looking closely.</td><td>QA, support engineers, newcomers</td><td>a magnifier is the most generic 'search' icon there is; the eye can read as 'privacy / spying'</td><td>debugging tools' inspector icons</td><td><svg class="ic" width="56" height="56" data-cand="6a"><use href="#a-6a"/></svg><svg class="ic" width="56" height="56" data-cand="6b"><use href="#a-6b"/></svg></td></tr><tr><td><span class="badge id">7</span></td><td><strong>Monoline</strong><br>One continuous stroke, drawn not built; light, crafted, modern.</td><td>design-literate developers</td><td>a 2 px stroke disappears at 16 px unless the small variant thickens it; 7b sonar may read as 'radar / wifi'</td><td>Linear-era single-stroke marks</td><td><svg class="ic" width="56" height="56" data-cand="7a"><use href="#a-7a"/></svg><svg class="ic" width="56" height="56" data-cand="7b"><use href="#a-7b"/></svg></td></tr><tr><td><span class="badge id">8</span></td><td><strong>Gradient-rich</strong><br>Depth and light: a premium app-store icon that pops in the Dock.</td><td>Mac App Store-style users, social preview</td><td>gradients need a flat fallback for tray and favicon; can feel trendy; against the UI's zero-accent rule (DEC-19)</td><td>Proxyman's and Postman's saturated app icons</td><td><svg class="ic" width="56" height="56" data-cand="8a"><use href="#a-8a"/></svg><svg class="ic" width="56" height="56" data-cand="8b"><use href="#a-8b"/></svg></td></tr><tr><td><span class="badge id">9</span></td><td><strong>Flat colour block</strong><br>Swiss-poster bluntness: one strong colour, one cut shape, nothing else.</td><td>anyone scanning a Dock or a README at a glance</td><td>the colour becomes the brand — needs one hue we keep forever</td><td>Postman's one-colour orange disc</td><td><svg class="ic" width="56" height="56" data-cand="9a"><use href="#a-9a"/></svg><svg class="ic" width="56" height="56" data-cand="9b"><use href="#a-9b"/></svg></td></tr><tr><td><span class="badge id">10</span></td><td><strong>Retro / terminal</strong><br>The developer's native habitat: monospace, phosphor, prompts — and the ASCII fish is a real thing.</td><td>CLI-first developers, mitmproxy users</td><td>nostalgia can look dated; '&gt;_' prompts are common</td><td>mitmproxy's terminal roots</td><td><svg class="ic" width="56" height="56" data-cand="10a"><use href="#a-10a"/></svg><svg class="ic" width="56" height="56" data-cand="10b"><use href="#a-10b"/></svg></td></tr>
+    </table>
+    <div class="callout" data-c="map-note">Round 1 judges the <strong>idea</strong>. Every candidate is drawn on one 24-unit grid with a 2-unit stroke so they compare fairly; colours are placeholders that Q2 decides. The small-size variant and the running/stopped tray pair come in round 2, for the picks only.</div>
+
+    <h3 id="dir-1">1 · Geometric mark</h3>
+<div class="cands" data-c="cands-1"><div class="cand" data-c="cand-1a">
+  <div class="cand-head"><span class="badge id">1a</span> <strong>Hull</strong> — a trawler in profile: hull, wheelhouse, gantry — the name, drawn plainly</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="1a"><use href="#a-1a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="1a"><use href="#a-1a"/></svg><svg class="ic" width="32" height="32" data-cand="1a"><use href="#a-1a"/></svg><svg class="ic" width="128" height="128" data-cand="1a"><use href="#a-1a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="1a"><use href="#a-1a"/></svg><svg class="ic" width="32" height="32" data-cand="1a"><use href="#a-1a"/></svg><svg class="ic" width="128" height="128" data-cand="1a"><use href="#a-1a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-hull"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-hull"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-hull"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-hull"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-1b">
+  <div class="cand-head"><span class="badge id">1b</span> <strong>Wake</strong> — a hull from above, its V-wake fanning out like traffic</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="1b"><use href="#a-1b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="1b"><use href="#a-1b"/></svg><svg class="ic" width="32" height="32" data-cand="1b"><use href="#a-1b"/></svg><svg class="ic" width="128" height="128" data-cand="1b"><use href="#a-1b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="1b"><use href="#a-1b"/></svg><svg class="ic" width="32" height="32" data-cand="1b"><use href="#a-1b"/></svg><svg class="ic" width="128" height="128" data-cand="1b"><use href="#a-1b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-wake"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-wake"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-wake"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-wake"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-2">2 · Lettermark</h3>
+<div class="cands" data-c="cands-2"><div class="cand" data-c="cand-2a">
+  <div class="cand-head"><span class="badge id">2a</span> <strong>T↔</strong> — a sans T whose bar is a two-way arrow: request out, response back</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="2a"><use href="#a-2a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="2a"><use href="#a-2a"/></svg><svg class="ic" width="32" height="32" data-cand="2a"><use href="#a-2a"/></svg><svg class="ic" width="128" height="128" data-cand="2a"><use href="#a-2a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="2a"><use href="#a-2a"/></svg><svg class="ic" width="32" height="32" data-cand="2a"><use href="#a-2a"/></svg><svg class="ic" width="128" height="128" data-cand="2a"><use href="#a-2a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-tarrow"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-tarrow"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-tarrow"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-tarrow"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-2b">
+  <div class="cand-head"><span class="badge id">2b</span> <strong>tr</strong> — a rounded monoline 'tr' ligature, foot of the t running on</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="2b"><use href="#a-2b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="2b"><use href="#a-2b"/></svg><svg class="ic" width="32" height="32" data-cand="2b"><use href="#a-2b"/></svg><svg class="ic" width="128" height="128" data-cand="2b"><use href="#a-2b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="2b"><use href="#a-2b"/></svg><svg class="ic" width="32" height="32" data-cand="2b"><use href="#a-2b"/></svg><svg class="ic" width="128" height="128" data-cand="2b"><use href="#a-2b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-tr"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-tr"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-tr"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-tr"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-3">3 · Mascot / animal</h3>
+<div class="cands" data-c="cands-3"><div class="cand" data-c="cand-3a">
+  <div class="cand-head"><span class="badge id">3a</span> <strong>Gull</strong> — the gull that follows every trawler, over a swell</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="3a"><use href="#a-3a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="3a"><use href="#a-3a"/></svg><svg class="ic" width="32" height="32" data-cand="3a"><use href="#a-3a"/></svg><svg class="ic" width="128" height="128" data-cand="3a"><use href="#a-3a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="3a"><use href="#a-3a"/></svg><svg class="ic" width="32" height="32" data-cand="3a"><use href="#a-3a"/></svg><svg class="ic" width="128" height="128" data-cand="3a"><use href="#a-3a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-gull"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-gull"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-gull"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-gull"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-3b">
+  <div class="cand-head"><span class="badge id">3b</span> <strong>Catch</strong> — a round little fish with one eye: what the trawl brings up</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="3b"><use href="#a-3b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="3b"><use href="#a-3b"/></svg><svg class="ic" width="32" height="32" data-cand="3b"><use href="#a-3b"/></svg><svg class="ic" width="128" height="128" data-cand="3b"><use href="#a-3b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="3b"><use href="#a-3b"/></svg><svg class="ic" width="32" height="32" data-cand="3b"><use href="#a-3b"/></svg><svg class="ic" width="128" height="128" data-cand="3b"><use href="#a-3b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-fish"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-fish"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-fish"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-fish"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-4">4 · Abstract node / relay</h3>
+<div class="cands" data-c="cands-4"><div class="cand" data-c="cand-4a">
+  <div class="cand-head"><span class="badge id">4a</span> <strong>Relay</strong> — client · proxy · server: a ring in the middle of the line</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="4a"><use href="#a-4a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="32" height="32" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="128" height="128" data-cand="4a"><use href="#a-4a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="32" height="32" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="128" height="128" data-cand="4a"><use href="#a-4a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-relay"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-relay"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-relay"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-relay"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-4b">
+  <div class="cand-head"><span class="badge id">4b</span> <strong>Overlap</strong> — two circles, the lens where they overlap is where Trawler sits</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="4b"><use href="#a-4b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="4b"><use href="#a-4b"/></svg><svg class="ic" width="32" height="32" data-cand="4b"><use href="#a-4b"/></svg><svg class="ic" width="128" height="128" data-cand="4b"><use href="#a-4b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="4b"><use href="#a-4b"/></svg><svg class="ic" width="32" height="32" data-cand="4b"><use href="#a-4b"/></svg><svg class="ic" width="128" height="128" data-cand="4b"><use href="#a-4b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-lens"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-lens"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-lens"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-lens"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-5">5 · Packet / flow</h3>
+<div class="cands" data-c="cands-5"><div class="cand" data-c="cand-5a">
+  <div class="cand-head"><span class="badge id">5a</span> <strong>Lanes</strong> — request lane →, response lane ←, one bar across both</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="5a"><use href="#a-5a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="5a"><use href="#a-5a"/></svg><svg class="ic" width="32" height="32" data-cand="5a"><use href="#a-5a"/></svg><svg class="ic" width="128" height="128" data-cand="5a"><use href="#a-5a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="5a"><use href="#a-5a"/></svg><svg class="ic" width="32" height="32" data-cand="5a"><use href="#a-5a"/></svg><svg class="ic" width="128" height="128" data-cand="5a"><use href="#a-5a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-lanes"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-lanes"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-lanes"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-lanes"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-5b">
+  <div class="cand-head"><span class="badge id">5b</span> <strong>Aperture</strong> — many streams in, one slot, one clean line out</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="5b"><use href="#a-5b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="5b"><use href="#a-5b"/></svg><svg class="ic" width="32" height="32" data-cand="5b"><use href="#a-5b"/></svg><svg class="ic" width="128" height="128" data-cand="5b"><use href="#a-5b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="5b"><use href="#a-5b"/></svg><svg class="ic" width="32" height="32" data-cand="5b"><use href="#a-5b"/></svg><svg class="ic" width="128" height="128" data-cand="5b"><use href="#a-5b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-funnel"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-funnel"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-funnel"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-funnel"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-6">6 · Magnifier / inspection</h3>
+<div class="cands" data-c="cands-6"><div class="cand" data-c="cand-6a">
+  <div class="cand-head"><span class="badge id">6a</span> <strong>Loupe</strong> — a loupe over &lt;&gt; — looking at the markup on the wire</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="6a"><use href="#a-6a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="6a"><use href="#a-6a"/></svg><svg class="ic" width="32" height="32" data-cand="6a"><use href="#a-6a"/></svg><svg class="ic" width="128" height="128" data-cand="6a"><use href="#a-6a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="6a"><use href="#a-6a"/></svg><svg class="ic" width="32" height="32" data-cand="6a"><use href="#a-6a"/></svg><svg class="ic" width="128" height="128" data-cand="6a"><use href="#a-6a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-loupe"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-loupe"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-loupe"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-loupe"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-6b">
+  <div class="cand-head"><span class="badge id">6b</span> <strong>Eye</strong> — an eye whose pupil is a packet</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="6b"><use href="#a-6b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="6b"><use href="#a-6b"/></svg><svg class="ic" width="32" height="32" data-cand="6b"><use href="#a-6b"/></svg><svg class="ic" width="128" height="128" data-cand="6b"><use href="#a-6b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="6b"><use href="#a-6b"/></svg><svg class="ic" width="32" height="32" data-cand="6b"><use href="#a-6b"/></svg><svg class="ic" width="128" height="128" data-cand="6b"><use href="#a-6b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-eye"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-eye"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-eye"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-eye"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-7">7 · Monoline</h3>
+<div class="cands" data-c="cands-7"><div class="cand" data-c="cand-7a">
+  <div class="cand-head"><span class="badge id">7a</span> <strong>Loop</strong> — one line that loops once: the flow, caught and let go</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="7a"><use href="#a-7a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="7a"><use href="#a-7a"/></svg><svg class="ic" width="32" height="32" data-cand="7a"><use href="#a-7a"/></svg><svg class="ic" width="128" height="128" data-cand="7a"><use href="#a-7a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="7a"><use href="#a-7a"/></svg><svg class="ic" width="32" height="32" data-cand="7a"><use href="#a-7a"/></svg><svg class="ic" width="128" height="128" data-cand="7a"><use href="#a-7a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-loop"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-loop"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-loop"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-loop"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-7b">
+  <div class="cand-head"><span class="badge id">7b</span> <strong>Sonar</strong> — a fish-finder sweep with two blips: traffic found</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="7b"><use href="#a-7b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="7b"><use href="#a-7b"/></svg><svg class="ic" width="32" height="32" data-cand="7b"><use href="#a-7b"/></svg><svg class="ic" width="128" height="128" data-cand="7b"><use href="#a-7b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="7b"><use href="#a-7b"/></svg><svg class="ic" width="32" height="32" data-cand="7b"><use href="#a-7b"/></svg><svg class="ic" width="128" height="128" data-cand="7b"><use href="#a-7b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-sonar"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-sonar"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-sonar"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-sonar"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-8">8 · Gradient-rich</h3>
+<div class="cands" data-c="cands-8"><div class="cand" data-c="cand-8a">
+  <div class="cand-head"><span class="badge id">8a</span> <strong>Deep</strong> — dusk-to-deep-sea gradient, a crest and rising bubbles</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="8a"><use href="#a-8a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="8a"><use href="#a-8a"/></svg><svg class="ic" width="32" height="32" data-cand="8a"><use href="#a-8a"/></svg><svg class="ic" width="128" height="128" data-cand="8a"><use href="#a-8a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="8a"><use href="#a-8a"/></svg><svg class="ic" width="32" height="32" data-cand="8a"><use href="#a-8a"/></svg><svg class="ic" width="128" height="128" data-cand="8a"><use href="#a-8a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-orb"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-orb"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-orb"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-orb"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-8b">
+  <div class="cand-head"><span class="badge id">8b</span> <strong>Facet</strong> — a packet cut as a gem, four facets catching light</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="8b"><use href="#a-8b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="8b"><use href="#a-8b"/></svg><svg class="ic" width="32" height="32" data-cand="8b"><use href="#a-8b"/></svg><svg class="ic" width="128" height="128" data-cand="8b"><use href="#a-8b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="8b"><use href="#a-8b"/></svg><svg class="ic" width="32" height="32" data-cand="8b"><use href="#a-8b"/></svg><svg class="ic" width="128" height="128" data-cand="8b"><use href="#a-8b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-prism"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-prism"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-prism"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-prism"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-9">9 · Flat colour block</h3>
+<div class="cands" data-c="cands-9"><div class="cand" data-c="cand-9a">
+  <div class="cand-head"><span class="badge id">9a</span> <strong>Sail</strong> — a poster block with a sail cut out of it</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="9a"><use href="#a-9a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="9a"><use href="#a-9a"/></svg><svg class="ic" width="32" height="32" data-cand="9a"><use href="#a-9a"/></svg><svg class="ic" width="128" height="128" data-cand="9a"><use href="#a-9a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="9a"><use href="#a-9a"/></svg><svg class="ic" width="32" height="32" data-cand="9a"><use href="#a-9a"/></svg><svg class="ic" width="128" height="128" data-cand="9a"><use href="#a-9a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-sail"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-sail"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-sail"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-sail"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-9b">
+  <div class="cand-head"><span class="badge id">9b</span> <strong>Horizon</strong> — sun over two bands of sea, screen-print flat</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="9b"><use href="#a-9b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="9b"><use href="#a-9b"/></svg><svg class="ic" width="32" height="32" data-cand="9b"><use href="#a-9b"/></svg><svg class="ic" width="128" height="128" data-cand="9b"><use href="#a-9b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="9b"><use href="#a-9b"/></svg><svg class="ic" width="32" height="32" data-cand="9b"><use href="#a-9b"/></svg><svg class="ic" width="128" height="128" data-cand="9b"><use href="#a-9b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-horizon"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-horizon"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-horizon"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-horizon"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<h3 id="dir-10">10 · Retro / terminal</h3>
+<div class="cands" data-c="cands-10"><div class="cand" data-c="cand-10a">
+  <div class="cand-head"><span class="badge id">10a</span> <strong>&gt;&lt;&gt;</strong> — the oldest ASCII fish, in amber phosphor</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="10a"><use href="#a-10a"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="10a"><use href="#a-10a"/></svg><svg class="ic" width="32" height="32" data-cand="10a"><use href="#a-10a"/></svg><svg class="ic" width="128" height="128" data-cand="10a"><use href="#a-10a"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="10a"><use href="#a-10a"/></svg><svg class="ic" width="32" height="32" data-cand="10a"><use href="#a-10a"/></svg><svg class="ic" width="128" height="128" data-cand="10a"><use href="#a-10a"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-ascii"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-ascii"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-ascii"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-ascii"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div><div class="cand" data-c="cand-10b">
+  <div class="cand-head"><span class="badge id">10b</span> <strong>&gt;~</strong> — a shell prompt whose cursor is a wave</div>
+  <div class="cand-body">
+    <div class="hero-icon"><svg class="ic" width="176" height="176" data-cand="10b"><use href="#a-10b"/></svg><span>1024 master, shown at 176</span></div>
+    <div class="strips">
+      <div class="strip light"><svg class="ic" width="16" height="16" data-cand="10b"><use href="#a-10b"/></svg><svg class="ic" width="32" height="32" data-cand="10b"><use href="#a-10b"/></svg><svg class="ic" width="128" height="128" data-cand="10b"><use href="#a-10b"/></svg><span>16 · 32 · 128 on light</span></div>
+      <div class="strip dark"><svg class="ic" width="16" height="16" data-cand="10b"><use href="#a-10b"/></svg><svg class="ic" width="32" height="32" data-cand="10b"><use href="#a-10b"/></svg><svg class="ic" width="128" height="128" data-cand="10b"><use href="#a-10b"/></svg><span>16 · 32 · 128 on dark</span></div>
+      <div class="trays">
+        <div class="menubar light"><svg class="ic" width="16" height="16" style="color:#000;--acc:#000"><use href="#g-prompt"/></svg><svg class="ic" width="32" height="32" style="color:#000;--acc:#000"><use href="#g-prompt"/></svg><span>template tray, light bar (black + alpha)</span></div>
+        <div class="menubar dark"><svg class="ic" width="16" height="16" style="color:#fff;--acc:#fff"><use href="#g-prompt"/></svg><svg class="ic" width="32" height="32" style="color:#fff;--acc:#fff"><use href="#g-prompt"/></svg><span>same template, macOS tints it on a dark bar</span></div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+    <h2 id="references">Real-world reference</h2>
+    <table data-c="references">
+      <tr><th>Product</th><th>Its mark and stance (described, not shown)</th><th>Directions borrowing its spirit</th></tr>
+      <tr><td><a href="https://proxyman.io/">Proxyman</a></td><td>Native macOS proxy; a polished, saturated app-store icon and a tidy sans wordmark — the 'feels like an Apple app' benchmark.</td><td>1, 8</td></tr><tr><td><a href="https://www.charlesproxy.com/">Charles</a></td><td>The veteran Java proxy; an illustrated, shareware-era icon — character over system. Shows what to avoid as much as what to borrow.</td><td>3, 5</td></tr><tr><td><a href="https://mitmproxy.org/">mitmproxy</a></td><td>Open-source, terminal-born; a simple wordmark-led identity that lives on a CLI and docs site.</td><td>10, 2</td></tr><tr><td><a href="https://httptoolkit.com/">HTTP Toolkit</a></td><td>Open-source MITM toolkit; clean, technical, diagram-like brand voice.</td><td>4, 5</td></tr><tr><td><a href="https://www.postman.com/">Postman</a></td><td>API platform; one flat orange disc with a white figure — one colour owned completely.</td><td>9, 2</td></tr><tr><td><a href="https://insomnia.rest/">Insomnia</a></td><td>API client (Kong); a single flat purple roundel — lettermark-simple at every size.</td><td>2, 4</td></tr><tr><td><a href="https://www.wireshark.org/">Wireshark</a></td><td>Packet analyser; a blue shark fin over stripes of water — the sea metaphor for network capture, already taken.</td><td>3, 1</td></tr><tr><td><a href="https://www.telerik.com/fiddler">Fiddler</a></td><td>Windows-born web debugging proxy (Progress Telerik); a corporate product-family mark.</td><td>5, 6</td></tr>
+    </table>
+    <div class="callout warn" data-c="references-note">Descriptions are from memory and not re-checked this round — open the link to see the real mark. None is copied; Wireshark's fin is why the mascot direction avoids sharks and fins.</div>
+
+    <h2 id="questionnaire">Questionnaire</h2>
+    <p>Eight quick picks. Comment the letter(s) on each question.</p>
+    <h3 id="q-vibe">Q1 · Vibe — which feels like Trawler?</h3>
+<div class="opts" data-c="q-vibe-opts"><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="1a"><use href="#a-1a"/></svg><svg class="ic" width="56" height="56" data-cand="9a"><use href="#a-9a"/></svg></div><div><span class="badge id">A</span> calm &amp; nautical</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="56" height="56" data-cand="5a"><use href="#a-5a"/></svg></div><div><span class="badge id">B</span> precise &amp; technical</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="3a"><use href="#a-3a"/></svg><svg class="ic" width="56" height="56" data-cand="3b"><use href="#a-3b"/></svg></div><div><span class="badge id">C</span> friendly &amp; characterful</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="10a"><use href="#a-10a"/></svg><svg class="ic" width="56" height="56" data-cand="10b"><use href="#a-10b"/></svg></div><div><span class="badge id">D</span> hacker / terminal</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="8a"><use href="#a-8a"/></svg><svg class="ic" width="56" height="56" data-cand="8b"><use href="#a-8b"/></svg></div><div><span class="badge id">E</span> premium &amp; glossy</div></div></div>
+<h3 id="q-colour">Q2 · Colour — the mark's colour budget</h3>
+<div class="opts" data-c="q-colour-opts"><div class="opt"><div class="opt-art"><span class="sw" style="background:#2b2622"></span><span class="sw" style="background:#f7f5f0"></span><span class="sw" style="background:#aea69c"></span></div><div><span class="badge id">A</span> ink only (matches the UI's zero-accent rule)</div></div><div class="opt"><div class="opt-art"><span class="sw" style="background:#2b2622"></span><span class="sw" style="background:#f7f5f0"></span><span class="sw" style="background:#e0a43a"></span></div><div><span class="badge id">B</span> ink + amber</div></div><div class="opt"><div class="opt-art"><span class="sw" style="background:#2b2622"></span><span class="sw" style="background:#f7f5f0"></span><span class="sw" style="background:#2f7f78"></span></div><div><span class="badge id">C</span> ink + sea teal</div></div><div class="opt"><div class="opt-art"><span class="sw" style="background:#2b2622"></span><span class="sw" style="background:#f7f5f0"></span><span class="sw" style="background:#e0664a"></span></div><div><span class="badge id">D</span> ink + signal coral</div></div><div class="opt"><div class="opt-art"><span class="sw" style="background:#1d2f4a"></span><span class="sw" style="background:#f4efe4"></span><span class="sw" style="background:#e0a43a"></span></div><div><span class="badge id">E</span> navy + amber</div></div><div class="opt"><div class="opt-art"><span class="sw wide" style="background:linear-gradient(135deg,#3b5b8c,#1d2f4a,#0f3b3a)"></span><span class="sw wide" style="background:linear-gradient(135deg,#e0a43a,#b8403a)"></span></div><div><span class="badge id">F</span> a gradient</div></div></div>
+<h3 id="q-shape">Q3 · Shape language</h3>
+<div class="opts" data-c="q-shape-opts"><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="7a"><use href="#a-7a"/></svg><svg class="ic" width="56" height="56" data-cand="2b"><use href="#a-2b"/></svg></div><div><span class="badge id">A</span> rounded monoline strokes</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="9a"><use href="#a-9a"/></svg><svg class="ic" width="56" height="56" data-cand="3b"><use href="#a-3b"/></svg></div><div><span class="badge id">B</span> bold filled silhouettes</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="1b"><use href="#a-1b"/></svg><svg class="ic" width="56" height="56" data-cand="8b"><use href="#a-8b"/></svg></div><div><span class="badge id">C</span> sharp geometry</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="56" height="56" data-cand="7b"><use href="#a-7b"/></svg></div><div><span class="badge id">D</span> dots and rings</div></div></div>
+<h3 id="q-literal">Q4 · Literal or abstract?</h3>
+<div class="opts" data-c="q-literal-opts"><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="1a"><use href="#a-1a"/></svg><svg class="ic" width="56" height="56" data-cand="3a"><use href="#a-3a"/></svg></div><div><span class="badge id">A</span> literal boat / sea (the name)</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="5a"><use href="#a-5a"/></svg><svg class="ic" width="56" height="56" data-cand="6a"><use href="#a-6a"/></svg></div><div><span class="badge id">B</span> literal function (proxy, inspect)</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="4b"><use href="#a-4b"/></svg><svg class="ic" width="56" height="56" data-cand="7a"><use href="#a-7a"/></svg></div><div><span class="badge id">C</span> abstract sign you learn</div></div></div>
+<h3 id="q-wordmark">Q5 · Wordmark style next to the mark</h3>
+<div class="opts" data-c="q-wordmark-opts"><div class="opt"><div class="opt-art"><span class="wm serif">Trawler</span></div><div><span class="badge id">A</span> Instrument Serif italic (today's title)</div></div><div class="opt"><div class="opt-art"><span class="wm sans">Trawler</span></div><div><span class="badge id">B</span> Inter semibold, tight</div></div><div class="opt"><div class="opt-art"><span class="wm mono">trawler</span></div><div><span class="badge id">C</span> DM Mono, lowercase</div></div><div class="opt"><div class="opt-art"><span class="wm caps">TRAWLER</span></div><div><span class="badge id">D</span> Inter, spaced capitals</div></div></div>
+<h3 id="q-mascot">Q6 · A mascot?</h3>
+<div class="opts" data-c="q-mascot-opts"><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="3b"><use href="#a-3b"/></svg><svg class="ic" width="56" height="56" data-cand="10a"><use href="#a-10a"/></svg></div><div><span class="badge id">A</span> yes — a creature people remember</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="4a"><use href="#a-4a"/></svg><svg class="ic" width="56" height="56" data-cand="9a"><use href="#a-9a"/></svg></div><div><span class="badge id">B</span> no — a sign, not a character</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="3a"><use href="#a-3a"/></svg><svg class="ic" width="56" height="56" data-cand="6b"><use href="#a-6b"/></svg></div><div><span class="badge id">C</span> only as a sticker / README extra, not the app icon</div></div></div>
+<h3 id="q-bg">Q7 · App-icon background (same glyph)</h3>
+<div class="opts" data-c="q-bg-opts"><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#f4efe4"/><use href="#g-eye" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#e0a43a"/></svg></div><div><span class="badge id">A</span> light paper</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="6b"><use href="#a-6b"/></svg></div><div><span class="badge id">B</span> warm dark (the UI canvas)</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="url(#gd-deep)"/><use href="#g-eye" x="25" y="25" width="50" height="50" style="color:#fff;--acc:#e0a43a"/></svg></div><div><span class="badge id">C</span> gradient</div></div><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" viewBox="0 0 100 100"><rect x="9.77" y="9.77" width="80.46" height="80.46" rx="18" fill="#e0a43a"/><use href="#g-eye" x="25" y="25" width="50" height="50" style="color:#2b2622;--acc:#2b2622"/></svg></div><div><span class="badge id">D</span> flat colour</div></div></div>
+<h3 id="q-favs">Q8 · Your favourites — any number</h3>
+<div class="opts" data-c="q-favs-opts"><div class="opt"><div class="opt-art"><svg class="ic" width="56" height="56" data-cand="1b"><use href="#a-1b"/></svg><svg class="ic" width="56" height="56" data-cand="4b"><use href="#a-4b"/></svg><svg class="ic" width="56" height="56" data-cand="10a"><use href="#a-10a"/></svg></div><div><span class="badge id">→</span> name any candidate ids from the map (e.g. <code>1b, 4b, 10a</code>) and, for each, <em>more like this</em> or <em>this, but …</em></div></div></div>
+
+    <h2 id="converge">How we converge</h2>
+    <div class="diagram" data-c="converge-flow"><pre class="mermaid">
+flowchart LR
+  R1["R1 · this doc&lt;br/&gt;10 directions × 2 marks&lt;br/&gt;+ 8 picks"] -- "your picks + 👍/👎" --> R2["R2 · refine&lt;br/&gt;2–3 picks × 2–3 variants&lt;br/&gt;small size, tray pair, wordmark lockup"]
+  R2 -- "one finalist" --> R3["R3 · full system&lt;br/&gt;app icon · small variant · tray states&lt;br/&gt;wordmark dark/light · palette"]
+  R2 -. "nothing fits" .-> R1b["R1 again, steered by what you rejected"]
+  R3 -- "comment signed + id" --> S["sources committed&lt;br/&gt;ui/src-tauri/icons/source/"]
+</pre><div class="caption">Each round is a new revision of this doc; open <code>?diff=latest</code> to see what changed.</div></div>
+    <table data-c="rounds">
+      <tr><th>Round</th><th>You give</th><th>You get back</th></tr>
+      <tr><td>R1 (now)</td><td>Q1–Q8 letters, 👍/👎 on cards</td><td>R2 built from them</td></tr>
+      <tr><td>R2</td><td>one finalist (or "back to R1")</td><td>the finalist as a system, mocked in Dock, tray, README, About</td></tr>
+      <tr><td>R3</td><td><code>signed: &lt;id&gt;</code></td><td>signed SVG sources; W3 generates every icon from them, W10 builds installer art</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

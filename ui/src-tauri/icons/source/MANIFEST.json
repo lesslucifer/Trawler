@@ -1,0 +1,120 @@
+{
+  "signed": "7b2 Sonar, ink + amber, wordmark DM Mono — owner, 2026-11-06 (E-PRORELEASE.W9)",
+  "palette": {
+    "tile": "#2b2622",
+    "ink": "#f7f5f0",
+    "amber": "#e0a43a",
+    "stopped-tile": "#6f6a64",
+    "wordmark-on-light": "#1f1c19",
+    "wordmark-on-dark": "#f2efe8",
+    "social-canvas": "#1b1916",
+    "tagline": "#aea69c",
+    "tile-edge": "#ffffff at 10-14% opacity"
+  },
+  "files": [
+    {
+      "file": "icon.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 651,
+      "purpose": "Master app icon: 824 body, 185 corner on the macOS 1024 grid, transparent outside",
+      "consumer": "W3: cargo xtask icons → icon.icns/.ico/PNG set (bundle.icon) above 32 px; W10: DMG/NSIS/WiX art"
+    },
+    {
+      "file": "icon-small.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 601,
+      "purpose": "Small-size variant, whole-pixel strokes on a 16 grid",
+      "consumer": "W3: the 16/24/32 layers of .icns/.ico"
+    },
+    {
+      "file": "tray-running-template.svg",
+      "viewBox": "0 0 18 18",
+      "size": "18x18",
+      "bytes": 466,
+      "purpose": "macOS menu-bar template, running: ring + lit sweep + blip, black + alpha",
+      "consumer": "W3: tray-running.png 18/36, icon_as_template(true) on macOS only"
+    },
+    {
+      "file": "tray-stopped-template.svg",
+      "viewBox": "0 0 18 18",
+      "size": "18x18",
+      "bytes": 262,
+      "purpose": "macOS menu-bar template, stopped: empty ring + centre dot (shape differs, not colour)",
+      "consumer": "W3: tray-stopped.png 18/36, macOS only"
+    },
+    {
+      "file": "tray-running.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 601,
+      "purpose": "Windows/Linux tray, running: dark tile, amber sweep and blip",
+      "consumer": "W3: coloured tray PNG 16/20/24/32 (Windows), 22/24/32 (Linux)"
+    },
+    {
+      "file": "tray-stopped.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 442,
+      "purpose": "Windows/Linux tray, stopped: muted tile, ring + centre dot",
+      "consumer": "W3: coloured tray PNG 16/20/24/32 (Windows), 22/24/32 (Linux)"
+    },
+    {
+      "file": "wordmark-light.svg",
+      "viewBox": "0 0 740 168",
+      "size": "740x168",
+      "bytes": 4037,
+      "purpose": "Lockup for light backgrounds: tile + 'trawler' in DM Mono as outlines, text #1f1c19",
+      "consumer": "W3: README <picture> light, About, onboarding header (W4)"
+    },
+    {
+      "file": "wordmark-dark.svg",
+      "viewBox": "0 0 740 168",
+      "size": "740x168",
+      "bytes": 4037,
+      "purpose": "Lockup for dark backgrounds: tile + 'trawler' in DM Mono as outlines, text #f2efe8",
+      "consumer": "W3: README <picture> dark, About, onboarding header (W4)"
+    },
+    {
+      "file": "favicon.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 601,
+      "purpose": "Favicon: the small variant",
+      "consumer": "W3: ui/index.html favicon + 32 px PNG"
+    },
+    {
+      "file": "mark-mono-black.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 518,
+      "purpose": "One-colour mark, black, no tile",
+      "consumer": "print and one-colour uses; W10 if art needs a mono mark"
+    },
+    {
+      "file": "mark-mono-white.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 518,
+      "purpose": "One-colour mark, white, no tile",
+      "consumer": "print and one-colour uses on dark"
+    },
+    {
+      "file": "icon-ink.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 651,
+      "purpose": "Ink-only fallback of the master icon (no amber)",
+      "consumer": "any place colour is not allowed (DEC-19 UI surfaces)"
+    },
+    {
+      "file": "social-preview.svg",
+      "viewBox": "0 0 1280 640",
+      "size": "1280x640",
+      "bytes": 30726,
+      "purpose": "GitHub social preview 1280x640: tile, DM Mono wordmark, tagline",
+      "consumer": "W10: brand kit #9 layout base → PNG the owner uploads (Q11)"
+    }
+  ]
+}

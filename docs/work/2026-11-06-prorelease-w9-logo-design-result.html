@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedb6419f34851f0dfaee15" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W9 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W9 result — logo and brand system</h1>
+      <p>Four rounds with the owner ended in one signed mark; its sources are committed for W3 and W10.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W9</span> · <code>wu/prorelease/logo-design</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w9-logo-design-plan.html">W9 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="callout" data-c="outcome" data-item="outcome"><b>signed: 7b2 ink+amber mono</b> · owner · 2026-11-06. 7b2 Sonar on the warm-dark <code>#2b2622</code> tile, ink + amber, lowercase DM Mono wordmark. Sources in <code>ui/src-tauri/icons/source/</code>, rules in <a href="../decisions/dec-89-one-signed-mark-one-source-folder.html">DEC-89</a>.</div>
+
+    <h2 id="timeline">Picks timeline</h2>
+    <div class="diagram" data-c="timeline">
+      <pre class="mermaid">
+flowchart LR
+  R0["R0 · drafts A/B/C"] -- all rejected --> R1["R1 · 10 directions × 2"]
+  R1 -- "loved 5b, 10a" --> R2["R2 · 20 refinements + 3 boards"]
+  R2 -- "loved 5b4, 7b2 · no board" --> R3["R3 · 5b4, 7b2, 1b2 as full systems × 2 colours"]
+  R3 -- "signed 7b2 ink+amber mono" --> S["sources + DEC-89"]
+      </pre>
+      <div class="caption">Rounds: <a href="2026-11-06-prorelease-w9-logo-round-1.html">1</a> · <a href="2026-11-06-prorelease-w9-logo-round-2.html">2</a> · <a href="2026-11-06-prorelease-w9-logo-round-3.html">3</a>. The agent recommended 5b4 Aperture with a sans wordmark; the owner chose 7b2 and DM Mono.</div>
+    </div>
+
+    <h2 id="reading">The reading</h2>
+    <table data-c="reading">
+      <tr><th>Owner signal</th><th>What it taught</th></tr>
+      <tr><td>R1 loves 5b, 10a</td><td>line-built, left to right, a dark terminal tile, one warm accent</td></tr>
+      <tr><td>R2 loves 5b4, 7b2; nos on the terminal fish and hybrids</td><td>a precise instrument reading traffic: even strokes in exact geometry, one lit catch, no picture or code text</td></tr>
+      <tr><td>R3 signs 7b2, not the recommended 5b4</td><td>the dark tile and the radar sweep over the light paper slot; a monospaced wordmark over the UI's sans</td></tr>
+    </table>
+
+    <h2 id="sources">Committed sources</h2>
+    <table data-c="sources">
+      <tr><th>File</th><th>viewBox</th><th>Purpose</th><th>Consumer</th></tr>
+      <tr><td><code>icon.svg</code></td><td>1024</td><td>master app icon (824 body, 185 corner)</td><td>W3 icon set above 32 px · W10</td></tr>
+      <tr><td><code>icon-small.svg</code></td><td>16</td><td>small-size variant</td><td>W3 16–32 px layers</td></tr>
+      <tr><td><code>tray-{running,stopped}-template.svg</code></td><td>18</td><td>macOS template, black + alpha, states by shape</td><td>W3 tray PNG 18/36, macOS only</td></tr>
+      <tr><td><code>tray-{running,stopped}.svg</code></td><td>16</td><td>coloured tray (amber / muted)</td><td>W3 Windows/Linux tray</td></tr>
+      <tr><td><code>wordmark-{light,dark}.svg</code></td><td>740 × 168</td><td>lockup, DM Mono outlined</td><td>W3 README, About, onboarding (W4)</td></tr>
+      <tr><td><code>favicon.svg</code></td><td>16</td><td>favicon</td><td>W3 <code>ui/index.html</code></td></tr>
+      <tr><td><code>mark-mono-{black,white}.svg</code></td><td>1024</td><td>one-colour mark</td><td>print, one-colour uses</td></tr>
+      <tr><td><code>icon-ink.svg</code></td><td>1024</td><td>ink-only fallback</td><td>where colour is not allowed</td></tr>
+      <tr><td><code>social-preview.svg</code></td><td>1280 × 640</td><td>GitHub social preview base</td><td>W10 #9</td></tr>
+      <tr><td><code>MANIFEST.json</code></td><td>—</td><td>each file's viewBox, size, purpose, consumer; the palette</td><td>W3's unit test</td></tr>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-c="evidence" data-item="evidence">
+      <tr><th>Claim</th><th>Proof</th></tr>
+      <tr><td>Every source renders</td><td><code>rsvg-convert</code> of all 13 SVGs, plus the master at 16/32/128, small at 16/32, templates at 18/36, coloured tray at 16/24/32; contact sheet viewed on light and dark</td></tr>
+      <tr><td>Plain fills only</td><td>no <code>var(</code>, <code>&lt;text</code>, <code>font-family</code>, <code>&lt;image</code> or <code>xlink:href</code> in any source; <code>xmllint</code> clean</td></tr>
+      <tr><td>Byte-identical to what was signed</td><td>copied from the round-3 7b2 files the owner picked from (ink + amber, <code>wordmark-mono</code>, <code>social-mono</code>)</td></tr>
+      <tr><td>Tests</td><td>waived: design WU, no code; W3 carries the tests</td></tr>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">The epic's brand-kit table asked for a 32 viewBox for #2, 16 for #3 and Instrument Serif for #5; the signed files keep their drawn grids (16, 18) and DM Mono. DEC-89 rule 3 and the manifest are the truth, and the epic plan's brand-kit section points there. The round-3 doc dropped its inline social mock (now an <code>&lt;img&gt;</code> of the source) and rounded inline path numbers to 2 decimals so the htmldoc server accepts its snapshot; its design matter is unchanged.</p>
+
+    <h2 id="unverified">Unverified</h2>
+    <table data-c="unverified">
+      <tr><th>Item</th><th>Why</th><th>Who closes it</th></tr>
+      <tr><td>The icon in a real Dock, Finder, taskbar and Start menu; the tray in a real menu bar and on Windows/Linux taskbars at 100–200 % DPI</td><td>only rsvg-convert and browser renders so far</td><td>W3 (owner approves the rendered set per OS)</td></tr>
+      <tr><td>macOS continuous corner</td><td>the master uses a circular <code>rx=185</code>; Apple's squircle differs slightly at the corners</td><td>W3 rendering check; a needed change returns to a design WU</td></tr>
+      <tr><td>Template strokes at 18 px</td><td>1.6-unit strokes fall between pixels; read fine at 36 (@2x)</td><td>W3 on a real @1x menu bar</td></tr>
+      <tr><td>Trademark search</td><td>out of scope here</td><td>owner</td></tr>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-c="distillation" data-item="distillation">DEC-89 minted (the next free number across every branch and worktree; W16/W17 have none) with its index row. The epic plan: W9 status signed, a brand-kit callout pointing at DEC-89 and the manifest. UC-INSTALL is unchanged: the brand reaches the installed app only in W3. <code>decisions-index.html</code> is over the htmldoc snapshot limit (413), so no pre-edit snapshot exists for it.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-c="follow-ups" data-item="follow-ups">
+      <tr><th>Item</th><th>Owner</th></tr>
+      <tr><td>W3: <code>cargo xtask icons</code> generates from <code>source/</code> per the manifest (master above 32, small for 16–32, template pair macOS only, coloured pair elsewhere); unit test reads <code>MANIFEST.json</code></td><td>W3</td></tr>
+      <tr><td>W10: DMG/NSIS/WiX art and the social preview built on <code>icon.svg</code>, the lockups and the palette; installer text areas stay light (WiX)</td><td>W10</td></tr>
+      <tr><td>W4/W13: which lockup the About window uses under DEC-19 (<code>icon-ink</code> or the amber mark)</td><td>W4</td></tr>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
