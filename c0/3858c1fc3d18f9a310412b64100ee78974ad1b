@@ -1,0 +1,8 @@
+schema: design/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W13
+base: 50d3a6217b90015d89b71859ec450a115f82dadd
+design_sha256: 7225620be3c6e6d2ccd1bd023f1189c499f57c4218e9cfc8c80281720e39bfe6
+verdict: PASS
+artifacts: [docs/work/2026-11-06-prorelease-about-help-design-run.html]
+date: 2026-11-06
