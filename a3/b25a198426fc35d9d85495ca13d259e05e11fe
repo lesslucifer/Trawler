@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-RCFIX
+branch: HEAD
+tests:
+  unit: { count: 20, covers: "closes_its_pipe_early's own cases: a pipe into grep -q or head is caught, a sed reader and an || are not. xtask/src/smoke.rs gains only a clippy allow on the cfg(not(unix)) make_executable (no behaviour): proven by cross-clippy for x86_64-pc-windows-msvc, red without it at smoke.rs:98 (the line main's Windows CI failed on), green with it" }
+  integration: { count: 20, covers: "release.yml's contract: no run: line in any job pipes into an early-exiting reader, and the host check captures with sed, compares with matrix.host and exits 1 before the compile; both tests red on the old grep -qx step, green now; the one-version tests hold 0.1.0-2 across Cargo.toml, Cargo.lock and ui/package.json" }
+  e2e: { waived: "the release's end-to-end run is the owner's v0.1.0-2 tag on GitHub's five runners, which no local session can host; the old step's exit 141 and the new step's pass/fail were reproduced locally under bash --noprofile --norc -eo pipefail, the runner's own flags" }
