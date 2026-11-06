@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PRORELEASE.W4 result: About, Help and the version on every OS</h1>
       <p>What W4 built from the W13 design run, how it is proven, and what is left open.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W4</span> · <code>wu/prorelease/about-help</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w4-about-help-plan.html">W4 plan</a> · design run <a href="2026-11-06-prorelease-about-help-design-run.html">W13 (closed)</a> · rule <a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a></div>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W4</span> · <code>wu/prorelease/about-help</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w4-about-help-plan.html">W4 plan</a> · design run <a href="2026-11-06-prorelease-about-help-design-run.html">W13 (closed)</a> · rule <a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a></div>
     </div>
   </header>
   <main>
@@ -53,6 +53,18 @@
     <h2 id="distillation">Distillation</h2>
     <p data-item="distillation">UC-ABOUT (new) and UC-UPDATE in <code>docs/use-cases/web-ui.html</code> and the index; DEC-90 and its index row; the design-rules lexicon (<em>licences</em>, <em>installed copy</em>) and keyboard conventions (Esc on the About window, F1 → user guide, the licence list as a scroll region). T1 untouched: <code>architecture.html</code> names no plugin.</p>
 
+    <h2 id="round-2">Round 2 — independent review of <code>ui/src-tauri</code></h2>
+    <div data-item="round-2">
+      <table data-c="round-2">
+        <thead><tr><th>Finding</th><th>Resolution</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>1 important: <code>about_help.rs</code> invoked from <code>tauri://localhost</code>, a remote origin on Windows (<code>http://tauri.localhost</code>), so its app commands would be refused there</td><td>every suite invoke sends <code>common::LOCAL_URL</code> (DEC-85); <code>login_item.rs</code> and <code>outlive_window.rs</code> had the same literal and now do too. A Windows-only failure cannot go red on macOS, so the guard is a source check: <code>every_suite_invoke_sends_the_platform_local_origin</code> refuses the literal in any suite file but <code>common.rs</code></td><td>the guard went red with the literal put back in <code>login_item.rs</code>, green without it. The WU's other tests audited for OS assumptions (paths, separators, line endings, origins, <code>cfg</code>-dead code under <code>-D warnings</code>): none; the menu builder takes the OS as an argument and is tested both ways</td></tr>
+          <tr><td>2 nit: <code>capabilities/about.json</code> promised more than it enforces</td><td>the description says it limits plugin and core permissions only, not the app commands; the missing app-command list (every local window can call every app command, true before W4) is a row in <a href="../backlog/roadmap.html">the roadmap</a></td><td>—</td></tr>
+          <tr><td>3 nit: <code>Cargo.lock</code> moves ~15 crates (dirs-sys, errno, muda, rustix, socket2, tempfile, tray-icon, rustls-platform-verifier, uds_windows, window-vibrancy …) from <code>windows-sys 0.60.2</code> to <code>0.61.2</code>, both already in the lock</td><td>accepted: one <code>windows</code> and one <code>webview2-com</code> stay (DEC-85's lock check green); the Windows CI / rc run is the proof. The lock is unchanged this round, so the notice needs no regeneration</td><td><code>ci_workflow</code> lock test in gate0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
     <h2 id="hand-check">Hand-check</h2>
     <table data-c="hand-check">
       <thead><tr><th>OS</th><th>Do</th><th>See</th></tr></thead>
@@ -69,7 +81,7 @@
       <table data-c="follow-ups">
         <thead><tr><th>Item</th><th>Owner</th></tr></thead>
         <tbody>
-          <tr><td>Independent review of <code>ui/src-tauri</code> (outside the cr gate): <code>src/about.rs</code>, <code>src/links.rs</code>, <code>src/menu.rs</code>, <code>src/update.rs</code>, <code>src/lib.rs</code>, <code>src/scenario.rs</code>, <code>src/settings.rs</code>, <code>capabilities/about.json</code>, <code>tauri.conf.e2e.json</code>, <code>Cargo.toml</code>, <code>tests/suite/about_help.rs</code>, root <code>Cargo.lock</code></td><td>router</td></tr>
+          <tr><td>Independent review of <code>ui/src-tauri</code> (outside the cr gate): <code>src/about.rs</code>, <code>src/links.rs</code>, <code>src/menu.rs</code>, <code>src/update.rs</code>, <code>src/lib.rs</code>, <code>src/scenario.rs</code>, <code>src/settings.rs</code>, <code>capabilities/about.json</code>, <code>tauri.conf.e2e.json</code>, <code>Cargo.toml</code>, <code>tests/suite/about_help.rs</code>, root <code>Cargo.lock</code>: done, round 2 above</td><td>router</td></tr>
           <tr><td>The issue form (<code>.github/ISSUE_TEMPLATE/bug_report.yml</code>) must use the field ids <code>version</code>, <code>os</code>, <code>install</code> and the file name the URL names; whether GitHub prefills a dropdown from the query is unverified, so <code>install</code> is safest as an input</td><td>W5</td></tr>
           <tr><td><code>PRIVACY.md</code> carries the words of <code>ui/src/privacy.ts</code>; a test pinning the two belongs with W5's copy</td><td>W5</td></tr>
           <tr><td>On macOS Tauri's <code>bundle_type()</code> answers <code>App</code> for any binary, so a build from source reads as installed (shows <em>check now</em>) and reports <em>dmg</em>; pre-existing in <code>update::installed</code></td><td>roadmap</td></tr>
