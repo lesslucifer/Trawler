@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU inspect-form-parse -> epic/release-fixes (round 2)"
+epic: E-RELFIX
+wu: E-RELFIX.W2
+branch: wu/release-fixes/inspect-form-parse
+base: 200005e742d49bf0c70a99e99f306f692947476a
+head: 5a7d22619c8c5b721ed23bcfab65d93c757a26de
+diff_sha256: 9a363a763e27e0cb02ec5eb69d8e76efdc13552e81136706484e43670d15fdc7
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 5
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 6
+    nit: 7
+  stage_seconds:
+    gate0: 22
+    finders: 45
+    verifiers: 36
+    total: 171
+  by_finder:
+    correctness: { found: 4, verified: 3 }
+    efficiency: { found: 3, verified: 2 }
+    altitude: { found: 6, verified: 4 }
+findings: { found: 11, verified: 8, waived: 0 }
+waivers: []
+nits:
+  - finding: "FormRenderer recomputes readForm and its entries on every render"
+    waived: "voids with this FAIL; the fix round memoises it"
+  - finding: "FormRenderer runs formShape over the whole uncapped body"
+    waived: "voids with this FAIL; the fix round reads the pane's shape from its label"
+  - finding: "FormRenderer and body.ts import shape and parse functions from formPairs"
+    waived: "both are plain ui/src modules; formPairs already holds the form grammar the pane and the window share"
+verdict: FAIL
+date: 2026-11-06
