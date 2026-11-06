@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="e55aea5e8d655a72d8383d39" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W18 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W18: the capture service log reads as plain text</h1>
+      <p>A README screenshot showed Settings → Capture service with raw ANSI colour codes (<code>␛[2m…␛[0m</code>, <code>␛[32m INFO</code>) in the core's log.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W18</span> · branch <code>wu/prorelease/service-log-ansi</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The core writes its log with colour codes only when stderr is a terminal, so the log the app captures through a pipe is plain text; the log view strips any SGR sequence a line still carries.</p>
+
+    <h2 id="verified">Root cause</h2>
+    <table data-c="verified">
+      <thead><tr><th>#</th><th>Path</th><th>Code does</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>R1</td><td>core log init</td><td><code>tracing_subscriber::fmt()</code> keeps ANSI on by default, terminal or not; both the <code>trawler</code> binary and the app's <code>--core</code> mode route through it</td><td><code>src/cli.rs:98-104</code></td></tr>
+        <tr><td>R2</td><td>supervisor</td><td>reads the child's stderr pipe line by line into the log ring, verbatim</td><td><code>ui/src-tauri/src/supervisor.rs:276-284</code></td></tr>
+        <tr><td>R3</td><td>log view</td><td>renders each line's text verbatim</td><td><code>ui/src/LogTail.tsx</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Where to fix</td><td><code>with_ansi(stderr().is_terminal())</code> in <code>cli::main</code></td><td>the one point every core launch routes through; a terminal run keeps its colours</td></tr>
+        <tr><td>Supervisor sets <code>NO_COLOR</code></td><td>no</td><td>redundant once the core checks the terminal; <code>ui/src-tauri</code> stays untouched</td></tr>
+        <tr><td>View strips SGR</td><td>yes, one regex in <code>LogTail</code></td><td>defensive, cheap, one place</td></tr>
+        <tr><td>Absolute CA path in the log</td><td>kept; reported to the router</td><td>useful to the owner; it names the OS user in screenshots</td></tr>
+        <tr><td>New DEC</td><td>none</td><td>no new rule</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W18 · UC-SVC (capture service log) · <code>src/cli.rs</code>, <code>ui/src/LogTail.tsx</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Run</th><th>Log text</th></tr></thead>
+        <tbody>
+          <tr><td>app (stderr piped)</td><td><code>2026-11-06T… INFO trawler::lib: proxy listening on …</code>, no <code>␛[</code></td></tr>
+          <tr><td><code>cargo run -p trawler</code> in a terminal</td><td>coloured, as today</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>integration (cargo)</td><td><code>tests/suite/core_entry.rs</code>: the core's piped stderr carries no ESC byte</td><td>yes</td></tr>
+          <tr><td>unit (vitest)</td><td><code>CaptureService.test.tsx</code>: a log line with SGR codes renders as its plain text</td><td>yes</td></tr>
+          <tr><td>e2e</td><td>waived: the integration test spawns the real binary through a pipe as the app does; existing specs keep running at the epic gate</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
