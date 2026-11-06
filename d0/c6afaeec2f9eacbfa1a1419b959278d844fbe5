@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: d0c6afaeec2f9eacbfa1a1419b959278d844fbe5
+base: 1da1cf4170031de57b9d2ba5f6ef8e21f70366ef
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-06-release-fixes-epic-result.html
+report_sha256: 139c95dd4a68ece1fa9d1b135983c042ea73d03e35cd5b7589bdae190dcc89e9
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECVC06QNTAGpDlNGvnWGrxPzi9xpcu94OH7ZgtEPvHiabbOawPjwGDnk5
+  +hikTnyzqKoeMAmP853RGMGrLNLS4N
+  -----END SSH SIGNATURE-----
