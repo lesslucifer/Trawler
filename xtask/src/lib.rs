@@ -52,7 +52,7 @@ usage:
   cargo xtask dod list [--epic <id>]
   cargo xtask package [--universal] [--profile <name>] [--build-only|--bundle-only|--sign-only] (the host's installers under target/[<triple>/]<profile>/bundle; macOS: ad-hoc signed and verified, plus the updater's .app.tar.gz; --universal: both Mac architectures; --build-only compiles, --bundle-only then bundles it, --sign-only then writes each updater target's .sig with TAURI_SIGNING_PRIVATE_KEY)
   cargo xtask licenses                                       (THIRD-PARTY-NOTICES.txt: Trawler's licence, then every licence text of the release crates and production npm packages; the app bundles it)
-  cargo xtask release-manifest <dist-dir> --tag v<version> --repo <owner/name> --pub-date <rfc3339>  (latest.json + notes.md beside the release artifacts; refuses a missing signature or platform)
+  cargo xtask release-manifest <dist-dir> --tag v<version> --repo <owner/name> --pub-date <rfc3339>  (latest.json, notes.md and SHA256SUMS beside the release artifacts; refuses a missing signature, platform or CHANGELOG.md section)
   cargo xtask smoke [--universal] [--profile <name>]          (install the package's own installer in a temp dir, run its core headless: a request through the proxy is captured, the CA is served, quitting frees both ports)
   cargo xtask ui build                                        (pnpm install + build → ui/dist/)
   cargo xtask ui dev                                          (pnpm install + launch the Tauri window)
