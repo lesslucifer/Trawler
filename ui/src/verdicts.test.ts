@@ -183,7 +183,7 @@ test("proxyStatus: a reading in progress says which reading", () => {
 describe("the proxy already set on this machine", () => {
   test("is named, with what replacing it costs", () => {
     expect(foreignProxyNotice("this Mac", "10.1.1.1:8080")).toBe(
-      "another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
+      "another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it, and Trawler never puts it back.",
     );
   });
 
@@ -191,7 +191,7 @@ describe("the proxy already set on this machine", () => {
     const notice = foreignProxyNotice("this Mac", null);
 
     expect(notice).toBe(
-      "another proxy is set on this Mac. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
+      "another proxy is set on this Mac. Setting Trawler replaces it, and Trawler never puts it back.",
     );
     expect(notice).not.toMatch(/null|undefined|:/);
   });

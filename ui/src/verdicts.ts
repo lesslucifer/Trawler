@@ -605,7 +605,7 @@ export function foreignProxyNotice(
   address: string | null,
 ): string {
   const named = address === null ? "" : `: ${address}`;
-  return `another proxy is set on ${device}${named}. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.`;
+  return `another proxy is set on ${device}${named}. Setting Trawler replaces it, and Trawler never puts it back.`;
 }
 
 // What the wire says, as one name. The words each reading carries are two

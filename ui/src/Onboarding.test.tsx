@@ -1278,7 +1278,7 @@ describe("a proxy that is already set", () => {
     draw({ proxy: { status: "foreign", address: "10.1.1.1:8080" } });
 
     expect(zone("foreign-proxy")).toHaveTextContent(
-      "another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
+      "another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it, and Trawler never puts it back.",
     );
   });
 
@@ -1286,7 +1286,7 @@ describe("a proxy that is already set", () => {
     draw({ proxy: { status: "foreign", address: null } });
 
     expect(zone("foreign-proxy")).toHaveTextContent(
-      "another proxy is set on this Mac. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
+      "another proxy is set on this Mac. Setting Trawler replaces it, and Trawler never puts it back.",
     );
   });
 
