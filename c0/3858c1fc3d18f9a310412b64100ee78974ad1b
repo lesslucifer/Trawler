@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: c03858c1fc3d18f9a310412b64100ee78974ad1b
+base: 50d3a6217b90015d89b71859ec450a115f82dadd
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w13-about-help-design-result.html
+report_sha256: 05b8f9d6d3940f0a18be3e46684d51b984191aaa634e2668a49910449c11e5cf
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECGS65QZMpcYqmEzhcGyNuqGrfcxAAjl2C3fCCyz775XwIGe/fvnnGjpP
+  3he4zN9NcdRnxaUhh2pCVrGOyrUtYK
+  -----END SSH SIGNATURE-----
