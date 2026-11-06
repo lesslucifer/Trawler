@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W14
+branch: HEAD
+tests:
+  unit: { count: 28, covers: "a [0.1.0] - date section under [Unreleased] is read by the final and its rc; a section of group headings with no entry is refused as empty, by name; an rc's notes open with the Release candidate line and a final's drop it with one blank line kept; the notes end with Check your download incl. Get-FileHash -Algorithm SHA256; the repo's CHANGELOG keeps the Keep a Changelog shape (Unreleased first, bracketed dated versions, only Added/Changed/Fixed/Removed/Security groups)" }
+  integration: { waived: "no workflow, wire or cross-module contract changes: release-manifest's run is already exercised end to end by the unit tests through the real template and CHANGELOG, and the release_workflow integration suite is unchanged and green" }
+  e2e: { waived: "a release run needs GitHub, the signing secrets and a tag; the next rc tag (v0.1.0-5, the epic's) is the e2e: its draft carries the new notes" }
