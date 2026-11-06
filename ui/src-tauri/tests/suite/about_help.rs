@@ -1,3 +1,4 @@
+use crate::common::LOCAL_URL;
 use tauri::ipc::{CallbackFn, InvokeBody, InvokeResponseBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, MockRuntime};
 use tauri::webview::InvokeRequest;
@@ -16,7 +17,7 @@ fn ask(
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::Json(body),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),
@@ -81,5 +82,19 @@ fn the_shell_refuses_an_address_where_it_takes_a_link_name() {
             ask(&window, "open_link", serde_json::json!({ "link": link })).is_err(),
             "{link} was taken"
         );
+    }
+}
+
+#[test]
+fn every_suite_invoke_sends_the_platform_local_origin() {
+    let hard_coded = format!("\"{}://localhost\"", "tauri");
+    let suite = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/suite");
+    for entry in std::fs::read_dir(suite).unwrap() {
+        let path = entry.unwrap().path();
+        if path.file_name().is_some_and(|name| name == "common.rs") {
+            continue;
+        }
+        let source = std::fs::read_to_string(&path).unwrap();
+        assert!(!source.contains(&hard_coded), "{} hard-codes the origin", path.display());
     }
 }
