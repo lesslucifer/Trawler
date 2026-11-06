@@ -1,0 +1,44 @@
+schema: doc/v1
+epic: E-PKG2
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the packaging row closed by E-PKG and E-PKG2; the release hand checks owed by the first rcs (the run, install and update per OS, keep capturing with open at login, macOS 11/12, AppImage autostart, Linux tray host); the reviews' follow-ups (W3 Windows tooling, W4 DEC-86 limits, W5 update edges, ci.yml's tag-pinned actions)"
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 9: open at login needs macOS 13; Linux autostart names $APPIMAGE for a binary inside its $APPDIR"
+  - path: "docs/decisions/dec-81-one-version-a-release-only-bundle-one-package-command.html"
+    tier: T2
+    action: updated
+    distills: "v2: package_bundle also installs the .dmg and runs its window"
+  - path: "docs/decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html"
+    tier: T2
+    action: added
+    distills: "an update asks, is signed with the version in the signature, and installs through the quit request and DEC-64's check; deb/rpm in place; never silent"
+  - path: "docs/decisions/dec-84-unsafe-is-confined-to-the-login-service-crate.html"
+    tier: T2
+    action: updated
+    distills: "rule 4: no service below macOS 13, the app's minimum stays 11, CI runs the crate"
+  - path: "docs/decisions/dec-85-the-rust-toolchain-is-pinned-and-windows-has-its-own-rules.html"
+    tier: T2
+    action: added
+    distills: "the toolchain is pinned at 1.99.0 and Windows has its own rules (paths, lifeline, kill, line endings)"
+  - path: "docs/decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html"
+    tier: T2
+    action: added
+    distills: "a v<version> tag equal to the workspace version builds every platform keyless, smokes each installer, signs only after, and opens a draft release with latest.json; numeric rc pre-releases; recorded limits"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "rows for DEC-82, 85, 86 and the updated DEC-77, 84"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL and UC-UPDATE rows"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL (artifacts, first-open steps, proof) and UC-UPDATE (check, ask, signed install through the quit, the states); UC-4 holds on three OSes"
