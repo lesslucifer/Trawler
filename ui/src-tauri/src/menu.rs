@@ -162,6 +162,7 @@ fn close_focused<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let menu = Menu::default(app)?;
     if cfg!(target_os = "macos") {
@@ -175,12 +176,17 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     }
     add_reset_layout(app, &menu)?;
     fill_help(app, &menu)?;
-    own_close_window(app, &menu)?;
+    if let Err(err) = own_close_window(app, &menu) {
+        eprintln!("Close Window keeps its native item: {err}");
+    }
     Ok(menu)
 }
 
 // The default menu holds the native item once per OS menu that lists it (File
 // and Window off Linux); the first place keeps Trawler's own, the rest go.
+// Tauri names a predefined item by neither kind nor a stable id, so its label
+// finds it: macOS shows the label with its mnemonic stripped, a fresh item
+// keeps the `&`.
 fn own_close_window<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<()> {
     let native = PredefinedMenuItem::close_window(app, None)?.text()?;
     let mut found = Vec::new();
@@ -188,7 +194,7 @@ fn own_close_window<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Re
         let MenuItemKind::Submenu(submenu) = item else { continue };
         for (index, entry) in submenu.items()?.into_iter().enumerate() {
             if let MenuItemKind::Predefined(predefined) = entry {
-                if predefined.text()? == native {
+                if same_label(&predefined.text()?, &native) {
                     found.push((submenu.clone(), index));
                 }
             }
@@ -204,10 +210,14 @@ fn own_close_window<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Re
         true,
         Some(CLOSE_WINDOW_ACCELERATOR),
     )?;
-    match found.first() {
-        Some((submenu, index)) => submenu.insert(&own, *index),
-        None => Ok(()),
-    }
+    let Some((submenu, index)) = found.first() else {
+        return Err(std::io::Error::other(format!("no \"{native}\" item in the menu")).into());
+    };
+    submenu.insert(&own, *index)
+}
+
+fn same_label(shown: &str, native: &str) -> bool {
+    shown.replace('&', "") == native.replace('&', "")
 }
 
 fn fill_help<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<()> {
@@ -389,6 +399,15 @@ mod tests {
         assert_eq!(close_target(None), CloseTarget::Nothing);
         let page = include_str!("../../src/shellDialogs.ts");
         assert!(page.contains(&format!("\"{CLOSE_WINDOW_EVENT}\"")));
+    }
+
+    #[test]
+    fn the_native_close_item_is_found_with_or_without_its_mnemonic() {
+        assert!(same_label("Close Window", "C&lose Window"));
+        assert!(same_label("C&lose Window", "C&lose Window"));
+        assert!(same_label("Close", "Close"));
+        assert!(!same_label("Close", "C&lose Window"));
+        assert!(!same_label("Minimize", "C&lose Window"));
     }
 
     #[test]

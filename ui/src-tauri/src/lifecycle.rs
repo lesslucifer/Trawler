@@ -157,12 +157,21 @@ pub fn on_window_destroyed<R: Runtime>(app: &AppHandle<R>, label: &str) -> bool 
     let stays = lifecycle(app).is_some_and(|lifecycle| lifecycle.stays_windowless());
     let ends = ends_the_app(label, stays);
     // A request met by a window that was already going away reached nobody who
-    // can act on it; a window only a later Open builds must not find it and quit.
-    if label == MAIN_WINDOW
-        && !ends
-        && lifecycle(app).is_some_and(|lifecycle| lifecycle.take_quit_request())
-    {
-        drop(request_quit(app));
+    // can act on it; a window only a later Open builds must not find it and act.
+    if label == MAIN_WINDOW && !ends {
+        if let Some(lifecycle) = lifecycle(app) {
+            if lifecycle.take_quit_request() {
+                drop(request_quit(app));
+            }
+            let dialogs_pending = !lifecycle
+                .dialog_requests
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .is_empty();
+            if dialogs_pending {
+                drop(announce_dialogs(app));
+            }
+        }
     }
     ends
 }
@@ -250,6 +259,10 @@ pub fn request_dialog<R: Runtime>(app: &AppHandle<R>, request: DialogRequest) ->
     if let Some(lifecycle) = lifecycle(app) {
         lifecycle.request_dialog(request);
     }
+    announce_dialogs(app)
+}
+
+fn announce_dialogs<R: Runtime>(app: &AppHandle<R>) -> JoinHandle<()> {
     let app = app.clone();
     std::thread::spawn(move || {
         if !announce_in_main(&app, DIALOG_REQUEST_EVENT) {
