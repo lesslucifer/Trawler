@@ -1,0 +1,25 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-91-the-public-text-is-one-voice-checked.html"
+    tier: T2
+    action: added
+    distills: "W11's rulings that outlive the archive: one fact per root file, no other tool named, install table follows package.rs, links resolve, issues only at 0.1.0, screenshots by script with OS prompts by hand, privacy claims only what the code backs"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-91 row"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL names the README's checked install table, first-open steps and PRIVACY.md (DEC-91)"
+  - path: "docs/work/2026-11-06-prorelease-w5-readme-community-plan.html"
+    tier: T3
+    action: added
+    distills: "the WU plan: requirement, flow, expected result, test plan"
+  - path: "docs/work/2026-11-06-prorelease-w5-readme-community-result.html"
+    tier: T3
+    action: added
+    distills: "outcome, deviations, evidence, the owner's S8/S9 list, the CLAUDE.md line staged apart, follow-ups"
