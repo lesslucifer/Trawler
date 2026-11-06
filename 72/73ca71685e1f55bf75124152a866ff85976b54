@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 7273ca71685e1f55bf75124152a866ff85976b54
+base: 5e15f58a2079cdfe096afad496935628f69342b7
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w15-router-watch-result.html
+report_sha256: db2f5f6feb66ba5fa44d2a1571df3614de43255064293cd30252581f0ea133a2
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDN6sW0tkLMQH5OciNymWVgZt3gyq3Y+pK1zrAaQylfwUQ0vcbimJHqfX
+  T62lWEnk51RphRVJmov3fMfeKI/boK
+  -----END SSH SIGNATURE-----
