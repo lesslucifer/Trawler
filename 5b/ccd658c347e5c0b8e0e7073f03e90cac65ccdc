@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 5bccd658c347e5c0b8e0e7073f03e90cac65ccdc
+base: 7a008d7e93b79d02fc96d997ee994d205a8120af
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-packaging-v2-w5-bg-service-sync-result.html
+report_sha256: dda9df3433fa1360d5f8e5c1a1b7e7e8f8dc376b42c435b4975ca141c21b6cbc
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECJqo0mnXzsK9z1RTmuLRYSFfFuuYm3bJJ/FWgi4wPOva8OF3iD4vNayt
+  GuZk96twz6vlosGHayTudIBvYlPTIM
+  -----END SSH SIGNATURE-----
