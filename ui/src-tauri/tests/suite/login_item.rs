@@ -1,3 +1,4 @@
+use crate::common::LOCAL_URL;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -72,7 +73,7 @@ fn invoke(
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::Json(body),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),
@@ -130,7 +131,7 @@ fn from_a_binary_with_no_bundle_the_commands_say_the_item_is_unavailable() {
             cmd: "login_item_read".into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::Json(serde_json::json!({})),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),

@@ -512,7 +512,9 @@
 
     <h2 id="uc-update">UC-UPDATE — Take a new version from inside the app</h2>
     <p data-c="uc-update-contract">An installed app checks <code>releases/latest/download/latest.json</code> at launch (at most once a day) and on
-      <em>Check for Updates…</em> (<a href="../decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a>).
+      <em>Check for Updates…</em> or Settings → General's <em>check now</em> (<a href="../decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a>).
+      The launch check runs only while <em>check for updates automatically</em> is on (default on, stored in <code>update-check.json</code>;
+      <a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a>); the user's own check always runs.
       It never installs silently.</p>
     <table data-c="uc-update-states">
       <tr><th>The check finds</th><th>Happens</th></tr>
@@ -528,6 +530,27 @@
       channel, download or redirect refused) and by
       <code>update.rs</code>'s unit tests. A real update from one published rc to the next is a hand check on each OS, owed on the
       <a href="../backlog/roadmap.html">roadmap</a>.</p>
+
+    <h2 id="uc-about">UC-ABOUT — See which Trawler runs, and get help</h2>
+    <p data-c="uc-about-contract">On every OS the user opens one About window, Trawler's own
+      (<a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a>, design run
+      <span class="badge id">E-PRORELEASE.W13</span>): the logo, the version (copyable), <em>MIT licence · © 2026 Vu Luu</em> and three
+      buttons, <em>user guide</em> (the root <code>GUIDE.md</code>), <em>report an issue</em> and <em>source code</em>, each opened in the browser.
+      Its other pages are <em>Third-party licences</em>, the bundled <code>THIRD-PARTY-NOTICES.txt</code> verbatim in one scrolling region
+      (<a href="../decisions/dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a>), and <em>Privacy</em>, the one statement in
+      <code>ui/src/privacy.ts</code>. Esc, ⌘W or Ctrl+W close it; the app keeps running.</p>
+    <table data-c="uc-about-entries">
+      <tr><th>Entry</th><th>macOS</th><th>Windows · Linux</th></tr>
+      <tr><td>About Trawler</td><td>the app menu</td><td>Help, last</td></tr>
+      <tr><td>User guide</td><td>Help → Trawler User Guide</td><td>Help → User Guide · F1</td></tr>
+      <tr><td>Report an Issue…</td><td colspan="2">Help; opens the issue form with version, OS + version + CPU and install kind (dmg · setup.exe · msi · deb · rpm · AppImage · from source) — nothing about traffic or the machine's name</td></tr>
+      <tr><td>Third-Party Licences · Privacy</td><td colspan="2">Help; the About window on that page</td></tr>
+      <tr><td>version · check now · check for updates automatically</td><td colspan="2">Settings → General, below its two switches; a copy that is not installed shows the version, no check now, and the switch disabled with <em>updates come with an installed copy of Trawler</em></td></tr>
+      <tr><td>a browser that would not open</td><td colspan="2">the About page shows <em>couldn't open your browser — copy the address</em> with the address</td></tr>
+    </table>
+    <p class="kd" data-c="uc-about-proof">Proven by <code>menu.rs</code> (Help per OS), <code>links.rs</code> (the report's fields), <code>update.rs</code> (the switch),
+      <code>about.rs</code>, <code>About.test.tsx</code>, <code>General.test.tsx</code>, <code>Settings.test.tsx</code> and the WebDriver spec
+      <code>ui/e2e/specs/about.spec.ts</code> (Settings reads the running version). The menus as each OS draws them are a hand check.</p>
 
     <h2 id="uc-onboard">UC-ONBOARD — Set up capture, for this machine or another device</h2>
     <div data-c="uc-onboard-contract">
