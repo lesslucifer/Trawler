@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 22ec5c0cd77e741f0d5c8ee2b9868108b707b373
+base: 575151f83e8f0c7938797ae1744ce958c9bff74f
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w9-logo-design-result.html
+report_sha256: 36eded6df6829012dd2bfe55707c777c563fd5f298762a8a2e072fce749c2b8f
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECgS7EdM4HTAQ4hNPKEFdxxK1NRTHxcMZo7eOhHBmM2F52KotbH1enCnx
+  tLfwhnV1LEcSWA2WL0Ew9LNebEojsH
+  -----END SSH SIGNATURE-----
