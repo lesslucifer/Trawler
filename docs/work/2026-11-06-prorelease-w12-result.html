@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedaf759f34851f0dfaed6b" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W12 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W12 result — user guide design, round 1</h1>
+      <p>What the design WU produced for owner review, the gaps it found, and the open questions.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W12</span> · <code>wu/prorelease/guide-design</code> → <code>epic/prorelease</code> · design <a href="2026-11-06-prorelease-w12-guide-design.html">W12 user guide design</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Plan item (W12)</th><th>Where in the design doc</th></tr></thead>
+        <tbody>
+          <tr><td>Guide outline, 13 sections, with the anchor scheme Help → User Guide and the README link into</td><td><code>#frame</code>, <code>#outline</code></td></tr>
+          <tr><td>Per-OS flows: install + first open, certificate trust, other devices, uninstall</td><td><code>#flows</code> (four diagrams)</td></tr>
+          <tr><td>Every claim checked against code, file:line</td><td><code>#facts</code></td></tr>
+          <tr><td>UI labels to quote, from <code>ui/src</code> and <code>ui/src-tauri/src</code></td><td><code>#labels</code></td></tr>
+          <tr><td>Screenshot list reusing W11's S1–S9, plus S10–S11 proposed</td><td><code>#screenshots</code></td></tr>
+          <tr><td>Troubleshooting symptoms</td><td><code>#troubleshooting</code></td></tr>
+          <tr><td>Install, Trust the certificate, Uninstall drafted in full in the W11 voice</td><td><code>#draft-install</code>, <code>#draft-trust</code>, <code>#draft-uninstall</code></td></tr>
+          <tr><td>Product gaps found (no removal button off macOS, three copy bugs, login-item leftovers, Linux scope)</td><td><code>#gaps</code> G1–G6</td></tr>
+          <tr><td>Owner questions with recommendations</td><td><code>#owner-questions</code> Q1–Q5, open</td></tr>
+          <tr><td>What could not be verified here</td><td><code>#unverified</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">None in scope. The plan's "per-app proxy" became "Capture one app" (curl <code>-x</code>, <code>HTTPS_PROXY</code>): the app has no per-app routing, so the guide shows only what the setup screen itself shows. "Privacy" is a link to <code>PRIVACY.md</code>, not a section (W11 Q4). Docs-only WU: the test layer is waived ("design WU, no code; its build WU W6 carries the tests").</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Guide claims and labels are true of the tree <code>d62447dc</code></td><td>file:line per row in the design doc's <code>#facts</code> and <code>#labels</code> (<code>ui/src-tauri/src/setup.rs</code>, <code>ui/src/setup.ts</code>, <code>ui/src/Onboarding.tsx</code>, <code>menu.rs</code>, <code>tray.rs</code>, <code>update.rs</code>, <code>login_item.rs</code>, <code>src/reach.rs</code>, <code>src/api</code>)</td></tr>
+          <tr><td>Help → User Guide target</td><td>W13 design run: <code>https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md</code>, F1 off macOS (D6)</td></tr>
+          <tr><td>Doc renders and is commentable</td><td>htmldoc id minted; baseline snapshot <code>2026-11-06T10-43-35-559Z</code></td></tr>
+          <tr><td>e2e / integration / unit</td><td>waived: no code changes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal only. The signed outline becomes truth through W6 (<code>GUIDE.md</code>), which distils into UC-INSTALL, UC-ONBOARD and UC-ABOUT as the epic plan lists. The design doc archives when W6 merges (DEC-3).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
+        <tbody>
+          <tr><td>Owner rulings Q1–Q5, then round 2 and the sign-off</td><td>owner via router → W12 round 2</td></tr>
+          <tr><td>Copy fixes G2–G4 (per Q2)</td><td>a fix WU or W4, per Q2</td></tr>
+          <tr><td>Folder paths, package name, first-open wording on real installs</td><td>W6 + the hand-check matrix</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
