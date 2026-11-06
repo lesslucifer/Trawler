@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9c0d9f34851f0dfaec04">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — design run: About, Help and the version</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="../../doc-assets/components/specimens.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+  <style>
+    table{font-size:13px}
+    .kd{color:var(--muted)}
+    .statebtn{margin-top:10px;margin-right:6px;border:1px solid var(--line);border-radius:4px;
+      padding:4px 10px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+    .a-mock h1,.a-mock h2,.a-mock h3{margin:0;padding:0;border:0}
+    .a-mock p,.a-mock li{color:inherit}
+    .a-mock ul{margin:0;padding:0;list-style:none}
+    /* mockup assembly only — which state shows. The base is macOS, the About page, the switch on, an installed build. */
+    .a-zone{display:block}
+    .a-on-windows,.a-on-linux,.a-on-licences,.a-on-privacy,.a-on-off,.a-on-dev,.a-on-failed,.a-on-browser,.a-on-nolist{display:none}
+    .windows .a-on-windows,.linux .a-on-linux,.licences .a-on-licences,.privacy .a-on-privacy,.off .a-on-off,
+    .dev .a-on-dev,.failed .a-on-failed,.browser .a-on-browser,.nolist .a-on-nolist{display:block}
+    .windows .a-off-windows,.linux .a-off-linux,.licences .a-off-licences,.privacy .a-off-privacy,.off .a-off-off,
+    .dev .a-off-dev,.failed .a-off-failed,.browser .a-off-browser,.nolist .a-off-nolist{display:none}
+    .windows .a-mac,.linux .a-mac{display:none}
+    .a-pc{display:none}
+    .windows .a-pc,.linux .a-pc{display:block}
+    .licences .a-off-pages,.privacy .a-off-pages{display:none}
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Design run — About, Help and the version</h1>
+      <p>Where a user on macOS, Windows or Linux finds which Trawler they run, under what licence, how to get help or report
+        a problem, what Trawler sends out, and how to stop it asking for updates.</p>
+      <div class="meta">Design run · round 2 · opened 2026-11-06 · closed 2026-11-06 on the owner's rulings · Trawler · T3 (docs/work/) · <strong>E-PRORELEASE.W13</strong> ·
+        branch <code>wu/prorelease/about-help-design</code> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> ·
+        <a href="2026-11-06-prorelease-w13-about-help-design-plan.html">WU plan</a> · built by W4</div>
+    </div>
+  </header>
+  <main data-artifact="design-run" data-status="archived">
+
+    <h2 id="at-a-glance">At a glance</h2>
+    <div class="diagram" data-c="routes">
+      <pre class="mermaid">flowchart LR
+  subgraph MENU["native menus"]
+    MA["macOS · Trawler → About Trawler"]
+    HW["Windows / Linux · Help → About Trawler"]
+    HG["Help → User Guide"]
+    HR["Help → Report an Issue…"]
+    HL["Help → Third-Party Licences"]
+    HP["Help → Privacy"]
+  end
+  subgraph AW["About window — one, every OS"]
+    P1["About page"]
+    P2["Third-party licences page"]
+    P3["Privacy page"]
+  end
+  BR(["the browser"])
+  SG["Settings → General · Updates"]
+  MA --> P1
+  HW --> P1
+  HL --> P2
+  HP --> P3
+  HG --> BR
+  HR --> BR
+  P1 -- "user guide · report an issue · source code" --> BR
+  P3 -- "Settings → General" --> SG
+  BR -. "would not open" .-> P1</pre>
+      <div class="caption">Every Help item lands in one of two places: the About window on the right page, or the browser. A browser that would not open lands on the About page with the address to copy.</div>
+    </div>
+
+    <h2 id="mockup">Mockup</h2>
+    <p class="kd">Mounted from the real <code>ui/src/components/</code>. The native menu bars and window title bars are drawn
+      by the screen (the OS owns them; the build only names the items). Each button shows one state — read each alone,
+      then combine the OS with any other.</p>
+    <div data-item="mockup">
+      <div class="app">
+        <div class="a-mock flex flex-col gap-6 bg-canvas p-4 font-ui text-body text-ink" id="mock">
+          <div class="a-zone" data-zone="help menu" id="m-menu"></div>
+          <div class="a-zone w-pane rounded-panel border border-hairline" data-zone="about window">
+            <div class="a-zone" data-zone="title bar" id="m-titlebar"></div>
+            <div class="flex gap-4 p-4">
+              <div class="a-zone" data-zone="pages" id="m-pages"></div>
+              <div class="min-w-0 flex-1">
+                <div class="a-zone a-off-pages" data-zone="about page" id="m-about"></div>
+                <div class="a-zone a-on-licences" data-zone="licences page" id="m-licences"></div>
+                <div class="a-zone a-on-privacy" data-zone="privacy page" id="m-privacy"></div>
+              </div>
+            </div>
+          </div>
+          <div class="a-zone w-pane rounded-panel border border-hairline p-4" data-zone="settings general updates" id="m-updates"></div>
+        </div>
+      </div>
+      <p>overflow: help menu — five items (six off macOS), bounded · about window — fixed at <code>pane</code> wide, its height the page's, bounded · title bar — one line · pages — three names in a column,
+        pinned · about page — logo slot, name, version, one licence line, three buttons, bounded; the version wraps, never cut ·
+        licences page — the notice is unbounded (every crate and package Trawler ships): it scrolls inside its own region,
+        capped at <code>body-max</code> on the mockup and at the window's height in the build, one tab stop (scroll-a-region);
+        the page title above it stays pinned · privacy page — a short statement, bounded; where the window is shorter, the page
+        scrolls · settings general updates — one switch, one line, one version row and at most one notice, bounded.</p>
+      <p class="kd">Payload: the installed version (<span class="font-mono" data-wire="installed version">0.1.0-5</span>),
+        the bundled <span class="font-mono" data-wire="third-party notice">THIRD-PARTY-NOTICES.txt</span> read verbatim, and
+        an address the browser would not open (<span class="font-mono" data-wire="address">https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md</span>).
+        Nothing else is wire data.</p>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="windows"
+        data-label-off="▶ Windows" data-label-on="◀ macOS">▶ Windows</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="linux"
+        data-label-off="▶ Linux" data-label-on="◀ macOS">▶ Linux</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="licences"
+        data-label-off="▶ Third-party licences page" data-label-on="◀ About page">▶ Third-party licences page</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="privacy"
+        data-label-off="▶ Privacy page" data-label-on="◀ About page">▶ Privacy page</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="browser"
+        data-label-off="▶ the browser would not open" data-label-on="◀ it opened">▶ the browser would not open</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="nolist"
+        data-label-off="▶ no licence list (dev build)" data-label-on="◀ the list">▶ no licence list (dev build)</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="off"
+        data-label-off="▶ update check off" data-label-on="◀ on (default)">▶ update check off</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="dev"
+        data-label-off="▶ not an installed copy" data-label-on="◀ installed">▶ not an installed copy</button>
+      <button class="statebtn" data-state-toggle="mock" data-state-class="failed"
+        data-label-off="▶ a save failed" data-label-on="◀ saved">▶ a save failed</button>
+      <script type="text/babel">
+        const { React, createRoot, Button, Checkbox, CopyText, MenuPath, Notice, PageSidebar } = window.Trawler;
+
+        const mount = (id, node) => {
+          const host = document.getElementById(id);
+          if (host) createRoot(host).render(node);
+        };
+        const noop = () => {};
+        const VERSION = "0.1.0-5";
+        const GUIDE = "https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md";
+        const caption = (text) => <p className="pt-chrome-tight font-ui text-chrome text-ink-mute">{text}</p>;
+
+        const item = (label, keys) => (
+          <li className="flex justify-between gap-4 px-chrome-x py-chrome-y">
+            <span>{label}</span><span className="text-ink-mute">{keys}</span>
+          </li>
+        );
+        const rule = <li className="my-chrome-y border-t border-hairline"></li>;
+        mount("m-menu", (
+          <div className="flex gap-6 font-ui text-control">
+            <div className="a-mac">
+              <p className="mb-2 font-ui text-chrome text-ink-mute">macOS · Trawler menu (first items)</p>
+              <ul className="w-field-lg rounded-card border border-hairline bg-canvas-soft py-chrome-y">
+                {item("About Trawler", "")}
+                {item("Check for Updates…", "")}
+                {rule}
+                {item("Settings…", "⌘,")}
+              </ul>
+            </div>
+            <div>
+              <p className="mb-2 font-ui text-chrome text-ink-mute">
+                <span className="a-mac">macOS · Help</span>
+                <span className="a-on-windows">Windows · Help (Alt+H)</span>
+                <span className="a-on-linux">Linux · Help (Alt+H)</span>
+              </p>
+              <ul className="w-pane-narrow rounded-card border border-hairline bg-canvas-soft py-chrome-y">
+                <li className="a-mac px-chrome-x py-chrome-y text-ink-mute">Search ⌕ (the system's)</li>
+                <div className="a-mac">{item("Trawler User Guide", "")}</div>
+                <div className="a-pc">{item("User Guide", "F1")}</div>
+                {item("Report an Issue…", "")}
+                {rule}
+                {item("Third-Party Licences", "")}
+                {item("Privacy", "")}
+                <div className="a-pc">{rule}{item("About Trawler", "")}</div>
+              </ul>
+            </div>
+          </div>
+        ));
+
+        mount("m-titlebar", (
+          <div className="flex items-center justify-between border-b border-hairline px-3 py-chrome-y font-ui text-chrome text-ink-mute">
+            <span className="a-mac">● ● ●</span>
+            <span>About Trawler</span>
+            <span className="a-on-windows">—  ✕</span>
+            <span className="a-on-linux">✕</span>
+            <span className="a-mac"></span>
+          </div>
+        ));
+
+        const PAGES = [
+          { value: "about", label: "About" },
+          { value: "licences", label: "Third-party licences" },
+          { value: "privacy", label: "Privacy" },
+        ];
+        mount("m-pages", (
+          <>
+            <div className="a-off-pages"><PageSidebar pages={PAGES} value="about" onChange={noop} ariaLabel="About pages" /></div>
+            <div className="a-on-licences"><PageSidebar pages={PAGES} value="licences" onChange={noop} ariaLabel="About pages" /></div>
+            <div className="a-on-privacy"><PageSidebar pages={PAGES} value="privacy" onChange={noop} ariaLabel="About pages" /></div>
+          </>
+        ));
+
+        mount("m-about", (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-card border border-dashed border-hairline font-ui text-label text-ink-mute" aria-hidden="true">logo</div>
+              <h1 className="font-serif text-title italic">Trawler</h1>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="font-ui text-chrome text-ink-mute">version</span>
+              <span className="font-mono" data-wire="installed version"><CopyText value={VERSION} label="version" /></span>
+            </div>
+            <p className="font-ui text-body text-ink-body">MIT licence · © 2026 Vu Luu</p>
+            <div className="flex flex-wrap gap-chrome-gap">
+              <Button onClick={noop}>user guide</Button>
+              <Button onClick={noop}>report an issue</Button>
+              <Button onClick={noop}>source code</Button>
+            </div>
+            {caption("Each opens in your browser. A report fills in your version and system; nothing is sent until you submit it.")}
+            <div className="a-on-browser">
+              <Notice tone="warn" detail={<span className="font-mono" data-wire="address"><CopyText value={GUIDE} label="address" /></span>}>
+                couldn't open your browser — copy the address
+              </Notice>
+            </div>
+          </div>
+        ));
+
+        const NOTICE = [
+          "Trawler ships the following third-party software.",
+          "",
+          "── axum 0.8.4 ── MIT",
+          "Copyright (c) 2019 Axum Contributors",
+          "Permission is hereby granted, free of charge, to any person obtaining a copy …",
+          "",
+          "── hudsucker 0.24.0 ── MIT OR Apache-2.0",
+          "…",
+          "── Instrument Serif ── OFL-1.1",
+          "…",
+        ].join("\n");
+        mount("m-licences", (
+          <div className="flex flex-col gap-3">
+            <h1 className="font-serif text-title italic">Third-party licences</h1>
+            <div className="a-off-nolist">
+              {caption("Every library and font inside this copy of Trawler, with its licence.")}
+              <pre tabIndex={0} className="mt-2 max-h-body-max overflow-auto whitespace-pre-wrap rounded-card border border-hairline p-3 font-mono text-value text-ink-body" data-wire="third-party notice">{NOTICE}</pre>
+            </div>
+            <div className="a-on-nolist">
+              <Notice>the list comes with an installed copy of Trawler</Notice>
+            </div>
+          </div>
+        ));
+
+        mount("m-privacy", (
+          <div className="flex flex-col gap-3">
+            <h1 className="font-serif text-title italic">Privacy</h1>
+            <p className="font-ui text-body text-ink-body">What you capture stays on this computer: Trawler keeps it in memory and
+              sends it nowhere. There is no account, no analytics and no crash reporting.</p>
+            <p className="font-ui text-body text-ink-body">Trawler goes online by itself for one thing: when it opens, at most once a
+              day, it asks GitHub whether a newer version exists. Turn that off in <MenuPath path={["Settings", "General"]} />.</p>
+            <p className="font-ui text-body text-ink-body">During setup, the test request you start goes to example.com.</p>
+            {caption("Draft wording — W11 sets the voice and W5 the final text; this page is its slot.")}
+          </div>
+        ));
+
+        mount("m-updates", (
+          <div className="flex flex-col gap-3">
+            <p className="font-ui text-chrome text-ink-mute">Settings → General, below its two switches</p>
+            <div className="flex items-center gap-chrome-gap">
+              <span className="font-ui text-body text-ink">Trawler</span>
+              <span className="font-mono" data-wire="installed version"><CopyText value={VERSION} label="version" /></span>
+              <span className="a-off-dev"><Button onClick={noop}>check now</Button></span>
+            </div>
+            <div className="a-off-dev">
+              <span className="a-off-off"><Checkbox checked onChange={noop}>check for updates automatically</Checkbox></span>
+              <span className="a-on-off"><Checkbox checked={false} onChange={noop}>check for updates automatically</Checkbox></span>
+            </div>
+            <div className="a-on-dev">
+              <Checkbox checked={false} onChange={noop} disabled>check for updates automatically</Checkbox>
+              <div className="pt-chrome-tight"><Notice>updates come with an installed copy of Trawler</Notice></div>
+            </div>
+            <div className="a-on-failed"><Notice tone="warn">couldn't save — permission denied</Notice></div>
+          </div>
+        ));
+      </script>
+    </div>
+
+    <h2 id="questions">The owner's calls</h2>
+    <table data-c="questions">
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommended</th><th>Owner's ruling</th></tr>
+      <tr><td>D1</td><td>What is About on each OS?</td><td>(a) Trawler's own About window everywhere — macOS's About item opens it
+        instead of the system panel · (b) macOS keeps the system panel, Windows/Linux get the window · (c) the system's own
+        everywhere (Windows: a plain message box, no links, no logo)</td><td><strong>(a)</strong> — one surface, the same
+        content, clickable links, the logo slot on every OS</td><td>✅ (a) — Trawler's own window on every OS, replacing macOS's system panel</td></tr>
+      <tr><td>D2</td><td>Where do the licences and the privacy statement open?</td><td>(a) pages of the About window (drawn) ·
+        (b) the browser, on GitHub</td><td><strong>(a)</strong> — works offline and shows the notice this copy ships;
+        a privacy statement that needs the network to read is odd</td><td>✅ (a) — pages inside the About window</td></tr>
+      <tr><td>D3</td><td>Where is the version in Settings?</td><td>(a) General, with check now and the switch (drawn) ·
+        (b) a third Settings page, About</td><td><strong>(a)</strong> — the version, the check and its switch are one
+        concern; the About window already is the about page</td><td>✅ (a) — the version and check now in Settings → General</td></tr>
+      <tr><td>D4</td><td>The switch's words</td><td>(a) <em>check for updates when Trawler opens</em> + <em>At most once a
+        day.</em> (drawn) · (b) <em>check for updates automatically</em></td><td><strong>(a)</strong> — says when, which is
+        what the user decides</td><td>✅ (b) — <em>check for updates automatically</em>, no helper line; the privacy page still says when the check runs</td></tr>
+      <tr><td>D5</td><td>What does Report an Issue fill in?</td><td>(a) version, OS and its version, CPU (arm64/x64), install
+        kind (dmg · msi · exe · deb · rpm · AppImage) · (b) version only</td><td><strong>(a)</strong> — the four facts a
+        triage asks first; nothing about traffic or the machine's name</td><td>✅ (a) — version, OS and its version, CPU, install kind; nothing about traffic or the machine's name</td></tr>
+      <tr><td>D6</td><td>F1 opens the user guide on Windows and Linux?</td><td>(a) yes · (b) no shortcut</td>
+        <td><strong>(a)</strong> — the platform's convention; macOS keeps the system's Help search (⇧⌘/)</td><td>✅ (a) — F1 opens the user guide on Windows and Linux</td></tr>
+      <tr><td>D7</td><td>The About window's links: words or text links?</td><td>(a) the collection's <code>Button</code> (drawn) ·
+        (b) a new text-link component</td><td><strong>(a)</strong> — no new component for three links</td><td>✅ (a) — the collection's <code>Button</code></td></tr>
+      <tr><td>D8</td><td>Does Esc close the About window?</td><td>(a) yes, beside ⌘W / Ctrl+W · (b) only ⌘W / Ctrl+W</td>
+        <td><strong>(a)</strong> — a read-only secondary window with nothing to lose</td><td>accepted default (a)</td></tr>
+      <tr><td>D9</td><td>Where does the OS's version come from?</td><td>(a) <code>tauri-plugin-os</code> · (b) a crate · (c) none — OS name only</td>
+        <td><strong>(a)</strong> — the Tauri-native source, one call on every OS</td><td>accepted default (a)</td></tr>
+    </table>
+
+    <h2 id="given">Given — what the screens are handed</h2>
+    <table data-item="capabilities" data-c="given-table">
+      <tr><th>Given</th><th>State</th><th>Where / why</th></tr>
+      <tr><td>the app's version — <code>package_info().version</code></td><td>used</td><td>the About page and the Settings
+        version row (CopyText); compile-time, so it has no unreadable state</td></tr>
+      <tr><td>licence and copyright — W1's metadata (MIT, Vu Luu)</td><td>used</td><td>the About page's licence line</td></tr>
+      <tr><td>the bundled <code>THIRD-PARTY-NOTICES.txt</code> (W2) and whether it is there</td><td>used</td><td>the licences
+        page, verbatim; absent in a build run from <code>target/</code> → its notice</td></tr>
+      <tr><td><code>update::installed</code> — whether this copy came from a bundle</td><td>used</td><td>check now hidden and
+        the switch disabled with its reason when not installed</td></tr>
+      <tr><td><code>update::check(ByUser)</code></td><td>used</td><td>check now — answers through the existing update dialogs, unchanged</td></tr>
+      <tr><td>the auto-check switch's read and write, and a refused write (new, W4)</td><td>used</td><td>the Checkbox; a
+        refusal is the warn notice and the box returns to what is stored, as General's two switches</td></tr>
+      <tr><td>the OS and CPU (<code>std::env::consts</code>) and the install kind (<code>bundle.rs</code>)</td><td>used</td><td>the report's prefill (D5)</td></tr>
+      <tr><td>the OS's version — <code>tauri-plugin-os</code> (D9, added by W4)</td><td>used</td><td>the report's prefill (D5)</td></tr>
+      <tr><td>open a URL in the browser, and its failure (opener, new in W4)</td><td>used</td><td>the three buttons and the
+        two browser Help items; a failure shows the About page with the address to copy</td></tr>
+      <tr><td>the guide's address (Q6: GUIDE.md at the root)</td><td>used</td><td>user guide · Help → User Guide</td></tr>
+      <tr><td>the issue form's field ids (W11/W5)</td><td>blocked</td><td>the prefill's query keys — a blocked-on row</td></tr>
+      <tr><td>the signed logo (W9)</td><td>blocked</td><td>a dashed placeholder slot meanwhile — a blocked-on row</td></tr>
+      <tr><td>the privacy statement's final text (W11 → W5)</td><td>blocked</td><td>a draft that names the two outbound calls — a blocked-on row</td></tr>
+      <tr><td>the core's state and the capture</td><td>deliberately unused</td><td>About and Help say nothing about capturing; the menu-bar icon and the Capture service page do</td></tr>
+    </table>
+    <p class="kd">Not given (may not be assumed to exist): a light theme — the app has one dark palette and these screens use
+      it on every OS; only the native menus and title bars follow the system's appearance · a way to check the network before
+      opening the browser · Trawler's own help viewer.</p>
+
+    <h2 id="keyboard">Keyboard</h2>
+    <table data-item="keyboard" data-c="keyboard-table">
+      <tr><th>Pointer does</th><th>Where</th><th>Key path</th></tr>
+      <tr><td>click a Help item</td><td>help menu</td><td>the OS's menu keys: macOS ⌃F2 to the menu bar, or ⇧⌘/ to Help
+        search · Windows/Linux Alt+H, ↑/↓, Enter</td></tr>
+      <tr><td>click User Guide</td><td>help menu (Windows/Linux)</td><td>F1 (D6)</td></tr>
+      <tr><td>click About Trawler</td><td>Trawler menu (macOS) · Help (Windows/Linux)</td><td>the OS's menu keys, as above</td></tr>
+      <tr><td>click a page name</td><td>pages</td><td>Tab to the page names · ↑ / ↓ moves to a page and shows it, no wrap (PageSidebar)</td></tr>
+      <tr><td>click user guide · report an issue · source code</td><td>about page</td><td>Tab · Enter or Space (Button)</td></tr>
+      <tr><td>click the version or the address to copy it</td><td>about page · updates</td><td>Tab · Enter or Space (CopyText)</td></tr>
+      <tr><td>scroll the licence list</td><td>licences page</td><td>one tab stop · ↑ / ↓ / Page Up / Page Down / Home / End</td></tr>
+      <tr><td>tick check for updates automatically</td><td>updates</td><td>Tab · Space (Checkbox)</td></tr>
+      <tr><td>click check now</td><td>updates</td><td>Tab · Enter or Space (Button)</td></tr>
+      <tr><td>close the About window</td><td>title bar</td><td>⌘W / Ctrl+W, or Esc (D8) — the app keeps running (close a secondary window)</td></tr>
+    </table>
+    <p class="kd">Accessibility: the About window's first focus is the page names; the licence list is a focusable region
+      named "Third-party licences"; the logo slot is decorative (<code>aria-hidden</code>) because the name beside it reads
+      "Trawler"; every button names its destination in words; the warn notice is announced (Notice's own role).</p>
+
+    <h2 id="proposals">Proposals</h2>
+    <table data-item="proposals" data-c="proposals-table">
+      <tr><th>Kind</th><th>What</th><th>Why nothing existing fits</th><th>Owner</th></tr>
+      <tr><td>key binding</td><td>F1 → User Guide on Windows and Linux</td><td>the keyboard conventions have no help key</td><td>W4 (D6 ruled)</td></tr>
+      <tr><td>lexicon</td><td><em>licences</em> (British spelling, as the Help item and the page) · <em>installed copy</em> — a
+        copy that came from an installer, the one that updates itself</td><td>neither term is in the lexicon</td><td>W4's distillation</td></tr>
+    </table>
+
+    <h2 id="blocked-on">Blocked-on</h2>
+    <table data-item="blocked-on" data-c="blocked-table">
+      <tr><th>What is missing</th><th>Whose call</th><th>What the run did meanwhile</th></tr>
+      <tr><td>the signed logo</td><td>W9 (owner)</td><td>a dashed 48 px slot beside the name; W4 mounts the mark there</td></tr>
+      <tr><td>the privacy statement's final text</td><td>W11 voice → W5 text (owner)</td><td>a draft that names the update check and the setup test request</td></tr>
+      <tr><td>the issue form and its field ids</td><td>W11 → W5 (<code>.github/ISSUE_TEMPLATE</code>)</td><td>D5 fixes what is filled in; W4 maps it to the form's ids</td></tr>
+    </table>
+
+    <h2 id="review">Review</h2>
+    <table data-item="review" data-c="review-table">
+      <thead><tr><th>What the reviewer said</th><th>What it moved</th><th>The contract it hit</th></tr></thead>
+      <tbody>
+        <tr><td>Start — the epic's W13: About on every OS, Help items per OS, the version in Settings, Q5 the switch default on</td>
+          <td>capabilities · mockup · keyboard — the About window with three pages, the Help menu on three OSes, General's
+            updates block, the empty and error states; seven calls for the owner (D1–D7)</td>
+          <td><code>PageSidebar</code> @use · <code>Checkbox</code> @use · <code>CopyText</code> @use · Q5 · Q6</td></tr>
+        <tr><td>D1 — About is Trawler's own window on every OS, replacing the macOS system panel</td>
+          <td>nothing — as drawn: macOS's About Trawler and Windows/Linux Help → About Trawler both open the window</td>
+          <td><code>taste</code> · the owner's call (D1)</td></tr>
+        <tr><td>D2 — the licences and the privacy statement are pages inside the About window</td>
+          <td>nothing — as drawn: three pages on <code>PageSidebar</code></td><td>the owner's call (D2) · <code>PageSidebar</code> @use</td></tr>
+        <tr><td>D3 — the version and check now live in Settings → General</td>
+          <td>nothing — as drawn: General's updates block</td><td><code>taste</code> · the owner's call (D3)</td></tr>
+        <tr><td>D4 — the switch reads "Check for updates automatically", the short wording, no helper line</td>
+          <td>mockup · keyboard — the label is <em>check for updates automatically</em> in every state (lower case, as General's two
+            switches); the "At most once a day." line is gone; the privacy page keeps saying the check runs when Trawler opens, at
+            most once a day</td>
+          <td>the owner's call (D4) · <code>Checkbox</code> @use · <code>taste</code> · honesty kept on the privacy page</td></tr>
+        <tr><td>D5 — Report an Issue fills version, OS and its version, CPU, install kind; nothing about traffic or the machine's name</td>
+          <td>nothing — as drawn; the report caption already promises nothing is sent until submit</td><td><code>taste</code> · the owner's call (D5)</td></tr>
+        <tr><td>D6 — F1 opens the user guide on Windows and Linux</td>
+          <td>keyboard · proposals — F1 is no longer proposed but ruled</td><td><code>taste</code> · the owner's call (D6) · keyboard-parity</td></tr>
+        <tr><td>D7 — the About window's links are the existing <code>Button</code></td>
+          <td>nothing — as drawn</td><td>the owner's call (D7) · <code>Button</code> @use</td></tr>
+        <tr><td>the run's other open items keep the run's recommendation as accepted defaults</td>
+          <td>questions · keyboard · capabilities · blocked-on — D8 Esc closes the About window; D9 the OS's version comes from
+            <code>tauri-plugin-os</code>, so its Given row is used and its blocked-on row is gone</td>
+          <td><code>taste</code> · the owner's ruling on defaults · keyboard-parity · capabilities·answered</td></tr>
+      </tbody>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
