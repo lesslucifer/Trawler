@@ -5,6 +5,7 @@ pub mod gate0;
 pub mod git;
 pub mod hooks;
 pub mod launch;
+pub mod licenses;
 pub mod mr;
 pub mod notes;
 pub mod notes_write;
@@ -50,6 +51,7 @@ usage:
   cargo xtask mr confirm [wu|epic] [<tip>] [--as <id>] [--target <ref>] [--report <path>] (mr/v1 note attesting the result report; level/tip/report inferred, signs if key)
   cargo xtask dod list [--epic <id>]
   cargo xtask package [--universal] [--profile <name>] [--build-only|--bundle-only|--sign-only] (the host's installers under target/[<triple>/]<profile>/bundle; macOS: ad-hoc signed and verified, plus the updater's .app.tar.gz; --universal: both Mac architectures; --build-only compiles, --bundle-only then bundles it, --sign-only then writes each updater target's .sig with TAURI_SIGNING_PRIVATE_KEY)
+  cargo xtask licenses                                       (THIRD-PARTY-NOTICES.txt: Trawler's licence, then every licence text of the release crates and production npm packages; the app bundles it)
   cargo xtask release-manifest <dist-dir> --tag v<version> --repo <owner/name> --pub-date <rfc3339>  (latest.json + notes.md beside the release artifacts; refuses a missing signature or platform)
   cargo xtask smoke [--universal] [--profile <name>]          (install the package's own installer in a temp dir, run its core headless: a request through the proxy is captured, the CA is served, quitting frees both ports)
   cargo xtask ui build                                        (pnpm install + build → ui/dist/)
@@ -90,6 +92,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["mr", rest @ ..] => mr::run(rest, repo),
         ["dod", "list", rest @ ..] => Ok(dod_list(rest, repo)),
         ["package", rest @ ..] => package::run(rest, repo),
+        ["licenses", rest @ ..] => licenses::run(rest, repo),
         ["smoke", rest @ ..] => smoke::run(rest, repo),
         ["release-manifest", rest @ ..] => release_manifest::run(rest, repo),
         ["ui", rest @ ..] => ui::run(rest, repo),

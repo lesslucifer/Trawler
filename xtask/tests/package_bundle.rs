@@ -194,6 +194,12 @@ fn a_package_is_ad_hoc_signed_and_passes_the_release_smoke() {
     assert!(verified.unwrap().success(), "codesign --verify --deep --strict {}", app.display());
     assert!(app.join(LOGIN_AGENT).is_file());
     assert_eq!(copyright_of(&app), format!("Copyright \u{a9} 2026 {}", xtask::package::HOLDER));
+    let notice = std::fs::read(app.join("Contents/Resources").join(xtask::licenses::NOTICE));
+    assert_eq!(
+        notice.unwrap(),
+        std::fs::read(repo.join(xtask::licenses::NOTICE)).unwrap(),
+        "the app carries the committed third-party notice"
+    );
     let archived = Command::new("tar")
         .arg("-tzf")
         .arg(bundle.join("macos/Trawler.app.tar.gz"))

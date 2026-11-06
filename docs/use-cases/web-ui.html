@@ -491,6 +491,8 @@
       (<span class="badge id">E-PKG2</span>, <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a>).
       Each package names Vu Luu as publisher and copyright holder and carries the MIT licence
       (<a href="../decisions/dec-87-one-licence-one-holder-no-crate-published.html">DEC-87</a>).
+      Every installer carries <code>THIRD-PARTY-NOTICES.txt</code>, Trawler's licence and every bundled dependency's
+      (<a href="../decisions/dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a>).
       The installers carry no paid signature, so the first open shows the OS's prompt, and the release notes name the one way past it.
       From then on the app is UC-4: one launch, an owned core, single instance, the CA in the platform's app data directory
       (<code>dev.trawler.app</code>).</p>
@@ -501,7 +503,7 @@
       <tr><td>Linux x64 · arm64 (glibc, WebKitGTK 4.1)</td><td><code>.AppImage</code> · <code>.deb</code> · <code>.rpm</code> (finals only: rpm refuses a pre-release version, DEC-86 rule 7)</td><td>no prompt; GNOME needs the AppIndicator extension for the tray</td></tr>
     </table>
     <p class="kd" data-c="uc-install-proof">Proven by <code>xtask/tests/package_bundle.rs</code> (macOS, <code>--features package-tests</code>):
-      the packaged app's <code>Info.plist</code> carries the copyright, the <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
+      the packaged app's <code>Info.plist</code> carries the copyright and its <code>Resources</code> the committed third-party notice, the <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
       under a temp <code>HOME</code>, and frees both ports when the app ends. Each release job smokes its own installer headless
       (<code>cargo xtask smoke</code>). The OS prompts and the installs in the Windows and Ubuntu VMs are hand checks of the first rc.</p>
 
