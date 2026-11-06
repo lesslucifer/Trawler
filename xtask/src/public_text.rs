@@ -104,10 +104,18 @@ pub fn anchors(markdown: &str) -> BTreeSet<String> {
     let mut fenced = false;
     let mut found = BTreeSet::new();
     for line in markdown.lines() {
+        let text = line.trim_start_matches('#');
         if line.trim_start().starts_with("```") {
             fenced = !fenced;
-        } else if !fenced && line.starts_with('#') {
-            found.insert(slug(line.trim_start_matches('#')));
+        } else if !fenced && text.len() < line.len() && text.starts_with(' ') {
+            let base = slug(text);
+            let mut anchor = base.clone();
+            let mut n = 0;
+            while found.contains(&anchor) {
+                n += 1;
+                anchor = format!("{base}-{n}");
+            }
+            found.insert(anchor);
         }
     }
     found
@@ -280,17 +288,17 @@ fn plain(text: &str) -> String {
 }
 
 pub fn privacy_markdown_words(markdown: &str) -> Vec<String> {
+    let is_rule = |line: &str| line.starts_with("|-") || line.starts_with("|:");
+    let lines: Vec<&str> =
+        markdown.lines().map(str::trim).filter(|line| !line.is_empty()).collect();
     let mut words = Vec::new();
-    let mut table_lines = 0;
-    for line in markdown.lines().map(str::trim).filter(|line| !line.is_empty()) {
-        if line.starts_with('#') {
+    for (at, line) in lines.iter().enumerate() {
+        let heads_a_table = lines.get(at + 1).is_some_and(|next| is_rule(next));
+        if line.starts_with('#') || is_rule(line) || heads_a_table {
             continue;
         }
         if line.starts_with('|') {
-            table_lines += 1;
-            if table_lines > 2 {
-                words.extend(line.trim_matches('|').split('|').map(plain));
-            }
+            words.extend(line.trim_matches('|').split('|').map(plain));
         } else {
             words.push(plain(line));
         }
@@ -298,29 +306,37 @@ pub fn privacy_markdown_words(markdown: &str) -> Vec<String> {
     words
 }
 
-pub fn typescript_strings(source: &str) -> Vec<String> {
-    let code: String = source
-        .lines()
-        .filter(|line| !line.trim_start().starts_with("//"))
-        .collect::<Vec<_>>()
-        .join("\n");
+// Only the forms privacy.ts is written in are read; any other literal, comment
+// or escape is refused, so text in it can never slip past the comparison.
+pub fn typescript_strings(source: &str) -> Result<Vec<String>, String> {
     let mut found = Vec::new();
-    let mut chars = code.chars();
+    let mut chars = source.chars().peekable();
     while let Some(c) = chars.next() {
-        if c != '"' {
-            continue;
-        }
-        let mut literal = String::new();
-        while let Some(c) = chars.next() {
-            match c {
-                '"' => break,
-                '\\' => literal.extend(chars.next()),
-                other => literal.push(other),
+        match c {
+            '"' => {
+                let mut literal = String::new();
+                loop {
+                    match chars.next() {
+                        Some('"') => break,
+                        Some('\\') => match chars.next() {
+                            Some(escaped @ ('\\' | '"')) => literal.push(escaped),
+                            other => return Err(format!("an escape \\{other:?} in {literal:?}")),
+                        },
+                        Some(other) => literal.push(other),
+                        None => return Err(format!("an unclosed string {literal:?}")),
+                    }
+                }
+                found.push(literal);
             }
+            '/' if chars.peek() == Some(&'/') => {
+                chars.by_ref().find(|c| *c == '\n');
+            }
+            '/' if chars.peek() == Some(&'*') => return Err("a block comment".to_string()),
+            '\'' | '`' => return Err(format!("a {c}-quoted string")),
+            _ => {}
         }
-        found.push(literal);
     }
-    found
+    Ok(found)
 }
 
 pub fn config_problems(yaml: &str) -> Vec<String> {
@@ -534,14 +550,37 @@ mod tests {
             "# Privacy\n\nLead **here**.\n\n| What | Where |\n|---|---|\n| A | `b` |\n\nClose.\n";
         assert_eq!(privacy_markdown_words(markdown), ["Lead here.", "A", "b", "Close."]);
         let source = "// \"not this\"\nconst A = \"Lead here.\";\nconst R = [{ what: \"A\", where: \"c:\\\\b\" }];";
-        assert_eq!(typescript_strings(source), ["Lead here.", "A", "c:\\b"]);
+        assert_eq!(typescript_strings(source).unwrap(), ["Lead here.", "A", "c:\\b"]);
+    }
+
+    #[test]
+    fn a_privacy_literal_the_scanner_cannot_read_is_refused_not_skipped() {
+        for source in ["const A = 'x';", "const A = `x`;", "/* \"x\" */", "const A = \"a\\nb\";"] {
+            assert!(typescript_strings(source).is_err(), "{source}");
+        }
+        let trailing = "const A = \"a\"; // the \"lead\"\nconst B = \"it's\";";
+        assert_eq!(typescript_strings(trailing).unwrap(), ["a", "it's"]);
+    }
+
+    #[test]
+    fn every_table_s_head_is_skipped_not_just_the_first() {
+        let markdown = "| H | I |\n|---|---|\n| a | b |\n\n| J | K |\n|:-|-:|\n| c | d |\n";
+        assert_eq!(privacy_markdown_words(markdown), ["a", "b", "c", "d"]);
+    }
+
+    #[test]
+    fn a_repeated_heading_gets_github_s_suffix_and_a_hashtag_is_no_heading() {
+        assert_eq!(
+            anchors("## FAQ\n#hashtag\n## FAQ\n## FAQ\n"),
+            BTreeSet::from(["faq".to_string(), "faq-1".to_string(), "faq-2".to_string()])
+        );
     }
 
     #[test]
     fn privacy_md_says_what_the_about_window_says() {
         assert_eq!(
             privacy_markdown_words(&read("PRIVACY.md")),
-            typescript_strings(&read("ui/src/privacy.ts"))
+            typescript_strings(&read("ui/src/privacy.ts")).unwrap()
         );
     }
 
