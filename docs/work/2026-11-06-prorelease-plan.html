@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed92059f34851f0dfaeb88" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE — plan: the first official public release (v0.1.0)</h1>
+      <p>An audit of everything a professional public release needs, by area, and the Working Units that close each gap. Plan only: no WU starts before the owner answers the questions below.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-PRORELEASE</span> · branch <code>epic/prorelease</code> off <code>main</code> 6a1ab80d</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <div data-item="intent">
+      <table>
+        <tr><th>Today</th><th>Official release</th></tr>
+        <tr><td>Temporary icon; the wordmark is plain serif text (<code>ui/src/App.tsx:1005</code>); no logo anywhere</td><td>One brand mark, one SVG source, every icon and installer image generated from it</td></tr>
+        <tr><td>README is a developer note (88 lines, <code>cargo run</code> + REST table, no installers, no app UI)</td><td>A user-first README: what/why, screenshots, install per OS, first run, usage, FAQ; dev content moves to CONTRIBUTING</td></tr>
+        <tr><td>Crates declare MIT but there is <strong>no LICENSE file</strong>; no third-party notices; bundle carries no publisher/copyright/license</td><td>LICENSE, a generated third-party notice shipped in the app, complete bundle metadata</td></tr>
+        <tr><td>Version visible only in the macOS About panel and update dialogs; no Help menu, no links</td><td>About on every OS, version in Settings, Help → guide / report an issue / licenses / privacy</td></tr>
+        <tr><td>Releases are drafts of rcs; hand checks live in a roadmap row (148)</td><td>A written release process + a hand-check matrix doc; <code>0.1.0</code> published as "Latest"</td></tr>
+      </table>
+    </div>
+
+    <h2 id="audit">Audit — per area</h2>
+    <p>✅ ready · ⚠️ partial · ❌ missing. Evidence paths are relative to the repo root at <code>6a1ab80d</code>.</p>
+
+    <h3 id="audit-brand">A. Branding</h3>
+    <table data-c="audit-brand">
+      <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
+      <tr><td>App icon set</td><td>⚠️</td><td><code>ui/src-tauri/icons/</code>: 32, 128, 256, 512 PNG, <code>icon.icns</code>, <code>icon.ico</code>; listed in <code>tauri.conf.json</code> <code>bundle.icon</code></td><td>Temporary art; no source file, not reproducible</td><td>W3</td></tr>
+      <tr><td>Tray icons</td><td>⚠️</td><td><code>tray-running.png</code>/<code>tray-stopped.png</code> 36×36, <code>include_bytes!</code> at <code>ui/src-tauri/src/tray.rs:18-19</code>, <code>icon_as_template(true)</code> <code>tray.rs:138-141</code></td><td>Must stay monochrome alpha glyphs (template); redraw from the brand mark</td><td>W3</td></tr>
+      <tr><td>Installer art</td><td>❌</td><td><code>tauri.conf.json</code> has no <code>macOS.dmg</code>, <code>windows.nsis</code>, <code>windows.wix</code></td><td>DMG background + layout, NSIS header/sidebar, WiX banner/dialog</td><td>W3</td></tr>
+      <tr><td>Logo in UI / docs</td><td>❌</td><td>No SVG/image in <code>ui/src</code>, no <code>ui/public</code>, no favicon in <code>ui/index.html</code></td><td>Logo in About, onboarding header, README</td><td>W3 · W4 · W5</td></tr>
+      <tr><td>Product name / identifier</td><td>✅</td><td><code>productName: "Trawler"</code>, <code>identifier: "dev.trawler.app"</code>; window titles "Trawler"/"Settings"</td><td>Identifier must never change (updater, CA dir, login item)</td><td>—</td></tr>
+      <tr><td>Bundle metadata</td><td>❌</td><td><code>tauri.conf.json</code> <code>bundle</code>: only <code>category</code>, <code>shortDescription</code>, <code>icon</code>, macOS min 11.0</td><td>No <code>publisher</code>, <code>copyright</code>, <code>license</code>/<code>licenseFile</code>, <code>homepage</code>, <code>longDescription</code>, <code>linux.deb</code>/<code>rpm</code> section/description</td><td>W1</td></tr>
+      <tr><td>Crate / package metadata</td><td>⚠️</td><td><code>Cargo.toml:25-31</code>, <code>ui/src-tauri/Cargo.toml:1-8</code> set description/license/repository; no <code>authors</code>/<code>homepage</code>; <code>ui/package.json</code> private</td><td><code>trawler</code> and <code>trawler-ui</code> lack <code>publish = false</code> while the name <code>trawler</code> is taken on crates.io</td><td>W1</td></tr>
+    </table>
+
+    <h3 id="audit-face">B. Public face</h3>
+    <table data-c="audit-face">
+      <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
+      <tr><td>README</td><td>⚠️</td><td><code>README.md</code> (88 lines): features, <code>cargo run</code>, API table, stale roadmap checklist, project layout</td><td>No installers, screenshots, first run, usage, FAQ, license; roadmap list contradicts what shipped (Compose, HAR)</td><td>W5</td></tr>
+      <tr><td>Screenshots</td><td>❌</td><td>Only <code>doc-assets/w2-*.png</code> (internal); <code>cargo xtask ui walkthrough</code> films the setup screen</td><td>Reproducible product screenshots (list, inspector, setup) from the e2e harness</td><td>W5</td></tr>
+      <tr><td>CONTRIBUTING · SECURITY · CODE_OF_CONDUCT</td><td>❌</td><td>none at the root or in <code>.github/</code></td><td>All three</td><td>W5</td></tr>
+      <tr><td>CHANGELOG / notes policy</td><td>⚠️</td><td><code>.github/release-notes.md</code> = install steps only, rendered by <code>xtask/src/release_manifest.rs:115-122</code></td><td>No "what's new"; no CHANGELOG</td><td>W7</td></tr>
+      <tr><td>Issue / PR templates</td><td>❌</td><td><code>.github/</code> holds only <code>workflows/</code> + <code>release-notes.md</code></td><td>Bug report (OS, version, install type), feature request, PR template</td><td>W5</td></tr>
+      <tr><td>Repo settings</td><td>⚠️</td><td><code>gh repo view</code>: description set, no topics, no homepage, no license detected, Discussions off</td><td>Owner sets them (Q11); never set by an agent</td><td>owner</td></tr>
+    </table>
+
+    <h3 id="audit-docs">C. Docs and in-app help</h3>
+    <table data-c="audit-docs">
+      <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
+      <tr><td>User-facing docs</td><td>❌</td><td>Every <code>docs/*.html</code> is engineering/process; <code>docs/use-cases/</code> are specs; only end-user text is the release notes</td><td>A user guide: install, trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (incl. removing the CA)</td><td>W6</td></tr>
+      <tr><td>About</td><td>⚠️</td><td>macOS predefined About <code>ui/src-tauri/src/menu.rs:126-140</code>; Windows/Linux none</td><td>About on every OS with version, license, copyright, links</td><td>W4</td></tr>
+      <tr><td>Version display</td><td>⚠️</td><td>About (macOS) + update dialogs <code>ui/src-tauri/src/update.rs:162,211,264</code>; React UI never shows it</td><td>Version in Settings</td><td>W4</td></tr>
+      <tr><td>Help menu / links</td><td>❌</td><td>No Help items, no external links; no opener plugin in <code>ui/src-tauri/Cargo.toml</code></td><td>Help → User guide · Report an issue · Third-party licenses · Privacy</td><td>W4</td></tr>
+    </table>
+
+    <h3 id="audit-legal">D. Legal and privacy</h3>
+    <table data-c="audit-legal">
+      <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
+      <tr><td>LICENSE</td><td>❌</td><td>No file; <code>license = "MIT"</code> in both crates; GitHub detects none</td><td>Owner picks (Q1); file + every metadata field agree</td><td>W1</td></tr>
+      <tr><td>Third-party licenses</td><td>❌</td><td><code>cargo metadata</code>: ~600 crates, all permissive except MPL-2.0 (<code>cssparser</code>, <code>selectors</code>, <code>dtoa-short</code>, <code>option-ext</code>), CDLA-Permissive-2.0 (<code>webpki-roots</code>), Unicode-3.0; fonts Inter / DM Mono / Instrument Serif are OFL-1.1 (bundled via <code>@fontsource</code>, <code>ui/src/main.tsx:8-11</code>)</td><td>All require the notice/licence text shipped; nothing generates or bundles one</td><td>W2</td></tr>
+      <tr><td>Name / trademark</td><td>⚠️</td><td><code>cargo search trawler</code>: crate <code>trawler</code> exists (a lobste.rs workload generator)</td><td>Our crates must not publish; a trademark search was not run (Q10)</td><td>W1 · owner</td></tr>
+      <tr><td>Privacy: no telemetry</td><td>✅</td><td>No analytics/crash/Sentry; <code>reqwest</code> dev-only (<code>Cargo.toml:102</code>); fonts and media bundled; HTML preview CSP <code>ui/src/htmlPreview.ts:1-4</code></td><td>Statement not written anywhere</td><td>W5</td></tr>
+      <tr><td>Privacy: outbound calls</td><td>⚠️</td><td>(1) update check to GitHub at launch ≤1/day + menu, no opt-out (<code>update.rs:12,144-157</code>); (2) setup test request to <code>https://example.com/?trawler-check=…</code> on click (<code>ui/src/ownRequest.ts:12-29</code>)</td><td>Disclose both; decide an opt-out for the launch check (Q5)</td><td>W4 · W5</td></tr>
+      <tr><td>Data at rest</td><td>✅</td><td>Flows in memory only; CA cert + <strong>unencrypted private key</strong> in <code>&lt;app data&gt;/ca/</code> (<code>src/ca.rs:76-78</code>); settings JSON in app config dir; no log files</td><td>Say so in the privacy + security text; uninstall steps remove the CA and its trust</td><td>W5 · W6</td></tr>
+    </table>
+
+    <h3 id="audit-trust">E. Distribution trust</h3>
+    <table data-c="audit-trust">
+      <tr><th>Platform</th><th>Today</th><th>User sees</th><th>Option to make it trusted</th><th>Owner needs</th></tr>
+      <tr><td>macOS</td><td>Ad-hoc (<code>signingIdentity "-"</code>, <code>codesign --verify --deep --strict</code>, <code>xtask/src/package.rs:311-326</code>; DEC-81 rule 4)</td><td>"cannot verify" → System Settings → Privacy &amp; Security → Open Anyway (macOS 15 removed the Ctrl-click bypass)</td><td>Developer ID Application cert + notarization (<code>notarytool</code>, stapled)</td><td>Apple Developer Program membership (paid yearly), a Developer ID cert exported as .p12, an App Store Connect API key; secrets set by the owner</td></tr>
+      <tr><td>Windows</td><td>Unsigned (DEC-81 rule 4)</td><td>SmartScreen "Windows protected your PC" → More info → Run anyway</td><td>(a) Azure Artifact Signing (subscription, identity validation, region-limited for individuals) · (b) OV certificate on an HSM/cloud key (yearly) · (c) SignPath Foundation free OSS signing (application, their CI integration)</td><td>One of the three; SmartScreen reputation still builds over downloads for OV</td></tr>
+      <tr><td>Linux</td><td>AppImage · deb · rpm (finals only), unsigned packages</td><td>No prompt</td><td>apt/rpm repo or Flathub — out of scope for 0.1.0</td><td>—</td></tr>
+      <tr><td>Updates</td><td>✅ minisign key, <code>requireSignedVersion</code> (DEC-82); only <code>--sign-only</code> sees the key (DEC-86)</td><td>Native ask dialog</td><td>Already trusted end to end</td><td>—</td></tr>
+    </table>
+    <div class="callout">Unsigned stays legitimate for 0.1.0 if the README says it plainly: why the prompt appears, the exact way past it per OS, and how to verify the download (checksums, W7). The paid options are Q7.</div>
+
+    <h3 id="audit-process">F. Release process</h3>
+    <table data-c="audit-process">
+      <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
+      <tr><td>Pipeline</td><td>✅</td><td><code>.github/workflows/release.yml</code>: tag → 5 targets → smoke → sign → <code>latest.json</code> → <code>gh release create --draft</code> (DEC-86); v0.1.0-3 green</td><td>—</td><td>—</td></tr>
+      <tr><td>Version policy</td><td>⚠️</td><td>One version in <code>Cargo.toml:5-6</code>; pre-release = contains <code>-</code> (<code>package.rs:388-391</code>); numeric rcs only (DEC-86 rule 7)</td><td>Not written for after 0.1.0 (patch vs minor, rc numbering)</td><td>W7</td></tr>
+      <tr><td>Publishing a draft</td><td>⚠️</td><td>DEC-86 rule 6; <code>releases/latest</code> skips drafts and pre-releases</td><td>The rc→rc update test only works with rcs published as normal releases ("Latest"); the rule for when to tick pre-release is in a decision, not a checklist</td><td>W7</td></tr>
+      <tr><td>Rollback</td><td>❌</td><td><code>requireSignedVersion</code> blocks downgrades (DEC-82)</td><td>Rollback = unpublish the bad release (channel falls back) + ship a fix forward; not written down</td><td>W7</td></tr>
+      <tr><td>Checksums</td><td>❌</td><td><code>release.yml:145-153</code> uploads installers + <code>.sig</code> only</td><td><code>SHA256SUMS</code> asset — the verification path for unsigned installers</td><td>W7</td></tr>
+      <tr><td>Hand-check matrix</td><td>⚠️</td><td>Roadmap row 148 + archived packaging-v2 plan matrix</td><td>One permanent checklist: install, first-open prompt, setup, capture, update rc→rc→final, uninstall, per OS</td><td>W7</td></tr>
+      <tr><td>Landing page</td><td>❌</td><td>none</td><td>Optional GitHub Pages (Q12)</td><td>deferred</td></tr>
+    </table>
+
+    <h3 id="audit-quality">G. Quality bar</h3>
+    <table data-c="audit-quality">
+      <tr><th>Item</th><th>Source</th><th>Proposed class</th></tr>
+      <tr><td>F4: <code>record_check</code> runs before the check — one offline launch silences update checks for 24h</td><td>roadmap 149</td><td><strong>blocking</strong> (W8): a final's users depend on the channel</td></tr>
+      <tr><td>F7: updater accepts non-https URLs</td><td>roadmap 149</td><td><strong>blocking</strong> (W8): a release-hardening one-liner</td></tr>
+      <tr><td>F5 (no in-flight guard / size cap), F6 (test gaps), single-instance socket on restart</td><td>roadmap 149</td><td>follow-up; the rc update test shows whether the socket bites</td></tr>
+      <tr><td>deb/rpm pkexec TOCTOU; sudo fallback</td><td>DEC-82 known limit</td><td>known limit, listed in the README</td></tr>
+      <tr><td>rpm-installed final meeting an rc manifest falls back to AppImage</td><td>DEC-86 limit</td><td>prevented by process: rcs after the final are ticked pre-release (W7)</td></tr>
+      <tr><td>Main window <code>csp: null</code></td><td><code>tauri.conf.json</code></td><td>follow-up hardening (not a regression)</td></tr>
+      <tr><td>Unrun hardware checks: trays, real login, Windows/Linux setup, macOS 11/12</td><td>roadmap 139, 144, 148</td><td>blocking as <em>hand checks</em> on the last rc, via the W7 matrix</td></tr>
+      <tr><td>CI actions pinned by tag, not SHA</td><td>roadmap 149</td><td>follow-up</td></tr>
+    </table>
+
+    <h2 id="logo">Logo — three directions (owner picks, Q3)</h2>
+    <p>The UI is warm-dark with zero chromatic accent (DEC-19): canvas <code>#2b2622</code>, ink <code>#f7f5f0</code>, ink-strong <code>#dad2c1</code>, mute <code>#aea69c</code>; the wordmark is Instrument Serif italic. Each direction keeps that palette; only C spends one semantic colour.</p>
+    <div class="cards" data-c="logo-directions">
+      <div class="card"><h4>A · The net</h4><p>A trawl net drawn as 4–5 converging hairlines closing into a knot, ink on a canvas squircle. Says "captures what passes through". Tray glyph = the same cone, solid. Scales well to 16px as a triangle-ish silhouette.</p></div>
+      <div class="card"><h4>B · The serif T</h4><p>Instrument Serif italic "T" in ink on canvas, one thin horizontal line crossing the stem (the wire). Matches the existing wordmark exactly; most restrained. Weak at 16px unless the stem is thickened for the small sizes.</p></div>
+      <div class="card"><h4>C · Hook and packet</h4><p>A hook catching a pair of braces <code>{ }</code>, ink on canvas, with one ok-green <code>#4cc38a</code> dot as the "capturing" light; tray running = dot shown, stopped = dot hollow. Most literal; the only one that spends colour.</p></div>
+    </div>
+    <table data-c="logo-pipeline">
+      <tr><th>Step</th><th>How (reproducible)</th></tr>
+      <tr><td>Source</td><td><code>ui/src-tauri/icons/source/icon.svg</code> (1024 viewBox, full-bleed squircle) + <code>tray.svg</code> (monochrome, alpha only) + installer-art SVGs, all hand-authored text SVG in git</td></tr>
+      <tr><td>Generate</td><td><code>cargo xtask icons</code> → <code>pnpm tauri icon source/icon.svg -o &lt;tmp&gt;</code> (Tauri 2 CLI takes SVG), copies the five files <code>bundle.icon</code> lists, renders tray PNGs at 36×36 via <code>tauri icon --png 36</code>, installer BMP/PNG at their fixed sizes</td></tr>
+      <tr><td>Prove</td><td>A unit test: every generated file matches the dimensions/format its consumer requires (icns, ico layers, BMP for NSIS/WiX), and a recorded source hash equals the current SVG's — a source edited without regenerating is red</td></tr>
+      <tr><td>Use</td><td>Favicon + About + onboarding header import the same SVG; README uses a PNG export</td></tr>
+    </table>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <table>
+        <tr><th>Use case</th><th>This epic adds</th></tr>
+        <tr><td><a href="../use-cases/web-ui.html#uc-install">UC-INSTALL</a></td><td>The installed app carries its brand icon, licence, publisher and the third-party notice; the README walks each OS's first open and verification</td></tr>
+        <tr><td><a href="../use-cases/web-ui.html#uc-update">UC-UPDATE</a></td><td>An offline launch never silences the next check (F4); only https URLs are fetched (F7); the optional auto-check switch (Q5)</td></tr>
+        <tr><td>new: UC-ABOUT (in <code>web-ui.html</code>)</td><td>On every OS the user can see the version, licence and copyright, open the guide, report an issue, and read the third-party licences and privacy statement</td></tr>
+      </table>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <tr><th>Check</th><th>Result</th></tr>
+        <tr><td>GitHub repo page</td><td>Detected licence; README opens with logo, one-line pitch, screenshot, install table per OS</td></tr>
+        <tr><td>Installers</td><td>Brand icon in Dock/taskbar/tray/installer; publisher + copyright + licence in each package's metadata</td></tr>
+        <tr><td>App</td><td>About shows version on macOS, Windows, Linux; Help menu opens guide, issues, licences, privacy</td></tr>
+        <tr><td>Release</td><td>Notes carry what's new + install + verification; <code>SHA256SUMS</code> attached; the matrix doc filled for the last rc</td></tr>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <div data-item="non-goals">
+      <ul>
+        <li>Buying certificates, setting secrets, setting repo settings, publishing or tagging — owner actions only.</li>
+        <li>Linux package repositories, Flathub, Homebrew cask, winget — follow-ups after 0.1.0.</li>
+        <li>New product features; the README describes what ships.</li>
+        <li>The <code>0.1.0</code> bump and tag itself (Q9: a separate cut epic after the hand checks).</li>
+      </ul>
+    </div>
+
+    <h2 id="wu-graph">WU graph</h2>
+    <div class="diagram" data-c="wu-graph">
+      <pre class="mermaid">
+flowchart LR
+  Q1([Q1 licence]) --> W1
+  Q2([Q2 holder]) --> W1
+  Q3([Q3 brand]) --> W3
+  Q4([Q4 md files]) --> W5
+  Q5([Q5 auto-check]) --> W4
+  Q6([Q6 guide home]) --> W6
+  Q7([Q7 signing]) --> W9
+  W1[W1 licence + metadata] --> W2[W2 third-party notice]
+  W2 --> W4[W4 About + Help]
+  W3[W3 brand assets] --> W4
+  W3 --> W5[W5 README + community]
+  W5 --> W6[W6 user guide]
+  W7[W7 release process + matrix]
+  W8[W8 updater F4 + F7]
+  W9[W9 signing, if bought]
+  W4 --> RC([last rc: matrix run])
+  W6 --> RC
+  W7 --> RC
+  W8 --> RC
+      </pre>
+      <div class="caption">Three parallel starts once their questions are answered: W1, W3, W7/W8 (separate worktrees). W9 exists only if Q7 buys signing.</div>
+    </div>
+
+    <h2 id="wu-summaries">WU summaries</h2>
+    <div data-item="wu-summaries">
+      <table data-c="wu-table">
+        <tr><th>WU</th><th>Owner Q</th><th>Parallel</th><th>Independent router review</th><th>Design review</th></tr>
+        <tr><td>W1</td><td>Q1 Q2 Q10</td><td>start</td><td>yes (<code>ui/src-tauri</code>)</td><td>—</td></tr>
+        <tr><td>W2</td><td>—</td><td>after W1</td><td>yes (<code>ui/src-tauri</code> resources)</td><td>—</td></tr>
+        <tr><td>W3</td><td>Q3</td><td>start</td><td>yes (<code>ui/src-tauri</code> icons, conf)</td><td>—</td></tr>
+        <tr><td>W4</td><td>Q5</td><td>after W2, W3</td><td>yes (<code>ui/src-tauri</code> menu, opener capability)</td><td>yes (renders <code>ui/src</code>)</td></tr>
+        <tr><td>W5</td><td>Q4</td><td>after W3</td><td>yes (<code>.github/</code> templates)</td><td>—</td></tr>
+        <tr><td>W6</td><td>Q6</td><td>after W5</td><td>—</td><td>—</td></tr>
+        <tr><td>W7</td><td>Q8 Q9</td><td>start</td><td>yes (<code>.github/workflows</code>, <code>release-notes.md</code>)</td><td>—</td></tr>
+        <tr><td>W8</td><td>Q8</td><td>start</td><td>yes (<code>ui/src-tauri/src/update.rs</code>)</td><td>—</td></tr>
+        <tr><td>W9</td><td>Q7</td><td>after W7</td><td>yes (<code>.github/workflows</code>, <code>xtask/src/package.rs</code>)</td><td>—</td></tr>
+      </table>
+
+      <div data-wu="E-PRORELEASE.W1">
+        <h3 id="w1">W1 — licence and bundle metadata</h3>
+        <p data-item="wu-summary">Add the chosen LICENSE file(s); every <code>license</code> field (both crates, <code>tauri.conf.json</code> <code>bundle.license</code>/<code>licenseFile</code>) agrees with it; set <code>publisher</code>, <code>copyright</code>, <code>homepage</code>, <code>longDescription</code>, <code>linux.deb.section</code>, <code>authors</code>; <code>publish = false</code> on <code>trawler</code> and <code>trawler-ui</code>.</p>
+        <p data-item="wu-maps-to">UC-INSTALL; new DEC (licence and metadata).</p>
+        <p data-item="wu-expected">Unit test in <code>xtask/src/package.rs</code> beside the one-version check: one licence everywhere (crates, conf, LICENSE file present) and the metadata fields non-empty — red on today's tree. Integration: the packaged <code>.dmg</code>'s <code>Info.plist</code> carries the copyright (<code>xtask/tests/package_bundle.rs</code>).</p>
+        <p data-item="wu-deps">Q1, Q2</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W2">
+        <h3 id="w2">W2 — third-party notice shipped in the app</h3>
+        <p data-item="wu-summary"><code>cargo xtask licenses</code> writes <code>THIRD-PARTY-NOTICES.txt</code> from <code>cargo metadata</code> (release-built crates only, licence texts from each crate's source dir) plus <code>pnpm licenses list --prod --json</code> (incl. the OFL fonts); committed, bundled as a Tauri resource.</p>
+        <p data-item="wu-maps-to">UC-ABOUT; the W1 DEC.</p>
+        <p data-item="wu-expected">Unit: a drift test regenerates and compares (red when <code>Cargo.lock</code>/<code>pnpm-lock.yaml</code> moves without it); every crate/package has a licence text, MPL/CDLA/OFL/Unicode texts present. Integration: the packaged bundle contains the file.</p>
+        <p data-item="wu-deps">W1</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W3">
+        <h3 id="w3">W3 — brand assets from one source</h3>
+        <p data-item="wu-summary">The chosen mark as SVG sources; <code>cargo xtask icons</code> regenerates the app icon set, tray template glyphs, DMG background/layout, NSIS header/sidebar, WiX banner/dialog and the favicon; <code>tauri.conf.json</code> references the installer art.</p>
+        <p data-item="wu-maps-to">UC-INSTALL; new DEC (one source, generated icon set).</p>
+        <p data-item="wu-expected">Unit: generated files have the sizes/formats their consumers require and the recorded source hash matches the SVG. Integration: the packaged bundle's icon is the generated one (hash), the tray loads both glyphs.</p>
+        <p data-item="wu-deps">Q3</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W4">
+        <h3 id="w4">W4 — About and Help on every OS</h3>
+        <p data-item="wu-summary">About on Windows/Linux (version, licence, copyright, logo) matching macOS; Help menu: User guide, Report an issue (prefilled with version and OS), Third-party licences (opens the bundled notice), Privacy; version shown in Settings; the auto-check switch if Q5 says so.</p>
+        <p data-item="wu-maps-to">UC-ABOUT, UC-UPDATE.</p>
+        <p data-item="wu-expected">Unit: menu builder carries the Help items on each OS; the issue URL encodes version + OS. Integration: Settings renders the version from the core/app. E2E: WebDriver opens Settings and reads the running version.</p>
+        <p data-item="wu-deps">W2, W3, Q5</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W5">
+        <h3 id="w5">W5 — README and community files</h3>
+        <p data-item="wu-summary">User-first README (logo, pitch, screenshots, install per OS with the signing explanation and checksum check, first run, usage, privacy, FAQ, known limits, licence); developer content moves to CONTRIBUTING; SECURITY (private advisories, CA-key note), CODE_OF_CONDUCT, issue/PR templates; screenshots produced by an e2e script, not by hand.</p>
+        <p data-item="wu-maps-to">UC-INSTALL, UC-ABOUT.</p>
+        <p data-item="wu-expected">Unit: a check that every README link/image path resolves and the install table names exactly the artifacts <code>package.rs</code> builds per host. The screenshot script runs under the e2e harness.</p>
+        <p data-item="wu-deps">W3, Q4</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W6">
+        <h3 id="w6">W6 — user guide</h3>
+        <p data-item="wu-summary">Install, trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (remove the app, the CA trust and the app data dir), troubleshooting; where per Q6.</p>
+        <p data-item="wu-maps-to">UC-INSTALL, UC-ONBOARD, UC-ABOUT (Help → User guide target).</p>
+        <p data-item="wu-expected">Unit: the Help → User guide URL resolves to the guide's location; links resolve. Docs-only otherwise (test layer waived with reason).</p>
+        <p data-item="wu-deps">W5, Q6</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W7">
+        <h3 id="w7">W7 — release process, notes, checksums, matrix</h3>
+        <p data-item="wu-summary">A T1 release doc: version policy after 0.1.0, publish rules (final = Latest; later rcs ticked pre-release), rollback (unpublish + fix forward), the hand-check matrix (macOS / Windows x64 / Windows arm64 / Ubuntu x64 / Ubuntu arm64 × install, first-open prompt, setup, capture, update rc→rc→final, uninstall); release notes gain a "What's new" from <code>CHANGELOG.md</code> and a verify section; <code>release.yml</code> attaches <code>SHA256SUMS</code>.</p>
+        <p data-item="wu-maps-to">UC-INSTALL, UC-UPDATE; DEC-86 amended.</p>
+        <p data-item="wu-expected">Unit (<code>release_manifest.rs</code>): notes include the version's CHANGELOG section and refuse a version without one; <code>SHA256SUMS</code> lists every installer with the right digest. actionlint green.</p>
+        <p data-item="wu-deps">Q8, Q9</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W8">
+        <h3 id="w8">W8 — updater F4 and F7</h3>
+        <p data-item="wu-summary">The last-check stamp is written only after a check completes; update and download URLs must be https.</p>
+        <p data-item="wu-maps-to">UC-UPDATE; DEC-82.</p>
+        <p data-item="wu-expected">Unit in <code>update.rs</code>: a failed check leaves the stamp unchanged (red today); an http endpoint is refused.</p>
+        <p data-item="wu-deps">Q8</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W9">
+        <h3 id="w9">W9 — paid signing (only if Q7 buys it)</h3>
+        <p data-item="wu-summary">macOS: Developer ID signing + notarize + staple in <code>--sign-only</code>-style isolated step; Windows: the chosen signer; secrets named, set by the owner; DEC-81 rule 4 superseded.</p>
+        <p data-item="wu-maps-to">UC-INSTALL (first open has no prompt).</p>
+        <p data-item="wu-expected">Unit: <code>package.rs</code> picks the identity from env and refuses a final without it once adopted; release smoke runs <code>spctl -a</code> / <code>signtool verify</code>. Proven for real only by a tag run.</p>
+        <p data-item="wu-deps">W7, Q7</p>
+      </div>
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <table>
+        <tr><th>Journey</th><th>Proof</th></tr>
+        <tr><td>Installed bundle carries brand, licence, notice</td><td><code>xtask/tests/package_bundle.rs</code> extended: icon hash, <code>Info.plist</code> copyright, notice resource present, window opens</td></tr>
+        <tr><td>About/version visible</td><td>WebDriver e2e reads the version in Settings (W4)</td></tr>
+        <tr><td>Install → first open → update → uninstall on each OS</td><td>The W7 matrix, run by hand on the last rc (OS prompts and real updates cannot run in CI)</td></tr>
+      </table>
+    </div>
+
+    <h2 id="questions">Owner questions</h2>
+    <table data-c="owner-questions">
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
+      <tr><td>Q1</td><td>Licence</td><td>MIT (already declared) · MIT OR Apache-2.0 (Rust norm, adds patent grant) · Apache-2.0 · GPL-3.0 / AGPL-3.0 (forks stay open; fewer adopters)</td><td><strong>MIT OR Apache-2.0</strong>; plain MIT is fine if you want the shortest</td></tr>
+      <tr><td>Q2</td><td>Copyright holder / publisher name</td><td>Your legal name · "The Trawler contributors" · an organisation</td><td>Your name in LICENSE; "Trawler contributors" as publisher only if you expect outside contributors</td></tr>
+      <tr><td>Q3</td><td>Logo direction</td><td>A net · B serif T · C hook and packet (see <a href="#logo">Logo</a>), or supply your own SVG</td><td><strong>A</strong>: readable at 16px, fits the tray template, no colour spent</td></tr>
+      <tr><td>Q4</td><td>Root GitHub files (README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, CHANGELOG, templates) in markdown — exempt from the HTML-docs rule as GitHub surface? Needs a CLAUDE.md edit you approve</td><td>yes · no (then GitHub shows raw HTML)</td><td><strong>yes</strong>; they are GitHub infrastructure like CLAUDE.md</td></tr>
+      <tr><td>Q5</td><td>Launch update check is always on</td><td>keep, disclose · add a Settings switch (default on) · default off</td><td><strong>switch, default on</strong></td></tr>
+      <tr><td>Q6</td><td>Where the user guide lives</td><td>README sections + <code>docs/guide/</code> markdown · GitHub Pages site · wiki</td><td><strong>One <code>GUIDE.md</code> at the root</strong> linked from README and Help; Pages later (Q12)</td></tr>
+      <tr><td>Q7</td><td>Paid signing</td><td>none for 0.1.0 · Apple Developer ID only · Apple + a Windows signer (Azure Artifact Signing / OV cert / SignPath Foundation OSS)</td><td><strong>Apple Developer ID</strong> if you accept the yearly fee (macOS prompt is the harshest); Windows: apply to SignPath Foundation, ship unsigned until accepted</td></tr>
+      <tr><td>Q8</td><td>Which known limits block the final</td><td>see <a href="#audit-quality">Quality bar</a></td><td>F4 + F7 block (W8); the rest documented as known limits</td></tr>
+      <tr><td>Q9</td><td>Release shape</td><td>this epic ends with rc <code>0.1.0-5</code>, then a tiny cut epic bumps to <code>0.1.0</code> after the matrix passes · bump inside this epic</td><td><strong>rc then a separate cut</strong> (the E-RC4 shape)</td></tr>
+      <tr><td>Q10</td><td>Name: crate <code>trawler</code> is taken on crates.io; trademark search not done</td><td>keep "Trawler" · rename before 1st public release</td><td>Keep; never publish the crates; run a USPTO/EUIPO search yourself</td></tr>
+      <tr><td>Q11</td><td>Repo settings (you set them)</td><td>topics: <code>http-proxy</code> <code>mitm</code> <code>debugging-proxy</code> <code>https</code> <code>network-debugging</code> <code>tauri</code> <code>rust</code> <code>charles-proxy-alternative</code> <code>proxyman-alternative</code> · homepage · private vulnerability reporting on · Discussions on</td><td>All of them, after W5 lands</td></tr>
+      <tr><td>Q12</td><td>Landing page on GitHub Pages</td><td>now · after 0.1.0 · never</td><td><strong>after 0.1.0</strong></td></tr>
+    </table>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <table>
+        <tr><th>Tier</th><th>Change</th></tr>
+        <tr><td>T2 decisions</td><td>new DEC: licence + metadata + notice; new DEC: one-source brand assets; DEC-81 rule 4 superseded only if W9 lands; DEC-86 amended (checksums, CHANGELOG notes, publish rules); DEC-82 (F4, F7)</td></tr>
+        <tr><td>T2 use cases</td><td>UC-INSTALL (metadata, verification), UC-UPDATE (F4/F7/switch), new UC-ABOUT; index</td></tr>
+        <tr><td>T2 backlog</td><td>roadmap: a "v0.1.0 public release" row; rows 148/149 point to the matrix and what stayed open</td></tr>
+        <tr><td>T1</td><td>new release-process doc (W7); <code>architecture.html</code> untouched unless W4 adds a plugin</td></tr>
+        <tr><td>T0</td><td>CLAUDE.md markdown exemption only if Q4 = yes, edited on your request</td></tr>
+      </table>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions">
+      <p>Q1–Q12 in <a href="#questions">Owner questions</a>. Unverified here: a trademark search; current Apple/Microsoft/SignPath prices and eligibility (read at decision time); whether the app offers any "remove CA trust" action (the guide's uninstall steps depend on it); real rendering of the icon at 16px on each OS.</p>
+    </div>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
