@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PRORELEASE — plan: the first official public release (v0.1.0)</h1>
       <p>An audit of everything a professional public release needs, by area, and the Working Units that close each gap. Plan only: every content item gets an owner-reviewed design WU before its build WU (v3); rulings Q1 MIT, Q2 Vu Luu, Q7 no paid signing; Q3 now asks the scope of the logo design WU.</p>
-      <div class="meta">v3 · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-PRORELEASE</span> · branch <code>epic/prorelease</code> off <code>main</code> 6a1ab80d</div>
+      <div class="meta">v4 (W12 rulings: W16, W17 added) · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-PRORELEASE</span> · branch <code>epic/prorelease</code> off <code>main</code> 6a1ab80d</div>
     </div>
   </header>
   <main>
@@ -188,15 +188,19 @@
     </div>
 
     <h2 id="wu-graph">WU graph</h2>
-    <p>Rule (v3): every content item has an owner-reviewed <strong>design</strong> WU before its <strong>build</strong> WU. W1–W8 keep their ids; W3–W6 are now the build WUs of W9–W13; W9–W14 are appended.</p>
+    <p>Rule (v3): every content item has an owner-reviewed <strong>design</strong> WU before its <strong>build</strong> WU. W1–W8 keep their ids; W3–W6 are now the build WUs of W9–W13; W9–W14 are appended; W15 (router skills) and W16–W17 (owner rulings Q1–Q2 in W12) after them.</p>
     <div class="diagram" data-c="wu-graph">
       <pre class="mermaid">
 flowchart LR
   classDef design stroke-dasharray: 4 3
-  classDef running stroke-width:3px
-  W1[W1 licence + metadata]:::running --> W2[W2 third-party notice]
-  W7[W7 release process + matrix]:::running
-  W8[W8 updater F4 + F7]:::running
+  classDef merged stroke-width:3px
+  W1[W1 licence + metadata]:::merged --> W2[W2 third-party notice]:::merged
+  W7[W7 release process + matrix]:::merged
+  W8[W8 updater F4 + F7]:::merged
+  W15[W15 router skills]:::merged
+  W16[W16 Windows remove the certificate] --> W6
+  W17[W17 two text fixes] --> W6
+  W4 --> W6
   W9{{W9 design: logo + brand system}}:::design -- owner signs mark --> W10{{W10 design: installer art + social}}:::design
   W9 --> W3[W3 build: brand assets]
   W10 --> W3
@@ -215,7 +219,7 @@ flowchart LR
   W8 --> RC
   W14 --> RC
       </pre>
-      <div class="caption">Hexagon dashed = design WU (owner review via htmldoc comments, exit = owner sign-off). Thick = running now (W1, W7, W8). Every arrow is "merged into <code>epic/prorelease</code>" except a design WU's outgoing edge, which is "signed off by the owner".</div>
+      <div class="caption">Hexagon dashed = design WU (owner review via htmldoc comments, exit = owner sign-off). Thick = merged (W1, W2, W7, W8, W15; W11, W13, W14 merged too). W12 signed. Every arrow is "merged into <code>epic/prorelease</code>" except a design WU's outgoing edge, which is "signed off by the owner".</div>
     </div>
 
     <h3 id="run-order">Run order — waves</h3>
@@ -225,7 +229,8 @@ flowchart LR
       <tr><td>2</td><td>W2 · W10 · W12 · W14</td><td>W2: W1 merged · W10: the owner signed the W9 mark · W12: W11 signed off · W14: W7 merged and W11 signed off</td></tr>
       <tr><td>3</td><td>W3</td><td>W9 and W10 signed off</td></tr>
       <tr><td>4</td><td>W4 · W5</td><td>W4: W2 and W3 merged, W13 signed off · W5: W3 merged, W11 signed off</td></tr>
-      <tr><td>5</td><td>W6</td><td>W5 merged, W12 signed off</td></tr>
+      <tr><td>4b</td><td>W16 · W17</td><td>W12 signed (owner Q1, Q2): start now, in parallel with W9/W10</td></tr>
+      <tr><td>5</td><td>W6</td><td>W4, W5, W16, W17 merged; W12 signed off</td></tr>
       <tr><td>6</td><td>rc <code>0.1.0-5</code> + the W7 hand-check matrix</td><td>every WU merged; the epic gate green (Q9)</td></tr>
     </table>
     <p>A design WU may start in the wave listed and stay open across later waves while rounds run; only its sign-off moves its dependents. A design WU whose dependent build is already running is not reopened — a change after sign-off is a new design round recorded in the same design doc.</p>
@@ -234,20 +239,23 @@ flowchart LR
     <div data-item="wu-summaries">
       <table data-c="wu-table">
         <tr><th>WU</th><th>Kind</th><th>Title</th><th>Depends</th><th>Owner input</th><th>Wave</th><th>Status</th><th>Independent router review</th><th>Design review</th></tr>
-        <tr><td>W1</td><td>build</td><td>licence + metadata</td><td>Q1 ✅ Q2 ✅</td><td>—</td><td>1</td><td>running</td><td>yes (<code>ui/src-tauri</code>)</td><td>—</td></tr>
-        <tr><td>W2</td><td>build</td><td>third-party notice</td><td>W1</td><td>—</td><td>2</td><td>planned</td><td>yes (<code>ui/src-tauri</code> resources)</td><td>—</td></tr>
+        <tr><td>W1</td><td>build</td><td>licence + metadata</td><td>Q1 ✅ Q2 ✅</td><td>—</td><td>1</td><td>merged</td><td>yes (<code>ui/src-tauri</code>)</td><td>—</td></tr>
+        <tr><td>W2</td><td>build</td><td>third-party notice</td><td>W1</td><td>—</td><td>2</td><td>merged</td><td>yes (<code>ui/src-tauri</code> resources)</td><td>—</td></tr>
         <tr><td>W3</td><td>build</td><td>brand assets</td><td>W9, W10</td><td>approve the rendered set per OS</td><td>3</td><td>planned</td><td>yes (<code>ui/src-tauri</code> icons, conf, tray)</td><td>—</td></tr>
         <tr><td>W4</td><td>build</td><td>About + Help + version</td><td>W2, W3, W13</td><td>—</td><td>4</td><td>planned</td><td>yes (<code>ui/src-tauri</code> menu, opener)</td><td>yes (cites W13's design run)</td></tr>
         <tr><td>W5</td><td>build</td><td>README + community files</td><td>W3, W11</td><td>—</td><td>4</td><td>planned</td><td>yes (<code>.github/</code> templates)</td><td>—</td></tr>
-        <tr><td>W6</td><td>build</td><td>user guide</td><td>W5, W12</td><td>—</td><td>5</td><td>planned</td><td>—</td><td>—</td></tr>
-        <tr><td>W7</td><td>build</td><td>release process, notes, checksums, matrix</td><td>Q8 ✅ Q9 ✅</td><td>—</td><td>1</td><td>running</td><td>yes (<code>.github/workflows</code>)</td><td>—</td></tr>
-        <tr><td>W8</td><td>build</td><td>updater F4 + F7</td><td>Q8 ✅</td><td>—</td><td>1</td><td>running</td><td>yes (<code>update.rs</code>)</td><td>—</td></tr>
-        <tr><td>W9</td><td>design</td><td>logo + brand system</td><td>Q3</td><td>taste brief, picks per round, <strong>signs the mark</strong></td><td>1</td><td>planned</td><td>—</td><td>—</td></tr>
-        <tr><td>W10</td><td>design</td><td>installer art + social preview</td><td>W9 signed</td><td>picks, sign-off</td><td>2</td><td>planned</td><td>—</td><td>—</td></tr>
-        <tr><td>W11</td><td>design</td><td>public text: voice, README, community, notes voice</td><td>—</td><td>pitch + tone pick, sign-off</td><td>1</td><td>planned</td><td>—</td><td>—</td></tr>
-        <tr><td>W12</td><td>design</td><td>user guide</td><td>W11 signed</td><td>outline review, sign-off</td><td>2</td><td>planned</td><td>—</td><td>—</td></tr>
-        <tr><td>W13</td><td>design</td><td>About / Help / Settings-version UX</td><td>—</td><td>mockup review, sign-off</td><td>1</td><td>planned</td><td>—</td><td>the design run W4 cites</td></tr>
-        <tr><td>W14</td><td>build</td><td>release notes + CHANGELOG copy</td><td>W7, W11</td><td>—</td><td>2</td><td>planned</td><td>yes (<code>.github/release-notes.md</code>)</td><td>—</td></tr>
+        <tr><td>W6</td><td>build</td><td>user guide</td><td>W4, W5, W12, W16, W17</td><td>—</td><td>5</td><td>planned</td><td>—</td><td>—</td></tr>
+        <tr><td>W7</td><td>build</td><td>release process, notes, checksums, matrix</td><td>Q8 ✅ Q9 ✅</td><td>—</td><td>1</td><td>merged</td><td>yes (<code>.github/workflows</code>)</td><td>—</td></tr>
+        <tr><td>W8</td><td>build</td><td>updater F4 + F7</td><td>Q8 ✅</td><td>—</td><td>1</td><td>merged</td><td>yes (<code>update.rs</code>)</td><td>—</td></tr>
+        <tr><td>W9</td><td>design</td><td>logo + brand system</td><td>Q3</td><td>taste brief, picks per round, <strong>signs the mark</strong></td><td>1</td><td>in progress</td><td>—</td><td>—</td></tr>
+        <tr><td>W10</td><td>design</td><td>installer art + social preview</td><td>W9 signed</td><td>picks, sign-off</td><td>2</td><td>in progress</td><td>—</td><td>—</td></tr>
+        <tr><td>W11</td><td>design</td><td>public text: voice, README, community, notes voice</td><td>—</td><td>pitch + tone pick, sign-off</td><td>1</td><td>merged</td><td>—</td><td>—</td></tr>
+        <tr><td>W12</td><td>design</td><td>user guide</td><td>W11 signed</td><td>outline review, sign-off</td><td>2</td><td>signed</td><td>—</td><td>—</td></tr>
+        <tr><td>W13</td><td>design</td><td>About / Help / Settings-version UX</td><td>—</td><td>mockup review, sign-off</td><td>1</td><td>merged</td><td>—</td><td>the design run W4 cites</td></tr>
+        <tr><td>W14</td><td>build</td><td>release notes + CHANGELOG copy</td><td>W7, W11</td><td>—</td><td>2</td><td>merged</td><td>yes (<code>.github/release-notes.md</code>)</td><td>—</td></tr>
+        <tr><td>W15</td><td>process</td><td>router watches, 10-minute heartbeat</td><td>—</td><td>—</td><td>1</td><td>merged</td><td>—</td><td>—</td></tr>
+        <tr><td>W16</td><td>build</td><td>Windows <strong>remove the certificate</strong></td><td>W12 signed (Q1)</td><td>—</td><td>4b</td><td>planned</td><td>yes (<code>ui/src-tauri</code> <code>setup.rs</code>)</td><td>yes (renders <code>ui/src</code>)</td></tr>
+        <tr><td>W17</td><td>build</td><td>two text fixes (quit promise, "menu bar")</td><td>W12 signed (Q2)</td><td>—</td><td>4b</td><td>planned</td><td>yes (<code>ui/src-tauri</code> <code>reach.rs</code>)</td><td>yes (renders <code>ui/src</code>)</td></tr>
       </table>
       <table data-c="design-merges">
         <tr><th>Merged into one design WU</th><th>Why one design covers them</th></tr>
@@ -303,7 +311,7 @@ flowchart LR
         <p data-item="wu-summary">Written to the W12 signed outline and per-OS flows. Install (incl. getting past the unsigned-app prompt: macOS Privacy &amp; Security → Open Anyway, Windows SmartScreen → More info → Run anyway; verifying <code>SHA256SUMS</code>), trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (remove the app, the CA trust and the app data dir), troubleshooting; where per Q6.</p>
         <p data-item="wu-maps-to">UC-INSTALL, UC-ONBOARD, UC-ABOUT (Help → User guide target).</p>
         <p data-item="wu-expected">Unit: the Help → User guide URL resolves to the guide's location; links resolve. Docs-only otherwise (test layer waived with reason).</p>
-        <p data-item="wu-deps">W5, W12 signed, Q6 ✅</p>
+        <p data-item="wu-deps">W4, W5, W16, W17 merged; W12 signed (owner Q5: the guide describes the final labels and behaviour), Q6 ✅</p>
       </div>
 
       <div data-wu="E-PRORELEASE.W7">
@@ -368,6 +376,30 @@ flowchart LR
         <p data-item="wu-maps-to">UC-INSTALL, UC-UPDATE; DEC-86 (as amended by W7).</p>
         <p data-item="wu-expected">Unit (<code>release_manifest.rs</code>, W7's tests extended): the rendered notes for a pre-release and a final carry the CHANGELOG section and the verify section; actionlint untouched (no workflow change).</p>
         <p data-item="wu-deps">W7 merged, W11 signed.</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W15">
+        <h3 id="w15">W15 — router watches, never asks "done?"</h3>
+        <p data-item="wu-summary">Router skills watch gate notes and runs themselves on a 10-minute heartbeat; merged (<a href="2026-11-06-prorelease-w15-router-watch-result.html">result</a>).</p>
+        <p data-item="wu-maps-to">process (skills).</p>
+        <p data-item="wu-expected">Skill files only: test layer waived.</p>
+        <p data-item="wu-deps">none.</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W16">
+        <h3 id="w16">W16 — build: Windows remove the certificate</h3>
+        <p data-item="wu-summary"><code>remove_ca</code> works on Windows: one elevated <code>certutil -delstore ROOT</code> on the machine store by thumbprint (the store <strong>set up this PC</strong> writes), mirroring the macOS button; the setup screen shows <strong>remove the certificate</strong> on Windows, and its <strong>to remove it later</strong> steps no longer lead with the per-user store (G2). Linux keeps the written steps.</p>
+        <p data-item="wu-maps-to">UC-ONBOARD; owner ruling Q1 (W12).</p>
+        <p data-item="wu-expected">Unit (<code>setup.rs</code>): the Windows removal argv is the elevated machine-store <code>certutil -delstore</code> with the live thumbprint; Linux still refuses. Unit (<code>Onboarding</code>/<code>setup.ts</code>): the button renders on Windows, the steps name the machine store. Integration (mock runtime, <code>ui/src-tauri/tests/suite</code>): <code>remove_ca</code> on Windows runs the elevated command and the trust read turns <em>not installed</em>. <code>design-review</code> (renders <code>ui/src</code>).</p>
+        <p data-item="wu-deps">W12 signed (Q1). Blocks W6.</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W17">
+        <h3 id="w17">W17 — build: two app text fixes</h3>
+        <p data-item="wu-summary">The replace-proxy dialog stops promising "When Trawler quits it turns the proxy off" (quitting asks; <code>ui/src-tauri/src/reach.rs:58-62</code>, G3); the keep-capturing dialog says menu bar on macOS and tray elsewhere (<code>KeepCapturingDialog.tsx:6</code>, G4).</p>
+        <p data-item="wu-maps-to">UC-ONBOARD, UC-BG; owner ruling Q2 (W12).</p>
+        <p data-item="wu-expected">Unit: tests pin both texts (the reach dialog body; the keep-capturing line per OS). <code>design-review</code> (renders <code>ui/src</code>).</p>
+        <p data-item="wu-deps">W12 signed (Q2). Blocks W6.</p>
       </div>
 
     </div>
