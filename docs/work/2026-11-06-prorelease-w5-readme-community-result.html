@@ -63,6 +63,7 @@
       <tr><td>N7 PR checklist read as an invitation</td><td>"The rest is for the maintainer's own pull requests." above it</td><td>—</td></tr>
       <tr><td>W4 prefilled URL vs bug form</td><td>ids <code>version</code>, <code>os</code>, <code>install</code> match <code>links.rs::issue_url</code>; <code>install</code> is now an input (its values are <code>install_kind</code>'s), a dropdown is not prefilled</td><td><code>the_bug_form_takes_every_field_the_app_prefills</code></td></tr>
       <tr><td>Privacy text in two places</td><td>PRIVACY.md's update row reworded to <code>privacy.ts</code>'s; markup-normalized text compared</td><td><code>privacy_md_says_what_the_about_window_says</code> (red first: the update row differed)</td></tr>
+      <tr><td>Code review on ff820c55: the privacy scanner skipped literal forms it could not read (important)</td><td>it now refuses a single-quoted or template literal, a block comment or an escape other than <code>\\</code> and <code>\"</code>, and skips trailing comments; every table's head is skipped; a repeated heading takes GitHub's <code>-n</code> suffix, a <code>#word</code> line is no heading</td><td><code>a_privacy_literal_the_scanner_cannot_read_is_refused_not_skipped</code> · <code>every_table_s_head_is_skipped_not_just_the_first</code> · <code>a_repeated_heading_gets_github_s_suffix_and_a_hashtag_is_no_heading</code></td></tr>
       <tr><td>N6 labels must exist</td><td>owner TODO below</td><td>—</td></tr>
     </table>
 
