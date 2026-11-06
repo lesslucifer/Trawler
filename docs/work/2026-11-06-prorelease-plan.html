@@ -135,7 +135,7 @@
 
     <h2 id="brand-kit">Brand kit — what you prepare, what is generated</h2>
     <p>#1–#5 are signed in W9, #6–#9 in W10; W3 then generates everything in the second table from the signed sources, and you approve the rendered set at real size on each OS before it merges.</p>
-    <div class="callout" data-c="brand-kit-signed">#1–#5 signed (W9): 7b2 Sonar, ink + amber, DM Mono wordmark. The files, viewBoxes and consumers are <code>ui/src-tauri/icons/source/MANIFEST.json</code>; the rules are <a href="../decisions/dec-89-one-signed-mark-one-source-folder.html">DEC-89</a>, which supersedes this table where they differ (#2 16 grid, #3 18 grid, #5 DM Mono).</div>
+    <div class="callout" data-c="brand-kit-signed">#1–#5 signed (W9): 7b2 Sonar, ink + amber, DM Mono wordmark. The files, viewBoxes and consumers are <code>ui/src-tauri/icons/source/MANIFEST.json</code>; the rules are <a href="../decisions/dec-89-one-signed-mark-one-source-folder.html">DEC-89</a>, which supersedes this table where they differ (#2 16 grid, #3 18 grid, #5 DM Mono). #6–#9 signed (W10): dmg=B, nsis=C, wix=C, social=C; their sources are the installer-art rows of the same manifest (<code>social-preview.svg</code> now holds the W10 layout).</div>
     <table data-c="brand-kit-supply">
       <tr><th>#</th><th>Deliverable</th><th>Format · size</th><th>Platform rules</th><th>You</th></tr>
       <tr><td>1</td><td>Master app icon</td><td>SVG, 1024×1024 viewBox (or PNG 1024×1024 RGBA, sRGB)</td><td>macOS grid: body 824×824 centred (100 px margin), continuous corner ≈185 px, transparent outside, no baked shadow. Windows/Linux reuse it as is (padding is fine there)</td><td>supply or approve</td></tr>
@@ -249,7 +249,7 @@ flowchart LR
         <tr><td>W7</td><td>build</td><td>release process, notes, checksums, matrix</td><td>Q8 ✅ Q9 ✅</td><td>—</td><td>1</td><td>merged</td><td>yes (<code>.github/workflows</code>)</td><td>—</td></tr>
         <tr><td>W8</td><td>build</td><td>updater F4 + F7</td><td>Q8 ✅</td><td>—</td><td>1</td><td>merged</td><td>yes (<code>update.rs</code>)</td><td>—</td></tr>
         <tr><td>W9</td><td>design</td><td>logo + brand system</td><td>Q3</td><td>taste brief, picks per round, <strong>signs the mark</strong></td><td>1</td><td>signed 7b2 (DEC-89)</td><td>—</td><td>—</td></tr>
-        <tr><td>W10</td><td>design</td><td>installer art + social preview</td><td>W9 signed</td><td>picks, sign-off</td><td>2</td><td>in progress</td><td>—</td><td>—</td></tr>
+        <tr><td>W10</td><td>design</td><td>installer art + social preview</td><td>W9 signed</td><td>picks, sign-off</td><td>2</td><td>signed dmg=B nsis=C wix=C social=C (DEC-89)</td><td>—</td><td>—</td></tr>
         <tr><td>W11</td><td>design</td><td>public text: voice, README, community, notes voice</td><td>—</td><td>pitch + tone pick, sign-off</td><td>1</td><td>merged</td><td>—</td><td>—</td></tr>
         <tr><td>W12</td><td>design</td><td>user guide</td><td>W11 signed</td><td>outline review, sign-off</td><td>2</td><td>signed</td><td>—</td><td>—</td></tr>
         <tr><td>W13</td><td>design</td><td>About / Help / Settings-version UX</td><td>—</td><td>mockup review, sign-off</td><td>1</td><td>merged</td><td>—</td><td>the design run W4 cites</td></tr>
@@ -287,7 +287,7 @@ flowchart LR
         <h3 id="w3">W3 — build: brand assets from the signed sources</h3>
         <p data-item="wu-summary">From the W9 + W10 signed SVG sources (<a href="#brand-kit">Brand kit</a> #1–#8, unchanged — a needed edit goes back to its design WU), <code>cargo xtask icons</code> regenerates the app icon set, the macOS template and Windows/Linux coloured tray pairs (template set on macOS only), DMG background/layout, NSIS header/sidebar, WiX banner/dialog and the favicon; <code>tauri.conf.json</code> references the installer art.</p>
         <p data-item="wu-maps-to">UC-INSTALL; new DEC (one source, generated icon set).</p>
-        <p data-item="wu-expected">Unit: generated files have the sizes/formats their consumers require and the recorded source hash matches the SVG. Integration: the packaged bundle's icon is the generated one (hash), the tray loads both glyphs.</p>
+        <p data-item="wu-expected">Unit: generated files have the sizes/formats their consumers require and the recorded source hash matches the SVG. Integration: the packaged bundle's icon is the generated one (hash), the tray loads both glyphs. Hand-check / verify on built bundles (left open by W10, its design doc <a href="2026-11-06-prorelease-w10-installer-art-design.html#unverified">Not verified</a>): Finder label y against the 240–262 pt chips in light and dark mode · which DMG @2x form Finder shows sharp (1320×800 PNG at 144 dpi vs a two-resolution TIFF the schema's png/jpg/gif list does not name) · the BMP writer (is <code>image</code>'s <code>bmp</code> feature on; 24-bit, no alpha, exact size) · NSIS/WiX bitmap blur at 125/150 % scaling (W7 matrix) · WiX text x-offset (≈ 180 px) on a built .msi.</p>
         <p data-item="wu-deps">W9 signed, W10 signed</p>
       </div>
 

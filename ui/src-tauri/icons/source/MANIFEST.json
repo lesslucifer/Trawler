@@ -9,7 +9,10 @@
     "wordmark-on-dark": "#f2efe8",
     "social-canvas": "#1b1916",
     "tagline": "#aea69c",
-    "tile-edge": "#ffffff at 10-14% opacity"
+    "tile-edge": "#ffffff at 10-14% opacity",
+    "paper": "#f4f1ea",
+    "deep-amber": "#a8741a",
+    "label-chip": "#7a756f"
   },
   "files": [
     {
@@ -109,12 +112,61 @@
       "consumer": "any place colour is not allowed (DEC-19 UI surfaces)"
     },
     {
+      "file": "dmg-background.svg",
+      "viewBox": "0 0 660 400",
+      "size": "660x400",
+      "bytes": 4781,
+      "purpose": "DMG window background (option B): canvas, sonar rings centred on the app icon at (180,170), amber arrow to Applications at (480,170), #7a756f label chips under both icons, lockup at the foot",
+      "consumer": "W3: cargo xtask icons → dmg-background.png 660x400 → bundle.macOS.dmg.background (positions stay at the defaults)"
+    },
+    {
+      "file": "dmg-background@2x.svg",
+      "viewBox": "0 0 660 400",
+      "size": "1320x800",
+      "bytes": 4782,
+      "purpose": "The DMG background at 2x: same drawing, 1320x800 render size",
+      "consumer": "W3: the Retina form of the DMG background (PNG at 144 dpi or a two-resolution TIFF; W3 proves which Finder shows sharp)"
+    },
+    {
+      "file": "nsis-header.svg",
+      "viewBox": "0 0 150 57",
+      "size": "150x57",
+      "bytes": 3670,
+      "purpose": "NSIS page header (option C): dark tile band, sonar mark, wordmark",
+      "consumer": "W3: nsis-header.bmp 150x57, 24-bit, no alpha → bundle.windows.nsis.headerImage"
+    },
+    {
+      "file": "nsis-sidebar.svg",
+      "viewBox": "0 0 164 314",
+      "size": "164x314",
+      "bytes": 4452,
+      "purpose": "NSIS welcome/finish sidebar (option C): canvas, tile + wordmark top, big lit sweep from the bottom-left corner",
+      "consumer": "W3: nsis-sidebar.bmp 164x314, 24-bit, no alpha → bundle.windows.nsis.sidebarImage"
+    },
+    {
+      "file": "wix-banner.svg",
+      "viewBox": "0 0 493 58",
+      "size": "493x58",
+      "bytes": 569,
+      "purpose": "WiX banner (option C): white text area, amber 3 px rule at the foot, sonar mark at the right",
+      "consumer": "W3: wix-banner.bmp 493x58, 24-bit, no alpha → bundle.windows.wix.bannerPath"
+    },
+    {
+      "file": "wix-dialog.svg",
+      "viewBox": "0 0 493 312",
+      "size": "493x312",
+      "bytes": 4618,
+      "purpose": "WiX welcome/completion dialog (option C): white, the NSIS sidebar art in the left 164 px",
+      "consumer": "W3: wix-dialog.bmp 493x312, 24-bit, no alpha → bundle.windows.wix.dialogImagePath"
+    },
+    {
       "file": "social-preview.svg",
       "viewBox": "0 0 1280 640",
       "size": "1280x640",
-      "bytes": 30726,
-      "purpose": "GitHub social preview 1280x640: tile, DM Mono wordmark, tagline",
-      "consumer": "W10: brand kit #9 layout base → PNG the owner uploads (Q11)"
+      "bytes": 31391,
+      "purpose": "GitHub social preview 1280x640 (option C, replaces the W9 layout): tile, wordmark and tagline left, big lit sweep right",
+      "consumer": "W3: social-preview.png the owner uploads (Q11)"
     }
-  ]
+  ],
+  "installer-art-signed": "dmg=B nsis=C wix=C social=C — owner, 2026-11-06 (E-PRORELEASE.W10)"
 }

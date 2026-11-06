@@ -12,7 +12,7 @@
     <div class="inner">
       <h1>E-PRORELEASE.W10 — design: installer art and social preview</h1>
       <p>The signed 7b2 Sonar mark placed on the DMG, NSIS, WiX and GitHub social canvases. Three layouts each; the owner picks; W3 rasterizes.</p>
-      <div class="meta">Draft v1 · 2026-11-06 · Trawler · T3 (docs/work/) · design · branch <code>wu/prorelease/installer-art-design</code>
+      <div class="meta">v2 signed · 2026-11-06 · Trawler · T3 (docs/work/) · design · branch <code>wu/prorelease/installer-art-design</code>
         off <code>epic/prorelease</code> · epic plan: <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> (W10, brand kit #6–#9) ·
         mark: <a href="../decisions/dec-89-one-signed-mark-one-source-folder.html">DEC-89</a> · sources: <code>ui/src-tauri/icons/source/</code></div>
     </div>
@@ -22,10 +22,19 @@
     <h2 id="status">Status</h2>
     <table data-c="rounds">
       <tr><th>Round</th><th>Shown</th><th>Answer</th></tr>
-      <tr><td>R1 layout + mood</td><td>3 options × 4 artifacts, each mocked at real size in its installer chrome (interactive picker, scratch)</td><td>⏳ owner pick: <code>INSTALLER ART: dmg=…, nsis=…, wix=…, social=…</code></td></tr>
-      <tr><td>R2 final art</td><td>the picks refined; signed SVG sources committed under <code>ui/src-tauri/icons/source/</code></td><td>—</td></tr>
+      <tr><td>R1 layout + mood</td><td>3 options × 4 artifacts, each mocked at real size in its installer chrome (interactive picker, scratch)</td><td>✅ <code>INSTALLER ART: dmg=B, nsis=C, wix=C, social=C</code></td></tr>
+      <tr><td>R2 final art</td><td>the picks refined (NSIS/WiX sweep moved to the corner, no 14 px sliver; DMG @2x added); signed SVG sources committed under <code>ui/src-tauri/icons/source/</code></td><td>✅ signed: dmg=B nsis=C wix=C social=C · owner · 2026-11-06</td></tr>
     </table>
-    <div class="callout" data-c="reco">Recommendation: <b>dmg=B · nsis=A · wix=A · social=A</b>. One dark column on both Windows installers, the DMG matches the dark app and the social card, and the committed social source already reads at 120 px wide.</div>
+    <div class="callout" data-c="reco">Signed: <b>dmg=B · nsis=C · wix=C · social=C</b> (the owner's own picks; the R1 recommendation was dmg=B · nsis=A · wix=A · social=A). The three art-only colours join the DEC-89 palette: paper <code>#f4f1ea</code>, deep amber <code>#a8741a</code>, label chip <code>#7a756f</code>.</div>
+    <h2 id="signed">Signed sources</h2>
+    <table data-c="signed-sources">
+      <tr><th>File (<code>ui/src-tauri/icons/source/</code>)</th><th>Option</th><th>Size</th><th>Preview</th></tr>
+      <tr><td><code>dmg-background.svg</code> · <code>dmg-background@2x.svg</code></td><td>B</td><td>660×400 · 1320×800 (same 660×400 viewBox)</td><td><img src="../../ui/src-tauri/icons/source/dmg-background.svg" width="330" height="200" alt="DMG background B"></td></tr>
+      <tr><td><code>nsis-header.svg</code> · <code>nsis-sidebar.svg</code></td><td>C</td><td>150×57 · 164×314</td><td><img src="../../ui/src-tauri/icons/source/nsis-header.svg" width="150" height="57" alt="NSIS header C"> <img src="../../ui/src-tauri/icons/source/nsis-sidebar.svg" width="82" height="157" alt="NSIS sidebar C"></td></tr>
+      <tr><td><code>wix-banner.svg</code> · <code>wix-dialog.svg</code></td><td>C</td><td>493×58 · 493×312</td><td><img src="../../ui/src-tauri/icons/source/wix-banner.svg" width="246" height="29" alt="WiX banner C"> <img src="../../ui/src-tauri/icons/source/wix-dialog.svg" width="246" height="156" alt="WiX dialog C"></td></tr>
+      <tr><td><code>social-preview.svg</code> (the shipped social source; option C replaced W9's layout, option A, in place)</td><td>C</td><td>1280×640</td><td><img src="../../ui/src-tauri/icons/source/social-preview.svg" width="320" height="160" alt="Social preview C"></td></tr>
+    </table>
+    <p class="caption">Rows with viewBox, bytes, purpose and W3 consumer: <code>MANIFEST.json</code>. Render check: rsvg-convert of each at its exact size, each viewed.</p>
 
     <h2 id="flow">Where the art goes</h2>
     <div class="diagram" data-c="flow-diagram"><pre class="mermaid">
@@ -85,7 +94,7 @@ flowchart LR
     <h2 id="handoff">Hand-off to W3 (after R2 sign-off)</h2>
     <table data-c="handoff">
       <tr><th>Item</th><th>W3 does</th></tr>
-      <tr><td>Sources</td><td>reads the signed installer-art SVGs from <code>ui/src-tauri/icons/source/</code> (names fixed in R2, listed in <code>MANIFEST.json</code>)</td></tr>
+      <tr><td>Sources</td><td>reads the signed installer-art SVGs from <code>ui/src-tauri/icons/source/</code> (names in <a href="#signed">Signed sources</a>, listed in <code>MANIFEST.json</code>)</td></tr>
       <tr><td>DMG @2x</td><td>proves on a built DMG which form Finder shows sharp at 660 × 400 pt: a 1320 × 800 PNG at 144 dpi, or a two-resolution TIFF (<code>tiffutil -cathidpicheck</code>), which the schema's png/jpg/gif list does not name</td></tr>
       <tr><td>tauri.conf.json</td><td>adds <code>bundle.macOS.dmg</code>, <code>bundle.windows.nsis</code>, <code>bundle.windows.wix</code> with the generated paths; positions stay at the defaults</td></tr>
       <tr><td>Test</td><td>the generated files have the exact sizes and formats above (BMP 24-bit), and the recorded source hash matches</td></tr>
@@ -93,9 +102,10 @@ flowchart LR
 
     <h2 id="unverified">Not verified</h2>
     <table data-c="unverified-table">
-      <tr><th>Gap</th><th>Where it gets checked</th></tr>
+      <tr><th>Gap</th><th>Where it gets checked (W3 plan block: verify items)</th></tr>
       <tr><td>The exact y of Finder's icon labels (the chips assume 240–262 pt) and the label colour rule in dark mode</td><td>W3 on a built DMG, both appearances</td></tr>
       <tr><td>DMG @2x path through the bundler</td><td>W3</td></tr>
+      <tr><td>Whether <code>image 0.25</code>'s <code>bmp</code> feature is enabled for the PNG → BMP step</td><td>W3</td></tr>
       <tr><td>NSIS/WiX bitmap scaling at 125/150 % display scaling (blur)</td><td>the W7 hand-check matrix on Windows</td></tr>
       <tr><td>WiX text x-offset (≈ 180 px, from WixUI's 370 × 270 dialog units)</td><td>W3 on a built .msi</td></tr>
       <tr><td>GitHub crop of the social card in each unfurl client</td><td>owner after upload</td></tr>
