@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedd5ec9f34851f0dfaf0a5" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W18 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W18 result: the capture service log reads as plain text</h1>
+      <p>What W18 changed, how it is proven, and what stays for the owner.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W18</span> · <code>wu/prorelease/service-log-ansi</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w18-service-log-ansi-plan.html">W18 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>Root cause</td><td><code>src/cli.rs</code> <code>main</code></td><td>the tracing subscriber coloured every line, terminal or pipe → <code>with_ansi(stderr().is_terminal())</code>: the app's piped capture gets plain text, a terminal run keeps its colours</td></tr>
+          <tr><td>Defensive strip</td><td><code>ui/src/LogTail.tsx</code></td><td>line text rendered verbatim → any SGR sequence (<code>␛[…m</code>) removed before render</td></tr>
+          <tr><td>Supervisor</td><td><code>ui/src-tauri/src/supervisor.rs</code></td><td>untouched: every core launch routes through <code>cli::main</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="privacy">Absolute path in the log</h2>
+    <p data-c="privacy">The core logs <em>generated new CA at</em> / <em>loaded existing CA from</em> with the absolute CA directory (<code>src/ca.rs:62,79</code>); in the app that is <code>~/Library/Application Support/dev.trawler.app/…</code> spelled out, so a screenshot shows the OS user name. Kept (useful to the owner); a README screenshot should be taken under a neutral account or cropped. Owner decision, not changed here.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">No <code>NO_COLOR</code> from the supervisor: redundant once the core checks the terminal, so <code>ui/src-tauri</code> is untouched. The plan's first commit carried a hand-made htmldoc id; a follow-up commit replaces it with a server-minted one.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Tests red first</td><td><code>tests/suite/core_entry.rs</code> failed on the old code with <code>\u{1b}[2m…\u{1b}[31mERROR</code> on the piped stderr; the new <code>CaptureService.test.tsx</code> case failed with the raw codes in the log; both green after</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1449 tests) · vitest 107 files, 61807 tests green</td></tr>
+          <tr><td>Hand check</td><td><code>cargo run -p trawler -- --ca-dir &lt;tmp&gt; --proxy-port 0 --api-port 0 2&gt;&amp;1 &gt;/dev/null | cat -v</code> prints <code>… INFO trawler: proxy listening on …</code> with no <code>^[[</code></td></tr>
+          <tr><td>Review</td><td><code>cr/v5</code> and <code>design/v1</code> notes on this tip</td></tr>
+          <tr><td>e2e</td><td>waived: the integration test spawns the real binary through a pipe, as the app does</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">UC-SVC (<code>docs/use-cases/web-ui.html</code>): the log shows the service's lines as plain text. No DEC (no new rule).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Retake the README Settings → Capture service screenshot (W5) once this lands; mind the user name in the CA path</td><td>W5 / owner</td></tr>
+          <tr><td>UC-SVC snapshot: the htmldoc server refused <code>web-ui.html</code> (413, too large); read the git diff</td><td>router</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
