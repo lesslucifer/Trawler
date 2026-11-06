@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="9df1e41e234eb3c4eae867fc" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W1 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W1 — licence and bundle metadata</h1>
+      <p>The crates say MIT but no LICENSE exists, and every installer ships without publisher, copyright or licence.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W1</span> · branch <code>wu/prorelease/licence-metadata</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The repo root carries an MIT <code>LICENSE</code> (Copyright (c) 2026 Vu Luu); every workspace crate, <code>ui/package.json</code> and the Tauri bundle declare that one licence; the bundle names Vu Luu as publisher and copyright holder, the homepage, a long description and the deb section; no workspace crate can be published.</p>
+
+    <h3 id="fields">Fields</h3>
+    <table data-c="fields">
+      <thead><tr><th>Source</th><th>Today</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td><code>LICENSE</code></td><td>absent</td><td>MIT text, <code>Copyright (c) 2026 Vu Luu</code></td></tr>
+        <tr><td><code>Cargo.toml</code> (trawler), <code>ui/src-tauri/Cargo.toml</code> (trawler-ui)</td><td><code>license = "MIT"</code>, repository</td><td>+ <code>authors</code>, <code>homepage</code>, <code>publish = false</code></td></tr>
+        <tr><td><code>login-service</code>, <code>xtask</code></td><td>login-service MIT; xtask no licence; both <code>publish = false</code></td><td>both MIT</td></tr>
+        <tr><td><code>ui/package.json</code></td><td><code>private</code>, no licence</td><td><code>"license": "MIT"</code></td></tr>
+        <tr><td><code>tauri.conf.json</code> <code>bundle</code></td><td>category, shortDescription, icon, macOS</td><td>+ <code>publisher</code>, <code>copyright</code>, <code>license</code>, <code>licenseFile</code>, <code>homepage</code>, <code>longDescription</code>, <code>linux.deb.section</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE audit A (bundle, crate metadata) and D (LICENSE, name) · owner rulings Q1 MIT, Q2 Vu Luu, Q10 keep the name, never publish · UC-INSTALL · new DEC-87 · <code>xtask/src/package.rs</code>, <code>xtask/tests/package_bundle.rs</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td><code>package::metadata_drift</code> on the tree</td><td>empty</td></tr>
+          <tr><td>The same check, one source off</td><td>one line naming that source and field</td></tr>
+          <tr><td>The packaged <code>Trawler.app</code></td><td><code>NSHumanReadableCopyright</code> = the bundle copyright</td></tr>
+          <tr><td>GitHub</td><td>detects MIT from <code>LICENSE</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>package</code>: <code>metadata_drift</code> names each crate off the licence, publishable or without authors/homepage, a package.json off the licence, each missing bundle field, a LICENSE that is not the holder's MIT</td><td>yes: the tree has no LICENSE and no bundle fields</td></tr>
+          <tr><td>unit</td><td><code>package</code>: the tree carries one licence and full metadata</td><td>yes</td></tr>
+          <tr><td>integration</td><td><code>package_bundle</code>: the packaged app's <code>Info.plist</code> carries the copyright</td><td>yes: the key is absent today</td></tr>
+          <tr><td>e2e</td><td>waived: no user journey changes; the epic's e2e (installed bundle) covers it</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
