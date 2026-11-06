@@ -1522,7 +1522,8 @@ flowchart LR
           the status bar says what decided it and <em>treat the data as</em> overrides it. Data windows share one remembered size and place, the last
           moved one's</td></tr>
         <tr><td>edits</td><td>JSON, XML, HTML, JavaScript, CSS and text edit freely on a virtualised surface with a fold gutter; a form is a table
-          of every pair, values whole and wrapped, each key and value editable, pairs added and removed; hex and image
+          of every pair — URL-encoded pairs, <code>name: value</code> lines (a leg's headers), or a URL's labelled parts then its
+          query's pairs (the URI); text that is none of them is shown as text under <em>not a form</em> — values whole and wrapped, each key and value editable, pairs added and removed; hex and image
           are read-only. Every change is a step: ⌘Z / ⇧⌘Z, <em>modified · N edits</em> while it differs, <em>restore
           original</em> in ⋯</td></tr>
         <tr><td>reformats</td><td>JSON: indent 2 / 4 / tab or minified, sort keys, fold to depth 1 / 2 / 3 / all / none;
