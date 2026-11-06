@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedad3c9f34851f0dfaed2a" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W13 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W13 result — design: About, Help and the version</h1>
+      <p>What the design run settled, how it closed, and what W4 builds from it.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W13</span> · <code>wu/prorelease/about-help-design</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w13-about-help-design-plan.html">W13 plan</a> · run <a href="2026-11-06-prorelease-about-help-design-run.html">design run</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>#</th><th>Owner's ruling</th><th>What the run now fixes for W4</th></tr></thead>
+        <tbody>
+          <tr><td>D1</td><td>About = Trawler's own window on every OS</td><td>macOS Trawler → About Trawler and Windows/Linux Help → About Trawler open one window; the macOS system panel is replaced</td></tr>
+          <tr><td>D2</td><td>licences and privacy = pages inside the About window</td><td>About · Third-party licences · Privacy on <code>PageSidebar</code>; the notice is read from the bundled <code>THIRD-PARTY-NOTICES.txt</code> (W2)</td></tr>
+          <tr><td>D3</td><td>version + check now in Settings → General</td><td>General's updates block: version (CopyText), check now, the switch</td></tr>
+          <tr><td>D4</td><td>"Check for updates automatically", short wording</td><td>the Checkbox reads <em>check for updates automatically</em> (lower case as General's switches); no helper line; the privacy page states the check runs when Trawler opens, at most once a day</td></tr>
+          <tr><td>D5</td><td>Report an Issue fills version, OS + version, CPU, install kind</td><td>nothing about traffic or the machine name</td></tr>
+          <tr><td>D6</td><td>F1 opens the user guide on Windows/Linux</td><td>F1 key binding; macOS keeps ⇧⌘/ Help search</td></tr>
+          <tr><td>D7</td><td>existing Button for the links</td><td>no new component</td></tr>
+          <tr><td>D8</td><td>accepted default</td><td>Esc closes the About window, beside ⌘W / Ctrl+W</td></tr>
+          <tr><td>D9</td><td>accepted default</td><td>the OS version comes from <code>tauri-plugin-os</code>, added by W4</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">None in scope. D4 took the owner's short wording over the run's recommendation; honesty about when the check runs moved wholly to the privacy page.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>The run is complete and well-formed</td><td><code>cargo xtask verify-doc</code> green on the run (12/12 hard rules) before <code>data-status="archived"</code></td></tr>
+          <tr><td>Every ruling is recorded</td><td>the run's review item: one row per ruling D1–D7 and one for the accepted defaults, each citing its contract</td></tr>
+          <tr><td>The hand-off</td><td>a design/v1 note on the WU tip from the design-review skill</td></tr>
+          <tr><td>unit · integration · e2e</td><td>waived: design WU, no code; W4 carries the tests</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">No T2 doc changes in this WU: the run is a T3 design input. UC-ABOUT, the lexicon terms (<em>licences</em>, <em>installed copy</em>) and the F1 key binding land with W4's build and its distillation, which cites this run.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Where it closes</th></tr></thead>
+        <tbody>
+          <tr><td>Build the About window, Help menus, General's updates block, the opener, <code>tauri-plugin-os</code></td><td>W4 (cites the run in its design/v1 <code>implements</code>)</td></tr>
+          <tr><td>The signed logo in the 48 px slot</td><td>W9 → W4</td></tr>
+          <tr><td>The privacy page's final text</td><td>W11 voice → W5 text</td></tr>
+          <tr><td>The issue form's field ids for the prefill</td><td>W11 → W5 (<code>.github/ISSUE_TEMPLATE</code>)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
