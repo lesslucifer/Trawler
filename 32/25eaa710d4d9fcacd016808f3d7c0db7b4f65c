@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 3225eaa710d4d9fcacd016808f3d7c0db7b4f65c
+base: 1bf8162c5838f66fd097d138bdfbfe4cc268c155
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w5-readme-community-result.html
+report_sha256: 5fb59046692c104d8c950e1dde20b81388c2038cf75c9dbebd5b82b69c48493b
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDAtkrmZgLGq+NPDGR7IPdDnrgxKKI2tCZlXh2ZEjFhiuDcgax4xljtzV
+  RpxLYbqxwhKJmIHH8ihKLsd1Rne+0O
+  -----END SSH SIGNATURE-----
