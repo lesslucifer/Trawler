@@ -222,7 +222,7 @@ fn eventually(what: &str, mut holds: impl FnMut() -> bool) -> Result<(), String>
     Err(format!("timed out waiting for {what}"))
 }
 
-fn capture_through_the_proxy(proxy: SocketAddr, api: SocketAddr) -> Result<(), String> {
+pub fn capture_through_the_proxy(proxy: SocketAddr, api: SocketAddr) -> Result<(), String> {
     let origin = serve_once()?;
     let request = format!(
         "GET http://{origin}{CAPTURED_PATH} HTTP/1.1\r\nHost: {origin}\r\nConnection: close\r\n\r\n"
