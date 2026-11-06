@@ -76,8 +76,9 @@ flowchart TB
         <em>served as …</em></td><td>the evidence rule (UC-5): the pane still shows the captured bytes, so a reader must see that
         the renderer choice moved</td></tr>
       <tr><td>8</td><td>The data window's kind picker still overrides</td><td>the user knows the bytes better than any rule</td></tr>
-      <tr><td>9</td><td>A form's label names its shape: <code>application/x-www-form-urlencoded</code> URL-encoded pairs,
-        <code>text/rfc822-headers</code> name: value lines, <code>text/uri-list</code> a URL, in the pane and the window alike. Picked
+      <tr><td>9</td><td>A form's label names its shape, in the pane and the window alike: <code>application/x-www-form-urlencoded</code>
+        is URL-encoded pairs whatever the text; <code>text/rfc822-headers</code> (name: value lines) and <code>text/uri-list</code> (a URL)
+        hold only where the bytes read as that shape, else <em>not a form</em> (a list of several URIs is not one URL). Picked
         without such a label, a form reads the bytes handed in as one shape, each a whole parse:
         <strong>URL</strong> (one line, no whitespace, <code>scheme://</code> or a leading <code>/</code>) — scheme, user, host, port,
         path and fragment as read-only labelled rows, then its query's pairs; <strong>name: value lines</strong> (every line a
@@ -85,7 +86,8 @@ flowchart TB
         per line, values verbatim; <strong>URL-encoded pairs</strong> (any other single line). Text with a raw <code>"</code>,
         <code>&lt;</code>, <code>&gt;</code> or a line break that is none of these is <em>not a form</em>: the window says so and shows the
         text. <code>+</code> is a space in a query as in a body; a path, user and fragment are percent-decoded only; a bad escape is
-        kept as sent. Edits touch only the query or the lines</td><td>the openers hand headers and URIs, and splitting either on
+        kept as sent. Edits touch only the query or the lines. Mixed line breaks are no header block. The pane cuts only
+        URL-encoded pairs; a URL or name: value lines over its cap, or text that is no form, it shows as text</td><td>the openers hand headers and URIs, and splitting either on
         <code>&amp;</code> and <code>=</code> made a URL's first key the whole URL; WHATWG's <code>URLSearchParams</code> reads a query
         with the form parser, and its percent-encode sets never leave <code>"</code> <code>&lt;</code> <code>&gt;</code> raw</td></tr>
     </table>
