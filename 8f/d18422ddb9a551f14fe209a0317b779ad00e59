@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 8fd18422ddb9a551f14fe209a0317b779ad00e59
+base: d62447dcb1b958ac1bf3ecd2f32c0f44d6879820
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w14-notes-copy-result.html
+report_sha256: 0e2faaf15ed8634002822c1672f3226a0884a10d60b1a8d021e0b71f18e9e1d7
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECXwWD0VE0hq1Q69MoXZULW3xl9fl2JMMhi9nqIwSq0QeVO2DSZWl9zPl
+  2mwVZE5qOEClODvHWgymq0lofaFHAM
+  -----END SSH SIGNATURE-----
