@@ -3,22 +3,19 @@ use std::path::{Path, PathBuf};
 
 pub const OUT: &str = ".github/screenshots";
 
-pub const LAUNCHES: [(&str, &[&str]); 2] = [
-    (
-        "attached",
-        &[
-            "s1-main-window",
-            "s2-setup-this-machine",
-            "s3-filter-chips",
-            "s4-inspector-headers",
-            "s5-send-again",
-            "s6-setup-iphone",
-            "s10-capture-menu",
-            "s11-settings-general",
-        ],
-    ),
-    ("owned", &["s7-settings-capture-service"]),
-];
+pub const LAUNCHES: [(&str, &[&str]); 1] = [(
+    "attached",
+    &[
+        "s1-main-window",
+        "s2-setup-this-machine",
+        "s3-filter-chips",
+        "s4-inspector-headers",
+        "s5-send-again",
+        "s6-setup-iphone",
+        "s10-capture-menu",
+        "s11-settings-general",
+    ],
+)];
 
 const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 

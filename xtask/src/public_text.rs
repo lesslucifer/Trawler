@@ -18,6 +18,11 @@ pub const PUBLISHED: [&str; 9] = [
 pub const ISSUE_FORMS: [&str; 2] =
     [".github/ISSUE_TEMPLATE/bug_report.yml", ".github/ISSUE_TEMPLATE/feature_request.yml"];
 
+pub const METADATA: [&str; 4] =
+    ["Cargo.toml", "ui/src-tauri/Cargo.toml", "ui/package.json", "ui/src-tauri/tauri.conf.json"];
+
+pub const BUG_FORM_PREFILLED: [&str; 3] = ["version", "os", "install"];
+
 pub const DENIED_NAMES: [&str; 9] = [
     "charles",
     "proxyman",
@@ -255,6 +260,69 @@ pub fn form_problems(file: &str, yaml: &str) -> Vec<String> {
     problems
 }
 
+// GitHub prefills only input and textarea fields from the issue URL's query.
+pub fn unprefillable_fields(yaml: &str, ids: &[&str]) -> Vec<String> {
+    let form: serde_yaml::Value = serde_yaml::from_str(yaml).unwrap_or_default();
+    let body = form["body"].as_sequence().cloned().unwrap_or_default();
+    ids.iter()
+        .filter(|id| {
+            !body.iter().any(|field| {
+                field["id"].as_str() == Some(**id)
+                    && ["input", "textarea"].contains(&field["type"].as_str().unwrap_or_default())
+            })
+        })
+        .map(|id| (*id).to_string())
+        .collect()
+}
+
+fn plain(text: &str) -> String {
+    text.replace("**", "").replace('`', "").trim().to_string()
+}
+
+pub fn privacy_markdown_words(markdown: &str) -> Vec<String> {
+    let mut words = Vec::new();
+    let mut table_lines = 0;
+    for line in markdown.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        if line.starts_with('#') {
+            continue;
+        }
+        if line.starts_with('|') {
+            table_lines += 1;
+            if table_lines > 2 {
+                words.extend(line.trim_matches('|').split('|').map(plain));
+            }
+        } else {
+            words.push(plain(line));
+        }
+    }
+    words
+}
+
+pub fn typescript_strings(source: &str) -> Vec<String> {
+    let code: String = source
+        .lines()
+        .filter(|line| !line.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut found = Vec::new();
+    let mut chars = code.chars();
+    while let Some(c) = chars.next() {
+        if c != '"' {
+            continue;
+        }
+        let mut literal = String::new();
+        while let Some(c) = chars.next() {
+            match c {
+                '"' => break,
+                '\\' => literal.extend(chars.next()),
+                other => literal.push(other),
+            }
+        }
+        found.push(literal);
+    }
+    found
+}
+
 pub fn config_problems(yaml: &str) -> Vec<String> {
     let config: serde_yaml::Value = match serde_yaml::from_str(yaml) {
         Ok(config) => config,
@@ -443,6 +511,45 @@ mod tests {
     fn the_readme_install_table_names_what_package_rs_builds() {
         let drift = install_table_drift(&read("README.md"));
         assert!(drift.is_empty(), "{drift:#?}");
+    }
+
+    #[test]
+    fn a_dropdown_or_missing_field_cannot_be_prefilled() {
+        let form = "body:\n  - type: input\n    id: version\n  - type: dropdown\n    id: install\n";
+        assert_eq!(unprefillable_fields(form, &["version", "os", "install"]), ["os", "install"]);
+    }
+
+    #[test]
+    fn the_bug_form_takes_every_field_the_app_prefills() {
+        let missing = unprefillable_fields(
+            &read(".github/ISSUE_TEMPLATE/bug_report.yml"),
+            &BUG_FORM_PREFILLED,
+        );
+        assert!(missing.is_empty(), "{missing:?}");
+    }
+
+    #[test]
+    fn privacy_words_drop_markup_headings_and_the_table_head() {
+        let markdown =
+            "# Privacy\n\nLead **here**.\n\n| What | Where |\n|---|---|\n| A | `b` |\n\nClose.\n";
+        assert_eq!(privacy_markdown_words(markdown), ["Lead here.", "A", "b", "Close."]);
+        let source = "// \"not this\"\nconst A = \"Lead here.\";\nconst R = [{ what: \"A\", where: \"c:\\\\b\" }];";
+        assert_eq!(typescript_strings(source), ["Lead here.", "A", "c:\\b"]);
+    }
+
+    #[test]
+    fn privacy_md_says_what_the_about_window_says() {
+        assert_eq!(
+            privacy_markdown_words(&read("PRIVACY.md")),
+            typescript_strings(&read("ui/src/privacy.ts"))
+        );
+    }
+
+    #[test]
+    fn no_published_metadata_names_another_tool() {
+        let named: Vec<String> =
+            METADATA.iter().flat_map(|file| denied_names(file, &read(file))).collect();
+        assert!(named.is_empty(), "{named:#?}");
     }
 
     #[test]

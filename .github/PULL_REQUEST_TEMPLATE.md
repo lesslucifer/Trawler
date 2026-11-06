@@ -2,6 +2,8 @@ Trawler doesn't take outside pull requests yet — please [open an issue](https:
 
 ---
 
+The rest is for the maintainer's own pull requests.
+
 ## What and why
 
 ## Linked issue

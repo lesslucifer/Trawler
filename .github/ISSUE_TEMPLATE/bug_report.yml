@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: Trawler version
-      description: Settings → General, or About Trawler.
+      description: "Shown in About Trawler and in Settings → General; **report an issue** in About Trawler fills this in."
       placeholder: 0.1.0
     validations:
       required: true
@@ -22,18 +22,12 @@ body:
       placeholder: macOS 15.4 · Windows 11 24H2 · Ubuntu 24.04
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: install
     attributes:
       label: How you installed Trawler
-      options:
-        - .dmg
-        - -setup.exe
-        - .msi
-        - AppImage
-        - .deb
-        - .rpm
-        - from source
+      description: "**report an issue** in About Trawler fills this in."
+      placeholder: dmg · setup.exe · msi · AppImage · deb · rpm · from source
     validations:
       required: true
   - type: textarea

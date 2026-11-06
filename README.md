@@ -85,7 +85,7 @@ To capture a phone or a simulator, open **⋮ → set up another device**. Every
 ## Privacy
 
 - Your captured traffic stays in memory on your machine and is gone when you quit. There is no account, analytics or telemetry.
-- Trawler makes two requests of its own: an update check to GitHub when it opens (at most once a day; a switch in **Settings → General** turns it off), and the setup screen's test request to example.com when you click it.
+- Trawler makes two requests of its own: an update check to GitHub when it opens (at most once a day; **Settings → General → check for updates automatically** turns it off), and the setup screen's test request to example.com when you click it.
 - Trawler's certificate key is stored unencrypted in your app data folder. While the certificate is trusted, anyone who can read your user files could use it to read your HTTPS. Remove it when you stop using Trawler.
 
 Details: [PRIVACY.md](PRIVACY.md).
@@ -152,7 +152,7 @@ Yes: iPhone, Android, the iOS Simulator and the Android emulator, from the setup
 <details>
 <summary>How do updates work?</summary>
 
-Trawler checks GitHub when it opens (at most once a day) and when you choose **Check for Updates…**. It asks before installing, and only installs a release signed by the project. A switch in **Settings → General** turns the check at opening off.
+Trawler checks GitHub when it opens (at most once a day) and when you choose **Check for Updates…**. It asks before installing, and only installs a release signed by the project. **Settings → General → check for updates automatically** turns the check when Trawler opens off.
 </details>
 
 <details>

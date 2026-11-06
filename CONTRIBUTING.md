@@ -8,8 +8,8 @@ Bug reports and ideas are very welcome as [issues](https://github.com/lesslucife
 
 What helps most in a report:
 
-- your Trawler version (**Settings → General**) and your system with its version,
-- how you installed it (`.dmg`, `-setup.exe`, `.msi`, AppImage, `.deb`, `.rpm`, or from source),
+- your Trawler version (**About Trawler** or **Settings → General**) and your system with its version,
+- how you installed it (`.dmg`, `-setup.exe`, `.msi`, AppImage, `.deb`, `.rpm`, or from source); **report an issue** in About Trawler fills in all three,
 - the steps that show the problem, what you expected, and what happened.
 
 Remove tokens, cookies and private hosts from anything you paste. A security problem goes to [SECURITY.md](SECURITY.md), never to a public issue.

@@ -1,7 +1,7 @@
 import { browser, $, $$ } from "@wdio/globals";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { invoke, onWindow, runningCore, sendThroughProxy } from "../specs/app.ts";
+import { invoke, onWindow } from "../specs/app.ts";
 import { addChips } from "../specs/query.ts";
 import { LAUNCH_VAR, OUT_VAR, PORTS_FILE, type Ports } from "./screenshots.conf.ts";
 import { FIXTURE, FIXTURE_ROWS } from "./fixture.ts";
@@ -161,26 +161,5 @@ describe("README and guide screenshots, the window on the harness core", functio
     await onWindow("settings");
     await $("h1=General").waitForDisplayed({ timeout: 15_000 });
     await shoot("s11-settings-general");
-  });
-});
-
-describe("README and guide screenshots, the window on its own core", function () {
-  if (process.env[LAUNCH_VAR] !== "owned") return;
-
-  it("S7 · Settings → Capture service, running, with its log", async () => {
-    mkdirSync(out, { recursive: true });
-    await $("header").waitForExist({ timeout: 30_000 });
-    const core = await runningCore();
-    await sendThroughProxy(core.proxy, `http://${core.api.replace(/^http:\/\//, "")}/stats`).catch(() => 0);
-    await invoke("open_settings");
-    await onWindow("settings");
-    await $("button=Capture service").click();
-    await $("h1=Capture service").waitForDisplayed({ timeout: 15_000 });
-    await browser.waitUntil(async () => (await $("body").getText()).includes("running"), {
-      timeout: 30_000,
-      timeoutMsg: "the Capture service page never read running",
-    });
-    await $('[role="log"]').waitForExist({ timeout: 15_000 });
-    await shoot("s7-settings-capture-service");
   });
 });
