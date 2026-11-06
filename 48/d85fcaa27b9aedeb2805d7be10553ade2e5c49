@@ -1,0 +1,12 @@
+schema: doc/v1
+epic: E-RC4
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the rc hand-check row: from v0.1.0-4 (E-RC4, cut from main) a pre-release's notes drop the rpm line; the update check is v0.1.0-3 installed offered v0.1.0-4"
+  - path: "docs/decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html"
+    tier: T2
+    action: updated
+    distills: "rule 5: a pre-release's notes drop the template's .rpm line"
