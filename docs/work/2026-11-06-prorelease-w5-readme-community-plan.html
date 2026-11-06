@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedc3109f34851f0dfaef27" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W5 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W5 — README and community files</h1>
+      <p>The repo's public face is a developer note; W11 (signed) fixes its voice, shape and screenshot list, W12 (signed) the guide anchors it links, W3 the brand assets it shows.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W5</span> · branch <code>wu/prorelease/readme-community</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · design <a href="2026-11-06-prorelease-w11-public-text-design.html">W11</a> · <a href="2026-11-06-prorelease-w12-guide-design.html">W12</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The repo root carries a user-first <code>README.md</code> in W11's section order and pitch A (wordmark, three badges, screenshots, the install table naming exactly what <code>package.rs</code> builds per host, first run, privacy, known limits, FAQ, scripting in two lines), and <code>CONTRIBUTING.md</code> (issues only at 0.1.0; build, layout and the control API moved from the README), <code>SECURITY.md</code>, <code>CODE_OF_CONDUCT.md</code> (Contributor Covenant 2.1), <code>PRIVACY.md</code>, issue forms and a PR template; no other tool is named in any of them; screenshots S1–S7, S10, S11 come from <code>cargo xtask ui screenshots</code> under the WebDriver harness.</p>
+
+    <h3 id="flow">Flow</h3>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  X["cargo xtask ui screenshots"] --> B["scenario build<br/>(walkthrough's)"]
+  B --> A["attached launch<br/>harness core + HAR fixture"]
+  B --> O["owned launch<br/>app's own core"]
+  A --> S["docs/screenshots/s1…s6, s10, s11"]
+  O --> S7["docs/screenshots/s7"]
+  S --> R["README.md"]
+  S7 --> R
+  R --> C["CONTRIBUTING · SECURITY · PRIVACY · CODE_OF_CONDUCT · GUIDE (W6)"]
+  T["xtask public_text tests"] -.checks.-> R
+    </pre></div>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE audit B (public face) · UC-INSTALL · W11 Q1–Q10, W12 Q4 · <code>README.md</code>, <code>CONTRIBUTING.md</code>, <code>SECURITY.md</code>, <code>CODE_OF_CONDUCT.md</code>, <code>PRIVACY.md</code>, <code>.github/ISSUE_TEMPLATE/</code>, <code>.github/pull_request_template.md</code>, <code>docs/screenshots/</code>, <code>xtask/src/public_text.rs</code>, <code>xtask/src/screenshots.rs</code>, <code>ui/e2e/screenshots/</code>. CLAUDE.md's root-markdown line (plan Q4) is staged apart as a rule-bearing <code>mr commit</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td>A README or community-file link or image to a missing repo path</td><td>the link test fails naming file and target</td></tr>
+          <tr><td>The install table vs <code>Os::bundles</code></td><td>each OS row names exactly that host's installer kinds; rpm marked final-only</td></tr>
+          <tr><td>A competitor name in any published file</td><td>the deny-list test fails naming file and word</td></tr>
+          <tr><td>Issue forms and config</td><td>parse as YAML with the fields GitHub needs</td></tr>
+          <tr><td><code>cargo xtask ui screenshots</code></td><td>every listed PNG written, else red naming the missing shot</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>public_text</code>: every relative link and image in the published files resolves; external links limited to the repo's own and known standards</td><td>yes: no CONTRIBUTING etc.</td></tr>
+          <tr><td>unit</td><td><code>public_text</code>: the README install table names each host's installer kinds from <code>package.rs</code></td><td>yes: no install table</td></tr>
+          <tr><td>unit</td><td><code>public_text</code>: no deny-listed name in README, community files, templates, CHANGELOG, release notes</td><td>yes: README names two</td></tr>
+          <tr><td>unit</td><td><code>public_text</code>: issue forms and config parse with their required keys</td><td>yes: none exist</td></tr>
+          <tr><td>unit</td><td><code>screenshots</code>: the run is green only when every listed shot exists as a PNG</td><td>yes: no command</td></tr>
+          <tr><td>integration</td><td>waived: text files, no new runtime contract; the screenshot script is the run below</td><td>—</td></tr>
+          <tr><td>e2e</td><td><code>cargo xtask ui screenshots</code> drives the real window (scenario build) and writes the shots</td><td>yes: no script</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
