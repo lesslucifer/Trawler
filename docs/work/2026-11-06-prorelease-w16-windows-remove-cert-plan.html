@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="b16e2a7f04c95d31e8a6c217" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W16 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W16 — remove the certificate on Windows</h1>
+      <p>The macOS <em>remove the certificate</em> button, on Windows: the machine Trusted Root copy that <em>set up this PC</em> wrote leaves under the one UAC approval set-up uses; the by-hand steps lead with that store.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W16</span> · branch <code>wu/prorelease/windows-remove-cert</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · owner ruling Q1</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">On Windows, once the certificate task reads trusted, task 1 offers <em>remove the certificate</em> exactly as macOS does; it deletes the live certificate (by SHA-1 thumbprint) from the machine ROOT store through the same UAC <code>Start-Process -Verb RunAs</code> set-up uses, or from the user's ROOT store unelevated when only that holds it; a cancelled approval reads as <em>the approval was cancelled</em>; the by-hand steps name the machine store first.</p>
+
+    <h2 id="flow">Flow</h2>
+    <pre class="mermaid">
+flowchart LR
+  B[remove the certificate] --> R{certutil -store ROOT · -user -store ROOT}
+  R -- a store did not answer --> E[couldn't read the certificate stores]
+  R -- machine holds it --> M["UAC: certutil -delstore ROOT ‹thumbprint›"]
+  R -- only the user's holds it --> U["certutil -user -delstore ROOT ‹thumbprint›"]
+  R -- neither --> N[nothing to run]
+  M & U & N --> T[trust re-read → task 1 not done]
+    </pre>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Elevation</td><td><code>elevated_argv("windows", …)</code>, the set-up path</td><td>owner ruling: no second elevation mechanism</td></tr>
+        <tr><td>Which copy</td><td>by thumbprint, read from both stores the trust reading reads</td><td>a name never settles a store (D1); the reading and the removal look at the same two stores</td></tr>
+        <tr><td>Both stores hold it</td><td>the machine copy first, one store per click; the re-read keeps the button while a user copy is left</td><td>the user's ROOT view may list the machine's roots too, so a user delete planned before the machine one could find nothing and fail a removal that worked</td></tr>
+        <tr><td>Placement, wording, notes</td><td>the macOS button unchanged; only the cancelled-prompt line is per host (<code>APPROVAL_CANCELLED</code>)</td><td>existing component and W12's W2 host wording; no new design run (design-rules: no new component, no new state)</td></tr>
+        <tr><td>By-hand steps</td><td>machine store first (<em>Manage computer certificates</em>, admin <code>certutil -delstore</code>), the user's as <em>If you added it by hand</em></td><td><em>set up this PC</em> writes the machine store (setup.rs <code>install_command</code>)</td></tr>
+        <tr><td>DEC</td><td>none: the web-ui use-case row is amended</td><td>the rule (every store that holds it, its trust with it, elevated only where the store asks) already stands for macOS</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W16 · owner ruling Q1 · W12 guide facts (Uninstall, Windows) · <code>docs/use-cases/web-ui.html</code> remove-the-certificate row · <code>ui/src-tauri/src/setup.rs</code>, <code>ui/src-tauri/src/scenario.rs</code>, <code>ui/src/Onboarding.tsx</code>, <code>ui/src/setup.ts</code>, <code>ui/e2e/walkthrough/script.ts</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td>Windows, certificate trusted</td><td>task 1: <em>remove the certificate</em>, bare, and <em>do it by hand</em></td></tr>
+          <tr><td>Click, approve</td><td>the machine copy is gone; task 1 reads not done</td></tr>
+          <tr><td>Click, UAC No</td><td><em>the approval was cancelled. Try again, or do it by hand.</em>; the steps stay shut</td></tr>
+          <tr><td><em>do it by hand</em></td><td><em>Manage computer certificates</em>, the admin command, then the user's command for a by-hand import</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>setup.rs</code>: <code>windows_held</code> reads each store by thumbprint and refuses an unread store; <code>windows_remove_commands</code>: machine → one UAC <code>Start-Process certutil -delstore ROOT ‹thumb›</code>, user only → unelevated <code>certutil -user -delstore</code>, both → the machine one only, neither → none. <code>setup.test.ts</code>: the Windows undo leads with the machine store</td><td>yes: neither function exists; the undo leads with the user's store</td></tr>
+          <tr><td>integration</td><td><code>scenario.rs</code> (the walkthrough's mock runtime): a UAC refusal's stderr reads refused and leaves the certificate trusted. <code>App.test.tsx</code>: on a Windows host the button invokes <code>remove_ca</code> with the served PEM and the re-read clears task 1. <code>Onboarding.test.tsx</code>: the button on Windows, its cancelled line per host</td><td>yes: no button on Windows</td></tr>
+          <tr><td>e2e</td><td>walkthrough chapter <code>ca-removed</code> extended to Windows (script only; not run here: port 4445 shared). Real elevation: owner hand-check on a Windows VM</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
