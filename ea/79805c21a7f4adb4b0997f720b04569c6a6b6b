@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-RELFIX
+wu: E-RELFIX.W1
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the packaging rows: v0.1.0-2 went red at linux-arm64's bundle (rpm refuses a hyphenated version), rc tags are cut on E-RELFIX's epic tip (first v0.1.0-3), an rc's latest.json has 16 entries, a final's 18"
+  - path: "docs/decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html"
+    tier: T2
+    action: updated
+    distills: "rule 2 and the flow: fail-fast false, the release still needs all five; rule 5: 18 keys for a final, 16 for a pre-release; rule 7: a pre-release bundles no rpm (rpm.rs passes the version verbatim, rpm refuses -); limits: an rpm final meeting a later rc falls back to the AppImage and fails, v0.1.0-2's red first run"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL's one-liner: rpm in finals only"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL's matrix: rpm in finals only (DEC-86 rule 7)"
+  - path: "docs/work/2026-11-06-release-fixes-w1-rpm-prerelease-plan.html"
+    tier: T3
+    action: added
+    distills: "W1's requirement, the bundler-by-bundler root cause, expected result and test plan"
+  - path: "docs/work/2026-11-06-release-fixes-w1-rpm-prerelease-result.html"
+    tier: T3
+    action: added
+    distills: "W1's outcome, evidence, the audit of the steps after the failing one, and what only the v0.1.0-3 run proves"
