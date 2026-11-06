@@ -59,7 +59,7 @@ flowchart LR
         script every webview gets</td><td>Q2: no webview renders a live list for hours unseen; the list reloads from the
         core</td></tr>
       <tr><td>4</td><td>While a tray exists, Tauri's own exit on the last window closing is held: only rule 1's exit or a
-        quit ends the app</td><td>a <code>--background</code> app whose Settings window closes must not quit</td></tr>
+        quit ends the app</td><td>a windowless <code>--background</code> app whose last data window closes must not quit (Settings is a dialog of the main window since E-PRORELEASE.W19)</td></tr>
       <tr><td>5</td><td>macOS: Accessory activation policy (no Dock icon) while no Trawler window is open, Regular from
         the first one built</td><td>Q11: the menu-bar convention</td></tr>
       <tr><td>6</td><td><code>--background</code> skips the launch window, only while a tray exists; else the window opens.
