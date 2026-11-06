@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W18
+branch: HEAD
+changes:
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-SVC: the capture service log shows the service's lines as plain text, no colour codes"
+  - path: "docs/work/2026-11-06-prorelease-w18-service-log-ansi-plan.html"
+    tier: T3
+    action: added
+    distills: "W18 plan: root cause in cli::main's tracing subscriber, fix point, test plan"
+  - path: "docs/work/2026-11-06-prorelease-w18-service-log-ansi-result.html"
+    tier: T3
+    action: added
+    distills: "W18 result: outcome, CA-path privacy note, evidence, follow-ups"
