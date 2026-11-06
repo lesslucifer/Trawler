@@ -1,0 +1,28 @@
+schema: cr/v5
+scope: "epic E-RELFIX -> main (close, round 3)"
+epic: E-RELFIX
+branch: epic/release-fixes
+base: 1da1cf4170031de57b9d2ba5f6ef8e21f70366ef
+head: d41a4aae9a3a5d508e7d29ca2a2d58ece782d81a
+diff_sha256: a21beb73ab0357587838a784abfe61d94e06989cbbe5d2f0c6ed8707b29adb97
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 2
+  stage_seconds:
+    gate0: 23
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 0 }
+findings: { found: 3, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
