@@ -31,7 +31,7 @@ impl Os {
         }
     }
 
-    fn pnpm(self) -> &'static str {
+    pub(crate) fn pnpm(self) -> &'static str {
         match self {
             Self::Windows => "pnpm.cmd",
             Self::MacOs | Self::Linux => "pnpm",

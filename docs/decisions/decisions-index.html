@@ -1073,6 +1073,16 @@
             <code>package::metadata_drift</code> names any source that disagrees</td>
           <td><span class="badge auto">active</span></td>
         </tr>
+        <tr>
+          <td><a href="dec-88-the-app-ships-every-licence-it-links.html"><code>dec-88-the-app-ships-every-licence-it-links.html</code></a></td>
+          <td><span class="badge id">DEC-88</span></td>
+          <td><strong>The app ships every licence it links.</strong> <code>cargo xtask licenses</code> writes the committed
+            <code>THIRD-PARTY-NOTICES.txt</code>: Trawler's MIT first, then each licence text of the release crates (normal deps of
+            <code>trawler-ui</code>, every platform) and production npm packages once, with the packages it covers; a package without
+            a file gets a standard text it offers, else the generator refuses. Bundled as a Tauri resource, never <code>licenseFile</code>;
+            a unit test fails when the lockfiles move without it</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
       </tbody>
     </table>
     <div class="callout" data-c="index-rules">

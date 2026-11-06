@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9f4f9f34851f0dfaec9f" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W2 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W2 result — third-party notice shipped in the app</h1>
+      <p>What W2 changed, how it is proven, and what stays open.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W2</span> · <code>wu/prorelease/third-party-notice</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w2-third-party-notice-plan.html">W2 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>Generator</td><td><code>xtask/src/licenses.rs</code>, <code>cargo xtask licenses</code> (<code>lib.rs</code> dispatch + usage)</td><td>none → normal-dep closure of <code>trawler-ui</code> (every platform) + <code>pnpm licenses list --prod</code>; each text once with the packages it covers; standard-text fallback or refusal by name</td></tr>
+          <tr><td>Standard texts</td><td><code>xtask/licenses/</code> MIT, Apache-2.0, BSD-3-Clause, MPL-2.0</td><td>for the ~45 crates that publish no licence file</td></tr>
+          <tr><td>The notice</td><td><code>THIRD-PARTY-NOTICES.txt</code> (root, committed)</td><td>absent → Trawler's MIT, then 302 texts covering 955 crate and 58 npm entries (~0.9 MB)</td></tr>
+          <tr><td>Bundle</td><td><code>ui/src-tauri/tauri.conf.json</code> <code>bundle.resources</code></td><td>+ <code>../../THIRD-PARTY-NOTICES.txt → THIRD-PARTY-NOTICES.txt</code> (not <code>licenseFile</code>, DEC-87)</td></tr>
+          <tr><td>Docs</td><td>DEC-88 + index row; UC-INSTALL contract and proof; use-case index</td><td>new</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="compatibility">Licence compatibility</h2>
+    <p data-item="compatibility">Every licence is compatible with distributing Trawler under MIT: permissive (MIT, Apache-2.0, BSD, ISC, Zlib, BSL-1.0, Unlicense, 0BSD, BlueOak-1.0.0, CDLA-Permissive-2.0, Unicode-3.0), file-level MPL-2.0 used unmodified (cssparser, cssparser-macros, selectors, dtoa-short, option-ext), OFL-1.1 fonts bundled with software, and r-efi's LGPL taken under its MIT option. No GPL/AGPL-only dependency. Detail: DEC-88 § Compatibility.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>The drift test is red without a regenerated notice</td><td><code>the_committed_notice_is_the_one_the_lockfiles_generate</code> and <code>the_notice_carries_the_copyleft_data_unicode_and_font_licence_texts</code> failed before the file existed; with one byte appended the drift test fails naming <code>cargo xtask licenses</code>; green after regenerating</td></tr>
+          <tr><td>Deterministic</td><td>two runs of <code>cargo xtask licenses</code> wrote identical bytes</td></tr>
+          <tr><td>Render rules</td><td><code>trawler_s_own_licence_comes_first_and_each_text_once_with_every_package_it_covers</code>, <code>a_package_without_a_licence_file_gets_the_standard_text_of_a_licence_it_offers</code>, <code>a_package_with_no_licence_text_to_give_is_refused_by_name</code>, <code>licence_files_are_read_and_spdx_tags_are_not</code></td></tr>
+          <tr><td>The conf bundles it</td><td><code>the_app_bundles_the_notice_as_a_resource_beside_its_binary</code></td></tr>
+          <tr><td>The packaged app carries it</td><td><code>xtask/tests/package_bundle.rs</code> <code>a_package_is_ad_hoc_signed_and_passes_the_release_smoke</code> (<code>--features package-tests</code>): the packaged <code>Trawler.app/Contents/Resources/THIRD-PARTY-NOTICES.txt</code> equals the committed file byte for byte; 3 passed in 118 s. Not re-run on the old tree: without the <code>resources</code> entry the bundler places no such file</td></tr>
+          <tr><td>e2e</td><td>waived: no user journey changes; W4 (About → Third-party licences) is the journey that opens it</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">DEC-88 (new) and its index row; UC-INSTALL's contract names the notice, its proof names the resource check; the use-case index row. UC-ABOUT does not exist yet (W13/W4 mint it); it should cite DEC-88. Pre-edit snapshots of <code>decisions-index.html</code> and <code>web-ui.html</code> were refused by the htmldoc server (413, too large); their diff is in git only.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Where it closes</th></tr></thead>
+        <tbody>
+          <tr><td>Open the notice from the app (Help → Third-party licences, About)</td><td>W4; UC-ABOUT cites DEC-88</td></tr>
+          <tr><td>The resource's place in the MSI/NSIS/deb/AppImage installs</td><td>the next rc's hand-check matrix (W7)</td></tr>
+          <tr><td>Regenerate on every lockfile move</td><td>enforced by the drift test in gate0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
