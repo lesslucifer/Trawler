@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 7b1f57a3503bdd35fb6e5d9ed8f9193c0014b83f
+base: 856ba1cea651b360fdc1dd8ad09e2dbb5198fc48
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w8-updater-result.html
+report_sha256: 723e8f0ce39106fcdc454d76cba7469c0315b5b7011f3b97daa11022819e186d
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAED5dSYabPbFT6Uoo043dFzPuHUp1YDGN5I/rDtMkcyGuaT0aBCv3UwJHd
+  IzMfCib0Nn67WP1I4cs5xEQiG4y0UN
+  -----END SSH SIGNATURE-----
