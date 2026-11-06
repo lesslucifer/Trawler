@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 73f4e8ffc104cd3a96ccf210e1b4c40b9c1dbfd8
+base: 5e15f58a2079cdfe096afad496935628f69342b7
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w2-third-party-notice-result.html
+report_sha256: 9aa599ea85cc1a32d8fe327ffb7c384e320d6f96a07a93837e944272e4e480e8
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAXgz1/fEK7b/B1H400zgPmsYUEhej1LO+pp+8UBoIdQCC7OkvixlY3+b
+  i/tNxG1fSfTgLWtxHjE5m+l3F8qEUI
+  -----END SSH SIGNATURE-----
