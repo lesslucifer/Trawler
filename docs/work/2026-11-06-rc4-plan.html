@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed7d059f34851f0dfaeb78" data-artifact="epic-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-RC4 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-RC4 — plan: v0.1.0-4, and a pre-release's notes give no rpm line</h1>
+      <p>The next rc, cut from <code>main</code> so it carries everything since <code>v0.1.0-3</code>: the first real update test (installed -3 offered -4).</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-RC4</span> · branch <code>epic/rc4</code> · collapsed: one epic, no WU</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="intent">Intent</h2>
+    <div data-item="intent">
+      <table>
+        <tr><th>Fact</th><th>Value</th></tr>
+        <tr><td>Version</td><td><code>0.1.0-3</code> → <code>0.1.0-4</code> in every source the one-version check (<code>package::drift_of</code>) reads: workspace members (<code>Cargo.toml</code>, <code>Cargo.lock</code>), <code>ui/package.json</code></td></tr>
+        <tr><td>Notes bug</td><td><code>.github/release-notes.md</code> puts deb and rpm on one line; <code>release_manifest::notes</code> only fills <code>{version}</code>, so the -3 draft's notes tell users to <code>dnf install</code> an rpm a pre-release never ships (<code>package::rpm_takes</code>)</td></tr>
+        <tr><td>Fix</td><td>the template gives each package its own line; <code>notes</code> drops the <code>.rpm</code> line when <code>rpm_takes(version)</code> is false. One call site (<code>run</code>) renders both <code>notes.md</code> and <code>latest.json</code>'s <code>notes</code></td></tr>
+      </table>
+    </div>
+
+    <h2 id="use-cases">Use-case requirements</h2>
+    <div data-item="use-cases">
+      <p><a href="../use-cases/web-ui.html#uc-install">UC-INSTALL</a>: the release notes name only installers the release carries.</p>
+    </div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table>
+        <tr><th>Version</th><th>Notes</th></tr>
+        <tr><td>final <code>0.1.0</code></td><td>both the <code>.deb</code> and the <code>.rpm</code> line</td></tr>
+        <tr><td>pre-release <code>0.1.0-4</code></td><td>the <code>.deb</code> line, no <code>.rpm</code> anywhere</td></tr>
+      </table>
+    </div>
+
+    <h2 id="non-goals">Non-goals</h2>
+    <div data-item="non-goals">
+      <ul><li>Any cleanup outside the version and the notes; no workflow change.</li></ul>
+    </div>
+
+    <h2 id="wu-summaries">WU summaries</h2>
+    <div data-item="wu-summaries">
+      <div data-wu="E-RC4.W1">
+        <p data-item="wu-summary">No Working Unit: the collapse rule lands this as commits on the epic (plan, fix + bump, distill, archive) and the epic result last (DEC-3).</p>
+        <p data-item="wu-maps-to">UC-INSTALL; DEC-86 rules 5 and 7.</p>
+        <p data-item="wu-expected">Unit tests red on the old code: the real template rendered for a pre-release has no <code>.rpm</code>, for a final has both lines; <code>run</code> writes such a <code>notes.md</code> (and <code>latest.json</code> notes) for a <code>v0.1.0-4</code> dist. The one-version check passes at 0.1.0-4.</p>
+        <p data-item="wu-deps">none</p>
+      </div>
+    </div>
+
+    <h2 id="e2e-plan">E2E test plan</h2>
+    <div data-item="e2e-plan">
+      <p>Waived: no product flow changes; the release path is xtask, proven by its unit tests over the real template and by the <code>v0.1.0-4</code> tag run.</p>
+    </div>
+
+    <h2 id="distillation-plan">Distillation plan</h2>
+    <div data-item="distillation-plan">
+      <p>DEC-86 rule 5 (a pre-release's notes drop the rpm line); the roadmap's rc hand-check row (the notes fix landed, <code>v0.1.0-4</code> is the update target).</p>
+    </div>
+
+    <h2 id="open-questions">Open questions</h2>
+    <div data-item="open-questions"><p>none</p></div>
+
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
