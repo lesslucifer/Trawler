@@ -1,0 +1,44 @@
+schema: cr/v5
+scope: "WU readme-community -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: wu/prorelease/readme-community
+base: c5cc5d192814495b3d35f27d48a788c1c3eb8716
+head: 8c9bf79dd5443367b33a0e27cd834f1cd509792f
+diff_sha256: b3eff02f2e612559af50bcc1719d9eff7f4a6c3e509842fb307e2f3e8a1a8941
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 7
+  stage_seconds:
+    finders: 35
+    verifiers: 16
+  by_finder:
+    correctness: { found: 4, verified: 1 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 3, verified: 1 }
+findings: { found: 9, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "broken_targets re-reads and re-parses a target per link"
+    waived: "dev-time check over nine small files; decided again on the fixed tip"
+  - finding: "fixed settle pauses in the screenshot spec"
+    waived: "bounded sleeps in a manual screenshot tool; decided again on the fixed tip"
+  - finding: "KINDS repeats the bundle names package.rs owns"
+    waived: "decided on the fixed tip"
+  - finding: "NOT_YET_WRITTEN can exempt a typo'd path silently"
+    waived: "decided on the fixed tip"
+  - finding: "anchors() reads fenced # lines as headings and has no duplicate -1 suffix"
+    waived: "decided on the fixed tip"
+  - finding: "form_problems accepts checkboxes without options"
+    waived: "decided on the fixed tip"
+  - finding: "a failed onPrepare can orphan the harness process"
+    waived: "decided on the fixed tip"
+verdict: FAIL
+date: 2026-11-06
