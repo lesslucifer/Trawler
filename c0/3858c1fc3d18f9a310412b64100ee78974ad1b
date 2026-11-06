@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W13
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-06-prorelease-about-help-design-run.html"
+    tier: T3
+    action: added
+    distills: "the closed design run: About window on every OS with About, Third-party licences and Privacy pages, the Help menu per OS, Settings → General's version, check now and the check for updates automatically switch; the owner's rulings D1-D7 and accepted defaults D8-D9 on its review item"
+  - path: "docs/work/2026-11-06-prorelease-w13-about-help-design-plan.html"
+    tier: T3
+    action: added
+    distills: "W13's requirement, mapping, expected result and waived test plan"
+  - path: "docs/work/2026-11-06-prorelease-w13-about-help-design-result.html"
+    tier: T3
+    action: added
+    distills: "the rulings and what W4 builds from them, the evidence, the follow-ups"
+t2_waived: "design WU: the run is a T3 input; UC-ABOUT, the lexicon terms and the F1 binding land with W4's build and its distillation"
