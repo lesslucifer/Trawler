@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W16
+base: 2425dd656cf5c514bdd0b0b32251a28a661fb4f2
+design_sha256: 5191575240f0f065bf0fd0f609628d5b0bf559a647b5552d20f97738d0a51be2
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/Onboarding.tsx
+    why: "the existing remove the certificate Action, its placement, frame and notes unchanged; the macOS-only gate is dropped so Windows shows the same button where set-up already runs, and its cancelled-prompt line takes the host's existing APPROVAL_CANCELLED wording (W12's W2) - no new surface, state or layout"
+date: 2026-11-06
