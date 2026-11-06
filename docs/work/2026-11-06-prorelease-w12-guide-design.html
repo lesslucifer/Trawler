@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedaea39f34851f0dfaed58">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W12 user guide design</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W12 — user guide design</h1>
+      <p>The shape of <code>GUIDE.md</code>: its outline and anchors, the per-OS flows, the screenshots, the UI labels it quotes, three sections drafted in full, and the owner's questions. W6 writes the guide from it.</p>
+      <div class="meta">Round 2 · signed (owner rulings Q1–Q5) · 2026-11-06 · Trawler · T3 design · <span class="badge id">E-PRORELEASE.W12</span> · <code>wu/prorelease/guide-design</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE W12 / W6</a> · voice <a href="2026-11-06-prorelease-w11-public-text-design.html">W11 (signed)</a> · feeds W6</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="frame">Frame</h2>
+    <table data-c="frame">
+      <tr><th>Rule</th><th>Source</th></tr>
+      <tr><td>One file, <code>GUIDE.md</code> at the repo root; Help → User Guide opens <code>https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md</code> (F1 off macOS)</td><td>plan Q6 ✅ · W13 design run D6</td></tr>
+      <tr><td>W11 voice: plain, to you, step not theory, honest, calm, no futures; <strong>no other tool named</strong>; OS labels in <strong>bold</strong>, quoted exactly</td><td>W11 Q5 + voice</td></tr>
+      <tr><td>The guide owns: unsigned-app steps, trusting/removing the certificate, every task step by step. README states each in one line and links here</td><td>W11 fact owners</td></tr>
+      <tr><td>Every step names a label the code shows today (<a href="#labels">Labels</a>) or an OS label; a claim the code can't back is not written (<a href="#facts">Facts</a>)</td><td>W11 facts rule</td></tr>
+      <tr><td>Privacy lives in <code>PRIVACY.md</code>; the guide links it, never restates it</td><td>W11 Q4</td></tr>
+    </table>
+
+    <h2 id="outline">Guide outline and anchors</h2>
+    <p>Headings are short and fixed: GitHub derives each anchor from its heading, and the README, the release notes and the app link to these anchors. A heading rename is an anchor change, checked by W6's link test.</p>
+    <table data-c="outline">
+      <tr><th>#</th><th><code>##</code> heading → anchor</th><th><code>###</code> subsections</th><th>Content</th><th>Shots</th></tr>
+      <tr><td>0</td><td>Trawler User Guide (H1) + contents list</td><td>—</td><td>One line: what Trawler does (pitch A line 1); the contents list of the 13 sections</td><td>—</td></tr>
+      <tr><td>1</td><td>Install → <code>#install</code></td><td>Check your download · macOS · Windows · Linux</td><td>File per system, SHA256SUMS, the first-open prompt per OS. <a href="#draft-install">Drafted in full</a></td><td>S8 S9</td></tr>
+      <tr><td>2</td><td>First run → <code>#first-run</code></td><td>—</td><td>Setup opens by itself while nothing decrypted has been captured; the device picker; the three tasks; <strong>make a request to example.com</strong>; <strong>‹ show traffic</strong></td><td>S2</td></tr>
+      <tr><td>3</td><td>Trust the certificate → <code>#trust-the-certificate</code></td><td>macOS · Windows · Linux · Check it worked</td><td>One-click vs by hand per OS; what each changes; the system proxy task beside it. Linux: Ubuntu/GNOME steps plus one line for other systems (Q3). <a href="#draft-trust">Drafted in full</a></td><td>S2</td></tr>
+      <tr><td>4</td><td>Capture another device → <code>#capture-another-device</code></td><td>Allow another device · iPhone or iPad · Android device · iOS Simulator · Android emulator · Another computer</td><td>The allow confirm and how to stop it; per device the setup screen's tasks; what apps on Android trust</td><td>S6</td></tr>
+      <tr><td>5</td><td>Capture one app → <code>#capture-one-app</code></td><td>—</td><td>Without the system proxy: <code>curl -x http://127.0.0.1:7420</code>, <code>HTTPS_PROXY</code>; the certificate file from <code>save…</code>. Only what the app itself shows; no runtime-specific variables</td><td>—</td></tr>
+      <tr><td>6</td><td>Filter the list → <code>#filter-the-list</code></td><td>—</td><td>Chip grammar table (keys, <code>-</code> to leave out, AND/OR rule), ⌘F / Ctrl+F; <strong>clear</strong> removes only what matches</td><td>S3</td></tr>
+      <tr><td>7</td><td>Inspect a request → <code>#inspect-a-request</code></td><td>Open in a window</td><td>request / response, Headers, Body, pretty / raw, <strong>copy as curl</strong>; the data window, its find keys, the HTML preview's limits</td><td>S1 S4</td></tr>
+      <tr><td>8</td><td>Send a request again → <code>#send-a-request-again</code></td><td>—</td><td><strong>replay</strong> from a request, <strong>↗ new request</strong>, edit, <strong>send</strong>, <strong>open the new flow</strong>; paste a curl command via <strong>↑ import…</strong></td><td>S5</td></tr>
+      <tr><td>9</td><td>Export and import → <code>#export-and-import</code></td><td>—</td><td><strong>↓ export as har…</strong> saves what the filter shows; <strong>↑ import…</strong> takes a HAR or a curl command; ↑ / ↗ row marks</td><td>S10</td></tr>
+      <tr><td>10</td><td>Keep capturing → <code>#keep-capturing</code></td><td>Open at login</td><td>The close question, the menu-bar / tray icon menu, Settings → General, OS limits (macOS 13, GNOME AppIndicator, AppImage path)</td><td>S11</td></tr>
+      <tr><td>11</td><td>Updates → <code>#updates</code></td><td>—</td><td>When it checks, the dialog, what installing clears and keeps, .deb/.rpm password, the auto-check switch (W4)</td><td>—</td></tr>
+      <tr><td>12</td><td>Uninstall → <code>#uninstall</code></td><td>macOS · Windows · Linux · Phones and simulators</td><td>Order: proxy off → certificate (button on macOS and Windows, W16; steps on Linux) → login item → quit → app → folders. <a href="#draft-uninstall">Drafted in full</a></td><td>—</td></tr>
+      <tr><td>13</td><td>Troubleshooting → <code>#troubleshooting</code></td><td>one <code>###</code> per symptom</td><td><a href="#troubleshooting">Symptom table</a>; ends: report an issue (Help → Report an Issue…) with the service log</td><td>S7</td></tr>
+    </table>
+    <p>Privacy is not a section: section 0 and Updates link <code>PRIVACY.md</code>.</p>
+
+    <h2 id="flows">Per-OS flows</h2>
+    <h3 id="flow-install">Install and first open</h3>
+    <div class="diagram" data-c="flow-install"><pre class="mermaid">
+flowchart LR
+  D[Download from releases/latest] --> V{Check against SHA256SUMS}
+  V -- mismatch --> X[Delete, download again]
+  V -- OK --> OS{System}
+  OS -- macOS --> M1[Open .dmg, drag to Applications] --> M2[Open: macOS can't verify the app] --> M3[System Settings → Privacy &amp; Security → Open Anyway] --> R
+  OS -- Windows --> W1[Run -setup.exe or .msi] --> W2[SmartScreen: More info → Run anyway] --> R
+  OS -- Linux --> L1[AppImage: chmod +x · .deb: apt install · .rpm: dnf install] --> R
+  R[Trawler opens on the setup screen]
+</pre><div class="caption">Linux shows no prompt. The prompt appears once per install; updates from inside the app do not ask again.</div></div>
+
+    <h3 id="flow-trust">Trust the certificate on this machine</h3>
+    <div class="diagram" data-c="flow-trust"><pre class="mermaid">
+flowchart TB
+  S[Setup screen · This machine] --> OS{System}
+  OS -- macOS --> MB["set up this Mac — one password prompt"]
+  MB --> MC[System keychain, trusted for every user + proxy on every network service]
+  OS -- macOS by hand --> MH[open in Keychain Access → Trawler Proxy CA → Always Trust]
+  MH --> MK[login keychain]
+  OS -- Windows --> WB["set up this PC — one Windows approval"]
+  WB --> WC[Trusted Root store for every user + proxy for your account]
+  OS -- Windows by hand --> WH[open the certificate → Install Certificate… → Trusted Root Certification Authorities]
+  OS -- Linux --> LH[By hand only: Firefox · Chrome · system tools, each its own store]
+  MC --> T[make a request to example.com]
+  MK --> T
+  WC --> T
+  WH --> T
+  LH --> T
+  T --> OK[example.com answered through Trawler.]
+</pre><div class="caption">Linux has no button: every step is shown on the screen and copied into the guide (Ubuntu labels).</div></div>
+
+    <h3 id="flow-devices">Another device</h3>
+    <div class="diagram" data-c="flow-devices"><pre class="mermaid">
+flowchart LR
+  P[Pick a device] --> K{Kind}
+  K -- iPhone or iPad / Android device --> A[1 Allow … to connect → Allow] --> C[2 install the certificate: scan the QR] --> W[3 set the Wi-Fi proxy] --> Q[4 Make a request]
+  K -- iOS Simulator · macOS only --> SS[set up the Simulator: certificate in every running Simulator + this Mac's proxy] --> Q
+  K -- Android emulator --> E[set up the emulator: certificate via adb + proxy 10.0.2.2] --> Q
+</pre><div class="caption">Phones need the allow step; simulators and emulators reach Trawler on this machine. A Google Play emulator image has no root, so its certificate is installed by tapping through Settings.</div></div>
+
+    <h3 id="flow-uninstall">Uninstall</h3>
+    <div class="diagram" data-c="flow-uninstall"><pre class="mermaid">
+flowchart LR
+  A[Stop routing through Trawler] --> B[Remove the certificate] --> C[Turn off open Trawler at login] --> D[Quit Trawler] --> E[Remove the app] --> F[Delete the app folders]
+  B -.-> B1[macOS · Windows: remove the certificate button]
+  B -.-> B2[Linux: written steps]
+  A -.-> A1[and on each phone or emulator: proxy off, profile / certificate removed]
+</pre><div class="caption">Order matters: the proxy goes first (no internet without Trawler), the certificate before the app (its button lives in the app).</div></div>
+
+    <h2 id="facts">Facts the guide may claim (verified in code)</h2>
+    <p>Tree <code>d62447dc</code>. Adds to W11's facts; W11's stand.</p>
+    <table data-c="facts">
+      <tr><th>Claim</th><th>Evidence</th></tr>
+      <tr><td>Setup opens by itself while no decrypted HTTPS request has been captured; also from <strong>set up capture</strong>, <strong>set up another device</strong> and the status dot</td><td><code>ui/src/App.tsx:243-250</code> · <code>ui/src/FlowList.tsx:146-153</code> · <code>ui/src/CaptureControls.tsx:140-142</code></td></tr>
+      <tr><td><strong>set up this Mac</strong> trusts the certificate in the System keychain and sets the proxy on every enabled network service, one admin prompt</td><td><code>ui/src-tauri/src/setup.rs:8-39,1087-1108,1248-1264</code></td></tr>
+      <tr><td><strong>set up this PC</strong> adds it to the machine's Trusted Root store (one UAC approval); the proxy is per account (HKCU), no approval</td><td><code>setup.rs:44-55,1109-1165,1266-1270</code></td></tr>
+      <tr><td>Linux: no automatic trust or proxy; steps for Firefox, Chrome, <code>update-ca-certificates</code>, GNOME proxy</td><td><code>setup.rs:1215,1281-1283</code> · <code>ui/src/setup.ts:575-587,709-726,885-940</code></td></tr>
+      <tr><td>Quitting does not restore the proxy by itself: it asks <strong>stop routing through Trawler before quitting?</strong> (button on macOS/Windows, steps on Linux)</td><td><code>ui/src/closeConfirm.ts:9-18,253</code> · <code>ui/src/ProxyCloseDialog.tsx:30,129</code></td></tr>
+      <tr><td><strong>remove the certificate</strong> exists on macOS only today; W16 adds it on Windows (elevated <code>certutil -delstore</code>, machine ROOT store); Linux steps stay on the setup screen under <strong>to remove it later</strong></td><td><code>ui/src/Onboarding.tsx:1353-1354,1725-1733</code> · <code>setup.rs:1337-1340</code> · <code>setup.ts:629-638,675-686,728-743</code></td></tr>
+      <tr><td>The certificate is named <strong>Trawler Proxy CA</strong>; files <code>trawler-ca.pem</code> + <code>trawler-ca.key</code> in <code>&lt;app data&gt;/ca</code></td><td><code>src/ca.rs:12,69</code> · <code>src/config.rs:66-72</code> · <code>ui/src-tauri/src/core.rs:73-75,158</code></td></tr>
+      <tr><td>Allowing another device listens on one chosen address, same ports, until you <strong>stop listening</strong> or Trawler quits; nothing saved; <code>0.0.0.0</code> refused</td><td><code>src/reach.rs:1-7,209-253</code> · <code>ui/src-tauri/src/reach.rs:8-22</code></td></tr>
+      <tr><td>Phones get the certificate from <code>http://&lt;address&gt;:7421/ca.mobileconfig</code> (iPhone) or <code>/ca.cer</code> (Android), by QR; Android's proxy page <code>/android-wifi</code></td><td><code>src/api/mod.rs:65-69</code> · <code>src/reach.rs:57-66</code> · <code>setup.ts:1232-1236</code></td></tr>
+      <tr><td>Android apps trust a user certificate only if they opt in; Chrome does</td><td><code>setup.ts:1057-1059</code></td></tr>
+      <tr><td>iOS Simulator (macOS only): <code>xcrun simctl keychain … add-root-cert</code> per running Simulator, no password; it uses this Mac's proxy; only an erase removes the root</td><td><code>setup.rs:453-509</code> · <code>setup.ts:359,1631,1659-1662</code></td></tr>
+      <tr><td>Android emulator: certificate via <code>adb</code> + <code>su</code> (not on Google Play images), proxy <code>10.0.2.2:&lt;port&gt;</code></td><td><code>setup.rs:513-517,958-1033</code> · <code>ui/src-tauri/src/route.rs:51-53,98-108</code></td></tr>
+      <tr><td>No pause/stop capture; <strong>clear</strong> and <strong>↓ export as har…</strong> act on what the filter shows</td><td><code>ui/src/CaptureControls.tsx:80,92</code> · <code>src/api/routes.rs:150-173</code></td></tr>
+      <tr><td>Filter keys <code>host: method: status: type: source: is:</code>, plain text searches the URI, <code>-</code> leaves out; different keys AND, same key OR</td><td><code>ui/src/query.ts:23-30,105-108</code> · <code>src/store.rs:203-224,255-265</code></td></tr>
+      <tr><td>A body Trawler didn't keep is marked as skipped in the HAR, not written empty</td><td><code>src/api/har.rs:122-123,147</code></td></tr>
+      <tr><td>Open at login: macOS 13+ from the installed app; Windows Run key; Linux <code>~/.config/autostart/dev.trawler.app.desktop</code> (an AppImage path)</td><td><code>login-service/src/agent.rs:20-25</code> · <code>ui/src-tauri/src/login_item.rs:147-148,237-238,290-340</code></td></tr>
+      <tr><td>Update check: launch, at most once a day, installed copies only; installing clears the captured list, keeps certificate and settings</td><td><code>ui/src-tauri/src/update.rs:12,44-49,81-90,152-160</code></td></tr>
+      <tr><td>No port setting; proxy 7420, API 7421</td><td><code>ui/src/CaptureService.tsx</code> (read-only facts) · <code>core.rs:258-259</code></td></tr>
+    </table>
+
+    <h2 id="labels">UI labels the guide quotes</h2>
+    <p>Exactly as the code renders them (in-app labels are lowercase; native menus are Title Case). W6 bolds them; W4, W16 and W17 change some, so W6 re-reads these lines before writing.</p>
+    <table data-c="labels">
+      <tr><th>Where</th><th>Labels</th><th>Source</th></tr>
+      <tr><td>Setup screen</td><td><strong>Set up capture</strong> · <strong>which device's traffic do you want to see</strong> · <strong>This machine — macOS/Windows/Linux</strong> · <strong>show notes</strong> · <strong>do it by hand</strong> · <strong>other ways</strong> · <strong>to remove it later</strong> · <strong>to turn it off later</strong> · <strong>‹ show traffic</strong></td><td><code>Onboarding.tsx:126-130,511,543,1078,1101</code> · <code>setup.ts:301,698,795</code></td></tr>
+      <tr><td>This machine tasks</td><td><strong>Trust Trawler's certificate</strong> · <strong>Send this Mac's traffic to Trawler</strong> · <strong>Make a request from this Mac</strong> · buttons <strong>set up this Mac</strong> / <strong>set up this PC</strong> · <strong>set the system proxy</strong> · <strong>stop routing through Trawler</strong> · <strong>remove the certificate</strong> · <strong>make a request to example.com</strong> · <strong>open in Keychain Access</strong> · <strong>open the certificate</strong> · <strong>open Proxy settings</strong> · <strong>open Network settings</strong> · <strong>save…</strong></td><td><code>setup.ts:755,819,1285-1307</code> · <code>Onboarding.tsx:606-613,1593-1654,1728</code></td></tr>
+      <tr><td>Status lines</td><td><strong>installed and trusted</strong> · <strong>installed, not trusted</strong> · <strong>not installed</strong> · <strong>this Mac routes through Trawler</strong> · <strong>example.com answered through Trawler.</strong> · <strong>the request reached Trawler and didn't decrypt.</strong></td><td><code>ui/src/verdicts.ts:172-188,585-597</code> · <code>Onboarding.tsx:291-310</code></td></tr>
+      <tr><td>Other devices</td><td><strong>iPhone or iPad</strong> · <strong>Android device</strong> · <strong>iOS Simulator</strong> · <strong>Android emulator</strong> · <strong>allow devices on &lt;network&gt; to connect</strong> · dialog <strong>Let other devices reach Trawler?</strong> → <strong>Allow</strong> · <strong>stop listening</strong> · chip <strong>reachable on &lt;host&gt;</strong> → <strong>stop</strong> · <strong>set up the Simulator</strong> · <strong>set up the emulator</strong></td><td><code>setup.ts:63-72,299-397</code> · <code>Onboarding.tsx:751-845,1592-1605</code> · <code>ui/src-tauri/src/reach.rs:8-22</code> · <code>App.tsx:928-955</code></td></tr>
+      <tr><td>Main window</td><td>filter placeholder <strong>filter — status:4xx, host:api, or any text</strong> · <strong>⋮</strong> menu: <strong>↓ export as har…</strong> · <strong>↑ import…</strong> · <strong>↗ new request</strong> · <strong>set up another device</strong> · <strong>settings…</strong> · clear <strong>⌫</strong> → <strong>clear</strong></td><td><code>QueryBar.tsx:69-70</code> · <code>CaptureControls.tsx:118-157,235-254</code></td></tr>
+      <tr><td>Inspector, composer</td><td><strong>request</strong> / <strong>response</strong> · <strong>Headers</strong> · <strong>Body</strong> · <strong>pretty</strong> / <strong>raw</strong> · <strong>open in data window</strong> · <strong>replay</strong> · <strong>copy as curl</strong> · <strong>send</strong> · <strong>open the new flow</strong> · <strong>start over</strong></td><td><code>FlowDetail.tsx:25-26,165-233</code> · <code>BodyViewer.tsx:131-149</code> · <code>Composer.tsx:43-65</code></td></tr>
+      <tr><td>Close, tray, Settings</td><td><strong>keep capturing after the window closes?</strong> → <strong>keep capturing</strong> / <strong>quit</strong> · tray <strong>Open Trawler</strong> · <strong>Settings…</strong> · <strong>Restart capture service</strong> · <strong>Quit Trawler</strong> · Settings <strong>General</strong> / <strong>Capture service</strong> · <strong>keep capturing when the window closes</strong> · <strong>open Trawler at login</strong> · <strong>restart</strong> · <strong>log</strong></td><td><code>KeepCapturingDialog.tsx:4-9</code> · <code>ui/src-tauri/src/tray.rs:79-97</code> · <code>Settings.tsx:9-12</code> · <code>General.tsx:113-117</code></td></tr>
+      <tr><td>Native menu</td><td><strong>Check for Updates…</strong> · <strong>Settings…</strong> (⌘, / Ctrl+,): macOS in the <strong>Trawler</strong> menu, Windows in <strong>File</strong>, Linux in <strong>Edit</strong> · <strong>Reset Layout</strong> in <strong>View</strong> · update dialog <strong>Install</strong> / <strong>Later</strong></td><td><code>ui/src-tauri/src/menu.rs:23,69-82,127-150</code> · <code>update.rs:14-15</code></td></tr>
+    </table>
+
+    <h2 id="screenshots">Screenshots</h2>
+    <p>W11's S1–S9 keep their ids, states and sources. S10 and S11 added to the W5 screenshot script (Q4).</p>
+    <table data-c="screenshots">
+      <tr><th>#</th><th>Screen · state</th><th>Guide section</th><th>Source</th></tr>
+      <tr><td>S1</td><td>Main window, JSON response selected</td><td>Inspect</td><td>W11 · e2e</td></tr>
+      <tr><td>S2</td><td>Setup screen — this machine, all tasks done</td><td>First run · Trust the certificate</td><td>W11 · e2e</td></tr>
+      <tr><td>S3</td><td>Filter chips <code>status:4xx</code> <code>-method:OPTIONS</code></td><td>Filter the list</td><td>W11 · e2e</td></tr>
+      <tr><td>S4</td><td>Inspector headers, HTTP/2 versions</td><td>Inspect</td><td>W11 · e2e</td></tr>
+      <tr><td>S5</td><td>Composer, one edited header, response shown</td><td>Send a request again</td><td>W11 · e2e</td></tr>
+      <tr><td>S6</td><td>Setup — iPhone, address allowed, certificate step</td><td>Capture another device</td><td>W11 · e2e</td></tr>
+      <tr><td>S7</td><td>Settings → Capture service, running, log</td><td>Troubleshooting</td><td>W11 · e2e</td></tr>
+      <tr><td>S8</td><td>macOS Privacy &amp; Security → Open Anyway</td><td>Install · macOS</td><td>W11 · hand, last rc</td></tr>
+      <tr><td>S9</td><td>Windows SmartScreen → More info → Run anyway</td><td>Install · Windows</td><td>W11 · hand, last rc</td></tr>
+      <tr><td><span class="badge auto">Q4</span> S10</td><td>The <strong>⋮</strong> menu open over the list</td><td>Export and import</td><td>e2e (W5 script)</td></tr>
+      <tr><td><span class="badge auto">Q4</span> S11</td><td>Settings → General, both switches</td><td>Keep capturing</td><td>e2e (W5 script), after W4</td></tr>
+    </table>
+
+    <h2 id="troubleshooting">Troubleshooting — symptoms</h2>
+    <table data-c="troubleshooting">
+      <tr><th>Symptom (### heading)</th><th>Answer direction</th><th>Source</th></tr>
+      <tr><td>Nothing shows up</td><td>Setup's task 2 status; another proxy set; Windows: <strong>Automatically detect settings</strong> / <strong>Use setup script</strong> outrank it; apps already open keep the old setting</td><td><code>setup.ts:839-844</code> · <code>verdicts.ts:603-609</code></td></tr>
+      <tr><td>HTTPS shows but doesn't decrypt</td><td>Restart the browser (it reads the store at start); Linux: Firefox and Chrome have their own stores; apps that pin never decrypt</td><td><code>setup.ts:533-540</code></td></tr>
+      <tr><td>My phone can't load the certificate page</td><td>Same network; this machine's firewall must let Trawler accept connections; address changed → <strong>no longer reachable on …</strong></td><td><code>setup.ts:1240-1245</code> · <code>Onboarding.tsx:808</code></td></tr>
+      <tr><td>An Android app's requests fail</td><td>The app doesn't trust user certificates; Chrome does</td><td><code>setup.ts:1057-1059</code></td></tr>
+      <tr><td>No internet after quitting</td><td>The system proxy still points at Trawler: open Trawler and <strong>stop routing through Trawler</strong>, or the off steps per OS</td><td><code>ui/src/proxyTargets.ts:9-34</code></td></tr>
+      <tr><td>Trawler's capture service isn't answering</td><td><strong>try again</strong> / <strong>restart</strong>; Settings → Capture service → <strong>log</strong></td><td><code>ui/src/NotAnswering.tsx</code> · <code>CaptureService.tsx</code></td></tr>
+      <tr><td>Some traffic never appears</td><td>W11 Known limits: HTTP/3, pinning, WebSocket messages, bodies over 10 MB</td><td>W11 #known-limits</td></tr>
+      <tr><td>No tray icon on Linux</td><td>GNOME needs the AppIndicator extension; keep capturing is then off</td><td><code>.github/release-notes.md</code> · <code>General.tsx</code></td></tr>
+    </table>
+
+    <h2 id="drafts">Drafts — the three hardest sections</h2>
+    <p>Written in the W11 voice as <code>GUIDE.md</code> source. <code>&lt;v&gt;</code> = the version in file names; screenshots as slots.</p>
+
+    <h3 id="draft-install">Draft 1 — Install</h3>
+    <pre data-c="draft-install">## Install
+
+Download the file for your system from the
+[latest release](https://github.com/lesslucifer/Trawler/releases/latest).
+
+| System | File |
+|---|---|
+| macOS 11 or later (Apple Silicon and Intel) | `Trawler_&lt;v&gt;_universal.dmg` |
+| Windows x64 | `Trawler_&lt;v&gt;_x64-setup.exe` (or the `.msi`) |
+| Windows arm64 | `Trawler_&lt;v&gt;_arm64-setup.exe` (or the `.msi`) |
+| Linux x64 | `.AppImage`, `.deb` or `.rpm` |
+| Linux arm64 | `.AppImage`, `.deb` or `.rpm` |
+
+Trawler isn't signed with a paid certificate. The first time you open it,
+macOS and Windows warn that they don't know the publisher. Check your
+download first, then follow the steps for your system. You do this once:
+updates install from inside Trawler.
+
+### Check your download
+
+Download `SHA256SUMS` from the same release into the folder with your
+file, then run:
+
+- macOS: `shasum -a 256 -c SHA256SUMS --ignore-missing`
+- Linux: `sha256sum -c SHA256SUMS --ignore-missing`
+- Windows (PowerShell): `(Get-FileHash .\&lt;file&gt;).Hash`, then compare it
+  with that file's line in `SHA256SUMS`.
+
+Your file must say `OK`, or the two hashes must match. If they don't, the
+download is damaged or was changed: delete it and download it again.
+
+### macOS
+
+1. Open the `.dmg` and drag **Trawler** to **Applications**.
+2. Open Trawler from Applications. macOS says it can't verify the app.
+   Click **Done**.
+3. Open **System Settings → Privacy &amp; Security**. Scroll down to the
+   message about Trawler and click **Open Anyway**.
+4. Click **Open Anyway** again and enter your password.
+
+[S8]
+
+### Windows
+
+1. Run the `-setup.exe` (or the `.msi`).
+2. If **Windows protected your PC** appears, click **More info**, then
+   **Run anyway**.
+3. Finish the installer, then open Trawler from the Start menu.
+
+[S9]
+
+### Linux
+
+There's no prompt to get past.
+
+- AppImage: `chmod +x Trawler_&lt;v&gt;_amd64.AppImage`, then run it. Keep the
+  file where it is if you turn on **open Trawler at login**.
+- `.deb`: `sudo apt install ./Trawler_&lt;v&gt;_amd64.deb`
+- `.rpm`: `sudo dnf install ./Trawler-&lt;v&gt;-1.x86_64.rpm`
+
+On GNOME, the tray icon needs the AppIndicator extension.
+
+Next: [First run](#first-run).</pre>
+
+    <h3 id="draft-trust">Draft 2 — Trust the certificate</h3>
+    <pre data-c="draft-trust">## Trust the certificate
+
+To read HTTPS, Trawler decrypts it with its own certificate,
+**Trawler Proxy CA**. Trawler makes it the first time it runs; it is
+unique to your install. Your system decrypts nothing through Trawler until
+it trusts that certificate, and it sends nothing to Trawler until its proxy
+points there. The setup screen does both; it opens by itself until Trawler
+has decrypted a request, and **⋮ → set up another device** opens it later.
+
+Pick **This machine** in **which device's traffic do you want to see**.
+
+[S2]
+
+### macOS
+
+Click **set up this Mac** and enter your password once. It trusts the
+certificate for every user of this Mac and points this Mac's proxy at
+Trawler.
+
+To do it by hand, open **do it by hand** under each task:
+
+1. Click **open in Keychain Access**. Search `Trawler`, double-click
+   **Trawler Proxy CA** and set **Trust → When using this certificate →
+   Always Trust**.
+2. Close the window and enter your password.
+3. Under the second task, click **open Proxy settings**, then **Wi-Fi →
+   Details… → Proxies**. Turn on **Web proxy (HTTP)** and **Secure web
+   proxy (HTTPS)**, each with server `127.0.0.1` and port `7420`. Click
+   **OK**. On Ethernet, pick Ethernet in place of Wi-Fi.
+
+### Windows
+
+Click **set up this PC** and approve once. It trusts the certificate for
+every user of this PC and points your account's proxy at Trawler.
+
+To do it by hand:
+
+1. Click **open the certificate**, then **Install Certificate… → Next**.
+   Choose **Place all certificates in the following store → Browse… →
+   Trusted Root Certification Authorities**, click **OK → Next → Finish**,
+   and **Yes** on the warning.
+2. Under the second task, click **open Proxy settings**, then **Manual
+   proxy setup → Use a proxy server → Set up**. Turn on **Use a proxy
+   server** with `127.0.0.1` and port `7420`, and click **Save**.
+
+If nothing arrives, turn off **Automatically detect settings** and **Use
+setup script** on the same page: either one outranks the proxy. Apps that
+were already open may need a restart.
+
+### Linux
+
+Trawler can't change these for you on Linux. Each place below keeps its
+own list of trusted certificates, so add it to the ones you use. The steps
+are Ubuntu's; other systems name them differently.
+
+1. Under the first task, click **save…** and keep `trawler-ca.pem` in
+   Downloads.
+2. Firefox: **Settings → Privacy and security → Connection and software
+   security → Advanced settings → Manage certificates → Authorities →
+   Import…**, choose `trawler-ca.pem`, tick **Trust this CA to identify
+   websites** and click **OK**.
+3. Chrome or Chromium: **Settings → Privacy and security → Security →
+   Manage certificates → Local certificates → Installed by you → Trusted
+   Certificates → Import** and choose `trawler-ca.pem`.
+4. curl and the system's tools:
+   `sudo cp "$(xdg-user-dir DOWNLOAD)/trawler-ca.pem" /usr/local/share/ca-certificates/trawler-ca.crt &amp;&amp; sudo update-ca-certificates`
+5. Under the second task, click **open Network settings**, then **Proxy →
+   Network Proxy → Configuration → Manual**. Set **HTTP Proxy** and
+   **HTTPS Proxy** to `127.0.0.1`, port `7420`, and click **Save**.
+   Firefox and Chrome follow this proxy; terminal tools read `HTTPS_PROXY`
+   instead.
+
+### Check it worked
+
+Click **make a request to example.com**. When it says **example.com
+answered through Trawler.**, you're set. If it says **the request reached
+Trawler and didn't decrypt.**, restart your browser: it reads the trusted
+list when it starts.
+
+While Trawler's certificate is trusted, anyone who can read your user files
+could use its key to read your HTTPS. Remove it when you stop using
+Trawler ([Uninstall](#uninstall)).</pre>
+
+    <h3 id="draft-uninstall">Draft 3 — Uninstall</h3>
+    <pre data-c="draft-uninstall">## Uninstall
+
+Do these in order. The first two need Trawler open.
+
+1. **Stop the proxy.** On the setup screen, under the second task, click
+   **stop routing through Trawler** (macOS and Windows). On Linux, run
+   `gsettings set org.gnome.system.proxy mode 'none'`.
+   Without this, your system has no internet once Trawler is gone.
+2. **Remove the certificate** (below, per system).
+3. **Turn off open Trawler at login** in **Settings… → General**.
+4. **Quit Trawler**, then remove the app and its folders (below).
+
+Did you capture a phone, a simulator or an emulator? Undo it there too
+(below).
+
+### macOS
+
+1. On the setup screen, under the first task, click **remove the
+   certificate** and enter your password.
+2. Drag **Trawler** from Applications to the Bin.
+3. Delete `~/Library/Application Support/dev.trawler.app`.
+
+### Windows
+
+1. On the setup screen, under the first task, click **remove the
+   certificate** and approve once. If you added the certificate by hand,
+   run in PowerShell instead:
+   `certutil -user -delstore ROOT "Trawler Proxy CA"`
+2. **Settings → Apps → Installed apps → Trawler → Uninstall.**
+3. Delete `%APPDATA%\dev.trawler.app`.
+
+### Linux
+
+1. Firefox: **Manage certificates → Authorities → Trawler Proxy CA →
+   Delete or Distrust…**
+2. Chrome or Chromium: **Manage certificates → Local certificates →
+   Installed by you → Trusted Certificates → Trawler Proxy CA**, delete it.
+3. If you added it for the system's tools:
+   `sudo rm /usr/local/share/ca-certificates/trawler-ca.crt &amp;&amp; sudo update-ca-certificates --fresh`
+4. Remove the app: delete the AppImage, or `sudo apt remove trawler`,
+   or `sudo dnf remove trawler`.
+5. Delete `~/.local/share/dev.trawler.app` and `~/.config/dev.trawler.app`.
+
+### Phones and simulators
+
+| Device | Proxy off | Certificate |
+|---|---|---|
+| iPhone or iPad | **Settings → Wi-Fi → ⓘ → Configure Proxy → Off → Save** | **Settings → General → VPN &amp; Device Management → Trawler Proxy CA → Remove Profile** |
+| Android device | **Settings → Network &amp; internet → Internet → ⚙ → ✎ → Advanced options → Proxy → None → Save** | **Settings → search Trusted credentials → User → Trawler Proxy CA → Uninstall → OK** |
+| iOS Simulator | follows this Mac (step 1) | **Device → Erase All Content and Settings** (erases everything in it) |
+| Android emulator | setup screen: **stop routing the emulator** | **Trusted credentials → Trawler Proxy CA → Uninstall → OK** |</pre>
+
+    <h2 id="gaps">Gaps found while verifying</h2>
+    <p>Product gaps the guide works around today. None is fixed in this WU (no product code).</p>
+    <table data-c="gaps">
+      <tr><th>#</th><th>Gap</th><th>Evidence</th><th>Guide today</th><th>Proposed</th></tr>
+      <tr><td>G1</td><td>No <strong>remove the certificate</strong> on Windows or Linux</td><td><code>setup.rs:1337-1340</code></td><td>Windows: the button (Draft 3); Linux: written steps</td><td>W16 (Q1)</td></tr>
+      <tr><td>G2</td><td>Windows removal steps lead with the per-user store, but <strong>set up this PC</strong> writes the machine store; the user-store command finds nothing</td><td><code>setup.ts:675-686</code> vs <code>setup.rs:21,44-55</code></td><td>Gone with W16: the button replaces those steps</td><td>W16 (Q2)</td></tr>
+      <tr><td>G3</td><td>The replace-proxy dialog says "When Trawler quits it turns the proxy off"; quitting only asks</td><td><code>ui/src-tauri/src/reach.rs:58-62</code> vs <code>closeConfirm.ts:9-18</code></td><td>Says quitting asks</td><td>W17 (Q2)</td></tr>
+      <tr><td>G4</td><td>The keep-capturing dialog says "stays in the menu bar" on Windows and Linux too</td><td><code>KeepCapturingDialog.tsx:6</code></td><td>"menu-bar or tray icon"</td><td>W17 (Q2)</td></tr>
+      <tr><td>G5</td><td>The app writes no <code>open Trawler at login</code> cleanup on uninstall: Linux's autostart file and Windows' Run value can outlive the app</td><td><code>login_item.rs:147-148,290-297</code></td><td>Uninstall step 3: turn it off first</td><td>kept as a guide step</td></tr>
+      <tr><td>G6</td><td>Linux steps are Ubuntu/GNOME only; no Fedora (<code>trust anchor</code>) or KDE steps on the setup screen</td><td><code>setup.ts:559,885-940</code></td><td>"other systems name them differently"</td><td>follow-up, app + guide together (Q3)</td></tr>
+    </table>
+
+    <h2 id="owner-questions">Owner questions</h2>
+    <table data-c="owner-questions">
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th><th>Ruling</th></tr>
+      <tr><td>Q1</td><td>Certificate removal on Windows/Linux for 0.1.0 (G1)</td><td>(a) written steps only; a removal button is a post-0.1.0 follow-up · (b) build a Windows <strong>remove the certificate</strong> (elevated <code>certutil -delstore</code>) before the final</td><td><strong>(a)</strong>: the steps are already on the setup screen and in the guide; Linux has no single store to remove from anyway</td><td><strong>(b)</strong>: new WU <span class="badge id">E-PRORELEASE.W16</span>, a Windows <strong>remove the certificate</strong> button (elevated <code>certutil -delstore</code>, machine ROOT store) before the final</td></tr>
+      <tr><td>Q2</td><td>Three copy bugs (G2 step order, G3 quit promise, G4 "menu bar" off macOS)</td><td>(a) a small fix WU before the final rc · (b) fold into W4 · (c) leave, the guide words around them</td><td><strong>(a)</strong>: text-only fixes with their unit tests; W4 stays about About/Help; the guide then matches the app word for word</td><td><strong>(a)</strong>: G2 goes to W16 (its button replaces those steps); G3 and G4 to new WU <span class="badge id">E-PRORELEASE.W17</span>, before the final rc</td></tr>
+      <tr><td>Q3</td><td>Linux coverage (G6)</td><td>(a) Ubuntu/GNOME steps, one line for other systems · (b) add Fedora and KDE steps to the guide</td><td><strong>(a)</strong>: the guide never says more than the app shows; other distros as a follow-up for app + guide together</td><td><strong>(a)</strong></td></tr>
+      <tr><td>Q4</td><td>Screenshots beyond S1–S9</td><td>(a) add S10 (⋮ menu) and S11 (Settings → General) to the W5 e2e script · (b) text only</td><td><strong>(a)</strong>: both are menus a reader looks for; e2e keeps them current</td><td><strong>(a)</strong></td></tr>
+      <tr><td>Q5</td><td>W4 changes labels the guide quotes (About window, version and "check for updates automatically" in Settings → General)</td><td>(a) W6 starts after W4 merges · (b) W6 writes now, a later pass patches</td><td><strong>(a)</strong>: one pass, the label check runs once against the final UI</td><td><strong>(a)</strong>: W6 starts after W4, W16 and W17 merge (the guide then describes the real behaviour)</td></tr>
+    </table>
+
+    <h2 id="unverified">Not verified here</h2>
+    <table data-c="unverified">
+      <tr><th>Claim</th><th>Why not</th><th>Who checks</th></tr>
+      <tr><td>macOS first-open wording ("can't verify", <strong>Done</strong>, second <strong>Open Anyway</strong> + password) on macOS 15/26</td><td>OS dialog, not in code</td><td>S8 on the last rc (W11 Q8)</td></tr>
+      <tr><td>SmartScreen wording; a browser download warning; whether the installer asks for admin</td><td>OS / browser behaviour</td><td>S9 on the last rc</td></tr>
+      <tr><td>Windows and Linux folder paths (<code>%APPDATA%\dev.trawler.app</code>, <code>~/.local/share/…</code>, <code>~/.config/…</code>) and WebView cache folders (<code>~/Library/WebKit</code>, <code>~/Library/Caches</code>, <code>%LOCALAPPDATA%</code>, <code>~/.cache</code>)</td><td>Tauri's <code>app_data_dir</code>/<code>app_config_dir</code> defaults; only the macOS path has a test (<code>core.rs:307-312</code>); cache folders are the WebView's own</td><td>W6 on real installs (the hand-check matrix)</td></tr>
+      <tr><td>The .deb/.rpm package name <code>trawler</code> for <code>apt remove</code> / <code>dnf remove</code></td><td>Derived by the Tauri bundler</td><td>W6: <code>dpkg -I</code> on the built .deb</td></tr>
+      <tr><td>Whether removing the app clears the macOS login item and the Windows Run value</td><td>OS behaviour</td><td>hand-check matrix</td></tr>
+      <tr><td>.deb/.rpm updates ask for a password via <code>pkexec</code></td><td>Updater plugin, not Trawler's code (DEC-82)</td><td>last rc update test</td></tr>
+      <tr><td>Whether the elevated <code>certutil -addstore</code> shows a Windows security warning</td><td>OS behaviour</td><td>hand-check matrix</td></tr>
+      <tr><td>OS-supplied menu labels (About, Hide, Close Window…); the setup recordings' content</td><td>Supplied by the OS / binary media</td><td>W6 reads them off a running build</td></tr>
+    </table>
+
+    <h2 id="sign-off">Sign-off</h2>
+    <table data-c="sign-off">
+      <tr><th>Round</th><th>Shown</th><th>Owner returns</th><th>State</th></tr>
+      <tr><td>R1</td><td>this doc</td><td>Q1–Q5 (asked in the terminal by the router)</td><td>answered</td></tr>
+      <tr><td>R2</td><td>rulings applied</td><td>sign-off</td><td>signed: W12 (owner rulings Q1-Q5, recorded 2026-11-06 in the terminal)</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
