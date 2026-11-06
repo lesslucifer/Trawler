@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { readKeepCapturing, readTrayAvailable, refusalWords, writeKeepCapturing, type KeepCapturing } from "./generalPrefs";
 import { splitProxyAddr } from "./setup";
+import { takeOnEvery } from "./shellEvent";
 import { dismissNotice, noticeDismissed, NOTICE_KEY, type NoticeKey } from "./noticePreference";
 
 // Quit-time proxy check (E-UISETUP.W5, re-ruled by E-ONBRVP.W11). Keys off the
@@ -140,7 +141,6 @@ export function useProxyCloseConfirm(
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
-    let unlistenQuit: (() => void) | undefined;
     let disposed = false;
     const { host, port } = splitProxyAddr(proxyAddr);
 
@@ -222,21 +222,12 @@ export function useProxyCloseConfirm(
       })
       .then((u) => (disposed ? u() : (unlisten = u)));
 
-    // The flag is taken only once the listener stands: a request that lands in
-    // between would otherwise be set, announced to nobody, and never taken.
-    (deps.listen?.(QUIT_REQUEST_EVENT, () => void takeQuitRequest()) ?? Promise.resolve(undefined))
-      .then((u) => (disposed ? u?.() : (unlistenQuit = u)))
-      .catch((err: unknown) => {
-        console.error("listening for quit requests failed:", err);
-      })
-      .then(() => {
-        if (!disposed) void takeQuitRequest();
-      });
+    const stopQuitRequests = takeOnEvery(deps.listen, QUIT_REQUEST_EVENT, () => void takeQuitRequest());
 
     return () => {
       disposed = true;
       unlisten?.();
-      unlistenQuit?.();
+      stopQuitRequests();
     };
   }, [deps, proxyAddr, readFacts]);
 
