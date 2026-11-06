@@ -9,8 +9,8 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-PRORELEASE — plan: the first official public release (v0.1.0)</h1>
-      <p>An audit of everything a professional public release needs, by area, and the Working Units that close each gap. Plan only: no WU starts before the owner answers the questions below.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-PRORELEASE</span> · branch <code>epic/prorelease</code> off <code>main</code> 6a1ab80d</div>
+      <p>An audit of everything a professional public release needs, by area, and the Working Units that close each gap. Plan only: owner rulings recorded (Q1 MIT, Q2 Vu Luu, Q7 no paid signing); Q3 logo still open.</p>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-PRORELEASE</span> · branch <code>epic/prorelease</code> off <code>main</code> 6a1ab80d</div>
     </div>
   </header>
   <main>
@@ -33,8 +33,8 @@
     <h3 id="audit-brand">A. Branding</h3>
     <table data-c="audit-brand">
       <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
-      <tr><td>App icon set</td><td>⚠️</td><td><code>ui/src-tauri/icons/</code>: 32, 128, 256, 512 PNG, <code>icon.icns</code>, <code>icon.ico</code>; listed in <code>tauri.conf.json</code> <code>bundle.icon</code></td><td>Temporary art; no source file, not reproducible</td><td>W3</td></tr>
-      <tr><td>Tray icons</td><td>⚠️</td><td><code>tray-running.png</code>/<code>tray-stopped.png</code> 36×36, <code>include_bytes!</code> at <code>ui/src-tauri/src/tray.rs:18-19</code>, <code>icon_as_template(true)</code> <code>tray.rs:138-141</code></td><td>Must stay monochrome alpha glyphs (template); redraw from the brand mark</td><td>W3</td></tr>
+      <tr><td>App icon set</td><td>⚠️</td><td><code>ui/src-tauri/icons/</code>: <code>32x32</code>, <code>128x128</code>, <code>128x128@2x</code> (256), <code>icon.png</code> (512), <code>icon.icns</code>, <code>icon.ico</code>; listed in <code>tauri.conf.json</code> <code>bundle.icon</code></td><td>Temporary art; no source file, not reproducible</td><td>W3</td></tr>
+      <tr><td>Tray icons</td><td>⚠️</td><td><code>tray-running.png</code>/<code>tray-stopped.png</code> 36×36, <code>include_bytes!</code> at <code>ui/src-tauri/src/tray.rs:18-19</code>, <code>icon_as_template(true)</code> <code>tray.rs:138-141</code></td><td>Template applies on macOS only; Windows/Linux get the same black glyph (unreadable on a dark taskbar). New: macOS template + coloured Windows/Linux states (<a href="#brand-kit">Brand kit</a>)</td><td>W3</td></tr>
       <tr><td>Installer art</td><td>❌</td><td><code>tauri.conf.json</code> has no <code>macOS.dmg</code>, <code>windows.nsis</code>, <code>windows.wix</code></td><td>DMG background + layout, NSIS header/sidebar, WiX banner/dialog</td><td>W3</td></tr>
       <tr><td>Logo in UI / docs</td><td>❌</td><td>No SVG/image in <code>ui/src</code>, no <code>ui/public</code>, no favicon in <code>ui/index.html</code></td><td>Logo in About, onboarding header, README</td><td>W3 · W4 · W5</td></tr>
       <tr><td>Product name / identifier</td><td>✅</td><td><code>productName: "Trawler"</code>, <code>identifier: "dev.trawler.app"</code>; window titles "Trawler"/"Settings"</td><td>Identifier must never change (updater, CA dir, login item)</td><td>—</td></tr>
@@ -76,12 +76,12 @@
     <h3 id="audit-trust">E. Distribution trust</h3>
     <table data-c="audit-trust">
       <tr><th>Platform</th><th>Today</th><th>User sees</th><th>Option to make it trusted</th><th>Owner needs</th></tr>
-      <tr><td>macOS</td><td>Ad-hoc (<code>signingIdentity "-"</code>, <code>codesign --verify --deep --strict</code>, <code>xtask/src/package.rs:311-326</code>; DEC-81 rule 4)</td><td>"cannot verify" → System Settings → Privacy &amp; Security → Open Anyway (macOS 15 removed the Ctrl-click bypass)</td><td>Developer ID Application cert + notarization (<code>notarytool</code>, stapled)</td><td>Apple Developer Program membership (paid yearly), a Developer ID cert exported as .p12, an App Store Connect API key; secrets set by the owner</td></tr>
-      <tr><td>Windows</td><td>Unsigned (DEC-81 rule 4)</td><td>SmartScreen "Windows protected your PC" → More info → Run anyway</td><td>(a) Azure Artifact Signing (subscription, identity validation, region-limited for individuals) · (b) OV certificate on an HSM/cloud key (yearly) · (c) SignPath Foundation free OSS signing (application, their CI integration)</td><td>One of the three; SmartScreen reputation still builds over downloads for OV</td></tr>
+      <tr><td>macOS</td><td>Ad-hoc (<code>signingIdentity "-"</code>, <code>codesign --verify --deep --strict</code>, <code>xtask/src/package.rs:311-326</code>; DEC-81 rule 4)</td><td>"cannot verify" → System Settings → Privacy &amp; Security → Open Anyway (macOS 15 removed the Ctrl-click bypass)</td><td>Developer ID + notarization — not taken (Q7)</td><td>—</td></tr>
+      <tr><td>Windows</td><td>Unsigned (DEC-81 rule 4)</td><td>SmartScreen "Windows protected your PC" → More info → Run anyway</td><td>(a) Azure Artifact Signing · (b) OV certificate · (c) SignPath Foundation OSS — not taken (Q7)</td><td>—</td></tr>
       <tr><td>Linux</td><td>AppImage · deb · rpm (finals only), unsigned packages</td><td>No prompt</td><td>apt/rpm repo or Flathub — out of scope for 0.1.0</td><td>—</td></tr>
       <tr><td>Updates</td><td>✅ minisign key, <code>requireSignedVersion</code> (DEC-82); only <code>--sign-only</code> sees the key (DEC-86)</td><td>Native ask dialog</td><td>Already trusted end to end</td><td>—</td></tr>
     </table>
-    <div class="callout">Unsigned stays legitimate for 0.1.0 if the README says it plainly: why the prompt appears, the exact way past it per OS, and how to verify the download (checksums, W7). The paid options are Q7.</div>
+    <div class="callout"><strong>Owner ruling (Q7): no paid signing.</strong> 0.1.0 ships ad-hoc (macOS) / unsigned (Windows); DEC-81 rule 4 stands. W5 and W6 document the consequence instead: why the prompt appears, the exact steps past it per OS (table above, with screenshots), and how to verify the download against <code>SHA256SUMS</code> (W7). Paid signing is a post-0.1.0 follow-up.</div>
 
     <h3 id="audit-process">F. Release process</h3>
     <table data-c="audit-process">
@@ -118,9 +118,127 @@
     <table data-c="logo-pipeline">
       <tr><th>Step</th><th>How (reproducible)</th></tr>
       <tr><td>Source</td><td><code>ui/src-tauri/icons/source/icon.svg</code> (1024 viewBox, full-bleed squircle) + <code>tray.svg</code> (monochrome, alpha only) + installer-art SVGs, all hand-authored text SVG in git</td></tr>
-      <tr><td>Generate</td><td><code>cargo xtask icons</code> → <code>pnpm tauri icon source/icon.svg -o &lt;tmp&gt;</code> (Tauri 2 CLI takes SVG), copies the five files <code>bundle.icon</code> lists, renders tray PNGs at 36×36 via <code>tauri icon --png 36</code>, installer BMP/PNG at their fixed sizes</td></tr>
+      <tr><td>Generate</td><td><code>cargo xtask icons</code> → <code>pnpm tauri icon source/icon.svg -o &lt;tmp&gt;</code> (Tauri 2 CLI takes SVG), copies the five files <code>bundle.icon</code> lists, renders the tray pairs and installer BMP/PNG at the sizes in <a href="#brand-kit">Brand kit</a></td></tr>
       <tr><td>Prove</td><td>A unit test: every generated file matches the dimensions/format its consumer requires (icns, ico layers, BMP for NSIS/WiX), and a recorded source hash equals the current SVG's — a source edited without regenerating is red</td></tr>
       <tr><td>Use</td><td>Favicon + About + onboarding header import the same SVG; README uses a PNG export</td></tr>
+    </table>
+
+    <h3 id="logo-examples">Examples — drafts, not final art</h3>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <symbol id="icon-a" viewBox="0 0 1024 1024">
+          <rect x="100" y="100" width="824" height="824" rx="185" fill="#2b2622" stroke="#3d3631" stroke-width="6"/>
+          <g fill="none" stroke-linecap="round">
+            <path d="M300 300 Q250 512 300 724" stroke="#f7f5f0" stroke-width="18"/>
+            <g stroke="#f7f5f0" stroke-width="18">
+              <path d="M300 300 L740 512"/><path d="M300 406 L740 512"/><path d="M300 512 L740 512"/><path d="M300 618 L740 512"/><path d="M300 724 L740 512"/>
+            </g>
+            <g stroke="#aea69c" stroke-width="10">
+              <path d="M410 353 Q390 512 410 671"/><path d="M520 406 Q505 512 520 618"/><path d="M630 459 Q622 512 630 565"/>
+            </g>
+            <path d="M788 512 L830 512" stroke="#dad2c1" stroke-width="14"/>
+          </g>
+          <circle cx="762" cy="512" r="28" fill="#f7f5f0"/>
+        </symbol>
+        <symbol id="icon-b" viewBox="0 0 1024 1024">
+          <rect x="100" y="100" width="824" height="824" rx="185" fill="#2b2622" stroke="#3d3631" stroke-width="6"/>
+          <path d="M180 560 L844 560" stroke="#aea69c" stroke-width="10" stroke-linecap="round"/>
+          <g fill="#f7f5f0">
+            <polygon points="330,290 740,290 728,350 318,350"/>
+            <polygon points="520,350 600,350 520,740 440,740"/>
+            <polygon points="400,724 568,724 564,744 396,744"/>
+          </g>
+        </symbol>
+        <symbol id="icon-c" viewBox="0 0 1024 1024">
+          <rect x="100" y="100" width="824" height="824" rx="185" fill="#2b2622" stroke="#3d3631" stroke-width="6"/>
+          <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M400 330 C340 330 360 420 360 470 C360 500 340 512 300 512 C340 512 360 524 360 554 C360 604 340 694 400 694" stroke="#f7f5f0" stroke-width="34"/>
+            <path d="M624 330 C684 330 664 420 664 470 C664 500 684 512 724 512 C684 512 664 524 664 554 C664 604 684 694 624 694" stroke="#f7f5f0" stroke-width="34"/>
+            <path d="M512 210 V450 Q512 520 462 520 Q430 520 430 486" stroke="#dad2c1" stroke-width="26"/>
+          </g>
+          <circle cx="512" cy="610" r="36" fill="#4cc38a"/>
+        </symbol>
+        <symbol id="tray-a-run" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3 L12.5 8 L1.5 13 Z"/><circle cx="13.6" cy="8" r="1.6"/></symbol>
+        <symbol id="tray-a-stop" viewBox="0 0 16 16"><path d="M2 3.8 L12 8 L2 12.2 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="13.6" cy="8" r="1.4" fill="none" stroke="currentColor" stroke-width="1.1"/></symbol>
+        <symbol id="tray-b-run" viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14.2,2 13.8,4.4 3.6,4.4"/><polygon points="8.4,4.4 10.6,4.4 8,14 5.8,14"/><rect x="0.5" y="8.6" width="15" height="1.3"/></symbol>
+        <symbol id="tray-b-stop" viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14.2,2 13.8,4.4 3.6,4.4"/><polygon points="8.4,4.4 10.6,4.4 8,14 5.8,14"/></symbol>
+        <symbol id="tray-c-run" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 2.5 C3.5 2.5 4 5 4 6.5 C4 7.5 3.5 8 2.5 8 C3.5 8 4 8.5 4 9.5 C4 11 3.5 13.5 5 13.5"/><path d="M11 2.5 C12.5 2.5 12 5 12 6.5 C12 7.5 12.5 8 13.5 8 C12.5 8 12 8.5 12 9.5 C12 11 12.5 13.5 11 13.5"/></g><circle cx="8" cy="8" r="2.1" style="fill:var(--dot,currentColor)"/></symbol>
+        <symbol id="tray-c-stop" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 2.5 C3.5 2.5 4 5 4 6.5 C4 7.5 3.5 8 2.5 8 C3.5 8 4 8.5 4 9.5 C4 11 3.5 13.5 5 13.5"/><path d="M11 2.5 C12.5 2.5 12 5 12 6.5 C12 7.5 12.5 8 13.5 8 C12.5 8 12 8.5 12 9.5 C12 11 12.5 13.5 11 13.5"/><circle cx="8" cy="8" r="1.7" stroke-width="1.2"/></g></symbol>
+      </defs>
+    </svg>
+    <table data-c="logo-examples">
+      <tr><th>Dir.</th><th>App icon (1024 source, shown at 128)</th><th>macOS tray — template, running · stopped (16 and 32 px, on light and dark menu bar)</th><th>Windows / Linux tray — coloured, running · stopped (16 and 32 px)</th><th>Wordmark lockup (dark · light)</th></tr>
+      <tr>
+        <td><strong>A</strong><br>net</td>
+        <td><svg width="128" height="128"><use href="#icon-a"/></svg></td>
+        <td>
+          <div style="background:#ececec;color:#000;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-a-run"/></svg><svg width="16" height="16"><use href="#tray-a-stop"/></svg><svg width="32" height="32"><use href="#tray-a-run"/></svg><svg width="32" height="32"><use href="#tray-a-stop"/></svg></div><br>
+          <div style="background:#1e1e1e;color:#fff;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-a-run"/></svg><svg width="16" height="16"><use href="#tray-a-stop"/></svg><svg width="32" height="32"><use href="#tray-a-run"/></svg><svg width="32" height="32"><use href="#tray-a-stop"/></svg></div>
+        </td>
+        <td>
+          <div style="background:#202020;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16" style="color:#4cc38a"><use href="#tray-a-run"/></svg><svg width="16" height="16" style="color:#aea69c"><use href="#tray-a-stop"/></svg><svg width="32" height="32" style="color:#4cc38a"><use href="#tray-a-run"/></svg><svg width="32" height="32" style="color:#aea69c"><use href="#tray-a-stop"/></svg></div><br>
+          <div style="background:#f3f3f3;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16" style="color:#1f8f5b"><use href="#tray-a-run"/></svg><svg width="16" height="16" style="color:#6b645c"><use href="#tray-a-stop"/></svg><svg width="32" height="32" style="color:#1f8f5b"><use href="#tray-a-run"/></svg><svg width="32" height="32" style="color:#6b645c"><use href="#tray-a-stop"/></svg></div>
+        </td>
+        <td>
+          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#2b2622"/><use href="#icon-a" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#f7f5f0">Trawler</text></svg><br>
+          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#f7f5f0"/><use href="#icon-a" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#2b2622">Trawler</text></svg>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>B</strong><br>serif T</td>
+        <td><svg width="128" height="128"><use href="#icon-b"/></svg></td>
+        <td>
+          <div style="background:#ececec;color:#000;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-b-run"/></svg><svg width="16" height="16"><use href="#tray-b-stop"/></svg><svg width="32" height="32"><use href="#tray-b-run"/></svg><svg width="32" height="32"><use href="#tray-b-stop"/></svg></div><br>
+          <div style="background:#1e1e1e;color:#fff;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-b-run"/></svg><svg width="16" height="16"><use href="#tray-b-stop"/></svg><svg width="32" height="32"><use href="#tray-b-run"/></svg><svg width="32" height="32"><use href="#tray-b-stop"/></svg></div>
+        </td>
+        <td>
+          <div style="background:#202020;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16" style="color:#4cc38a"><use href="#tray-b-run"/></svg><svg width="16" height="16" style="color:#aea69c"><use href="#tray-b-stop"/></svg><svg width="32" height="32" style="color:#4cc38a"><use href="#tray-b-run"/></svg><svg width="32" height="32" style="color:#aea69c"><use href="#tray-b-stop"/></svg></div><br>
+          <div style="background:#f3f3f3;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16" style="color:#1f8f5b"><use href="#tray-b-run"/></svg><svg width="16" height="16" style="color:#6b645c"><use href="#tray-b-stop"/></svg><svg width="32" height="32" style="color:#1f8f5b"><use href="#tray-b-run"/></svg><svg width="32" height="32" style="color:#6b645c"><use href="#tray-b-stop"/></svg></div>
+        </td>
+        <td>
+          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#2b2622"/><use href="#icon-b" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#f7f5f0">Trawler</text></svg><br>
+          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#f7f5f0"/><use href="#icon-b" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#2b2622">Trawler</text></svg>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>C</strong><br>hook + packet</td>
+        <td><svg width="128" height="128"><use href="#icon-c"/></svg></td>
+        <td>
+          <div style="background:#ececec;color:#000;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32"><use href="#tray-c-stop"/></svg></div><br>
+          <div style="background:#1e1e1e;color:#fff;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32"><use href="#tray-c-stop"/></svg></div>
+        </td>
+        <td>
+          <div style="background:#202020;color:#dad2c1;--dot:#4cc38a;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16" style="color:#aea69c"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32" style="color:#aea69c"><use href="#tray-c-stop"/></svg></div><br>
+          <div style="background:#f3f3f3;color:#2b2622;--dot:#1f8f5b;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16" style="color:#6b645c"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32" style="color:#6b645c"><use href="#tray-c-stop"/></svg></div>
+        </td>
+        <td>
+          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#2b2622"/><use href="#icon-c" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#f7f5f0">Trawler</text></svg><br>
+          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#f7f5f0"/><use href="#icon-c" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#2b2622">Trawler</text></svg>
+        </td>
+      </tr>
+    </table>
+    <div class="callout warn">Drafts to choose a direction, not shipping art: hand-drawn SVG geometry, the wordmark uses live text (Georgia if Instrument Serif is not installed; the final converts it to outlines). The tray glyphs are redrawn for 16 px rather than shrunk from the 1024 icon — C drops its hook at tray size. Swatch backgrounds mimic a light/dark macOS menu bar and a dark/light Windows taskbar.</div>
+
+    <h2 id="brand-kit">Brand kit — what you prepare, what is generated</h2>
+    <p>Minimum from you: pick A, B or C (or hand over your own master SVG). W3 then draws everything in the first table from it; you approve the rendered set at real size on each OS before it merges.</p>
+    <table data-c="brand-kit-supply">
+      <tr><th>#</th><th>Deliverable</th><th>Format · size</th><th>Platform rules</th><th>You</th></tr>
+      <tr><td>1</td><td>Master app icon</td><td>SVG, 1024×1024 viewBox (or PNG 1024×1024 RGBA, sRGB)</td><td>macOS grid: body 824×824 centred (100 px margin), continuous corner ≈185 px, transparent outside, no baked shadow. Windows/Linux reuse it as is (padding is fine there)</td><td>supply or approve</td></tr>
+      <tr><td>2</td><td>Small-size variant (only if #1 breaks at ≤32 px)</td><td>SVG, 32×32 viewBox, whole-pixel strokes</td><td>Feeds the 16/24/32 layers of <code>.ico</code> and <code>.icns</code></td><td>approve</td></tr>
+      <tr><td>3</td><td>macOS tray, running + stopped</td><td>SVG, 16×16 viewBox (rendered 18×18 @1x, 36×36 @2x)</td><td>Template image: black + alpha only, no colour — macOS tints it. States differ by <strong>shape</strong>, never colour</td><td>approve</td></tr>
+      <tr><td>4</td><td>Windows / Linux tray, running + stopped</td><td>SVG, 16×16 viewBox (rendered 16, 20, 24, 32 px for Windows 100–200 % DPI; 22, 24, 32 px for Linux AppIndicator)</td><td>Coloured allowed; must read on a dark <em>and</em> a light taskbar; running = accent, stopped = muted. Today <code>tray.rs:139</code> sets template on every OS — W3 sets it only on macOS</td><td>approve</td></tr>
+      <tr><td>5</td><td>Wordmark lockup</td><td>SVG, mark + "Trawler" in Instrument Serif italic (OFL-1.1) as outlines; dark-on-light and light-on-dark</td><td>README header (<code>&lt;picture&gt;</code> light/dark), About window, onboarding header</td><td>approve</td></tr>
+      <tr><td>6</td><td>DMG background</td><td>PNG 660×400 @1x + 1320×800 @2x</td><td>Leave the icon spot (left) and Applications link spot (right) clear; Tauri <code>bundle.macOS.dmg</code>: <code>background</code>, <code>windowSize</code>, <code>appPosition</code>, <code>applicationFolderPosition</code></td><td>approve</td></tr>
+      <tr><td>7</td><td>NSIS (<code>.exe</code>) art</td><td>BMP 24-bit: header 150×57, sidebar 164×314</td><td><code>bundle.windows.nsis.headerImage</code> / <code>sidebarImage</code>; sidebar shows on welcome + finish pages</td><td>approve</td></tr>
+      <tr><td>8</td><td>WiX (<code>.msi</code>) art</td><td>BMP 24-bit: banner 493×58, dialog 493×312</td><td><code>bundle.windows.wix.bannerPath</code> / <code>dialogImagePath</code>; installer text is black over them — keep the text area (banner left, dialog right of 164 px) light</td><td>approve</td></tr>
+      <tr><td>9</td><td>GitHub social preview</td><td>PNG 1280×640</td><td>Uploaded by you in repo settings (Q11)</td><td>upload</td></tr>
+    </table>
+    <table data-c="brand-kit-generated">
+      <tr><th>Generated by <code>cargo xtask icons</code> (W3)</th><th>From</th><th>Consumer</th></tr>
+      <tr><td><code>32x32.png</code>, <code>128x128.png</code>, <code>128x128@2x.png</code>, <code>icon.png</code> (512), <code>icon.icns</code> (16–1024 incl. @2x), <code>icon.ico</code> (16, 24, 32, 48, 64, 256)</td><td>#1 (+ #2)</td><td><code>tauri.conf.json</code> <code>bundle.icon</code>: Dock, Finder, taskbar, Start menu, <code>.deb</code>/<code>.rpm</code>/AppImage desktop entry</td></tr>
+      <tr><td><code>tray-running.png</code>, <code>tray-stopped.png</code> (macOS template) + Windows/Linux coloured pair</td><td>#3, #4</td><td><code>ui/src-tauri/src/tray.rs</code></td></tr>
+      <tr><td>DMG background, NSIS BMPs, WiX BMPs</td><td>#1 + #5 + palette</td><td><code>tauri.conf.json</code> <code>bundle.macOS.dmg</code>, <code>bundle.windows.nsis</code>, <code>bundle.windows.wix</code></td></tr>
+      <tr><td><code>favicon.svg</code> + 32 px PNG; README logo PNGs</td><td>#2, #5</td><td><code>ui/index.html</code>, README, About</td></tr>
     </table>
 
     <h2 id="use-cases">Use-case requirements</h2>
@@ -147,6 +265,7 @@
     <h2 id="non-goals">Non-goals</h2>
     <div data-item="non-goals">
       <ul>
+        <li>Paid code signing for 0.1.0 (Q7 = none: ad-hoc macOS, unsigned Windows; follow-up after 0.1.0).</li>
         <li>Buying certificates, setting secrets, setting repo settings, publishing or tagging — owner actions only.</li>
         <li>Linux package repositories, Flathub, Homebrew cask, winget — follow-ups after 0.1.0.</li>
         <li>New product features; the README describes what ships.</li>
@@ -164,7 +283,6 @@ flowchart LR
   Q4([Q4 md files]) --> W5
   Q5([Q5 auto-check]) --> W4
   Q6([Q6 guide home]) --> W6
-  Q7([Q7 signing]) --> W9
   W1[W1 licence + metadata] --> W2[W2 third-party notice]
   W2 --> W4[W4 About + Help]
   W3[W3 brand assets] --> W4
@@ -172,33 +290,31 @@ flowchart LR
   W5 --> W6[W6 user guide]
   W7[W7 release process + matrix]
   W8[W8 updater F4 + F7]
-  W9[W9 signing, if bought]
   W4 --> RC([last rc: matrix run])
   W6 --> RC
   W7 --> RC
   W8 --> RC
       </pre>
-      <div class="caption">Three parallel starts once their questions are answered: W1, W3, W7/W8 (separate worktrees). W9 exists only if Q7 buys signing.</div>
+      <div class="caption">Parallel starts: W1 and W7/W8 now (Q1, Q2, Q8, Q9 answered); W3 once Q3 picks a logo (separate worktrees). W9 (paid signing) dropped by Q7.</div>
     </div>
 
     <h2 id="wu-summaries">WU summaries</h2>
     <div data-item="wu-summaries">
       <table data-c="wu-table">
         <tr><th>WU</th><th>Owner Q</th><th>Parallel</th><th>Independent router review</th><th>Design review</th></tr>
-        <tr><td>W1</td><td>Q1 Q2 Q10</td><td>start</td><td>yes (<code>ui/src-tauri</code>)</td><td>—</td></tr>
+        <tr><td>W1</td><td>Q1 ✅ Q2 ✅ Q10 ✅</td><td>start</td><td>yes (<code>ui/src-tauri</code>)</td><td>—</td></tr>
         <tr><td>W2</td><td>—</td><td>after W1</td><td>yes (<code>ui/src-tauri</code> resources)</td><td>—</td></tr>
-        <tr><td>W3</td><td>Q3</td><td>start</td><td>yes (<code>ui/src-tauri</code> icons, conf)</td><td>—</td></tr>
-        <tr><td>W4</td><td>Q5</td><td>after W2, W3</td><td>yes (<code>ui/src-tauri</code> menu, opener capability)</td><td>yes (renders <code>ui/src</code>)</td></tr>
-        <tr><td>W5</td><td>Q4</td><td>after W3</td><td>yes (<code>.github/</code> templates)</td><td>—</td></tr>
-        <tr><td>W6</td><td>Q6</td><td>after W5</td><td>—</td><td>—</td></tr>
-        <tr><td>W7</td><td>Q8 Q9</td><td>start</td><td>yes (<code>.github/workflows</code>, <code>release-notes.md</code>)</td><td>—</td></tr>
-        <tr><td>W8</td><td>Q8</td><td>start</td><td>yes (<code>ui/src-tauri/src/update.rs</code>)</td><td>—</td></tr>
-        <tr><td>W9</td><td>Q7</td><td>after W7</td><td>yes (<code>.github/workflows</code>, <code>xtask/src/package.rs</code>)</td><td>—</td></tr>
+        <tr><td>W3</td><td>Q3 ⏳</td><td>start</td><td>yes (<code>ui/src-tauri</code> icons, conf)</td><td>—</td></tr>
+        <tr><td>W4</td><td>Q5 ✅</td><td>after W2, W3</td><td>yes (<code>ui/src-tauri</code> menu, opener capability)</td><td>yes (renders <code>ui/src</code>)</td></tr>
+        <tr><td>W5</td><td>Q4 ✅</td><td>after W3</td><td>yes (<code>.github/</code> templates)</td><td>—</td></tr>
+        <tr><td>W6</td><td>Q6 ✅</td><td>after W5</td><td>—</td><td>—</td></tr>
+        <tr><td>W7</td><td>Q8 ✅ Q9 ✅</td><td>start</td><td>yes (<code>.github/workflows</code>, <code>release-notes.md</code>)</td><td>—</td></tr>
+        <tr><td>W8</td><td>Q8 ✅</td><td>start</td><td>yes (<code>ui/src-tauri/src/update.rs</code>)</td><td>—</td></tr>
       </table>
 
       <div data-wu="E-PRORELEASE.W1">
         <h3 id="w1">W1 — licence and bundle metadata</h3>
-        <p data-item="wu-summary">Add the chosen LICENSE file(s); every <code>license</code> field (both crates, <code>tauri.conf.json</code> <code>bundle.license</code>/<code>licenseFile</code>) agrees with it; set <code>publisher</code>, <code>copyright</code>, <code>homepage</code>, <code>longDescription</code>, <code>linux.deb.section</code>, <code>authors</code>; <code>publish = false</code> on <code>trawler</code> and <code>trawler-ui</code>.</p>
+        <p data-item="wu-summary">Add an MIT <code>LICENSE</code> (Copyright (c) 2026 Vu Luu); every <code>license</code> field (both crates, <code>tauri.conf.json</code> <code>bundle.license</code>/<code>licenseFile</code>) agrees with it; set <code>publisher</code> and <code>copyright</code> to "Vu Luu", <code>homepage</code>, <code>longDescription</code>, <code>linux.deb.section</code>, <code>authors</code>; <code>publish = false</code> on <code>trawler</code> and <code>trawler-ui</code>.</p>
         <p data-item="wu-maps-to">UC-INSTALL; new DEC (licence and metadata).</p>
         <p data-item="wu-expected">Unit test in <code>xtask/src/package.rs</code> beside the one-version check: one licence everywhere (crates, conf, LICENSE file present) and the metadata fields non-empty — red on today's tree. Integration: the packaged <code>.dmg</code>'s <code>Info.plist</code> carries the copyright (<code>xtask/tests/package_bundle.rs</code>).</p>
         <p data-item="wu-deps">Q1, Q2</p>
@@ -214,7 +330,7 @@ flowchart LR
 
       <div data-wu="E-PRORELEASE.W3">
         <h3 id="w3">W3 — brand assets from one source</h3>
-        <p data-item="wu-summary">The chosen mark as SVG sources; <code>cargo xtask icons</code> regenerates the app icon set, tray template glyphs, DMG background/layout, NSIS header/sidebar, WiX banner/dialog and the favicon; <code>tauri.conf.json</code> references the installer art.</p>
+        <p data-item="wu-summary">The chosen mark as SVG sources (<a href="#brand-kit">Brand kit</a> #1–#8); <code>cargo xtask icons</code> regenerates the app icon set, the macOS template and Windows/Linux coloured tray pairs (template set on macOS only), DMG background/layout, NSIS header/sidebar, WiX banner/dialog and the favicon; <code>tauri.conf.json</code> references the installer art.</p>
         <p data-item="wu-maps-to">UC-INSTALL; new DEC (one source, generated icon set).</p>
         <p data-item="wu-expected">Unit: generated files have the sizes/formats their consumers require and the recorded source hash matches the SVG. Integration: the packaged bundle's icon is the generated one (hash), the tray loads both glyphs.</p>
         <p data-item="wu-deps">Q3</p>
@@ -230,7 +346,7 @@ flowchart LR
 
       <div data-wu="E-PRORELEASE.W5">
         <h3 id="w5">W5 — README and community files</h3>
-        <p data-item="wu-summary">User-first README (logo, pitch, screenshots, install per OS with the signing explanation and checksum check, first run, usage, privacy, FAQ, known limits, licence); developer content moves to CONTRIBUTING; SECURITY (private advisories, CA-key note), CODE_OF_CONDUCT, issue/PR templates; screenshots produced by an e2e script, not by hand.</p>
+        <p data-item="wu-summary">User-first README (logo, pitch, screenshots, install per OS with the unsigned-download explanation (Gatekeeper "Open Anyway", SmartScreen "More info → Run anyway", with screenshots) and checksum check, first run, usage, privacy, FAQ, known limits, licence); developer content moves to CONTRIBUTING; SECURITY (private advisories, CA-key note), CODE_OF_CONDUCT, issue/PR templates; screenshots produced by an e2e script, not by hand.</p>
         <p data-item="wu-maps-to">UC-INSTALL, UC-ABOUT.</p>
         <p data-item="wu-expected">Unit: a check that every README link/image path resolves and the install table names exactly the artifacts <code>package.rs</code> builds per host. The screenshot script runs under the e2e harness.</p>
         <p data-item="wu-deps">W3, Q4</p>
@@ -238,7 +354,7 @@ flowchart LR
 
       <div data-wu="E-PRORELEASE.W6">
         <h3 id="w6">W6 — user guide</h3>
-        <p data-item="wu-summary">Install, trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (remove the app, the CA trust and the app data dir), troubleshooting; where per Q6.</p>
+        <p data-item="wu-summary">Install (incl. getting past the unsigned-app prompt: macOS Privacy &amp; Security → Open Anyway, Windows SmartScreen → More info → Run anyway; verifying <code>SHA256SUMS</code>), trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (remove the app, the CA trust and the app data dir), troubleshooting; where per Q6.</p>
         <p data-item="wu-maps-to">UC-INSTALL, UC-ONBOARD, UC-ABOUT (Help → User guide target).</p>
         <p data-item="wu-expected">Unit: the Help → User guide URL resolves to the guide's location; links resolve. Docs-only otherwise (test layer waived with reason).</p>
         <p data-item="wu-deps">W5, Q6</p>
@@ -260,13 +376,6 @@ flowchart LR
         <p data-item="wu-deps">Q8</p>
       </div>
 
-      <div data-wu="E-PRORELEASE.W9">
-        <h3 id="w9">W9 — paid signing (only if Q7 buys it)</h3>
-        <p data-item="wu-summary">macOS: Developer ID signing + notarize + staple in <code>--sign-only</code>-style isolated step; Windows: the chosen signer; secrets named, set by the owner; DEC-81 rule 4 superseded.</p>
-        <p data-item="wu-maps-to">UC-INSTALL (first open has no prompt).</p>
-        <p data-item="wu-expected">Unit: <code>package.rs</code> picks the identity from env and refuses a final without it once adopted; release smoke runs <code>spctl -a</code> / <code>signtool verify</code>. Proven for real only by a tag run.</p>
-        <p data-item="wu-deps">W7, Q7</p>
-      </div>
     </div>
 
     <h2 id="e2e-plan">E2E test plan</h2>
@@ -281,26 +390,46 @@ flowchart LR
 
     <h2 id="questions">Owner questions</h2>
     <table data-c="owner-questions">
-      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr>
-      <tr><td>Q1</td><td>Licence</td><td>MIT (already declared) · MIT OR Apache-2.0 (Rust norm, adds patent grant) · Apache-2.0 · GPL-3.0 / AGPL-3.0 (forks stay open; fewer adopters)</td><td><strong>MIT OR Apache-2.0</strong>; plain MIT is fine if you want the shortest</td></tr>
-      <tr><td>Q2</td><td>Copyright holder / publisher name</td><td>Your legal name · "The Trawler contributors" · an organisation</td><td>Your name in LICENSE; "Trawler contributors" as publisher only if you expect outside contributors</td></tr>
-      <tr><td>Q3</td><td>Logo direction</td><td>A net · B serif T · C hook and packet (see <a href="#logo">Logo</a>), or supply your own SVG</td><td><strong>A</strong>: readable at 16px, fits the tray template, no colour spent</td></tr>
-      <tr><td>Q4</td><td>Root GitHub files (README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, CHANGELOG, templates) in markdown — exempt from the HTML-docs rule as GitHub surface? Needs a CLAUDE.md edit you approve</td><td>yes · no (then GitHub shows raw HTML)</td><td><strong>yes</strong>; they are GitHub infrastructure like CLAUDE.md</td></tr>
-      <tr><td>Q5</td><td>Launch update check is always on</td><td>keep, disclose · add a Settings switch (default on) · default off</td><td><strong>switch, default on</strong></td></tr>
-      <tr><td>Q6</td><td>Where the user guide lives</td><td>README sections + <code>docs/guide/</code> markdown · GitHub Pages site · wiki</td><td><strong>One <code>GUIDE.md</code> at the root</strong> linked from README and Help; Pages later (Q12)</td></tr>
-      <tr><td>Q7</td><td>Paid signing</td><td>none for 0.1.0 · Apple Developer ID only · Apple + a Windows signer (Azure Artifact Signing / OV cert / SignPath Foundation OSS)</td><td><strong>Apple Developer ID</strong> if you accept the yearly fee (macOS prompt is the harshest); Windows: apply to SignPath Foundation, ship unsigned until accepted</td></tr>
-      <tr><td>Q8</td><td>Which known limits block the final</td><td>see <a href="#audit-quality">Quality bar</a></td><td>F4 + F7 block (W8); the rest documented as known limits</td></tr>
-      <tr><td>Q9</td><td>Release shape</td><td>this epic ends with rc <code>0.1.0-5</code>, then a tiny cut epic bumps to <code>0.1.0</code> after the matrix passes · bump inside this epic</td><td><strong>rc then a separate cut</strong> (the E-RC4 shape)</td></tr>
-      <tr><td>Q10</td><td>Name: crate <code>trawler</code> is taken on crates.io; trademark search not done</td><td>keep "Trawler" · rename before 1st public release</td><td>Keep; never publish the crates; run a USPTO/EUIPO search yourself</td></tr>
-      <tr><td>Q11</td><td>Repo settings (you set them)</td><td>topics: <code>http-proxy</code> <code>mitm</code> <code>debugging-proxy</code> <code>https</code> <code>network-debugging</code> <code>tauri</code> <code>rust</code> <code>charles-proxy-alternative</code> <code>proxyman-alternative</code> · homepage · private vulnerability reporting on · Discussions on</td><td>All of them, after W5 lands</td></tr>
-      <tr><td>Q12</td><td>Landing page on GitHub Pages</td><td>now · after 0.1.0 · never</td><td><strong>after 0.1.0</strong></td></tr>
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th><th>Ruling</th></tr>
+      <tr><td>Q1</td><td>Licence</td><td>MIT (already declared) · MIT OR Apache-2.0 (Rust norm, adds patent grant) · Apache-2.0 · GPL-3.0 / AGPL-3.0 (forks stay open; fewer adopters)</td><td><strong>MIT OR Apache-2.0</strong>; plain MIT is fine if you want the shortest</td><td>✅ <strong>MIT</strong></td></tr>
+      <tr><td>Q2</td><td>Copyright holder / publisher name</td><td>Your legal name · "The Trawler contributors" · an organisation</td><td>Your name in LICENSE; "Trawler contributors" as publisher only if you expect outside contributors</td><td>✅ <strong>Vu Luu</strong> (LICENSE, publisher, copyright)</td></tr>
+      <tr><td>Q3</td><td>Logo direction</td><td>A net · B serif T · C hook and packet (see <a href="#logo">Logo</a>), or supply your own SVG</td><td><strong>A</strong>: readable at 16px, fits the tray template, no colour spent</td><td>⏳ open — see <a href="#logo-examples">Examples</a></td></tr>
+      <tr><td>Q4</td><td>Root GitHub files (README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, CHANGELOG, templates) in markdown — exempt from the HTML-docs rule as GitHub surface? Needs a CLAUDE.md edit you approve</td><td>yes · no (then GitHub shows raw HTML)</td><td><strong>yes</strong>; they are GitHub infrastructure like CLAUDE.md</td><td>✅ as proposed</td></tr>
+      <tr><td>Q5</td><td>Launch update check is always on</td><td>keep, disclose · add a Settings switch (default on) · default off</td><td><strong>switch, default on</strong></td><td>✅ as proposed</td></tr>
+      <tr><td>Q6</td><td>Where the user guide lives</td><td>README sections + <code>docs/guide/</code> markdown · GitHub Pages site · wiki</td><td><strong>One <code>GUIDE.md</code> at the root</strong> linked from README and Help; Pages later (Q12)</td><td>✅ as proposed</td></tr>
+      <tr><td>Q7</td><td>Paid signing</td><td>none for 0.1.0 · Apple Developer ID only · Apple + a Windows signer (Azure Artifact Signing / OV cert / SignPath Foundation OSS)</td><td><strong>Apple Developer ID</strong> if you accept the yearly fee (macOS prompt is the harshest); Windows: apply to SignPath Foundation, ship unsigned until accepted</td><td>✅ <strong>none</strong>: ad-hoc/unsigned; W9 dropped; README + guide explain the prompts</td></tr>
+      <tr><td>Q8</td><td>Which known limits block the final</td><td>see <a href="#audit-quality">Quality bar</a></td><td>F4 + F7 block (W8); the rest documented as known limits</td><td>✅ as proposed</td></tr>
+      <tr><td>Q9</td><td>Release shape</td><td>this epic ends with rc <code>0.1.0-5</code>, then a tiny cut epic bumps to <code>0.1.0</code> after the matrix passes · bump inside this epic</td><td><strong>rc then a separate cut</strong> (the E-RC4 shape) — explained <a href="#q9-shape">below</a></td><td>✅ as proposed</td></tr>
+      <tr><td>Q10</td><td>Name: crate <code>trawler</code> is taken on crates.io; trademark search not done</td><td>keep "Trawler" · rename before 1st public release</td><td>Keep; never publish the crates; run a USPTO/EUIPO search yourself</td><td>✅ as proposed</td></tr>
+      <tr><td>Q11</td><td>Repo settings (you set them)</td><td>topics: <code>http-proxy</code> <code>mitm</code> <code>debugging-proxy</code> <code>https</code> <code>network-debugging</code> <code>tauri</code> <code>rust</code> <code>charles-proxy-alternative</code> <code>proxyman-alternative</code> · homepage · private vulnerability reporting on · Discussions on</td><td>All of them, after W5 lands</td><td>✅ as proposed</td></tr>
+      <tr><td>Q12</td><td>Landing page on GitHub Pages</td><td>now · after 0.1.0 · never</td><td><strong>after 0.1.0</strong></td><td>✅ as proposed</td></tr>
+    </table>
+
+    <h3 id="q9-shape">Q9 in plain words — why two epics</h3>
+    <div class="diagram" data-c="q9-diagram">
+      <pre class="mermaid">
+flowchart LR
+  A[E-PRORELEASE: W1–W8 land] --> B[tag v0.1.0-5<br>release candidate]
+  B --> C{hand-check matrix<br>on macOS, Windows, Ubuntu}
+  C -- a check fails --> D[fix, tag 0.1.0-6]
+  D --> C
+  C -- all pass --> E[tiny cut epic like E-RC4:<br>bump to 0.1.0, tag v0.1.0]
+  E --> F[published as Latest;<br>every install's updater offers it]
+      </pre>
+      <div class="caption">This epic stops at a release candidate. Only after a person has installed, opened, updated and uninstalled it on every OS does a separate one-line epic bump the version to 0.1.0 and tag it.</div>
+    </div>
+    <table data-c="q9-why">
+      <tr><th>Release candidate (0.1.0-5)</th><th>Final (0.1.0)</th></tr>
+      <tr><td>Disposable: a broken rc is fixed by the next number (-6)</td><td>Irreversible: a version number is published once; the updater refuses to go back (DEC-82)</td></tr>
+      <tr><td>Draft / pre-release; only testers install it</td><td>Becomes "Latest" on GitHub and is what every installed app's updater offers</td></tr>
+      <tr><td>Carries all of this epic's work, so the hand checks test the real thing</td><td>Carries nothing new — just the version bump, so nothing unchecked slips in</td></tr>
     </table>
 
     <h2 id="distillation-plan">Distillation plan</h2>
     <div data-item="distillation-plan">
       <table>
         <tr><th>Tier</th><th>Change</th></tr>
-        <tr><td>T2 decisions</td><td>new DEC: licence + metadata + notice; new DEC: one-source brand assets; DEC-81 rule 4 superseded only if W9 lands; DEC-86 amended (checksums, CHANGELOG notes, publish rules); DEC-82 (F4, F7)</td></tr>
+        <tr><td>T2 decisions</td><td>new DEC: licence + metadata + notice; new DEC: one-source brand assets; DEC-81 rule 4 stands (ad-hoc/unsigned confirmed by Q7, consequence documented); DEC-86 amended (checksums, CHANGELOG notes, publish rules); DEC-82 (F4, F7)</td></tr>
         <tr><td>T2 use cases</td><td>UC-INSTALL (metadata, verification), UC-UPDATE (F4/F7/switch), new UC-ABOUT; index</td></tr>
         <tr><td>T2 backlog</td><td>roadmap: a "v0.1.0 public release" row; rows 148/149 point to the matrix and what stayed open</td></tr>
         <tr><td>T1</td><td>new release-process doc (W7); <code>architecture.html</code> untouched unless W4 adds a plugin</td></tr>
@@ -310,7 +439,7 @@ flowchart LR
 
     <h2 id="open-questions">Open questions</h2>
     <div data-item="open-questions">
-      <p>Q1–Q12 in <a href="#questions">Owner questions</a>. Unverified here: a trademark search; current Apple/Microsoft/SignPath prices and eligibility (read at decision time); whether the app offers any "remove CA trust" action (the guide's uninstall steps depend on it); real rendering of the icon at 16px on each OS.</p>
+      <p>Only <strong>Q3 (logo direction)</strong> remains open — pick A, B or C from <a href="#logo-examples">Examples</a> or supply a master SVG; it gates W3 and through it W4 and W5. Q1–Q2, Q4–Q12 ruled. Unverified here: a trademark search; whether the app offers any "remove CA trust" action (the guide's uninstall steps depend on it); real rendering of the icon at 16px on each OS.</p>
     </div>
 
   </main>
