@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W4
+branch: HEAD
+tests:
+  unit: { count: 59, covers: "Help per OS (macOS: Trawler User Guide, Report an Issue…, Third-Party Licences, Privacy; Windows/Linux adds F1 on User Guide and About Trawler last) and each id's action; the issue URL carries template, version, OS + version + CPU and install kind only, encoded; install kind per bundle type; a link is a closed name; the launch-check switch reads on when absent or unreadable, round-trips, and a launch checks only installed + on + due; the About page marks and the bundled notice; About window pages, links by name, unopened address, Esc, shell page switch; General's version, check now, switch write, refusal restore, not-installed state" }
+  integration: { count: 6, covers: "through the shell's IPC: update_prefs_read answers the running version, installed and the stored switch, update_automatic_write stores what the launch check reads, about_read answers the version, open_link refuses an address; Settings renders the version the shell reports" }
+  e2e: { count: 1, covers: "WebDriver opens Settings in the real e2e build (HOME a temp dir) and reads the version this app runs from General" }
