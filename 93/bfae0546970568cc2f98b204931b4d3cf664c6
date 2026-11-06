@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 93bfae0546970568cc2f98b204931b4d3cf664c6
+base: 1bf8162c5838f66fd097d138bdfbfe4cc268c155
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w18-service-log-ansi-result.html
+report_sha256: 0548f1cde47bccdef5f056ac18b06c4808a96a58b976fe426cc19c368aca78c8
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEA8vVmBRc3J97Xu2qXsiksHm84NzRZNke5+Oe0XRbCiYzHx2NMajncc2u
+  SkyeLCobZHEYnuSK8K0qkLAuedotUI
+  -----END SSH SIGNATURE-----
