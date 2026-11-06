@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W17
+base: 2425dd656cf5c514bdd0b0b32251a28a661fb4f2
+design_sha256: 317d33015cd04d3beb3bf051bc67f4ee8d34a1672b8c0f6d41f240b65d23ef91
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/General.tsx
+    why: "copy fix inside the existing layout: the quit line, the no-icon notice and the login line name each OS's icon place (W11 terms, owner ruling Q2); no element, order or style changes"
+  - path: ui/src/KeepCapturingDialog.tsx
+    why: "copy fix inside the existing layout: the stays line names the menu bar, system tray (notification area) or system tray with GNOME's AppIndicator hint per OS (owner ruling Q2); no element, order or style changes"
+  - path: ui/src/components/Menu.tsx
+    why: "label fix inside the existing row: the shortcut column reads Ctrl/Alt/Shift/Backspace on Windows and Linux, glyphs on macOS; no element, order or style changes"
+date: 2026-11-06
