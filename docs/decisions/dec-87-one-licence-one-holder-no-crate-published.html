@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9b509f34851f0dfaebd9">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-87: one licence and one holder</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-87 — one licence, one holder, no crate published</h1>
+      <p>What every package and installer says about who made Trawler and under which terms.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W1</strong> from the owner's rulings Q1, Q2 and Q10 · UC-INSTALL · relates to
+        <a href="dec-81-one-version-a-release-only-bundle-one-package-command.html">DEC-81</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="sources">The sources</h2>
+    <div class="diagram" data-c="sources">
+      <pre class="mermaid">
+flowchart LR
+  L["LICENSE · MIT · Copyright (c) 2026 Vu Luu"] --> C["every workspace crate: license MIT · authors · homepage · publish = false"]
+  L --> P["ui/package.json: license MIT"]
+  L --> B["tauri.conf.json bundle: license · publisher · copyright · homepage · longDescription · deb section"]
+  B --> I["installers: Info.plist copyright · NSIS/MSI publisher · deb/rpm metadata"]
+      </pre>
+      <div class="caption">One licence file; every other source states the same licence and holder. <code>package::metadata_drift</code> names any source that disagrees.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>Trawler is MIT. The root <code>LICENSE</code> is the MIT text with <code>Copyright (c) 2026 Vu Luu</code>; every workspace crate, <code>ui/package.json</code> and <code>bundle.license</code> say <code>MIT</code>; <code>bundle.licenseFile</code> stays unset (Q1)</td><td>the crates already declared MIT; GitHub and every package manager read the same terms. A <code>licenseFile</code> makes tauri-bundler embed it as the <code>.dmg</code>'s licence agreement: Finder asks the user to agree before it mounts, and <code>hdiutil attach</code> stops at the prompt (seen in <code>package_bundle</code>, E-PRORELEASE.W1). MIT asks no acceptance</td></tr>
+      <tr><td>2</td><td>Vu Luu is the copyright holder, the bundle <code>publisher</code> and every crate's <code>authors</code>; the bundle <code>copyright</code> is <code>Copyright © 2026 Vu Luu</code> (Q2)</td><td>without <code>publisher</code> Tauri derives one from the identifier (<code>trawler</code>), which Windows shows in Apps and the installer</td></tr>
+      <tr><td>3</td><td>Every crate is <code>publish = false</code>; the name stays Trawler (Q10)</td><td>the crates.io name <code>trawler</code> belongs to another project; a <code>cargo publish</code> must never be one command away</td></tr>
+      <tr><td>4</td><td><code>homepage</code> is the GitHub repository in every crate and the bundle; the bundle carries a <code>longDescription</code> and <code>linux.deb.section</code> <code>devel</code></td><td>deb, rpm and the Windows uninstall entry show them; empty fields read as an unfinished package</td></tr>
+    </table>
+
+    <h2 id="limits">Known limits</h2>
+    <table data-c="limits">
+      <tr><th>Limit</th><th>Why accepted</th></tr>
+      <tr><td>The year in <code>LICENSE</code> and the bundle copyright is fixed at 2026</td><td>the first publication year is the one that matters for MIT; a later range is a one-line edit the check names</td></tr>
+      <tr><td>No installer shows the licence text; it ships in the repository and (W2) in the app's notices</td><td>MIT asks only that the notice travels with the software, which W2's bundled notice carries</td></tr>
+      <tr><td>Third-party licences are not covered here</td><td>the shipped notice of every dependency's licence is E-PRORELEASE.W2</td></tr>
+    </table>
+
+    <h2 id="held">Held by</h2>
+    <p data-c="held"><code>package</code>'s unit tests (<code>metadata_drift_of</code> per field, and the tree has none) pin rules 1 to 4; <code>xtask/tests/package_bundle.rs</code> proves the packaged macOS app's <code>Info.plist</code> carries the copyright. The Windows and Linux installers' metadata is a hand check on the next rc.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

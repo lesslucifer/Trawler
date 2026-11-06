@@ -159,6 +159,16 @@ fn the_installed_window_owns_a_core_that_captures_and_frees_its_ports(dmg: &Path
     });
 }
 
+fn copyright_of(app: &Path) -> String {
+    let read = Command::new("plutil")
+        .args(["-extract", "NSHumanReadableCopyright", "raw", "-o", "-"])
+        .arg(app.join("Contents/Info.plist"))
+        .output()
+        .unwrap();
+    assert!(read.status.success(), "plutil: {read:?}");
+    String::from_utf8(read.stdout).unwrap().trim_end().to_string()
+}
+
 #[test]
 fn a_package_is_ad_hoc_signed_and_passes_the_release_smoke() {
     let repo = repo();
@@ -183,6 +193,7 @@ fn a_package_is_ad_hoc_signed_and_passes_the_release_smoke() {
         Command::new("codesign").args(["--verify", "--deep", "--strict"]).arg(&app).status();
     assert!(verified.unwrap().success(), "codesign --verify --deep --strict {}", app.display());
     assert!(app.join(LOGIN_AGENT).is_file());
+    assert_eq!(copyright_of(&app), format!("Copyright \u{a9} 2026 {}", xtask::package::HOLDER));
     let archived = Command::new("tar")
         .arg("-tzf")
         .arg(bundle.join("macos/Trawler.app.tar.gz"))

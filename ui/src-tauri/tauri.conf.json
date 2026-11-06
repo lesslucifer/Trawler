@@ -37,6 +37,11 @@
     "targets": "all",
     "category": "DeveloperTool",
     "shortDescription": "Native MITM HTTP(S) debugging proxy.",
+    "longDescription": "Trawler is a native HTTP(S) debugging proxy: it captures the traffic of the apps and devices pointed at it, decrypts HTTPS with its own local certificate authority, and lets you inspect, filter, replay and export every request and response. Everything stays on your machine.",
+    "publisher": "Vu Luu",
+    "copyright": "Copyright \u00a9 2026 Vu Luu",
+    "license": "MIT",
+    "homepage": "https://github.com/lesslucifer/Trawler",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -44,6 +49,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "linux": {
+      "deb": {
+        "section": "devel"
+      }
+    },
     "macOS": {
       "minimumSystemVersion": "11.0",
       "signingIdentity": "-",
