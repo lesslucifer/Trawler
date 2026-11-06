@@ -1,0 +1,8 @@
+schema: test/v2
+level: epic
+epic: E-RC4
+branch: HEAD
+tests:
+  unit: { count: 42, covers: "release_manifest::notes over the real .github/release-notes.md: a final (0.1.0) gives both the .deb and the .rpm install line, a pre-release (0.1.0-4) gives the .deb line and no rpm anywhere (red on the old code, which only filled {version}); run on a v0.1.0-4 dist writes notes.md without rpm and latest.json's notes equal to it (red on the old code); package's one-version test holds 0.1.0-4 across Cargo.toml, Cargo.lock's four workspace crates and ui/package.json" }
+  integration: { waived: "no integration contract changed: release.yml and every caller of release-manifest are untouched, and run() is the command's whole contract, exercised end to end in its unit tests against the real template and a temp dist; also rendered by hand via cargo xtask release-manifest for v0.1.0-4 (16 entries, no rpm line) and v0.1.0 (18 entries, both lines)" }
+  e2e: { waived: "no product flow changes; the release path's end to end run is the owner's v0.1.0-4 tag on GitHub's five runners, which no local session can host" }
