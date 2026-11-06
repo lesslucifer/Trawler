@@ -65,6 +65,13 @@ function onMacHost() {
   });
 }
 
+function onWindowsHost() {
+  Object.defineProperty(window.navigator, "userAgent", {
+    configurable: true,
+    value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+  });
+}
+
 function onLinuxHost() {
   Object.defineProperty(window.navigator, "userAgent", {
     configurable: true,
@@ -707,8 +714,11 @@ test("Stop routing invokes unset_proxy after the proxy was set", async () => {
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("unset_proxy"));
 });
 
-test("remove the certificate hands the shell the certificate the core serves, then reads this machine again", async () => {
-  onMacHost();
+test.each([
+  ["Mac", onMacHost],
+  ["PC", onWindowsHost],
+])("remove the certificate on a %s hands the shell the certificate the core serves, then reads this machine again", async (_, onHost) => {
+  onHost();
   watchPaused();
   let trust = "trusted";
   vi.mocked(invoke).mockImplementation(async (name: string) => {

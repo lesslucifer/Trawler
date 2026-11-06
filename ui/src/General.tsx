@@ -8,11 +8,15 @@ import {
   readLoginItem,
   readTrayAvailable,
   refusalWords,
+  GNOME_TRAY_HINT,
+  trayIcon,
+  trayPlace,
   writeKeepCapturing,
   writeLoginItem,
   type KeepCapturing,
   type LoginItem,
 } from "./generalPrefs";
+import { hostOs, type HostOs } from "./setup";
 
 interface Shown {
   keepCapturing: KeepCapturing;
@@ -46,7 +50,7 @@ async function readAll(call: Invoke): Promise<Shown> {
  * Settings → General, as E-BGSVC.W5's design run drew it: the two switches the shell keeps (DEC-77), each writing
  * through its command, a refused write named under its box while the box shows what is stored.
  */
-export function General({ call = invoke }: { call?: Invoke }) {
+export function General({ call = invoke, os = hostOs() }: { call?: Invoke; os?: HostOs }) {
   const [shown, setShown] = useState<Shown | null>(null);
   const [keepRefused, setKeepRefused] = useState<string | null>(null);
   const [loginRefused, setLoginRefused] = useState<string | null>(null);
@@ -94,7 +98,7 @@ export function General({ call = invoke }: { call?: Invoke }) {
             <Checkbox checked={shown.keepCapturing === "on"} onChange={keep}>
               keep capturing when the window closes
             </Checkbox>
-            <Line>Quit from the menu-bar icon.</Line>
+            <Line>{`Quit from the ${trayIcon(os)}.`}</Line>
           </>
         ) : (
           <>
@@ -102,7 +106,7 @@ export function General({ call = invoke }: { call?: Invoke }) {
               keep capturing when the window closes
             </Checkbox>
             <div className="pt-chrome-tight">
-              <Notice>needs a menu-bar icon, which this desktop can't show</Notice>
+              <Notice>{`needs a ${trayIcon(os)}, which this desktop can't show${os === "linux" ? ` — ${GNOME_TRAY_HINT} one` : ""}`}</Notice>
             </div>
           </>
         )}
@@ -114,7 +118,7 @@ export function General({ call = invoke }: { call?: Invoke }) {
             open Trawler at login
           </Checkbox>
         </span>
-        <Line>Opens in the menu bar, with no window.</Line>
+        <Line>{shown.tray ? `Opens in ${trayPlace(os)}, with no window.` : "Opens with its window."}</Line>
         <Refusal why={loginRefused} />
       </div>
     </div>

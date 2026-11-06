@@ -1386,10 +1386,10 @@ describe("This PC's by-hand routes", () => {
     expect(commands(trust.alternatives!)).toEqual(["certutil -user -addstore -f ROOT \"$HOME\\Downloads\\trawler-ca.pem\""]);
   });
 
-  it("the user's own import comes off without an administrator, set up this PC's with one", () => {
+  it("set up this PC's machine copy comes off with an administrator, a by-hand import's without one (W16)", () => {
     expect(commands(pc().trust.guide!.undo!)).toEqual([
-      'certutil -user -delstore ROOT "Trawler Proxy CA"',
       'certutil -delstore ROOT "Trawler Proxy CA"',
+      'certutil -user -delstore ROOT "Trawler Proxy CA"',
     ]);
   });
 
@@ -1561,13 +1561,15 @@ describe("Another Windows PC, walked by hand (W14)", () => {
     expect(everything(pc)).not.toMatch(/as administrator, run:\n?.*addstore/);
   });
 
-  it("removes the certificate from the user's store by hand first, then from both by command (W2, I3)", () => {
+  it("removes the certificate from the machine's store by hand first, then by command, the user's last (W2, I3, W16)", () => {
     expect(paths(trust.undo![0])).toEqual([
-      ["Manage user certificates", "Trusted Root Certification Authorities", "Certificates", "Trawler Proxy CA"],
+      ["Manage computer certificates", "Trusted Root Certification Authorities", "Certificates", "Trawler Proxy CA"],
     ]);
+    expect(trust.undo![1][0]).toBe("Or in PowerShell as administrator, run:");
+    expect(trust.undo![2][0]).toBe("If you added it by hand, in PowerShell, run:");
     expect(commands(trust.undo!)).toEqual([
-      'certutil -user -delstore ROOT "Trawler Proxy CA"',
       'certutil -delstore ROOT "Trawler Proxy CA"',
+      'certutil -user -delstore ROOT "Trawler Proxy CA"',
     ]);
     expect(trust.undo).toEqual(setup("this", { os: "windows" }).trust.guide!.undo);
   });

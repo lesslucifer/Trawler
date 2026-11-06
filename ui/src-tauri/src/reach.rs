@@ -57,8 +57,9 @@ const REPLACE: &str = "Replace";
 fn replace_message(address: &str) -> String {
     format!(
         "Another proxy is set on this machine: {address}.\n\n\
-         Trawler will replace it for as long as Trawler runs. When Trawler quits it turns the \
-         proxy off — it does not put {address} back, and you would set that one again yourself."
+         Trawler will replace it, and this machine routes through Trawler until you stop \
+         routing through Trawler. When you quit, Trawler asks first. Stopping turns the proxy \
+         off — it does not put {address} back, and you would set that one again yourself."
     )
 }
 
@@ -103,5 +104,15 @@ mod tests {
         let message = replace_message("10.1.1.1:8080");
         assert!(message.contains("does not put 10.1.1.1:8080 back"), "{message}");
         assert!(message.contains("turns the proxy off"), "{message}");
+    }
+
+    // Quitting only asks (closeConfirm.ts): the proxy stays on Trawler until
+    // the user stops routing through it.
+    #[test]
+    fn the_replacement_ask_says_quitting_asks_rather_than_turning_the_proxy_off() {
+        let message = replace_message("10.1.1.1:8080");
+        assert!(message.contains("When you quit, Trawler asks first"), "{message}");
+        assert!(message.contains("stop routing through Trawler"), "{message}");
+        assert!(!message.contains("When Trawler quits it turns"), "{message}");
     }
 }

@@ -142,13 +142,6 @@ const open = (text: string) => disclosing(text).hasAttribute("open");
 const guideOpen = (n: number, summary: string) =>
   within(task(n)).getByText(summary).closest("details")!.hasAttribute("open");
 
-// A Mac removes a trusted certificate with a button, so its steps are that
-// button's by hand; a PC's are still the only way back.
-const TRUST_BACK = {
-  macos: "do it by hand",
-  windows: "to remove it later",
-} as const;
-
 // Each host's by-hand routes start where its own guide does: a Mac's in its
 // settings and Keychain Access, a PC's in its Settings and certificate dialog (W12).
 const FIRST_STEP = {
@@ -681,7 +674,7 @@ describe("a trusted certificate is removed by its own button", () => {
     },
   );
 
-  it("is not offered on Windows yet", () => {
+  it("is offered on Windows too, its steps by hand under it (W16)", () => {
     draw({
       os: "windows",
       trustProbe: "trusted",
@@ -689,12 +682,37 @@ describe("a trusted certificate is removed by its own button", () => {
     });
 
     expect(
-      screen.queryByRole("button", { name: "remove the certificate" }),
-    ).toBeNull();
-    expect(within(task(1)).getByText("to remove it later")).toBeInTheDocument();
-    cleanup();
-    draw({ os: "linux", trustProbe: "absent" });
-    expect(within(task(1)).getByText(/^sudo cp /)).toBeInTheDocument();
+      within(task(1)).getByRole("button", { name: "remove the certificate" }),
+    ).toBeEnabled();
+    expect(within(task(1)).getByText("do it by hand")).toBeInTheDocument();
+    expect(within(task(1)).queryByText("to remove it later")).toBeNull();
+  });
+
+  it("names Windows' approval when it is cancelled (W16)", async () => {
+    draw({
+      os: "windows",
+      trustProbe: "trusted",
+      proxy: { status: "none", address: null },
+      onRemoveCa: vi.fn(() =>
+        Promise.reject({
+          refused: true,
+          detail: "Start-Process : The operation was canceled by the user.",
+        }),
+      ),
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "remove the certificate" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        within(task(1)).getByText(
+          "the approval was cancelled. Try again, or do it by hand.",
+        ),
+      ).toBeInTheDocument(),
+    );
+    expect(guideOpen(1, "do it by hand")).toBe(false);
   });
 
   it("waits for a reading in flight", () => {
@@ -908,10 +926,8 @@ describe.each(["macos", "windows"] as const)(
         within(task(2)).getByRole("button", { name: "set the system proxy" }),
       ).toBeInTheDocument();
       expect(within(task(2)).getByText(MANUAL)).toBeInTheDocument();
-      expect(within(task(1)).getByText(TRUST_BACK[os])).toBeInTheDocument();
-      expect(within(task(1)).queryAllByText(MANUAL)).toHaveLength(
-        os === "macos" ? 1 : 0,
-      );
+      expect(within(task(1)).getByText(MANUAL)).toBeInTheDocument();
+      expect(within(task(1)).queryAllByText(MANUAL)).toHaveLength(1);
       openEveryDisclosure();
       expect(
         screen.queryByRole("button", { name: "the trust command" }),
@@ -953,11 +969,9 @@ describe.each(["macos", "windows"] as const)(
       expect(
         screen.queryByRole("button", { name: "set the system proxy" }),
       ).toBeNull();
-      expect(guideOpen(1, TRUST_BACK[os])).toBe(false);
+      expect(guideOpen(1, MANUAL)).toBe(false);
       expect(guideOpen(2, MANUAL)).toBe(false);
-      expect(within(task(1)).queryAllByText(MANUAL)).toHaveLength(
-        os === "macos" ? 1 : 0,
-      );
+      expect(within(task(1)).queryAllByText(MANUAL)).toHaveLength(1);
       expect(within(task(2)).queryByText("to turn it off later")).toBeNull();
       openEveryDisclosure();
       expect(
@@ -1278,7 +1292,7 @@ describe("a proxy that is already set", () => {
     draw({ proxy: { status: "foreign", address: "10.1.1.1:8080" } });
 
     expect(zone("foreign-proxy")).toHaveTextContent(
-      "another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
+      "another proxy is set on this Mac: 10.1.1.1:8080. Setting Trawler replaces it, and Trawler never puts it back.",
     );
   });
 
@@ -1286,7 +1300,7 @@ describe("a proxy that is already set", () => {
     draw({ proxy: { status: "foreign", address: null } });
 
     expect(zone("foreign-proxy")).toHaveTextContent(
-      "another proxy is set on this Mac. Setting Trawler replaces it while Trawler runs, and restores nothing when it quits.",
+      "another proxy is set on this Mac. Setting Trawler replaces it, and Trawler never puts it back.",
     );
   });
 

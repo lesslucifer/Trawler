@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { General } from "./General";
 import type { Invoke } from "./coreService";
 import type { KeepCapturing, LoginItem } from "./generalPrefs";
@@ -48,7 +48,7 @@ test("keep capturing is ticked only when the shell reads it on", async () => {
     ["unanswered", false],
   ] as const) {
     const { call } = shell({ keepCapturing: reading });
-    const { unmount } = render(<General call={call} />);
+    const { unmount } = render(<General call={call} os="macos" />);
     expect(await keepBox()).toHaveProperty("checked", ticked);
     expect(screen.getByText("Quit from the menu-bar icon.")).toBeInTheDocument();
     unmount();
@@ -57,7 +57,7 @@ test("keep capturing is ticked only when the shell reads it on", async () => {
 
 test("with no menu-bar icon keep capturing is disabled, says why, and drops its line", async () => {
   const { call } = shell({ keepCapturing: "on", tray: false });
-  render(<General call={call} />);
+  render(<General call={call} os="macos" />);
   const box = await keepBox();
   expect(box).toBeDisabled();
   expect(box).not.toBeChecked();
@@ -67,7 +67,7 @@ test("with no menu-bar icon keep capturing is disabled, says why, and drops its 
 
 test("ticking keep capturing writes it once and shows it on", async () => {
   const { call, spy, stored } = shell();
-  render(<General call={call} />);
+  render(<General call={call} os="macos" />);
   fireEvent.click(await keepBox());
   await waitFor(async () => expect(await keepBox()).toBeChecked());
   expect(writes(spy, "keep_capturing_write")).toEqual([["keep_capturing_write", { on: true }]]);
@@ -76,7 +76,7 @@ test("ticking keep capturing writes it once and shows it on", async () => {
 
 test("open at login is ticked whenever an entry exists, and names its program on hover", async () => {
   const { call } = shell({ login: { on: true, starts: ENTRY } });
-  render(<General call={call} />);
+  render(<General call={call} os="macos" />);
   const box = await loginBox();
   expect(box).toBeChecked();
   expect(box.closest("[title]")).toHaveAttribute("title", ENTRY);
@@ -85,7 +85,7 @@ test("open at login is ticked whenever an entry exists, and names its program on
 
 test("off, open at login has nothing to name", async () => {
   const { call } = shell();
-  render(<General call={call} />);
+  render(<General call={call} os="macos" />);
   const box = await loginBox();
   expect(box).not.toBeChecked();
   expect(box.closest("[title]")).toBeNull();
@@ -93,7 +93,7 @@ test("off, open at login has nothing to name", async () => {
 
 test("ticking open at login shows the entry the shell wrote", async () => {
   const { call, spy } = shell();
-  render(<General call={call} />);
+  render(<General call={call} os="macos" />);
   fireEvent.click(await loginBox());
   await waitFor(async () => expect(await loginBox()).toBeChecked());
   expect((await loginBox()).closest("[title]")).toHaveAttribute("title", ENTRY);
@@ -106,7 +106,7 @@ test("a refused write says why and each box shows what is stored", async () => {
     login: { on: true, starts: ENTRY },
     refuse: "Permission denied (os error 13)",
   });
-  render(<General call={call} />);
+  render(<General call={call} os="macos" />);
 
   fireEvent.click(await keepBox());
   expect(await screen.findByText("couldn't save — permission denied")).toBeInTheDocument();
@@ -115,4 +115,30 @@ test("a refused write says why and each box shows what is stored", async () => {
   fireEvent.click(await loginBox());
   await waitFor(() => expect(screen.getAllByText("couldn't save — permission denied")).toHaveLength(2));
   await waitFor(async () => expect(await loginBox()).toBeChecked());
+});
+
+describe("each OS names its own icon place", () => {
+  test.each([
+    ["macos", "Quit from the menu-bar icon.", "Opens in the menu bar, with no window."],
+    ["windows", "Quit from the tray icon.", "Opens in the system tray (notification area), with no window."],
+    ["linux", "Quit from the tray icon.", "Opens in the system tray, with no window."],
+  ] as const)("%s, with a tray", async (os, quitLine, loginLine) => {
+    const { call } = shell();
+    render(<General call={call} os={os} />);
+    await keepBox();
+    expect(screen.getByText(quitLine)).toBeInTheDocument();
+    expect(screen.getByText(loginLine)).toBeInTheDocument();
+  });
+
+  test.each([
+    ["macos", "needs a menu-bar icon, which this desktop can't show"],
+    ["windows", "needs a tray icon, which this desktop can't show"],
+    ["linux", "needs a tray icon, which this desktop can't show — on GNOME, the AppIndicator extension shows one"],
+  ] as const)("%s, with no tray: the notice, and a login launch opens the window", async (os, notice) => {
+    const { call } = shell({ tray: false });
+    render(<General call={call} os={os} />);
+    await keepBox();
+    expect(screen.getByText(notice)).toBeInTheDocument();
+    expect(screen.getByText("Opens with its window.")).toBeInTheDocument();
+  });
 });

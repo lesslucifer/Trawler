@@ -189,3 +189,15 @@ describe("placement", () => {
     expect(menu()).toHaveStyle({ left: `${window.innerWidth - 8}px`, top: `${window.innerHeight - 8}px` });
   });
 });
+
+describe("shortcut keys per OS", () => {
+  it.each([
+    ["macos", ["⌘Z", "⌥Z", "⇧⌥⌘C", "⌘⌫"]],
+    ["windows", ["Ctrl+Z", "Alt+Z", "Ctrl+Alt+Shift+C", "Ctrl+Backspace"]],
+    ["linux", ["Ctrl+Z", "Alt+Z", "Ctrl+Alt+Shift+C", "Ctrl+Backspace"]],
+  ] as const)("%s", (os, shown) => {
+    const rows = ["⌘Z", "⌥Z", "⇧⌥⌘C", "⌘⌫"].map((keys, i) => ({ label: `row ${i}`, keys, run: () => {} }));
+    render(<Menu label="more" sections={[rows]} at={{ x: 0, y: 0 }} onClose={() => {}} os={os} />);
+    expect(screen.getAllByRole("menuitem").map((item) => item.lastElementChild?.textContent)).toEqual(shown);
+  });
+});
