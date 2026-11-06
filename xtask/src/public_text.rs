@@ -21,8 +21,6 @@ pub const ISSUE_FORMS: [&str; 2] =
 pub const METADATA: [&str; 4] =
     ["Cargo.toml", "ui/src-tauri/Cargo.toml", "ui/package.json", "ui/src-tauri/tauri.conf.json"];
 
-pub const BUG_FORM_PREFILLED: [&str; 3] = ["version", "os", "install"];
-
 pub const DENIED_NAMES: [&str; 9] = [
     "charles",
     "proxyman",
@@ -41,12 +39,21 @@ pub const NOT_YET_WRITTEN: [&str; 1] = ["GUIDE.md"];
 
 pub fn targets(text: &str) -> Vec<String> {
     let mut found = Vec::new();
-    for (open, close) in [("](", ')'), ("src=\"", '"'), ("srcset=\"", '"'), ("href=\"", '"')] {
+    let openers = [
+        ("](", ')'),
+        ("src=\"", '"'),
+        ("srcset=\"", '"'),
+        ("href=\"", '"'),
+        ("src='", '\''),
+        ("srcset='", '\''),
+        ("href='", '\''),
+    ];
+    for (open, close) in openers {
         let mut rest = text;
         while let Some(at) = rest.find(open) {
             rest = &rest[at + open.len()..];
             let Some(end) = rest.find(close) else { continue };
-            let candidates: Vec<&str> = if open == "srcset=\"" {
+            let candidates: Vec<&str> = if open.starts_with("srcset") {
                 rest[..end].split(',').collect()
             } else {
                 vec![&rest[..end]]
@@ -56,6 +63,16 @@ pub fn targets(text: &str) -> Vec<String> {
                     found.push(target.to_string());
                 }
             }
+        }
+    }
+    for line in text.lines() {
+        let definition = line.trim_start();
+        if line.len() - definition.len() > 3 || !definition.starts_with('[') {
+            continue;
+        }
+        let Some(at) = definition.find("]:") else { continue };
+        if let Some(target) = definition[at + 2..].split_whitespace().next() {
+            found.push(target.trim_start_matches('<').trim_end_matches('>').to_string());
         }
     }
     found
@@ -100,23 +117,62 @@ pub fn slug(heading: &str) -> String {
         .collect()
 }
 
+fn without_link_targets(heading: &str) -> String {
+    let mut text = String::new();
+    let mut rest = heading;
+    while let Some(at) = rest.find("](") {
+        text.push_str(&rest[..at]);
+        rest = rest[at + 2..].find(')').map_or("", |end| &rest[at + 2 + end + 1..]);
+    }
+    text + rest
+}
+
+fn is_setext_rule(line: &str) -> bool {
+    let line = line.trim_end();
+    !line.is_empty() && (line.chars().all(|c| c == '=') || line.chars().all(|c| c == '-'))
+}
+
 pub fn anchors(markdown: &str) -> BTreeSet<String> {
-    let mut fenced = false;
+    let mut fence: Option<&str> = None;
+    let mut paragraph: Option<&str> = None;
     let mut found = BTreeSet::new();
     for line in markdown.lines() {
-        let text = line.trim_start_matches('#');
-        if line.trim_start().starts_with("```") {
-            fenced = !fenced;
-        } else if !fenced && text.len() < line.len() && text.starts_with(' ') {
-            let base = slug(text);
-            let mut anchor = base.clone();
-            let mut n = 0;
-            while found.contains(&anchor) {
-                n += 1;
-                anchor = format!("{base}-{n}");
-            }
-            found.insert(anchor);
+        let trimmed = line.trim_start();
+        let indented = line.len() - trimmed.len() > 3;
+        let marker = trimmed.get(..3).filter(|m| *m == "```" || *m == "~~~");
+        if let (Some(marker), false) = (marker, indented) {
+            fence = match fence {
+                None => Some(marker),
+                Some(open) if open == marker => None,
+                open => open,
+            };
+            paragraph = None;
+            continue;
         }
+        if fence.is_some() {
+            continue;
+        }
+        let hashes = trimmed.len() - trimmed.trim_start_matches('#').len();
+        let atx = (1..=6).contains(&hashes) && trimmed[hashes..].starts_with(' ');
+        let heading = if indented {
+            None
+        } else if atx {
+            Some(&trimmed[hashes..])
+        } else if is_setext_rule(trimmed) {
+            paragraph
+        } else {
+            None
+        };
+        paragraph = (!trimmed.is_empty() && !atx && heading.is_none()).then_some(trimmed);
+        let Some(heading) = heading else { continue };
+        let base = slug(&without_link_targets(heading));
+        let mut anchor = base.clone();
+        let mut n = 0;
+        while found.contains(&anchor) {
+            n += 1;
+            anchor = format!("{base}-{n}");
+        }
+        found.insert(anchor);
     }
     found
 }
@@ -129,7 +185,11 @@ pub fn broken_targets(repo: &Path, file: &str, text: &str) -> Vec<String> {
             continue;
         }
         let (path, anchor) = target.split_once('#').unwrap_or((&target, ""));
-        let joined = if path.is_empty() { Path::new(file).to_path_buf() } else { dir.join(path) };
+        let joined = match path.strip_prefix('/') {
+            _ if path.is_empty() => Path::new(file).to_path_buf(),
+            Some(from_root) => PathBuf::from(from_root),
+            None => dir.join(path),
+        };
         let name = joined.to_string_lossy().replace('\\', "/");
         let Some(resolved) = normalized(&joined) else {
             broken.push(format!("{file}: {target} (outside the repo)"));
@@ -266,6 +326,17 @@ pub fn form_problems(file: &str, yaml: &str) -> Vec<String> {
         }
     }
     problems
+}
+
+pub fn prefilled_fields(links_rs: &str) -> Vec<String> {
+    let params = links_rs.split("let params = [").nth(1).and_then(|rest| rest.split("];").next());
+    params
+        .into_iter()
+        .flat_map(|list| list.split("(\"").skip(1))
+        .filter_map(|pair| pair.split('"').next())
+        .filter(|name| *name != "template")
+        .map(String::from)
+        .collect()
 }
 
 // GitHub prefills only input and textarea fields from the issue URL's query.
@@ -536,12 +607,51 @@ mod tests {
     }
 
     #[test]
+    fn the_prefilled_fields_are_issue_url_s_params_but_the_template() {
+        let source = "fn issue_url() {\n    let params = [\n        (\"template\", T),\n        \
+                      (\"version\", v),\n        (\"os\", &os),\n    ];\n}\n";
+        assert_eq!(prefilled_fields(source), ["version", "os"]);
+    }
+
+    #[test]
     fn the_bug_form_takes_every_field_the_app_prefills() {
-        let missing = unprefillable_fields(
-            &read(".github/ISSUE_TEMPLATE/bug_report.yml"),
-            &BUG_FORM_PREFILLED,
-        );
+        let prefilled = prefilled_fields(&read("ui/src-tauri/src/links.rs"));
+        assert!(!prefilled.is_empty(), "links.rs's issue_url names no params");
+        let fields: Vec<&str> = prefilled.iter().map(String::as_str).collect();
+        let missing = unprefillable_fields(&read(".github/ISSUE_TEMPLATE/bug_report.yml"), &fields);
         assert!(missing.is_empty(), "{missing:?}");
+    }
+
+    #[test]
+    fn reference_definitions_and_single_quoted_attributes_are_targets() {
+        let text = "[a]: x.md\n   [b]: <y.png> \"t\"\n<img src='z.png'> <a href='w.md'>\n";
+        assert_eq!(targets(text), ["z.png", "w.md", "x.md", "y.png"]);
+    }
+
+    #[test]
+    fn a_root_relative_link_resolves_from_the_repo_root() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".github/s")).unwrap();
+        std::fs::write(dir.path().join(".github/s/a.png"), "").unwrap();
+        let text = "![a](/.github/s/a.png) ![b](/etc/hosts)";
+        assert_eq!(
+            broken_targets(dir.path(), ".github/n.md", text),
+            [".github/n.md: /etc/hosts (no etc/hosts)"]
+        );
+    }
+
+    #[test]
+    fn indented_setext_and_linked_headings_count_and_a_tilde_fence_hides_one() {
+        assert_eq!(
+            anchors("  ## Indented\nSetext one\n===\nSetext two\n---\n## See [the guide](g.md)\n~~~\n# hidden\n~~~\n"),
+            BTreeSet::from([
+                "indented".to_string(),
+                "setext-one".to_string(),
+                "setext-two".to_string(),
+                "see-the-guide".to_string()
+            ])
+        );
+        assert!(anchors("text\n\n---\n").is_empty());
     }
 
     #[test]
