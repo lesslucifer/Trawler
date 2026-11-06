@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W17
+branch: HEAD
+tests:
+  unit: { count: 375, covers: "the keep-capturing ask names the menu bar on macOS, the system tray (notification area) on Windows, the system tray with the GNOME AppIndicator hint on Linux; Settings → General's quit line, no-icon notice and login line per OS and per tray/no tray (no tray: Opens with its window); menu shortcut labels read Ctrl/Alt/Shift/Backspace on Windows and Linux and keep the glyphs on macOS; the foreign-proxy notice no longer says while Trawler runs; the replace-proxy ask says quitting asks first and names stop routing through Trawler, never When Trawler quits it turns" }
+  integration: { waived: "text only: no command, wire or cross-module contract moves; the components render through their real callers in App.test.tsx and Onboarding.test.tsx, unchanged and green" }
+  e2e: { waived: "text only; no spec asserts these strings, and the owned e2e suite (shared port 4445) runs at the epic gate" }
