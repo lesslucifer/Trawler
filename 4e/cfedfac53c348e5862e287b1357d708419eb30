@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 4ecfedfac53c348e5862e287b1357d708419eb30
+base: 2425dd656cf5c514bdd0b0b32251a28a661fb4f2
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w16-windows-remove-cert-result.html
+report_sha256: ce471770c64f8a93e19e49062001b235837551379b3abf612dc676777d2b1322
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB1EORE4eJbhpLOXfwEQruYPJVFFBlO6pQtoO2L9GZMd/lMNaT8AJU0Ct
+  WBudRL8uIl5EDKRV+bspNSxgzMc4EE
+  -----END SSH SIGNATURE-----
