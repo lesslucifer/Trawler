@@ -103,6 +103,7 @@ pub fn source_hashes(repo: &Path) -> Result<String, String> {
         .map_err(|e| format!("{}: {e}", dir.display()))?
         .flatten()
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| !name.starts_with('.'))
         .collect();
     names.sort();
     let mut sums = String::new();
@@ -133,8 +134,8 @@ pub fn view_box(svg: &str) -> Option<[u32; 4]> {
 fn render(repo: &Path, source: &str, widths: &[u32]) -> Result<Vec<Image>, String> {
     let svg = std::fs::read_to_string(repo.join(SOURCE_DIR).join(source))
         .map_err(|e| format!("read {source}: {e}"))?;
-    let [0, 0, vw, vh] = view_box(&svg).ok_or(format!("{source}: no integer viewBox"))? else {
-        return Err(format!("{source}: viewBox must start at 0 0"));
+    let Some([0, 0, vw @ 1..=u32::MAX, vh @ 1..=u32::MAX]) = view_box(&svg) else {
+        return Err(format!("{source}: the viewBox must be integer, start at 0 0 and have a size"));
     };
     let body_start = svg.find("<svg").and_then(|i| svg[i..].find('>').map(|j| i + j + 1));
     let body_end = svg.rfind("</svg>");
@@ -157,7 +158,8 @@ fn render(repo: &Path, source: &str, widths: &[u32]) -> Result<Vec<Image>, Strin
     let input = scratch.path().join("source.svg");
     std::fs::write(&input, wrapper).map_err(|e| e.to_string())?;
     let sizes: Vec<String> = squares.iter().map(u32::to_string).collect();
-    let ran = Command::new("pnpm")
+    let pnpm = crate::package::Os::named(std::env::consts::OS)?.pnpm();
+    let ran = Command::new(pnpm)
         .args(["exec", "tauri", "icon"])
         .arg(&input)
         .arg("-o")
@@ -339,6 +341,18 @@ mod tests {
             String::from_utf8(committed(HASHES)).unwrap() == source_hashes(&repo()).unwrap(),
             "{HASHES} is stale against {SOURCE_DIR}: run cargo xtask icons"
         );
+    }
+
+    #[test]
+    fn a_hidden_file_finder_leaves_in_the_source_folder_is_not_a_source() {
+        let repo = tempfile::tempdir().unwrap();
+        let dir = repo.path().join(SOURCE_DIR);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("icon.svg"), "<svg/>").unwrap();
+        std::fs::write(dir.join(".DS_Store"), "finder").unwrap();
+        let sums = source_hashes(repo.path()).unwrap();
+        assert_eq!(sums.lines().count(), 1, "{sums}");
+        assert!(sums.ends_with("  source/icon.svg\n"));
     }
 
     #[test]
