@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU settings-modal -> epic/prorelease (final tip, after the result report)"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W19
+branch: wu/prorelease/settings-modal
+base: 0633b2303a487193284241c1576b581a2879551f
+head: 69740f39bea8f9c1b1a4b9b37c434a6e7620b638
+diff_sha256: ca5bd8a2e9f1c41cb6b66ae8ef3606fab482fb0695d5e5e63b755c388bb75694
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 8
+  stage_seconds:
+    total: 54
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 3, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "a quit prompt or keep ask over Settings/About unmounts it; a cancel remounts it on its first page"
+    waived: "the plan promises Settings reappears, not its page; every General and Capture service control saves on change, so nothing unsaved is lost, and the queue keeps About's asked page (round 1's verifier refuted it as a defect)"
+  - finding: "shellDialogs.ts take() swallows a failed take_dialog_requests with no log"
+    waived: "the requests stay in the shell and are taken on the next announcement or mount; the web shell has no shell and fails every take, so a log there is noise"
+  - finding: "About's useEffect(() => setShown(show), [show]) costs one redundant render on open"
+    waived: "one render of a read-only dialog on open; the effect is the in-place page turn a second ask needs"
+  - finding: "each dialog-requested event costs one take_dialog_requests round trip"
+    waived: "bounded by user menu actions; the take drains the whole queue each time"
+  - finding: "the topmost order is stated in topmost() and mapped to actions in App.tsx"
+    waived: "topmost() is the one rule and is unit-tested; App maps each result to the close action it owns, and the App test covers the order end to end"
+  - finding: "the TS event names are pinned only by Rust tests"
+    waived: "the Rust tests include_str! shellDialogs.ts and fail on any drift in either direction; cargo test runs in every gate"
+verdict: PASS
+date: 2026-11-06
