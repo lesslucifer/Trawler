@@ -41,7 +41,7 @@
     </table>
 
     <h2 id="deviations">Deviations</h2>
-    <p data-item="deviations">None from the plan. The T1 release doc lands as an owner-signed <code>mr commit</code> after this report (rule-bearing), so the WU confirm's tip is that commit.</p>
+    <p data-item="deviations">None from the plan. The T1 release doc lands as an owner-signed <code>mr commit</code> after this report (rule-bearing), so the WU confirm's tip follows that commit. The epic moved meanwhile (W1, W15, W8, W2): it is merged into this branch (no rebase), conflicts resolved keeping both sides: <code>xtask/src/lib.rs</code> usage lists <code>licenses</code> and the new <code>release-manifest</code> line; the UC-INSTALL index row carries both the notes' verify step and DEC-87/88. A version bump leaves <code>THIRD-PARTY-NOTICES.txt</code> unchanged (workspace crates are not listed; <code>cargo xtask licenses</code> on the merge writes no diff), so the release doc needs no DEC-88 step.</p>
 
     <h2 id="evidence">Evidence</h2>
     <div data-item="evidence">
@@ -50,7 +50,7 @@
         <tbody>
           <tr><td>Tests red first</td><td>the new <code>release_manifest</code> tests failed to compile (no <code>changes</code>, three-argument <code>notes</code>), then 5 failed (no CHANGELOG, no template sections, no SHA256SUMS); <code>the_checksums_are_rechecked_by_another_tool_and_ship_with_the_draft</code> failed on the old <code>release.yml</code>; all green after</td></tr>
           <tr><td>Hand run</td><td><code>cargo xtask release-manifest</code> on a fake 0.1.0-5 dist: <code>shasum -a 256 -c SHA256SUMS</code> OK on all ten files; notes open with the 0.1.0 section; <code>v0.2.0-1</code> refused: <code>CHANGELOG.md has no ## 0.2.0 section for 0.2.0-1</code></td></tr>
-          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1390 tests)</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1390 tests; 1406 after the epic merge)</td></tr>
           <tr><td>Workflow lint</td><td><code>actionlint .github/workflows/release.yml</code> green</td></tr>
           <tr><td>e2e</td><td>waived to the next rc tag (the draft carries SHA256SUMS and the new notes)</td></tr>
         </tbody>
