@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+branch: 799e0ed8
+tests:
+  unit: { count: 42, covers: "notes over the real template: a final gives the .deb and the .rpm line, a pre-release the .deb line and no rpm (both pre-release tests red on the old code); run on a v0.1.0-4 dist writes that notes.md and latest.json carries the same notes; the_tree_carries_one_version holds 0.1.0-4 across Cargo.toml, Cargo.lock and ui/package.json" }
+  integration: { waived: "no integration contract changed: release.yml and the callers of release-manifest are untouched; run() is exercised end to end in its unit tests over the real template and a temp dist" }
+  e2e: { waived: "the release's e2e is the owner's v0.1.0-4 tag run on GitHub runners" }
