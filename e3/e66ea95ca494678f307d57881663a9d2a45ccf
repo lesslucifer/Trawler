@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-RELFIX
+wu: E-RELFIX.W2
+base: 200005e742d49bf0c70a99e99f306f692947476a
+tip: e3e66ea95ca494678f307d57881663a9d2a45ccf
+diff_sha256: 4b6da9b651c453f389f9aaffc10c3f48024e29e75a42aed8860ef03418eb0c73
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-06
