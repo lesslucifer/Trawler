@@ -496,7 +496,7 @@
       <tr><th>OS</th><th>Artifact</th><th>First open</th></tr>
       <tr><td>macOS 11+ (universal)</td><td><code>.dmg</code></td><td>ad-hoc signed · Privacy &amp; Security → Open Anyway</td></tr>
       <tr><td>Windows 10/11 x64 · arm64</td><td><code>-setup.exe</code> · <code>.msi</code></td><td>SmartScreen → More info → Run anyway</td></tr>
-      <tr><td>Linux x64 · arm64 (glibc, WebKitGTK 4.1)</td><td><code>.AppImage</code> · <code>.deb</code> · <code>.rpm</code></td><td>no prompt; GNOME needs the AppIndicator extension for the tray</td></tr>
+      <tr><td>Linux x64 · arm64 (glibc, WebKitGTK 4.1)</td><td><code>.AppImage</code> · <code>.deb</code> · <code>.rpm</code> (finals only: rpm refuses a pre-release version, DEC-86 rule 7)</td><td>no prompt; GNOME needs the AppIndicator extension for the tray</td></tr>
     </table>
     <p class="kd" data-c="uc-install-proof">Proven by <code>xtask/tests/package_bundle.rs</code> (macOS, <code>--features package-tests</code>):
       the packaged <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
