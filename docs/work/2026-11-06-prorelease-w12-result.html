@@ -8,9 +8,9 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-PRORELEASE.W12 result — user guide design, round 1</h1>
-      <p>What the design WU produced for owner review, the gaps it found, and the open questions.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W12</span> · <code>wu/prorelease/guide-design</code> → <code>epic/prorelease</code> · design <a href="2026-11-06-prorelease-w12-guide-design.html">W12 user guide design</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+      <h1>E-PRORELEASE.W12 result — user guide design, signed</h1>
+      <p>What the design WU produced, the gaps it found, and the owner's rulings that closed it (round 2).</p>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W12</span> · <code>wu/prorelease/guide-design</code> → <code>epic/prorelease</code> · design <a href="2026-11-06-prorelease-w12-guide-design.html">W12 user guide design</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
     </div>
   </header>
   <main>
@@ -27,7 +27,9 @@
           <tr><td>Troubleshooting symptoms</td><td><code>#troubleshooting</code></td></tr>
           <tr><td>Install, Trust the certificate, Uninstall drafted in full in the W11 voice</td><td><code>#draft-install</code>, <code>#draft-trust</code>, <code>#draft-uninstall</code></td></tr>
           <tr><td>Product gaps found (no removal button off macOS, three copy bugs, login-item leftovers, Linux scope)</td><td><code>#gaps</code> G1–G6</td></tr>
-          <tr><td>Owner questions with recommendations</td><td><code>#owner-questions</code> Q1–Q5, open</td></tr>
+          <tr><td>Owner questions with recommendations</td><td><code>#owner-questions</code> Q1–Q5, ruled (Ruling column)</td></tr>
+          <tr><td>Round 2: rulings applied — Q1 Windows button (W16), Q2 text fixes (W16 G2, W17 G3–G4), Q3 Ubuntu/GNOME + one line, Q4 S10/S11 in the W5 script, Q5 W6 after W4/W16/W17; signed</td><td><code>#gaps</code>, <code>#draft-uninstall</code>, <code>#flow-uninstall</code>, <code>#screenshots</code>, <code>#sign-off</code></td></tr>
+          <tr><td>Epic plan v4: W16, W17 added, W15 recorded, statuses and waves, W6 depends on W4, W5, W12, W16, W17</td><td><a href="2026-11-06-prorelease-plan.html#wu-summaries">plan <code>#wu-summaries</code></a>, <code>#run-order</code></td></tr>
           <tr><td>What could not be verified here</td><td><code>#unverified</code></td></tr>
         </tbody>
       </table>
@@ -43,6 +45,7 @@
         <tbody>
           <tr><td>Guide claims and labels are true of the tree <code>d62447dc</code></td><td>file:line per row in the design doc's <code>#facts</code> and <code>#labels</code> (<code>ui/src-tauri/src/setup.rs</code>, <code>ui/src/setup.ts</code>, <code>ui/src/Onboarding.tsx</code>, <code>menu.rs</code>, <code>tray.rs</code>, <code>update.rs</code>, <code>login_item.rs</code>, <code>src/reach.rs</code>, <code>src/api</code>)</td></tr>
           <tr><td>Help → User Guide target</td><td>W13 design run: <code>https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md</code>, F1 off macOS (D6)</td></tr>
+          <tr><td>Owner sign-off</td><td>Q1–Q5 answered in the terminal 2026-11-06, recorded in the design doc <code>#sign-off</code></td></tr>
           <tr><td>Doc renders and is commentable</td><td>htmldoc id minted; baseline snapshot <code>2026-11-06T10-43-35-559Z</code></td></tr>
           <tr><td>e2e / integration / unit</td><td>waived: no code changes</td></tr>
         </tbody>
@@ -57,8 +60,9 @@
       <table data-c="follow-ups">
         <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
         <tbody>
-          <tr><td>Owner rulings Q1–Q5, then round 2 and the sign-off</td><td>owner via router → W12 round 2</td></tr>
-          <tr><td>Copy fixes G2–G4 (per Q2)</td><td>a fix WU or W4, per Q2</td></tr>
+          <tr><td>Windows <strong>remove the certificate</strong> button + G2 steps</td><td>W16</td></tr>
+          <tr><td>Text fixes G3, G4</td><td>W17</td></tr>
+          <tr><td>Fedora/KDE steps in app + guide (Q3)</td><td>post-0.1.0 follow-up</td></tr>
           <tr><td>Folder paths, package name, first-open wording on real installs</td><td>W6 + the hand-check matrix</td></tr>
         </tbody>
       </table>
