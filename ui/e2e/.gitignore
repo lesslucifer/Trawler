@@ -9,3 +9,5 @@ pnpm-lock.yaml
 .run-tally*.json
 # The walkthrough launcher hands its worker the harness ports the same way.
 walkthrough/.walkthrough-ports.json
+# The screenshot launcher hands its worker the harness ports the same way.
+screenshots/.screenshots-ports.json

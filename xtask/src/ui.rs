@@ -25,6 +25,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         }
         ["e2e"] => e2e(&dir),
         ["walkthrough"] => super::walkthrough::run(&dir, repo),
+        ["screenshots"] => super::screenshots::run(&dir, repo),
         ["specimens"] => specimens(repo, "build-specimens.mjs"),
         ["specimens", "--check"] => specimens(repo, "check-render.mjs"),
         _ => Err(super::USAGE.to_string()),

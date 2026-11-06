@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedc4e49f34851f0dfaef4a">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-91: the public text is one voice, checked</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-91 — the public text is one voice, checked</h1>
+      <p>The repo's GitHub-facing files are root markdown written for users, each fact in one file, and a unit test holds their links, install table, names and forms.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W5</strong> (rulings of W11 Q1–Q10, W12 Q4) · UC-INSTALL · relates to
+        <a href="dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a> · <a href="dec-89-one-signed-mark-one-source-folder.html">DEC-89</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="files">Which fact lives where</h2>
+    <div class="diagram" data-c="files">
+      <pre class="mermaid">
+flowchart LR
+  R["README.md<br/>what · install · first run · limits · FAQ"] --> G["GUIDE.md<br/>every task step by step"]
+  R --> P["PRIVACY.md<br/>what leaves, what stays"]
+  R --> C["CONTRIBUTING.md<br/>build · layout · control API"]
+  R --> S["SECURITY.md<br/>private report · scope · CA key"]
+  R --> L["CHANGELOG.md → release notes"]
+  R --> K["CODE_OF_CONDUCT.md<br/>Contributor Covenant 2.1"]
+      </pre>
+      <div class="caption">The README states each fact in one line and links the file that owns it.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>Voice: plain, second person, present tense; OS and UI labels in bold exactly as shown; limits stated where they bite; no hype, no futures, no internal ids</td><td>the reader is a user, not a maintainer</td></tr>
+      <tr><td>2</td><td>No other tool is named in any published file (README, community files, issue forms, PR template, CHANGELOG, release notes)</td><td>owner ruling (W11 Q5); held by a deny-list test</td></tr>
+      <tr><td>3</td><td>The README's install table names exactly the installer kinds <code>package.rs</code> bundles per host for a final; an <code>.rpm</code> row says final releases only</td><td>DEC-86 rule 7; a table that drifts from the build sends users to files that don't exist</td></tr>
+      <tr><td>4</td><td>Every relative link and image in a published file resolves, a markdown anchor included; a file linked before it exists sits in <code>NOT_YET_WRITTEN</code> and must leave it the moment it lands</td><td>no broken link on the repo's front page</td></tr>
+      <tr><td>5</td><td>Outside pull requests are not taken at 0.1.0: issues only, said politely in CONTRIBUTING, the PR template and the FAQ</td><td>owner ruling (W11 Q10)</td></tr>
+      <tr><td>6</td><td>Product screenshots come from <code>cargo xtask ui screenshots</code> (the walkthrough's scenario build, a HAR fixture of reserved hosts, a temp <code>HOME</code>) into <code>.github/screenshots/</code>; only the OS prompts (S8, S9) are hand-captured once, on the last rc</td><td>reproducible shots that follow the UI; CI cannot show OS dialogs (W11 Q8)</td></tr>
+      <tr><td>7</td><td>Privacy and security claims are only those the code backs: in memory only, loopback unless a device is allowed, an unencrypted CA key in the app data folder, two outbound calls (the update check with its switch, the setup test)</td><td>a public promise the code breaks is the worst bug</td></tr>
+    </table>
+
+    <h2 id="held">Held by</h2>
+    <p data-c="held"><code>xtask/src/public_text.rs</code>' unit tests (links and anchors resolve, the install table matches <code>Os::bundles</code>, no denied name, issue forms and their config parse) and <code>xtask/src/screenshots.rs</code>' (a run is green only when every listed shot is a PNG; the spec takes exactly the listed shots).</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

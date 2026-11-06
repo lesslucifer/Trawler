@@ -549,12 +549,7 @@ fn read_plan(e2e: &Path) -> Result<Plan, String> {
     parse_plan(&String::from_utf8_lossy(&out.stdout))
 }
 
-pub fn run(ui: &Path, repo: &Path) -> Result<(i32, String), String> {
-    let e2e = ui.join("e2e");
-    required(pnpm(&e2e, &["install"], &[]), "pnpm install in ui/e2e")?;
-    let plan = read_plan(&e2e)?;
-    judge_plan(&plan)?;
-
+pub fn scenario_build(ui: &Path) -> Result<(), String> {
     required(pnpm(ui, &["install"], &[("VITE_E2E", "1")]), "pnpm install")?;
     required(pnpm(ui, &["build"], &[("VITE_E2E", "1")]), "pnpm build")?;
     let target = ui.join("src-tauri/target/scenario");
@@ -570,7 +565,16 @@ pub fn run(ui: &Path, repo: &Path) -> Result<(i32, String), String> {
         "--features",
         "scenario",
     ];
-    required(pnpm(ui, &build, &[("CARGO_TARGET_DIR", &target)]), "the scenario build")?;
+    required(pnpm(ui, &build, &[("CARGO_TARGET_DIR", &target)]), "the scenario build")
+}
+
+pub fn run(ui: &Path, repo: &Path) -> Result<(i32, String), String> {
+    let e2e = ui.join("e2e");
+    required(pnpm(&e2e, &["install"], &[]), "pnpm install in ui/e2e")?;
+    let plan = read_plan(&e2e)?;
+    judge_plan(&plan)?;
+
+    scenario_build(ui)?;
 
     let out = repo.join("target/walkthrough");
     let _ = std::fs::remove_dir_all(&out);

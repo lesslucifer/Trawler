@@ -12,7 +12,9 @@ pub mod notes;
 pub mod notes_write;
 pub mod package;
 pub mod preflight;
+pub mod public_text;
 pub mod release_manifest;
+pub mod screenshots;
 pub mod smoke;
 pub mod tally;
 pub mod target;
@@ -62,6 +64,7 @@ usage:
   cargo xtask ui e2e                                          (build e2e app + drive the real window via WebdriverIO)
   cargo xtask ui specimens [--check]                          (compile the collection for design files; --check renders each over file://)
   cargo xtask ui walkthrough                                  (film the setup screen on every host x platform → target/walkthrough/: a video per reel + index.html)
+  cargo xtask ui screenshots                                  (the README and guide screenshots from the scenario build → .github/screenshots/)
   cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
 
 pub fn repo_root() -> Result<PathBuf, String> {

@@ -1,88 +1,185 @@
-# Trawler
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="ui/src-tauri/icons/brand/wordmark-dark.png">
+    <img alt="Trawler" src="ui/src-tauri/icons/brand/wordmark-light.png" width="370">
+  </picture>
+</p>
 
-A native HTTP(S) debugging proxy written in Rust — a lightweight, hackable take on
-[Charles](https://www.charlesproxy.com/) and [Proxyman](https://proxyman.io/). Trawler
-sits between your apps and the network, decrypts HTTPS via a locally-trusted CA, and
-captures every request and response flowing through it — exposed over a local,
-scriptable control API.
+<h3 align="center">See every HTTP and HTTPS request your apps make.</h3>
 
-> ⚠️ **For debugging your own traffic only.** Intercepting TLS traffic requires
-> installing a custom root CA. Only run this against devices and services you own or
-> are authorized to inspect.
+<p align="center">
+  A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.
+</p>
 
-## Features
+<p align="center">
+  <a href="https://github.com/lesslucifer/Trawler/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/lesslucifer/Trawler?include_prereleases&sort=semver&label=release"></a>
+  <a href="LICENSE"><img alt="Licence: MIT" src="https://img.shields.io/github/license/lesslucifer/Trawler?label=licence"></a>
+  <img alt="Platforms: macOS, Windows, Linux" src="https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-informational">
+</p>
 
-- **HTTP & HTTPS interception** — MITM proxy with on-the-fly per-host certificate generation ([`hudsucker`](https://crates.io/crates/hudsucker) 0.24).
-- **Self-managed CA** — generates and persists a local Certificate Authority on first run; downloadable at `/ca.crt`.
-- **Body capture** — buffer-then-forward up to a 10 MB per-request cap, with a streaming (SSE) fast-path that is never buffered.
-- **In-memory store** — a byte-weighted ring buffer of live flows; nothing hits disk.
-- **Control API** — inspect-only REST + a live Server-Sent-Events stream, scriptable from `curl` on day one.
-- **View-side decoding** — `?decode=1` reverses `content-encoding` (gzip/deflate) and pretty-prints JSON, leaving stored bytes untouched.
+<p align="center"><a href="#install">Download for macOS · Windows · Linux</a></p>
 
-## Architecture
+![Trawler's main window: the list of captured requests, one JSON response open in the inspector](.github/screenshots/s1-main-window.png)
 
-- **[Core Technical Design](docs/core-technical-design.html)** — the *why*: capture model, body-cap rule, TLS interception, CA/trust, and the hard limits.
-- **[Architecture](docs/architecture.html)** — the *how*: layout & conventions, runtime wiring, the request/response lifecycle, the client/core boundary, and the load-bearing decisions.
+## What you can do
 
-The proxy handler is a dumb producer; a central store owns the canonical flows; every
-interface is a subscriber over a broadcast bus. The core is a library (`src/lib.rs`);
-the binary (`src/main.rs`) is a thin launcher — any UI is just a client of the API.
+- Capture the HTTP and HTTPS traffic of this machine.
+- Capture an iPhone, an Android phone, the iOS Simulator or the Android emulator, set up from one screen.
+- Filter the list with chips such as `status:4xx` or `-method:OPTIONS`.
+- Read headers, timing and bodies, with viewers for JSON, XML, HTML, forms and more.
+- Send a request again, edited, or write one from scratch.
+- Export what you captured to HAR, and open a HAR file.
+- Keep capturing with the window closed, from the menu-bar or tray icon.
 
-## Getting started
+## Install
 
-### Prerequisites
+Download the file for your system from the [latest release](https://github.com/lesslucifer/Trawler/releases/latest).
 
-- [Rust](https://rustup.rs/) (stable, 2021 edition or later)
+| System | Download | First open |
+|---|---|---|
+| macOS 11 or later · Apple Silicon and Intel | `Trawler_<version>_universal.dmg` | **Privacy & Security → Open Anyway** |
+| Windows x64 | `Trawler_<version>_x64-setup.exe` (recommended) · `Trawler_<version>_x64_en-US.msi` | **More info → Run anyway** |
+| Windows arm64 | `Trawler_<version>_arm64-setup.exe` · `Trawler_<version>_arm64_en-US.msi` | **More info → Run anyway** |
+| Linux x64 | `Trawler_<version>_amd64.AppImage` · `Trawler_<version>_amd64.deb` · `Trawler-<version>-1.x86_64.rpm` (final releases only) | no prompt |
+| Linux arm64 | `Trawler_<version>_aarch64.AppImage` · `Trawler_<version>_arm64.deb` · `Trawler-<version>-1.aarch64.rpm` (final releases only) | no prompt |
 
-### Run
+Every installed copy updates itself from inside the app.
 
-```sh
-cargo run                         # proxy on :7420, control API on :7421
-RUST_LOG=trawler=debug cargo run  # verbose
-```
+<details>
+<summary>First open on macOS and Windows</summary>
 
-Then point a client at the proxy and watch traffic land in the API:
+Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher. You do this once; updates install from inside Trawler.
 
-```sh
-curl -x http://127.0.0.1:7420 http://example.com/     # proxy a request
-curl http://127.0.0.1:7421/flows                       # list captured flows
-curl -N http://127.0.0.1:7421/stream                   # live SSE of new flows
-```
+- **macOS:** open Trawler from Applications, click **Done** on the warning, then open **System Settings → Privacy & Security**, scroll to the message about Trawler and click **Open Anyway**.
+- **Windows:** when **Windows protected your PC** appears, click **More info**, then **Run anyway**.
 
-For HTTPS, download and trust the CA (`http://127.0.0.1:7421/ca.crt`) — see the
-per-platform routing/trust table in the [Core Technical Design](docs/core-technical-design.html#network).
+Step by step, with pictures: [the guide](GUIDE.md#install).
+</details>
 
-## Control API
+<details>
+<summary>Check your download</summary>
 
-| Endpoint | Returns |
-|---|---|
-| `GET /flows?host=&method=&status=&content_type=&q=` | flow summaries, newest first |
-| `GET /flows/{id}` | full flow detail (headers + body states) |
-| `GET /flows/{id}/request/body` · `…/response/body` | raw bytes; `?decode=1` for decoded |
-| `GET /stream` | live SSE lifecycle events (compact, no bodies) |
-| `GET /ca.crt` | root CA certificate (PEM) |
+Each release has a `SHA256SUMS` file. Download it into the folder with your file, then run:
 
-## Roadmap
+- macOS: `shasum -a 256 -c SHA256SUMS --ignore-missing`
+- Linux: `sha256sum -c SHA256SUMS --ignore-missing`
+- Windows (PowerShell): `(Get-FileHash .\<file> -Algorithm SHA256).Hash`, then compare it with that file's line in `SHA256SUMS`.
 
-- [ ] Persistent session storage (SQLite / HAR) behind the store boundary
-- [ ] Replay and breakpoints / request rewriting
-- [ ] A TUI or web dashboard client
-- [ ] WebSocket frame inspection
-- [ ] Transparent (NAT) interception
+Your file must say `OK`, or the two hashes must match. If they don't, delete the file and download it again.
+</details>
 
-## Project layout
+## First run
 
-```
-src/lib.rs      Composition root — run(Config) wires proxy + control API
-src/main.rs     Thin binary launcher
-src/config.rs   Runtime configuration and defaults
-src/flow.rs     Domain model: Flow, RequestRec/ResponseRec, BodyRec
-src/event.rs    FlowEvent (broadcast lifecycle events)
-src/capture.rs  Body drain / cap / streaming rule
-src/store.rs    Byte-weighted ring buffer + broadcast bus + filtering
-src/recorder.rs hudsucker HttpHandler — the capture producer
-src/ca.rs       Certificate authority material
-src/api/        axum control API: routes, view projections, decode chain
-docs/           Interactive HTML design & architecture docs
-ca/             Generated CA (git-ignored) — never commit or share the private key
-```
+1. Open Trawler. The setup screen opens by itself.
+2. Pick **This machine** and click **set up this Mac** (or **set up this PC**). It trusts Trawler's certificate and points the system proxy at Trawler. On Linux, the screen shows each step to do by hand.
+3. Click **make a request to example.com**. Your requests now appear in the list.
+
+To capture a phone or a simulator, open **⋮ → set up another device**. Every step, per system: [the guide](GUIDE.md#first-run).
+
+## More screens
+
+| Setup | Filters | Send again |
+|---|---|---|
+| ![The setup screen for this machine, every task done](.github/screenshots/s2-setup-this-machine.png) | ![The list filtered by the chips status:4xx and -method:OPTIONS](.github/screenshots/s3-filter-chips.png) | ![A request sent again with one header edited, its response shown](.github/screenshots/s5-send-again.png) |
+
+## Privacy
+
+- Your captured traffic stays in memory on your machine and is gone when you quit. There is no account, analytics or telemetry.
+- Trawler makes two requests of its own: an update check to GitHub when it opens (at most once a day; a switch in **Settings → General** turns it off), and the setup screen's test request to example.com when you click it.
+- Trawler's certificate key is stored unencrypted in your app data folder. While the certificate is trusted, anyone who can read your user files could use it to read your HTTPS. Remove it when you stop using Trawler.
+
+Details: [PRIVACY.md](PRIVACY.md).
+
+## Known limits
+
+- HTTP/3 traffic isn't captured: it goes around any HTTP proxy.
+- Apps that pin their certificates refuse Trawler's, so their requests fail while capture is on.
+- WebSocket: the opening request is captured; messages aren't shown.
+- A body over 10 MB still reaches the app, but Trawler doesn't keep it.
+- Captured requests are cleared when you quit. Export to HAR to keep them.
+- Removing the certificate from the app works on macOS and Windows; on Linux, follow the steps on the setup screen.
+- On GNOME, the tray icon needs the AppIndicator extension.
+- Open at login needs macOS 13 or later.
+- Updating a `.deb` or `.rpm` install asks for your password.
+- `.rpm` is built for final releases only.
+
+Workarounds: [the guide](GUIDE.md#troubleshooting).
+
+## FAQ
+
+<details>
+<summary>Is it free?</summary>
+
+Yes. MIT licence, no paid tier, no account.
+</details>
+
+<details>
+<summary>Why does my computer warn me when I first open it?</summary>
+
+Trawler isn't signed with a paid certificate. The warning is the OS saying it doesn't know the publisher. Check your download against `SHA256SUMS`, then follow the steps in [Install](#install).
+</details>
+
+<details>
+<summary>Is it safe to trust Trawler's certificate?</summary>
+
+The certificate is made on your machine and is unique to your install. While it's trusted, anyone who can read your user files could use its key to read your HTTPS. Remove it when you stop using Trawler ([the guide](GUIDE.md#uninstall)).
+</details>
+
+<details>
+<summary>Does Trawler send my traffic anywhere?</summary>
+
+No. It forwards each request to where it was going and keeps a copy in memory on your machine. See [PRIVACY.md](PRIVACY.md).
+</details>
+
+<details>
+<summary>Where are captured requests saved?</summary>
+
+Nowhere: they live in memory and go away when you quit. Export to HAR to keep them.
+</details>
+
+<details>
+<summary>Why don't I see an app's traffic?</summary>
+
+The app ignores the system proxy, pins its own certificates, or uses HTTP/3. See [Known limits](#known-limits).
+</details>
+
+<details>
+<summary>Can I capture my phone, a simulator or an emulator?</summary>
+
+Yes: iPhone, Android, the iOS Simulator and the Android emulator, from the setup screen.
+</details>
+
+<details>
+<summary>How do updates work?</summary>
+
+Trawler checks GitHub when it opens (at most once a day) and when you choose **Check for Updates…**. It asks before installing, and only installs a release signed by the project. A switch in **Settings → General** turns the check at opening off.
+</details>
+
+<details>
+<summary>What can't it do?</summary>
+
+Trawler has no breakpoints, rewrite rules or scripting language. It is native on macOS, Windows and Linux, open source and local-only.
+</details>
+
+<details>
+<summary>Can I send a pull request?</summary>
+
+Not yet. Bug reports and ideas are welcome as issues; see [CONTRIBUTING.md](CONTRIBUTING.md).
+</details>
+
+<details>
+<summary>How do I remove it completely?</summary>
+
+Turn the proxy off, remove the certificate, then the app and its data folder, in that order ([the guide](GUIDE.md#uninstall)).
+</details>
+
+## Scripting
+
+Trawler has a local HTTP API on `127.0.0.1:7421` that lists, streams, exports and replays requests, for example `curl http://127.0.0.1:7421/flows`. The capture core also runs without the window (`cargo run -p trawler`). The API reference: [CONTRIBUTING.md](CONTRIBUTING.md#control-api).
+
+## Contributing · Security · Licence
+
+- Bug reports and ideas are welcome as issues: [CONTRIBUTING.md](CONTRIBUTING.md).
+- Found a vulnerability? Report it privately: [SECURITY.md](SECURITY.md).
+- Everyone here follows the [code of conduct](CODE_OF_CONDUCT.md).
+- MIT © 2026 Vu Luu: [LICENSE](LICENSE). Third-party licences: [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt).

@@ -1,0 +1,74 @@
+name: Bug report
+description: Something in Trawler doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. Before you paste anything, remove tokens, cookies and private hosts.
+        A security problem goes to a private report instead (see SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: Trawler version
+      description: Settings → General, or About Trawler.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: System and its version
+      placeholder: macOS 15.4 · Windows 11 24H2 · Ubuntu 24.04
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed Trawler
+      options:
+        - .dmg
+        - -setup.exe
+        - .msi
+        - AppImage
+        - .deb
+        - .rpm
+        - from source
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you did
+      description: The steps that show the problem.
+      placeholder: |
+        1. Open the setup screen
+        2. Click …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: dropdown
+    id: curl-check
+    attributes:
+      label: Does `curl -x http://127.0.0.1:7420 https://example.com` show up in the list?
+      options:
+        - "Yes"
+        - "No"
+        - I didn't try
+  - type: textarea
+    id: log
+    attributes:
+      label: Service log
+      description: Settings → Capture service → log. Remove anything private first.
+      render: text
