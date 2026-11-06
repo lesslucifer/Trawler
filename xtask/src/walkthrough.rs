@@ -515,7 +515,7 @@ pub fn index_html(results: &[ReelResult<'_>]) -> String {
     page
 }
 
-fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<bool, String> {
+pub(crate) fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<bool, String> {
     let mut cmd = Command::new("pnpm");
     cmd.args(args).current_dir(dir);
     for (k, v) in env {
@@ -526,7 +526,7 @@ fn pnpm(dir: &Path, args: &[&str], env: &[(&str, &str)]) -> Result<bool, String>
         .map_err(|e| format!("failed to launch pnpm (is it installed?): {e}"))
 }
 
-fn required(ok: Result<bool, String>, what: &str) -> Result<(), String> {
+pub(crate) fn required(ok: Result<bool, String>, what: &str) -> Result<(), String> {
     if ok? {
         Ok(())
     } else {

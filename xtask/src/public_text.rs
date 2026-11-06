@@ -59,11 +59,16 @@ pub fn slug(heading: &str) -> String {
 }
 
 pub fn anchors(markdown: &str) -> BTreeSet<String> {
-    markdown
-        .lines()
-        .filter(|line| line.starts_with('#'))
-        .map(|line| slug(line.trim_start_matches('#')))
-        .collect()
+    let mut fenced = false;
+    let mut found = BTreeSet::new();
+    for line in markdown.lines() {
+        if line.trim_start().starts_with("```") {
+            fenced = !fenced;
+        } else if !fenced && line.starts_with('#') {
+            found.insert(slug(line.trim_start_matches('#')));
+        }
+    }
+    found
 }
 
 pub fn broken_targets(repo: &Path, file: &str, text: &str) -> Vec<String> {
@@ -195,8 +200,10 @@ pub fn form_problems(file: &str, yaml: &str) -> Vec<String> {
             if field["attributes"]["label"].as_str().is_none() {
                 problems.push(format!("{file}: a {kind} without a label"));
             }
-            if kind == "dropdown" && field["attributes"]["options"].as_sequence().is_none() {
-                problems.push(format!("{file}: a dropdown without options"));
+            if ["dropdown", "checkboxes"].contains(&kind)
+                && field["attributes"]["options"].as_sequence().is_none()
+            {
+                problems.push(format!("{file}: a {kind} without options"));
             }
         }
     }
@@ -245,6 +252,20 @@ mod tests {
         assert_eq!(slug(" Contributing · Security · Licence"), "contributing--security--licence");
         assert_eq!(slug("Check your download"), "check-your-download");
         assert_eq!(slug("Why don't I see an app's traffic?"), "why-dont-i-see-an-apps-traffic");
+    }
+
+    #[test]
+    fn a_hash_line_inside_a_code_fence_is_no_heading() {
+        assert_eq!(
+            anchors("# Top\n```sh\n# a comment\n```\n## Next\n"),
+            BTreeSet::from(["top".to_string(), "next".to_string()])
+        );
+    }
+
+    #[test]
+    fn checkboxes_need_their_options() {
+        let form = "name: B\ndescription: d\nbody:\n  - type: checkboxes\n    id: c\n    attributes: {label: C}\n";
+        assert_eq!(form_problems("b.yml", form), ["b.yml: a checkboxes without options"]);
     }
 
     #[test]

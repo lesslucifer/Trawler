@@ -1,5 +1,5 @@
+use super::walkthrough::{pnpm, required};
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 pub const OUT: &str = ".github/screenshots";
 
@@ -33,6 +33,21 @@ pub fn missing_shots(out: &Path, shots: &[&str]) -> Vec<String> {
         .collect()
 }
 
+// The committed shots sit where the run writes, so a shot the spec skipped
+// would otherwise pass on last run's file.
+pub fn clear_shots(out: &Path, shots: &[&str]) -> Result<(), String> {
+    for shot in shots {
+        let path = out.join(format!("{shot}.png"));
+        match std::fs::remove_file(&path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                return Err(format!("{}: {e}", path.display()));
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
+
 fn home_dir() -> Result<PathBuf, String> {
     std::env::var_os("HOME").map(PathBuf::from).ok_or("HOME is not set".to_string())
 }
@@ -44,34 +59,30 @@ fn launch(e2e: &Path, out: &Path, name: &str) -> Result<(), String> {
     let home = tempfile::tempdir().map_err(|e| format!("a temp HOME: {e}"))?;
     let tool_home =
         |var: &str, dir: &str| std::env::var_os(var).unwrap_or_else(|| real.join(dir).into());
-    let status = Command::new("pnpm")
-        .args(["exec", "wdio", "run", "screenshots/screenshots.conf.ts"])
-        .current_dir(e2e)
-        .env("HOME", home.path())
-        .env("CARGO_HOME", tool_home("CARGO_HOME", ".cargo"))
-        .env("RUSTUP_HOME", tool_home("RUSTUP_HOME", ".rustup"))
-        .env("TRAWLER_SCREENSHOTS_LAUNCH", name)
-        .env("TRAWLER_SCREENSHOTS_OUT", out)
-        .status()
-        .map_err(|e| format!("failed to launch pnpm (is it installed?): {e}"))?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("the {name} screenshot launch failed"))
-    }
+    let home = home.path().to_string_lossy();
+    let cargo_home = tool_home("CARGO_HOME", ".cargo");
+    let rustup_home = tool_home("RUSTUP_HOME", ".rustup");
+    let out = out.to_string_lossy();
+    let env = [
+        ("HOME", &*home),
+        ("CARGO_HOME", &*cargo_home.to_string_lossy()),
+        ("RUSTUP_HOME", &*rustup_home.to_string_lossy()),
+        ("TRAWLER_SCREENSHOTS_LAUNCH", name),
+        ("TRAWLER_SCREENSHOTS_OUT", &*out),
+    ];
+    let conf = ["exec", "wdio", "run", "screenshots/screenshots.conf.ts"];
+    required(pnpm(e2e, &conf, &env), &format!("the {name} screenshot launch"))
 }
 
 pub fn run(ui: &Path, repo: &Path) -> Result<(i32, String), String> {
     let e2e = ui.join("e2e");
-    let installed = Command::new("pnpm").arg("install").current_dir(&e2e).status();
-    if !installed.is_ok_and(|status| status.success()) {
-        return Err("pnpm install in ui/e2e failed".to_string());
-    }
+    required(pnpm(&e2e, &["install"], &[]), "pnpm install in ui/e2e")?;
     super::walkthrough::scenario_build(ui)?;
     let out = repo.join(OUT);
     std::fs::create_dir_all(&out).map_err(|e| format!("{}: {e}", out.display()))?;
     let mut missing = Vec::new();
     for (name, shots) in LAUNCHES {
+        clear_shots(&out, shots)?;
         launch(&e2e, &out, name)?;
         missing.extend(missing_shots(&out, shots));
     }
@@ -85,6 +96,17 @@ pub fn run(ui: &Path, repo: &Path) -> Result<(i32, String), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_run_starts_without_the_shots_it_takes_and_keeps_the_hand_captured_ones() {
+        let dir = tempfile::tempdir().unwrap();
+        for name in ["a.png", "s8-hand.png"] {
+            std::fs::write(dir.path().join(name), PNG_SIGNATURE).unwrap();
+        }
+        clear_shots(dir.path(), &["a", "never-taken"]).unwrap();
+        assert_eq!(missing_shots(dir.path(), &["a"]), ["a.png"]);
+        assert!(dir.path().join("s8-hand.png").exists());
+    }
 
     #[test]
     fn a_shot_is_taken_only_when_its_png_exists() {

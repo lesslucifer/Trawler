@@ -79,14 +79,19 @@ export const config: WebdriverIO.Config = {
       proxy: OURS,
     });
     if (!attached) return;
-    const ports = await startCore();
-    const reach = await fetch(`${ports.control}/front/reach`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify([ETHERNET]),
-    });
-    if (!reach.ok) throw new Error(`harness /front/reach: ${reach.status}`);
-    process.env.TRAWLER_API = ports.front;
+    try {
+      const ports = await startCore();
+      const reach = await fetch(`${ports.control}/front/reach`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify([ETHERNET]),
+      });
+      if (!reach.ok) throw new Error(`harness /front/reach: ${reach.status}`);
+      process.env.TRAWLER_API = ports.front;
+    } catch (failed) {
+      harness?.kill();
+      throw failed;
+    }
   },
   onComplete: async () => {
     if (!attached) return;
