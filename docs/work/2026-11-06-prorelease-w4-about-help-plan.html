@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="7b3e1c9a4d2f8e6051a7c3b9" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W4 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W4: About, Help and the version on every OS</h1>
+      <p>Built from the signed W13 design run (D1–D9): Trawler's own About window with three pages, a Help menu per OS, the version, <em>check now</em> and the auto-check switch in Settings → General.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W4</span> · branch <code>wu/prorelease/about-help</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · design run <a href="2026-11-06-prorelease-about-help-design-run.html">W13 (closed)</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">On macOS, Windows and Linux the user opens one About window (version, licence, copyright, logo, user guide, report an issue, source code) with Third-party licences and Privacy pages; the Help menu opens the guide, a prefilled issue (version, OS and its version, CPU, install kind; nothing about traffic or the machine), the licences and the privacy page; Settings → General shows the version, <em>check now</em> and <em>check for updates automatically</em> (default on, stored, honoured by the launch check).</p>
+
+    <h2 id="shape">Shape</h2>
+    <div class="diagram"><pre class="mermaid">flowchart LR
+  M["menu.rs · Help per OS · About item"] --> A["about.rs · window 'about' · page"]
+  M --> L["links.rs · guide · issue · source → opener"]
+  A --> P["About.tsx · About · Licences · Privacy"]
+  P --> L
+  S["General.tsx · Updates block"] --> U["update.rs · auto switch · check(ByUser)"]
+  U --> LA["check_at_launch honours the switch"]</pre></div>
+    <p>The webview never hands the shell a URL: it names a link (<code>guide</code> · <code>issue</code> · <code>source</code>) and the shell builds the address.</p>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>How links open</td><td>Rust <code>tauri_plugin_opener::open_url</code> from a command taking a closed <code>Link</code> enum; no opener permission for the webview</td><td>least reach: no page can open an arbitrary address</td></tr>
+        <tr><td>OS version</td><td><code>tauri_plugin_os::version()</code> from Rust (D9); the plugin is not registered for the webview</td><td>one call on every OS, nothing exposed</td></tr>
+        <tr><td>Install kind</td><td><code>bundle_type()</code>: app → dmg · nsis → exe · msi · deb · rpm · AppImage · none → from source</td><td>the W11 issue form's install values</td></tr>
+        <tr><td>Issue prefill</td><td><code>issues/new?template=bug_report.yml&amp;version=…&amp;os=…&amp;install=…</code>; <code>os</code> carries OS, version and CPU</td><td>W5 owns the form; these ids are the contract it takes (follow-up)</td></tr>
+        <tr><td>Auto-check switch</td><td><code>update-check.json</code> <code>{"automatic":bool}</code> in the config dir; missing or unreadable reads on</td><td>Q5 default on, the keep-capturing file's shape</td></tr>
+        <tr><td>About window</td><td>label <code>about</code>, page mark <code>__TRAWLER_PAGE__ = "about"</code>, the first page in <code>__TRAWLER_ABOUT_PAGE__</code>; an open window is told the page by the <code>about-page</code> event</td><td>the Settings window's pattern</td></tr>
+        <tr><td>Capability</td><td>new <code>about</code>: <code>core:default</code> + <code>core:window:allow-close</code> (Esc, D8)</td><td>no fs or dialog reach for a read-only window</td></tr>
+        <tr><td>Privacy text</td><td>one file <code>ui/src/privacy.ts</code> holding W11's draft; W5's <code>PRIVACY.md</code> copies it (follow-up)</td><td>one source for the page</td></tr>
+        <tr><td>Logo</td><td><code>/favicon.svg</code> (W3's generated mark), decorative</td><td>already shipped in <code>ui/public</code></td></tr>
+        <tr><td>Rule</td><td>new DEC-90, written with the build</td><td>own About everywhere, closed links, the switch</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W4 · design run W13 (D1–D9) · plan Q5, Q6 · UC-ABOUT (new) · UC-UPDATE · DEC-82, DEC-88, DEC-89 · <code>ui/src-tauri/src/{menu,update,about,links}.rs</code>, <code>ui/src-tauri/capabilities/about.json</code>, <code>ui/src/{About,General,page,privacy,aboutLinks}.ts(x)</code>, <code>ui/e2e/specs/about.spec.ts</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Where</th><th>macOS</th><th>Windows · Linux</th></tr></thead>
+        <tbody>
+          <tr><td>app menu</td><td>About Trawler (own window) · Check for Updates… · Settings…</td><td>— (Settings…, Check for Updates… as today)</td></tr>
+          <tr><td>Help</td><td>Trawler User Guide · Report an Issue… · ─ · Third-Party Licences · Privacy</td><td>User Guide (F1) · Report an Issue… · ─ · Third-Party Licences · Privacy · ─ · About Trawler</td></tr>
+          <tr><td>About window</td><td colspan="2">About · Third-party licences · Privacy; Esc, ⌘W / Ctrl+W close it; a browser that would not open shows the address to copy</td></tr>
+          <tr><td>Settings → General</td><td colspan="2">Trawler &lt;version&gt; · check now · check for updates automatically (on); not installed: no check now, the switch disabled with its reason</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit (cargo)</td><td><code>menu.rs</code>: the Help items per OS (ids, labels, F1 off macOS, About in Help off macOS only); each id maps to its action. <code>links.rs</code>: the issue URL encodes version, OS + version + CPU and install kind and nothing else; install kind per bundle type. <code>update.rs</code>: the switch reads on when absent or unreadable, round-trips; a launch checks only when installed, switched on and due. <code>about.rs</code>: the page mark matches <code>page.ts</code></td><td>yes</td></tr>
+          <tr><td>unit (vitest)</td><td>About: three pages, version, licence line, the three buttons name their link, a failed open shows the address, Esc closes, the notice or its absence; Privacy shows the one text; General: version, check now, the switch writes and a refusal restores, not installed disables</td><td>yes</td></tr>
+          <tr><td>integration</td><td>Settings renders the version the shell reports (<code>Settings.test.tsx</code> through the real <code>update_prefs_read</code> contract); <code>tauri.conf.e2e.json</code> drives the new window (xtask capability tests)</td><td>yes</td></tr>
+          <tr><td>e2e</td><td><code>ui/e2e/specs/about.spec.ts</code>: WebDriver opens Settings and reads the running version (HOME a temp dir)</td><td>yes</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
