@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PRORELEASE.W15 result — router watches, 10-minute heartbeat</h1>
       <p>What the router skills now say about watching owner actions and checking up on a schedule, and how the commands were proven.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W15</span> · <code>wu/prorelease/router-watch</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w15-router-watch-plan.html">W15 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W15</span> · <code>wu/prorelease/router-watch</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w15-router-watch-plan.html">W15 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
     </div>
   </header>
   <main>
@@ -27,6 +27,21 @@
           <tr><td><code>trawler-router/references/commands.md</code></td><td>40 → 51</td><td>watch commands with real refs (<code>mr</code> note, commit, merge, push, tag, draft, htmldoc open comments); heartbeat Trawler probes</td></tr>
           <tr><td><code>trawler-router/references/failure-modes.md</code></td><td>31 → 34</td><td>rows 28–30: missed owner action, worker never started, dead/stalled worker</td></tr>
           <tr><td>Both folders</td><td>435 → 464</td><td>+29, under the ~40 budget</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="round-2">Round 2 — the owner's attention is the first principle</h2>
+    <div data-item="round-2">
+      <div class="callout">Owner: "My attention as a human is limited and valuable … know what to provide to me at the correct time." · "give me the detailed information of that task again … I can't remember things from the past, you sent me a ton of messages."</div>
+      <table data-c="round-2">
+        <thead><tr><th>File</th><th>Lines before → after</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><code>router-agent/SKILL.md</code></td><td>70 → 73</td><td>new first section "First principle: work with a human, their attention is the scarcest resource": the owner's words, one task at a time (queue), next on detection (absorb mid-task findings), <b>self-contained every time</b> (read-first, cd command, what they will see, how done is detected; reminders and "again" re-send the task in full, nothing else), <b>short</b> (no history, no other WUs beyond <code>Up next</code>, digest worker reports, never forward); old duplicate bullets folded in</td></tr>
+          <tr><td><code>router-agent/references/messages.md</code></td><td>39 → 41</td><td>"Reminder / again" template: the current ask re-sent whole</td></tr>
+          <tr><td><code>router-agent/references/lessons.md</code></td><td>78 → 79</td><td>A14; top-10 rule 5 cites it</td></tr>
+          <tr><td><code>trawler-router/SKILL.md</code></td><td>68 → 68</td><td>owner-queue line points at the first principle</td></tr>
+          <tr><td>Both folders</td><td>464 → 470</td><td>+6, under the ≤ 12 budget</td></tr>
         </tbody>
       </table>
     </div>

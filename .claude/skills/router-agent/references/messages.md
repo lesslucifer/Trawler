@@ -22,6 +22,8 @@
 **What you need to do now:** 1. Reply A or B.
 ```
 
+**Reminder / "again"**: the current task's ask re-sent whole (read-first, commands, what they will see, `Watching`); no history, no other tasks.
+
 **Status board**: `| Worker | Doing | You'll get |` · **Your current task:** one, in full · **Up next:** one line each · **Running without you:** … · closing line (promise a push only after arming the watcher).
 
 **Push**: `✍️ Sign-off ready: <item>` / `📄 Doc only | 🧪 Try in app` / one line what / `cd <abs> && <command>` / `Then: <next>`. Plain text, ≤ ~10 lines, same turn as the terminal message, report the id.
