@@ -114,7 +114,7 @@ pub fn manifest(
     }))
 }
 
-/// The body under `## <version>`; a pre-release (`0.1.0-5`) reads its final's (`0.1.0`).
+/// The body under `## [<version>] - <date>`; a pre-release (`0.1.0-5`) reads its final's (`0.1.0`).
 pub fn changes(changelog: &str, version: &str) -> Result<String, String> {
     let final_version = version.split('-').next().unwrap_or(version);
     let heading = format!("## {final_version}");
@@ -123,7 +123,7 @@ pub fn changes(changelog: &str, version: &str) -> Result<String, String> {
         let named = title.split_whitespace().next().map(|word| word.trim_matches(['[', ']']));
         if named == Some(final_version) {
             let body = body.trim();
-            if body.is_empty() {
+            if body.lines().all(|line| line.trim().is_empty() || line.starts_with('#')) {
                 return Err(format!("{CHANGELOG}'s {heading} section is empty"));
             }
             return Ok(body.to_string());
@@ -133,11 +133,10 @@ pub fn changes(changelog: &str, version: &str) -> Result<String, String> {
 }
 
 pub fn notes(template: &str, changelog: &str, version: &str) -> Result<String, String> {
-    let shipped: String = if crate::package::rpm_takes(version) {
-        template.to_string()
-    } else {
-        template.split_inclusive('\n').filter(|line| !line.contains(".rpm")).collect()
-    };
+    let final_release = crate::package::rpm_takes(version);
+    let dropped = if final_release { "Release candidate" } else { ".rpm" };
+    let shipped: String =
+        template.split_inclusive('\n').filter(|line| !line.contains(dropped)).collect();
     Ok(shipped.replace("{version}", version).replace("{changes}", &changes(changelog, version)?))
 }
 
@@ -358,6 +357,24 @@ mod tests {
         assert!(changes("## 0.3.0-beta\n\n- x\n", "0.3.0").is_err(), "a longer word is no match");
     }
 
+    const KEEP_A_CHANGELOG: &str = "# Changelog\n\n## [Unreleased]\n\n### Added\n\n- Next.\n\n\
+        ## [0.1.0] - 2026-11-06\n\nThe first public release.\n\n### Added\n\n- First.\n";
+
+    #[test]
+    fn a_final_and_its_rc_read_the_dated_section_under_unreleased() {
+        let body = "The first public release.\n\n### Added\n\n- First.";
+        assert_eq!(changes(KEEP_A_CHANGELOG, "0.1.0").unwrap(), body);
+        assert_eq!(changes(KEEP_A_CHANGELOG, "0.1.0-5").unwrap(), body);
+        assert!(changes("## [Unreleased]\n\n- Next.\n", "0.1.0").is_err());
+    }
+
+    #[test]
+    fn a_section_of_group_headings_and_no_entry_is_empty() {
+        let text = "## [Unreleased]\n\n## [0.2.0] - 2026-12-01\n\n### Added\n\n### Fixed\n\n## [0.1.0]\n- x\n";
+        let refusal = changes(text, "0.2.0-1").unwrap_err();
+        assert!(refusal.contains("empty") && refusal.contains("## 0.2.0"), "{refusal}");
+    }
+
     #[test]
     fn a_missing_or_empty_section_is_refused_by_name() {
         let refusal = changes(CHANGES, "0.3.0-1").unwrap_err();
@@ -367,16 +384,27 @@ mod tests {
     }
 
     #[test]
-    fn the_notes_open_with_what_s_new_and_end_with_how_to_verify() {
+    fn the_notes_open_with_what_s_new_and_end_with_how_to_check_the_download() {
         let text = rendered("0.2.0-1");
         let new = text.find("## What's new\n\n- Faster filters.").expect(&text);
         let install = text.find("## macOS").unwrap();
-        let verify = text.find("## Verify your download").expect(&text);
+        let verify = text.find("## Check your download").expect(&text);
         assert!(new < install && install < verify, "{text}");
-        for needle in ["SHA256SUMS", "shasum -a 256 -c", "sha256sum -c", "Get-FileHash"] {
+        for needle in
+            ["SHA256SUMS", "shasum -a 256 -c", "sha256sum -c", "Get-FileHash", "-Algorithm SHA256"]
+        {
             assert!(text[verify..].contains(needle), "the verify section lacks {needle}");
         }
         assert!(!text.contains("{changes}"));
+    }
+
+    const CANDIDATE: &str = "Release candidate — for testing; the final follows.";
+
+    #[test]
+    fn only_a_release_candidate_s_notes_say_so_under_the_title() {
+        let text = rendered("0.2.0-1");
+        assert!(text.starts_with(&format!("# Trawler 0.2.0-1\n\n{CANDIDATE}\n")), "{text}");
+        assert!(!rendered("0.2.0").contains("Release candidate"));
     }
 
     #[test]
@@ -392,6 +420,25 @@ mod tests {
         let changelog = std::fs::read_to_string(repo.join(CHANGELOG)).expect("CHANGELOG.md");
         let version = crate::package::version_of(&repo).unwrap();
         changes(&changelog, &version).unwrap();
+    }
+
+    #[test]
+    fn the_repo_s_changelog_keeps_a_changelog_s_shape() {
+        let repo = crate::repo_root().unwrap();
+        let changelog = std::fs::read_to_string(repo.join(CHANGELOG)).expect("CHANGELOG.md");
+        let versions: Vec<&str> = changelog.lines().filter(|l| l.starts_with("## ")).collect();
+        assert_eq!(versions.first(), Some(&"## [Unreleased]"), "{changelog}");
+        for heading in &versions[1..] {
+            let (version, date) = heading[3..].split_once(" - ").expect(heading);
+            assert!(version.starts_with('[') && version.ends_with(']'), "{heading}");
+            assert!(date.len() == 10 && date.as_bytes()[4] == b'-', "{heading}");
+        }
+        for group in changelog.lines().filter(|l| l.starts_with("### ")) {
+            assert!(
+                ["Added", "Changed", "Fixed", "Removed", "Security"].contains(&&group[4..]),
+                "{group}"
+            );
+        }
     }
 
     fn write_dist(dist: &Path, assets: Vec<(String, Option<String>)>) {
