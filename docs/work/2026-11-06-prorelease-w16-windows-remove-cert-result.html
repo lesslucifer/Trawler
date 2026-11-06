@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedb5ed9f34851f0dfaee02" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W16 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W16 result — remove the certificate on Windows</h1>
+      <p>What W16 changed, how it is proven, and what only a Windows machine can prove.</p>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W16</span> · <code>wu/prorelease/windows-remove-cert</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w16-windows-remove-cert-plan.html">W16 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>Removal command</td><td><code>ui/src-tauri/src/setup.rs</code> <code>remove_ca</code>, <code>windows_held</code>, <code>windows_remove_commands</code></td><td>macOS only → Windows too: both ROOT stores read by thumbprint; machine copy → <code>certutil -delstore ROOT ‹thumb›</code> through <code>elevated_argv</code> (set-up's UAC <code>Start-Process -Verb RunAs</code>); user copy only → <code>certutil -user -delstore ROOT ‹thumb›</code>, unelevated; an unread store → <em>couldn't read the certificate stores</em></td></tr>
+          <tr><td>Shared readers</td><td><code>store_holds</code>, <code>windows_root_stores</code></td><td>the macOS held-closure and the trust reading's two <code>certutil -store</code> calls, now shared by the removal</td></tr>
+          <tr><td>Button</td><td><code>ui/src/Onboarding.tsx</code></td><td><code>os === "macos"</code> dropped: offered wherever set-up is (<code>trustHere</code>); the cancelled line per host (<code>removeCaNote(os)</code>: <em>the approval was cancelled…</em> on Windows)</td></tr>
+          <tr><td>By-hand steps</td><td><code>ui/src/setup.ts</code> <code>WINDOWS_CERT_UNDO</code></td><td>user store first → <em>Manage computer certificates</em>, then <em>Or in PowerShell as administrator</em> <code>certutil -delstore</code>, then <em>If you added it by hand</em> <code>certutil -user -delstore</code></td></tr>
+          <tr><td>Walkthrough</td><td><code>ui/e2e/walkthrough/script.ts</code></td><td>the <code>ca-removed</code> chapter and the trust-back line cover Windows</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="rulings">Choices made</h2>
+    <table data-c="rulings">
+      <thead><tr><th>Question</th><th>Choice</th></tr></thead>
+      <tbody>
+        <tr><td>A copy in both stores</td><td>one store per click, machine first; the re-read keeps the button while a user copy is left (the user's ROOT view may list machine roots, so a planned second delete could fail a removal that worked)</td></tr>
+        <tr><td>DEC</td><td>none: the web-ui use-case row carries the Windows half</td></tr>
+        <tr><td>Design run</td><td>none: the existing button, placement and notes; only a host word changes (W12's W2)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">None from the plan; round 2 added the CN gate and the <code>Stop</code> preference (above). The Windows copy label for the user-store command is <em>the user store's removal command</em>; the machine command took <em>the removal command</em>, the macOS label.</p>
+
+    <h2 id="round-2">Round 2 — the router's review</h2>
+    <table data-c="round-2">
+      <thead><tr><th>#</th><th>Finding</th><th>Resolution</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>IMPORTANT: the Windows delete is keyed on the thumbprint of a webview PEM; any root the stores hold could be removed</td><td>fixed: <code>removal_thumbprint</code> refuses (<em>not Trawler's certificate</em>) unless the PEM's subject carries CN = <code>CA_COMMON_NAME</code>, before any store is read or any command built, on both hosts. The IPC PEM stays the source: the live core's CA may not be the app's own file (a core minted under another folder, D1), and macOS already keys on it. Listing narrowed by CN not taken: an empty <code>certutil -store ROOT ‹CN›</code> exits non-zero, which would read as an unread store (unverifiable here). Test <code>removal_takes_only_a_certificate_issued_under_trawlers_name</code>: a root with another CN and <em>Trawler Proxy CA</em> as its O is refused (red on the old code)</td></tr>
+        <tr><td>2</td><td>NIT: <code>certutil -delstore</code> also matches a serial equal to the thumbprint</td><td>accepted: such a cert must first be planted in ROOT (machine: admin; user: Windows' own add-root warning), and deleting it removes only what the planter put there</td></tr>
+        <tr><td>3</td><td>IMPORTANT: a cancelled UAC leaves <code>$p</code> unset, <code>exit $p.ExitCode</code> exits 0, the refusal reads as success</td><td>fixed in the shared <code>elevated_argv</code>: <code>$ErrorActionPreference = 'Stop'</code> first, so the cancel stops the script with its error on stderr and exit 1. Covers set-up's install too. Test <code>a_cancelled_uac_prompt_exits_non_zero_rather_than_with_the_missing_process_exit</code> (red on the old code); real behaviour: hand-check 2 and 6</td></tr>
+        <tr><td>4</td><td>NIT: the scenario test replayed canned stderr through <code>command_failed</code></td><td>dropped: the unit <code>a_dismissed_prompt_is_a_refusal_in_every_wording_the_os_uses</code> already holds the UAC wording; <code>scenario.rs</code> is back to the epic's</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Tests red first</td><td>Rust: 5 new unit tests did not compile on the old code; vitest: 7 failed (no button on Windows, the user store first)</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1415 tests); vitest 106 files, 61 778 tests green; <code>scenario</code> feature tests 21/21. Round 2: 2 new unit tests red first (the foreign root got a thumbprint; the wrapper had no <code>Stop</code>), then gate0 green (1417), <code>scenario</code> 20/20 (one dropped); <code>ui/src</code> untouched, vitest not re-run</td></tr>
+          <tr><td>Windows compile</td><td><code>cargo clippy --target x86_64-pc-windows-msvc</code> stops in <code>aws-lc-sys</code>'s C build (no MSVC headers here). The change adds no <code>cfg</code>: every new function is reached from <code>remove_ca</code> on every target, so DEC-85's dead-code layer cannot fire</td></tr>
+          <tr><td>Real elevation</td><td>not testable here: owner hand-check on a Windows VM (below)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="hand-check">Hand-check on Windows</h2>
+    <table data-c="hand-check">
+      <thead><tr><th>#</th><th>Do</th><th>Sees</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Install the built app, open it, <em>set up this PC</em>, approve UAC</td><td>task 1 done; <em>remove the certificate</em> under it</td></tr>
+        <tr><td>2</td><td><em>remove the certificate</em>, then <em>No</em> on UAC</td><td><em>the approval was cancelled. Try again, or do it by hand.</em> shows (never a silent success); still trusted</td></tr>
+        <tr><td>3</td><td>Again, <em>Yes</em></td><td>task 1 not done; <code>certutil -store ROOT "Trawler Proxy CA"</code> finds nothing</td></tr>
+        <tr><td>4</td><td><code>certutil -user -addstore -f ROOT %USERPROFILE%\Downloads\trawler-ca.pem</code>, wait for the re-read, click the button</td><td>no UAC; Windows' own delete-root warning, <em>Yes</em>; task 1 not done</td></tr>
+        <tr><td>5</td><td>Both stores: steps 1 and 4, click twice</td><td>first click UAC, button stays; second click the user warning; then not done</td></tr>
+        <tr><td>6</td><td>Uninstall state; <em>set up this PC</em>, <em>No</em> on UAC</td><td>the cancelled line; task 1 not done, proxy untouched</td></tr>
+        <tr><td>7</td><td>Devtools console (debug build): <code>__TAURI_INTERNALS__.invoke("remove_ca", {pem: ‹any public root's PEM, e.g. from <code>certutil -store ROOT</code> export›})</code></td><td>rejects with <em>not Trawler's certificate</em>; no UAC; <code>certutil -store ROOT</code> still lists that root</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation"><code>docs/use-cases/web-ui.html</code> remove-the-certificate row: Windows, its stores, one store per click, the steps lead with the machine store. No DEC or T1 change.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Independent review of <code>ui/src-tauri/src/setup.rs</code> (outside the cr gate; round 2: <code>elevated_argv</code>, <code>names_trawlers_ca</code>, <code>removal_thumbprint</code>, <code>remove_ca</code>)</td><td>router</td></tr>
+          <tr><td>W12/W6 guide, Uninstall → Windows: the button now also removes a by-hand copy; the <em>run in PowerShell instead</em> line can go</td><td>W6</td></tr>
+          <tr><td>The Windows hand-check above, on a VM with the next rc</td><td>owner</td></tr>
+          <tr><td>The web-ui row's macOS clause <em>the proxy stays set</em> predates W21 (the screen says nothing of it): stale, not W16's</td><td>router</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
