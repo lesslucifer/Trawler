@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9eb69f34851f0dfaec89" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W8 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W8 result — updater F4 and F7</h1>
+      <p>What W8 changed in the updater, how it is proven, and what the audit of <code>update.rs</code> left open.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W8</span> · <code>wu/prorelease/updater-f4-f7</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w8-updater-plan.html">W8 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <table data-c="outcome" data-item="outcome">
+      <thead><tr><th>Finding</th><th>Where</th><th>Before → after</th></tr></thead>
+      <tbody>
+        <tr><td>F4</td><td><code>ui/src-tauri/src/update.rs</code> <code>record_outcome</code>, <code>check</code>, <code>check_at_launch</code></td><td>stamp written before the request → written in <code>check</code> after <code>find</code> answers, only for newer or up to date; a failed check leaves it; a completed menu check also stamps</td></tr>
+        <tr><td>F7</td><td><code>update.rs</code> <code>https_only</code>, <code>find</code></td><td>plugin defaults (http endpoint refused only in release builds, http download only logged, redirects followed to http) → reqwest <code>https_only(true)</code> via <code>configure_client</code>; the plugin carries that hook to the download, and reqwest checks every redirect hop</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">None from the plan. The test's download sets <code>Update.timeout</code> itself, since the plugin drops the builder's timeout for downloads (A1).</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-c="evidence" data-item="evidence">
+      <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+      <tbody>
+        <tr><td>Tests red first</td><td>against stubs keeping the old behaviour (<code>record_outcome</code> always writing, <code>https_only</code> the identity): the unit test failed (stamp moved to 2000 on a failed check), and the three integration tests failed at their "nothing sent over http" asserts; all green after the fix</td></tr>
+        <tr><td>Integration</td><td><code>ui/src-tauri/tests/suite/updater.rs</code>: http channel, https manifest naming an http download, https → http redirect; https origin from <code>trawler::test_support::tls_origin</code>; an unaccepted http listener proves no connection was made</td></tr>
+        <tr><td>Single path</td><td><code>find</code> is the only updater construction in the app; no JS updater capability exists</td></tr>
+        <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1384 tests)</td></tr>
+        <tr><td>e2e</td><td>waived: the update path runs only from an installed bundle; the hand-check matrix's rc → rc row covers it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="audit">Audit of update.rs — listed, not fixed</h2>
+    <table data-c="audit">
+      <thead><tr><th>#</th><th>Item</th><th>Where</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>A1</td><td>No timeout on the check or the download</td><td><code>update.rs</code> <code>find</code> sets none; plugin 2.14.1 <code>updater.rs:735</code> builds every <code>Update</code> with <code>timeout: None</code></td><td>a stalled connection leaves <em>Check for Updates…</em> with no answer and an Install that never ends (no stamp now, so a launch retries)</td></tr>
+        <tr><td>A2</td><td>Update requests follow the system proxy</td><td>plugin <code>ClientBuilder</code>, no <code>no_proxy</code></td><td>with the system proxy set to Trawler, its own core sees the update traffic; with that core gone and the proxy left set, checks fail. The signature still guards the bytes</td></tr>
+        <tr><td>A3</td><td>No in-flight guard (F5)</td><td><code>check</code>, <code>install_on_quit</code></td><td>a launch check and a menu check can both offer and both download</td></tr>
+        <tr><td>A4</td><td>Download size uncapped (F5)</td><td><code>install_on_quit</code></td><td>the whole archive is held in memory before verification</td></tr>
+        <tr><td>A5</td><td>Stamp write is not atomic</td><td><code>record_check</code> (<code>fs::write</code>)</td><td>a torn write reads as "never", so the next launch checks: benign</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-c="distillation" data-item="distillation">DEC-82 v5: rule 1 (stamp only after a completed check, menu included), new rule 7 (https only), two rejected alternatives, Held by; its index row. UC-UPDATE: the unreachable-channel row keeps the clock, a new http row, the proof names the new tests. <code>web-ui.html</code> is over the htmldoc server's snapshot size limit (413), so no pre-edit snapshot exists for it.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-c="follow-ups" data-item="follow-ups">
+      <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Independent review of <code>ui/src-tauri/src/update.rs</code>, <code>ui/src-tauri/tests/suite/updater.rs</code>, <code>ui/src-tauri/Cargo.toml</code> (outside the cr gate)</td><td>router</td></tr>
+        <tr><td>A1 (timeouts) and A2 (proxy) as candidates next to F5 on the roadmap</td><td>router · owner</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

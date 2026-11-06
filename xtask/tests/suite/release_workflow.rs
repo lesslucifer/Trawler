@@ -403,3 +403,16 @@ fn each_row_uploads_from_the_bundle_dir_its_package_args_build() {
         );
     }
 }
+
+#[test]
+fn the_checksums_are_rechecked_by_another_tool_and_ship_with_the_draft() {
+    let runs: Vec<String> = steps(&job("release")).iter().map(run_of).collect();
+    let manifest = runs.iter().position(|r| r.contains("cargo xtask release-manifest")).unwrap();
+    let check = runs
+        .iter()
+        .position(|r| r.contains("sha256sum --strict -c SHA256SUMS"))
+        .expect("a step re-hashes every installer SHA256SUMS names");
+    let create = runs.iter().position(|r| r.contains("gh release create")).unwrap();
+    assert!(manifest < check && check <= create, "manifest {manifest}, check {check}");
+    assert!(runs[create].contains("dist/*"), "SHA256SUMS is attached from dist");
+}

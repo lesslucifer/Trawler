@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9b509f34851f0dfaebdb" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W1 result — licence and bundle metadata</h1>
+      <p>What W1 changed, how it is proven, and what only an rc's installers on Windows and Linux can show.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W1</span> · <code>wu/prorelease/licence-metadata</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w1-licence-metadata-plan.html">W1 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>Licence file</td><td><code>LICENSE</code></td><td>absent → MIT, <code>Copyright (c) 2026 Vu Luu</code></td></tr>
+          <tr><td>Crate metadata</td><td><code>Cargo.toml</code>, <code>ui/src-tauri/Cargo.toml</code>, <code>login-service/Cargo.toml</code>, <code>xtask/Cargo.toml</code></td><td>all four: <code>license = "MIT"</code>, <code>authors = ["Vu Luu"]</code>, <code>homepage</code>, <code>publish = false</code> (trawler and trawler-ui were publishable; xtask had no licence)</td></tr>
+          <tr><td>Front-end package</td><td><code>ui/package.json</code></td><td>+ <code>"license": "MIT"</code></td></tr>
+          <tr><td>Bundle</td><td><code>ui/src-tauri/tauri.conf.json</code></td><td>+ <code>longDescription</code>, <code>publisher</code>, <code>copyright</code>, <code>license</code>, <code>homepage</code>, <code>linux.deb.section</code> <code>devel</code></td></tr>
+          <tr><td>The check</td><td><code>xtask/src/package.rs</code> (<code>metadata_drift_of</code>, <code>metadata_drift</code>, <code>read_json</code> shared with <code>version_drift</code>)</td><td>names each source off the one licence and holder, and a <code>licenseFile</code></td></tr>
+          <tr><td>Docs</td><td>DEC-87 + index row; UC-INSTALL contract and proof; use-case index</td><td>new</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">The plan's <code>authors</code>/<code>homepage</code> on trawler and trawler-ui extends to all four workspace crates: one rule over every member is smaller than a per-crate list. The plan's <code>licenseFile</code> is dropped: the packaging test showed tauri-bundler embeds it as the <code>.dmg</code>'s licence agreement, so <code>hdiutil attach</code> stopped at an agree prompt (and every user would click through one). The check now refuses a <code>licenseFile</code> (DEC-87 rule 1).</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>The tree check is red on the old tree</td><td><code>the_tree_carries_one_licence_and_full_metadata</code> failed with 20 lines (no LICENSE, every bundle field, authors, homepage, publishable trawler and trawler-ui, xtask's licence) before the metadata landed; green after</td></tr>
+          <tr><td>Each field is named</td><td><code>each_licence_or_metadata_field_that_disagrees_is_named</code>, <code>a_tree_without_licence_or_bundle_metadata_names_every_gap</code>, <code>one_licence_and_full_metadata_is_no_drift</code></td></tr>
+          <tr><td>Tauri takes the fields</td><td>tauri-utils 2.10.2 <code>BundleConfig</code>: <code>publisher</code>, <code>homepage</code>, <code>copyright</code>, <code>license</code>, <code>license_file</code>, <code>long_description</code>, <code>DebConfig::section</code>; the app builds with the new config</td></tr>
+          <tr><td>The packaged app carries the copyright</td><td><code>xtask/tests/package_bundle.rs</code> <code>a_package_is_ad_hoc_signed_and_passes_the_release_smoke</code> (<code>--features package-tests</code>): <code>plutil</code> reads <code>NSHumanReadableCopyright</code> = <code>Copyright © 2026 Vu Luu</code> from the packaged <code>Trawler.app</code>; green in 54 s. Not re-run on the old tree: the bundler writes the key only when <code>bundle.copyright</code> is set, which it was not</td></tr>
+          <tr><td>e2e</td><td>waived: no user journey changes; the epic's installed-bundle e2e covers the bundle</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">DEC-87 (new) and its index row; UC-INSTALL's contract names the publisher and licence, its proof names the copyright check; the use-case index row. <code>web-ui.html</code>'s pre-edit snapshot was refused by the htmldoc server (413, too large); its diff is in git only.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Where it closes</th></tr></thead>
+        <tbody>
+          <tr><td>Windows Apps entry publisher, deb <code>Section</code>/<code>Homepage</code>, rpm <code>License</code> — seen only in real installers</td><td>the next rc's hand-check matrix (W7)</td></tr>
+          <tr><td>Third-party licence notice</td><td>W2</td></tr>
+          <tr><td>Repo settings, trademark search</td><td>owner (Q10, Q11)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

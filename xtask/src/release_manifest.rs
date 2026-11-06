@@ -1,8 +1,10 @@
+use std::fmt::Write as _;
 use std::path::Path;
 
 use serde_json::{json, Map, Value};
 
 const TEMPLATE: &str = ".github/release-notes.md";
+const CHANGELOG: &str = "CHANGELOG.md";
 const ARCHS: [&str; 2] = ["x86_64", "aarch64"];
 
 fn has(name: &str, suffix: &str) -> bool {
@@ -112,13 +114,40 @@ pub fn manifest(
     }))
 }
 
-pub fn notes(template: &str, version: &str) -> String {
+/// The body under `## <version>`; a pre-release (`0.1.0-5`) reads its final's (`0.1.0`).
+pub fn changes(changelog: &str, version: &str) -> Result<String, String> {
+    let final_version = version.split('-').next().unwrap_or(version);
+    let heading = format!("## {final_version}");
+    for section in format!("\n{changelog}").split("\n## ").skip(1) {
+        let (title, body) = section.split_once('\n').unwrap_or((section, ""));
+        let named = title.split_whitespace().next().map(|word| word.trim_matches(['[', ']']));
+        if named == Some(final_version) {
+            let body = body.trim();
+            if body.is_empty() {
+                return Err(format!("{CHANGELOG}'s {heading} section is empty"));
+            }
+            return Ok(body.to_string());
+        }
+    }
+    Err(format!("{CHANGELOG} has no {heading} section for {version}"))
+}
+
+pub fn notes(template: &str, changelog: &str, version: &str) -> Result<String, String> {
     let shipped: String = if crate::package::rpm_takes(version) {
         template.to_string()
     } else {
         template.split_inclusive('\n').filter(|line| !line.contains(".rpm")).collect()
     };
-    shipped.replace("{version}", version)
+    Ok(shipped.replace("{version}", version).replace("{changes}", &changes(changelog, version)?))
+}
+
+fn checksums(dist: &Path, assets: &[(String, Option<String>)]) -> Result<String, String> {
+    let mut sums = String::new();
+    for (name, _) in assets {
+        let bytes = std::fs::read(dist.join(name)).map_err(|e| format!("read {name}: {e}"))?;
+        writeln!(sums, "{}  {name}", crate::git::sha256_hex(&bytes)?).map_err(|e| e.to_string())?;
+    }
+    Ok(sums)
 }
 
 fn flag<'a>(args: &[&'a str], name: &str) -> Option<&'a str> {
@@ -134,7 +163,9 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let version = tag.strip_prefix('v').ok_or(format!("tag {tag} does not start with v"))?;
     let template = std::fs::read_to_string(repo.join(TEMPLATE))
         .map_err(|e| format!("read {TEMPLATE}: {e}"))?;
-    let notes = notes(&template, version);
+    let changelog = std::fs::read_to_string(repo.join(CHANGELOG))
+        .map_err(|e| format!("read {CHANGELOG}: {e}"))?;
+    let notes = notes(&template, &changelog, version)?;
 
     let mut assets = Vec::new();
     let entries = std::fs::read_dir(dist).map_err(|e| format!("read {}: {e}", dist.display()))?;
@@ -154,10 +185,12 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
         download_base: &format!("https://github.com/{github_repo}/releases/download/{tag}"),
     };
     let latest = manifest(&release, &assets)?;
+    let sums = checksums(dist, &assets)?;
     let text = serde_json::to_string_pretty(&latest).map_err(|e| e.to_string())?;
+    std::fs::write(dist.join("SHA256SUMS"), sums).map_err(|e| e.to_string())?;
     std::fs::write(dist.join("latest.json"), text).map_err(|e| e.to_string())?;
     std::fs::write(dist.join("notes.md"), &notes).map_err(|e| e.to_string())?;
-    Ok((0, format!("wrote latest.json and notes.md for {tag} in {}", dist.display())))
+    Ok((0, format!("wrote latest.json, notes.md and SHA256SUMS for {tag} in {}", dist.display())))
 }
 
 #[cfg(test)]
@@ -297,11 +330,125 @@ mod tests {
         assert!(!text.contains("{version}"));
     }
 
+    const CHANGES: &str =
+        "# Changelog\n\n## 0.2.0\n\n- Faster filters.\n\n## 0.1.0\n\n- First release.\n";
+
     fn rendered(version: &str) -> String {
         let template =
             std::fs::read_to_string(crate::repo_root().expect("repo root").join(TEMPLATE))
                 .expect("the notes template");
-        notes(&template, version)
+        notes(&template, CHANGES, version).unwrap()
+    }
+
+    #[test]
+    fn a_final_reads_its_own_section_up_to_the_next_heading() {
+        assert_eq!(changes(CHANGES, "0.2.0").unwrap(), "- Faster filters.");
+        assert_eq!(changes(CHANGES, "0.1.0").unwrap(), "- First release.");
+    }
+
+    #[test]
+    fn a_pre_release_reads_its_final_s_section() {
+        assert_eq!(changes(CHANGES, "0.2.0-3").unwrap(), "- Faster filters.");
+    }
+
+    #[test]
+    fn a_heading_may_bracket_the_version_and_carry_a_date() {
+        let text = "## [0.3.0] - 2026-12-01\n\n- Dated.\n";
+        assert_eq!(changes(text, "0.3.0").unwrap(), "- Dated.");
+        assert!(changes("## 0.3.0-beta\n\n- x\n", "0.3.0").is_err(), "a longer word is no match");
+    }
+
+    #[test]
+    fn a_missing_or_empty_section_is_refused_by_name() {
+        let refusal = changes(CHANGES, "0.3.0-1").unwrap_err();
+        assert!(refusal.contains("CHANGELOG.md") && refusal.contains("## 0.3.0"), "{refusal}");
+        let refusal = changes("## 0.3.0\n\n## 0.2.0\n- x\n", "0.3.0").unwrap_err();
+        assert!(refusal.contains("empty"), "{refusal}");
+    }
+
+    #[test]
+    fn the_notes_open_with_what_s_new_and_end_with_how_to_verify() {
+        let text = rendered("0.2.0-1");
+        let new = text.find("## What's new\n\n- Faster filters.").expect(&text);
+        let install = text.find("## macOS").unwrap();
+        let verify = text.find("## Verify your download").expect(&text);
+        assert!(new < install && install < verify, "{text}");
+        for needle in ["SHA256SUMS", "shasum -a 256 -c", "sha256sum -c", "Get-FileHash"] {
+            assert!(text[verify..].contains(needle), "the verify section lacks {needle}");
+        }
+        assert!(!text.contains("{changes}"));
+    }
+
+    #[test]
+    fn a_rpm_line_in_the_changelog_survives_a_pre_release() {
+        let text =
+            notes("{changes}\n- `.rpm`: x\n", "## 0.1.0\n- the .rpm now installs\n", "0.1.0-5");
+        assert_eq!(text.unwrap(), "- the .rpm now installs\n");
+    }
+
+    #[test]
+    fn the_repo_s_changelog_has_the_workspace_version_s_section() {
+        let repo = crate::repo_root().unwrap();
+        let changelog = std::fs::read_to_string(repo.join(CHANGELOG)).expect("CHANGELOG.md");
+        let version = crate::package::version_of(&repo).unwrap();
+        changes(&changelog, &version).unwrap();
+    }
+
+    fn write_dist(dist: &Path, assets: Vec<(String, Option<String>)>) {
+        for (name, signature) in assets {
+            std::fs::write(dist.join(&name), format!("bytes of {name}")).unwrap();
+            std::fs::write(dist.join(format!("{name}.sig")), signature.unwrap()).unwrap();
+        }
+    }
+
+    fn run_in(dist: &Path, tag: &str, repo: &Path) -> Result<(i32, String), String> {
+        let args = [
+            dist.to_str().unwrap(),
+            "--tag",
+            tag,
+            "--repo",
+            "o/r",
+            "--pub-date",
+            "2026-11-06T00:00:00Z",
+        ];
+        run(&args, repo)
+    }
+
+    #[test]
+    fn run_writes_sha256sums_for_every_installer_and_no_signature() {
+        let dist = tempfile::tempdir().unwrap();
+        write_dist(dist.path(), full());
+        run_in(dist.path(), "v0.1.0", &crate::repo_root().unwrap()).unwrap();
+        let sums = std::fs::read_to_string(dist.path().join("SHA256SUMS")).unwrap();
+        let lines: Vec<&str> = sums.lines().collect();
+        assert_eq!(lines.len(), full().len(), "{sums}");
+        let mut names: Vec<&str> = lines.iter().map(|l| l.split_once("  ").unwrap().1).collect();
+        let mut sorted = names.clone();
+        sorted.sort_unstable();
+        assert_eq!(names, sorted);
+        names.retain(|n| has(n, ".sig") || *n == "latest.json" || *n == "notes.md");
+        assert!(names.is_empty(), "{sums}");
+        let dmg = "Trawler_0.1.0_universal.dmg";
+        let digest = crate::git::sha256_hex(format!("bytes of {dmg}").as_bytes()).unwrap();
+        assert!(lines.contains(&format!("{digest}  {dmg}").as_str()), "{sums}");
+    }
+
+    #[test]
+    fn run_refuses_a_version_without_a_changelog_section_and_writes_nothing() {
+        let repo = tempfile::tempdir().unwrap();
+        let real = crate::repo_root().unwrap();
+        std::fs::create_dir_all(repo.path().join(".github")).unwrap();
+        std::fs::copy(real.join(TEMPLATE), repo.path().join(TEMPLATE)).unwrap();
+        std::fs::write(repo.path().join(CHANGELOG), "## 0.1.0\n\n- First.\n").unwrap();
+        let dist = tempfile::tempdir().unwrap();
+        write_dist(dist.path(), full());
+        let refusal = run_in(dist.path(), "v0.2.0", repo.path()).unwrap_err();
+        assert!(refusal.contains("## 0.2.0"), "{refusal}");
+        for written in ["latest.json", "notes.md", "SHA256SUMS"] {
+            assert!(!dist.path().join(written).exists(), "{written}");
+        }
+        std::fs::remove_file(repo.path().join(CHANGELOG)).unwrap();
+        assert!(run_in(dist.path(), "v0.1.0", repo.path()).unwrap_err().contains("CHANGELOG.md"));
     }
 
     #[test]

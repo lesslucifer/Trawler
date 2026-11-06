@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9d8c9f34851f0dfaec34" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W15 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W15 — router watches, never asks "done?"; a 10-minute heartbeat</h1>
+      <p>The owner repeatedly had to tell the router an action was done, and a worker announced as spawned never started.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W15</span> · branch <code>wu/prorelease/router-watch</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The router skills make the router watch every owner action it stages (a background watcher keyed on observable state, armed in the same turn) instead of waiting to be told, and run a recurring 10-minute heartbeat that checks workers, worktrees, owner actions, runs and comments, relaunches dead or stalled workers, advances unblocked work and notifies the owner only on change; both skills stay concise (net growth ≤ ~40 lines).</p>
+
+    <h3 id="changes">Changes</h3>
+    <table data-c="changes">
+      <thead><tr><th>File</th><th>Adds</th></tr></thead>
+      <tbody>
+        <tr><td><code>router-agent/SKILL.md</code></td><td>two one-line principles; heartbeat in the session-start checklist</td></tr>
+        <tr><td><code>router-agent/references/worker-ops.md</code></td><td>generic watch table (owner action → observable state) and heartbeat recipe; spawn verified with <code>ps</code></td></tr>
+        <tr><td><code>router-agent/references/lessons.md</code></td><td>two lessons: owner had to say "done"; announced worker never started</td></tr>
+        <tr><td><code>trawler-router/references/commands.md</code></td><td>watch commands with real refs (<code>mr</code> notes, merge, push, tag, release, draft, comments); heartbeat prompt; absolute <code>claude</code> path</td></tr>
+        <tr><td><code>trawler-router/references/failure-modes.md</code></td><td>rows: missed owner action, dead worker, stalled worker</td></tr>
+        <tr><td><code>trawler-router/SKILL.md</code></td><td>stale facts refreshed (fail-fast false on main, v0.1.0-4 from main)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">Owner directives (router session trawler-05): "watch and know after the user completes the action" · "a check-up schedule on a fixed 10-minute schedule" · <code>.claude/skills/</code> (infrastructure, not rule-bearing).</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td>Every owner action the trawler skill stages</td><td>a matching watch command</td></tr>
+          <tr><td>Line count of both skill folders</td><td>435 → ≤ 475</td></tr>
+          <tr><td>Each watch command</td><td>parses in zsh (<code>zsh -n</code>) and its read-only probe runs on this repo</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit · integration · e2e</td><td>waived: skill files only (infrastructure, no code path); the watch probes are run once by hand</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

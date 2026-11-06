@@ -1015,12 +1015,13 @@
           <td><a href="dec-82-an-update-asks-is-signed-and-quits-through-the-check.html"><code>dec-82-an-update-asks-is-signed-and-quits-through-the-check.html</code></a></td>
           <td><span class="badge id">DEC-82</span></td>
           <td><strong>An update asks, is signed, and quits through the check.</strong> The channel is the public release's
-            <code>latest.json</code>. A launch checks at most once a day and only when installed from a bundle, and says
+            <code>latest.json</code>. A launch checks at most once a day and only when installed from a bundle (the day counts from the last check
+            that completed, so an offline launch stays due), and says
             nothing unless it offers; <em>Check for Updates…</em> always answers. The offer names both versions and says the
             captured list is cleared. An update installs only if the owner's key signed that exact version. It installs by
             making ⌘Q's quit request (DEC-64; a windowless app reopens its window to ask), then the core stops and the app relaunches. A cancelled quit drops it.
             Every bundle type updates in place, deb and rpm through <code>pkexec</code>. Only the release workflow holds the
-            key. Known limit: the plugin's deb/rpm root install reads a temp file a same-user process could swap (upstream). Rejected: deb/rpm via the release page, a pending update outliving its quit, unversioned signatures</td>
+            key. Every updater request (manifest, download, redirect) is https only. Known limit: the plugin's deb/rpm root install reads a temp file a same-user process could swap (upstream). Rejected: deb/rpm via the release page, a pending update outliving its quit, unversioned signatures</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -1060,8 +1061,27 @@
             <code>v*</code> tag and fails unless it equals the workspace version. Five targets build with
             <code>cargo xtask package</code>, each is smoke-tested (<code>cargo xtask smoke</code>) before it uploads, and
             <code>cargo xtask release-manifest</code> writes <code>latest.json</code> (every target and install kind) and the
-            first-open notes for a draft, never a prerelease. The key reaches only a sign step after a keyless build and bundle (the lockfile's <code>tauri signer sign --app-version</code>, never through pnpm);
+            notes (CHANGELOG's <em>What's new</em>, first-open steps, a verify section) and <code>SHA256SUMS</code> for a draft, never a prerelease; the owner publishes a final as latest and ticks pre-release on every rc after the first final. The key reaches only a sign step after a keyless build and bundle (the lockfile's <code>tauri signer sign --app-version</code>, never through pnpm);
             rcs are numeric (<code>0.1.0-1</code>, an MSI refuses <code>rc.1</code>); actions pinned to SHAs, no caches</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-87-one-licence-one-holder-no-crate-published.html"><code>dec-87-one-licence-one-holder-no-crate-published.html</code></a></td>
+          <td><span class="badge id">DEC-87</span></td>
+          <td><strong>One licence, one holder, no crate published.</strong> The root <code>LICENSE</code> is MIT, Copyright (c) 2026 Vu Luu;
+            every crate, <code>ui/package.json</code> and the Tauri bundle say MIT, Vu Luu is publisher, copyright holder and author,
+            the homepage is the repository, and every crate is <code>publish = false</code> (the crates.io name is taken).
+            <code>package::metadata_drift</code> names any source that disagrees</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-88-the-app-ships-every-licence-it-links.html"><code>dec-88-the-app-ships-every-licence-it-links.html</code></a></td>
+          <td><span class="badge id">DEC-88</span></td>
+          <td><strong>The app ships every licence it links.</strong> <code>cargo xtask licenses</code> writes the committed
+            <code>THIRD-PARTY-NOTICES.txt</code>: Trawler's MIT first, then each licence text of the release crates (normal deps of
+            <code>trawler-ui</code>, every platform) and production npm packages once, with the packages it covers; a package without
+            a file gets a standard text it offers, else the generator refuses. Bundled as a Tauri resource, never <code>licenseFile</code>;
+            a unit test fails when the lockfiles move without it</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
