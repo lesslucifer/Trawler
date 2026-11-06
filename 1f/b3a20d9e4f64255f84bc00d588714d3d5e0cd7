@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU about-help -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W4
+branch: wu/prorelease/about-help
+base: c5cc5d192814495b3d35f27d48a788c1c3eb8716
+head: 1fb3a20d9e4f64255f84bc00d588714d3d5e0cd7
+diff_sha256: 158c93d27ffd81d8820b997183dc60fee27e930c1134f3d2a41cf5cdb090319c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 6
+    nit: 5
+  stage_seconds:
+    finders: 21
+    total: 93
+  by_finder:
+    correctness: { found: 3, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 8, verified: 1 }
+findings: { found: 10, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "ui/src/privacy.ts: the per-OS CA paths (dev.trawler.app/ca) are prose literals no test ties to the shell's identifier or ca_dir"
+    waived: "user-facing disclosure text; the identifier is already a literal in the e2e config and specs, and W5's PRIVACY.md carries the same words; a pin belongs with W5's privacy-copy test (result follow-up)"
+verdict: PASS
+date: 2026-11-06
