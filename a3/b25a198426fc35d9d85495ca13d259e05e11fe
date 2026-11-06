@@ -1,0 +1,12 @@
+schema: doc/v1
+epic: E-RCFIX
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the packaging row: v0.1.0-1 went red at the host check (SIGPIPE under pipefail, E-RCFIX); the first rc is v0.1.0-2"
+  - path: "docs/decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html"
+    tier: T2
+    action: updated
+    distills: "rule 8: the host is captured by sed and compared with [ ], no run: pipes into grep -q or head under pipefail; a known-limits row: v0.1.0-1's red first run, the tag never moved, v0.1.0-2 the retry, every later step's first run still that tag's"
