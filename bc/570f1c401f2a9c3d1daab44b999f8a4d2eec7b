@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU licence-metadata -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W1
+branch: wu/prorelease/licence-metadata
+base: 856ba1cea651b360fdc1dd8ad09e2dbb5198fc48
+head: bc570f1c401f2a9c3d1daab44b999f8a4d2eec7b
+diff_sha256: db5669e4c68c71436cf3df47a26eb1c0867c20f8e44de5b7311b3322c1b3ccdf
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 3
+  stage_seconds:
+    finders: 42
+    verifiers: 0
+    total: 42
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 3, verified: 3, waived: 3 }
+waivers: []
+nits:
+  - finding: "The copyright year 2026 is a literal in the bundle and LICENSE format strings rather than one constant"
+    waived: "DEC-87 limits row: the first publication year is fixed; a later range is a one-line edit the check names in every place"
+  - finding: "The LICENSE check verifies the MIT header and holder line, not the whole body"
+    waived: "the check guards which licence and whose; the body is the verbatim MIT text and GitHub's licence detector reads it"
+  - finding: "metadata_drift runs only from a unit test, not from cargo xtask package"
+    waived: "the same shape as version_drift: the tree test runs in gate0 at every merge, so no tree lands with drift"
+verdict: PASS
+date: 2026-11-06
