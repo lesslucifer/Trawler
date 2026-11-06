@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W7
+branch: HEAD
+tests:
+  unit: { count: 24, covers: "the CHANGELOG section reader (final, rc reads its final's, bracketed/dated heading, missing and empty refused by name), notes open with What's new and end with the verify section, an rpm line in the changelog survives a pre-release, the repo's CHANGELOG holds the workspace version's section, run writes SHA256SUMS with each installer's digest and no .sig, run refuses a version without a section and writes nothing" }
+  integration: { count: 22, covers: "the release job re-checks SHA256SUMS with sha256sum --strict -c after release-manifest and before gh release create dist/*, which attaches it" }
+  e2e: { waived: "a release run needs GitHub, the signing secrets and a tag; the next rc tag (v0.1.0-5, the epic's) is the e2e: its draft carries SHA256SUMS and the new notes" }
