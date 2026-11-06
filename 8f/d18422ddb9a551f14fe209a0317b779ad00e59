@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU notes-copy -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W14
+branch: wu/prorelease/notes-copy
+base: d62447dcb1b958ac1bf3ecd2f32c0f44d6879820
+head: 8fd18422ddb9a551f14fe209a0317b779ad00e59
+diff_sha256: 19b06de965c791f1020d6397ea56cb3017bd5afcdf54657b099dc399d4f8d896
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 4
+  stage_seconds:
+    gate0: 0
+    finders: 20
+    verifiers: 0
+    total: 60
+  by_finder:
+    correctness: { found: 4, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 4, verified: 0, waived: 4 }
+waivers: []
+nits:
+  - finding: "changes() treats any body line starting with # as a heading, so an entry written as '#123 fixed X' would count as empty"
+    waived: "Keep a Changelog entries are '- ' bullets (W11 voice, the repo's shape test); a bare '#'-led line is not an entry form this file uses"
+  - finding: "the missing/empty refusal names '## 0.2.0' while the heading is now '## [0.2.0] - <date>'"
+    waived: "the message names the file and the version a maintainer looks for; wording only, the refusal itself is correct"
+  - finding: "a section with intro prose and empty group headings passes the emptiness check"
+    waived: "deliberate: prose under a version is content the notes ship (the 0.1.0 intro line); only headings and blanks are empty"
+  - finding: "the final drops any template line containing 'Release candidate', so a future line with that phrase would vanish from final notes"
+    waived: "the template owns that one line and only_a_release_candidate_s_notes_say_so_under_the_title pins both renders; same pattern as the existing .rpm filter"
+verdict: PASS
+date: 2026-11-06
