@@ -1,0 +1,26 @@
+schema: cr/v5
+scope: "WU readme-community -> epic/prorelease (review rerun)"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: wu/prorelease/readme-community
+base: 1bf8162c5838f66fd097d138bdfbfe4cc268c155
+head: 4a86803b04227375001a32af42a033eec185c6c6
+diff_sha256: e80b7359de2a3c73cd29a75c36526a86b1bda4e000f6c420aa6fa5449710680c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 4
+    nit: 12
+  by_finder:
+    correctness: { found: 11, verified: 3 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 3, verified: 1 }
+findings: { found: 16, verified: 4, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-06
