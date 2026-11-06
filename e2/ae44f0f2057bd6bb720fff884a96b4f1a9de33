@@ -1,0 +1,62 @@
+schema: cr/v5
+scope: "WU readme-community -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: wu/prorelease/readme-community
+base: c5cc5d192814495b3d35f27d48a788c1c3eb8716
+head: e2ae44f0f2057bd6bb720fff884a96b4f1a9de33
+diff_sha256: 9acada6272389bccf32d4fce3248956bb457581464dfc7a967e66d2952fa1b17
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 12
+  stage_seconds:
+    finders: 41
+    verifiers: 20
+  by_finder:
+    correctness: { found: 8, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 5, verified: 0 }
+findings: { found: 14, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "checkboxes fields were accepted without options (round 1)"
+    fixed: "form_problems requires options on dropdown and checkboxes; checkboxes_need_their_options"
+  - finding: "a # line inside a code fence counted as a heading (round 1)"
+    fixed: "anchors() skips fenced lines; a_hash_line_inside_a_code_fence_is_no_heading"
+  - finding: "a failed onPrepare could orphan the harness (round 1)"
+    fixed: "screenshots.conf.ts kills the harness before rethrowing"
+  - finding: "link titles, directory links, ../ paths and srcset lists misread (round 2)"
+    fixed: "targets() keeps the first token per candidate; paths are normalised and checked by name; a_title_a_directory_a_parent_path_and_a_srcset_list_resolve"
+  - finding: "## Install split also matched ## Installation (round 2)"
+    fixed: "only the exact ## Install heading opens the section; only_the_install_heading_itself_holds_the_table"
+  - finding: "duplicate headings get no -1/-2 anchor; a heading with a link or inline HTML slugs differently from GitHub; ~~~ fences and indented headings"
+    waived: "no published file has a repeated or linked heading; a miss fails loud as a spurious broken link, never a wrong pass"
+  - finding: "root-absolute /x links and percent-encoded paths read as broken"
+    waived: "none is used; it fails loud"
+  - finding: "every form field needs an id though GitHub makes it optional"
+    waived: "stricter than GitHub on purpose: the forms carry ids and the check keeps them unique"
+  - finding: "clear_shots deletes committed shots before the launch succeeds"
+    waived: "the deletion is what proves a shot was taken this run; git restores them"
+  - finding: "S3 clicks captured chip buttons after each re-render"
+    waived: "each click removes one chip and the next handle stays attached; the run passed and S5 depends on it, so a regression is red"
+  - finding: "screenshots need HOME and bare pnpm, so no Windows run; helpers live in walkthrough.rs"
+    waived: "the scenario tooling is macOS-only (walkthrough.conf.ts paths, no CI job); the helpers are reused, not copied"
+  - finding: "anchored files and PNGs are read whole, once per link"
+    waived: "a dev-time check over nine small files"
+  - finding: "fixed settle pauses in the screenshot spec"
+    waived: "a bounded settle before a capture in a manual tool"
+  - finding: "the shot list sits in LAUNCHES and the spec, matched by scraping shoot(\""
+    waived: "the spec uses only literal names; the test fails on any drift it can see"
+  - finding: "installer_kinds names a final with the literal 0.1.0; KINDS repeats bundle names; NOT_YET_WRITTEN is scheduling state"
+    waived: "rpm_takes is tested for 0.1.0; an unknown kind shows as drift; a stale pending entry fails a_file_still_listed_as_not_yet_written_does_not_exist"
+  - finding: "public_text has no non-test caller"
+    waived: "the check is a unit test by design (DEC-91), run by gate0"
+verdict: PASS
+date: 2026-11-06
