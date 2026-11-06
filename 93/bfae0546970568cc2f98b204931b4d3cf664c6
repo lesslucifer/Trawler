@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W18
+branch: HEAD
+tests:
+  unit: { count: 13, covers: "a capture service log line carrying ANSI SGR colour codes renders as its plain text, with no ESC left in the log region" }
+  integration: { count: 2, covers: "the real trawler binary spawned with a piped stderr, as the app's supervisor spawns it, writes its log with no ANSI escape byte" }
+  e2e: { waived: "the integration test drives the real binary through a pipe exactly as the supervisor does; the owned e2e suite (shared port 4445) runs at the epic gate" }
