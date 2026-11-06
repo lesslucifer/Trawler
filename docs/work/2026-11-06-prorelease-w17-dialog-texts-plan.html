@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedb2229f34851f0dfaeda1" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W17 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W17: texts that say what the app does</h1>
+      <p>Owner ruling Q2 (W12 gaps G3, G4): the replace-proxy ask says quitting asks before turning the proxy off, the keep-capturing ask names each OS's icon place, and the same class of wrong text found in the audit is fixed.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W17</span> · branch <code>wu/prorelease/dialog-texts</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · voice <a href="2026-11-06-prorelease-w11-public-text-design.html">W11 (signed)</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">Every in-app text that names where Trawler lives or what quitting does matches the code on each OS: the replace-proxy ask says the proxy stays on Trawler until the user stops routing through it (quitting asks), the keep-capturing ask and Settings → General name the menu bar on macOS, the notification area on Windows and the system tray on Linux (with GNOME's AppIndicator need), and menu shortcuts read Ctrl/Alt/Shift on Windows and Linux.</p>
+
+    <h2 id="verified">What the code does</h2>
+    <table data-c="verified">
+      <thead><tr><th>#</th><th>Text today</th><th>Code says</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>G3</td><td>"When Trawler quits it turns the proxy off"</td><td>Exit stops the core only; quitting with this machine routed through Trawler asks <strong>stop routing through Trawler before quitting?</strong>; the ask only exists where <code>set_proxy</code> does (macOS, Windows), both with the button</td><td><code>ui/src-tauri/src/reach.rs:56-62</code> · <code>ui/src-tauri/src/lib.rs:180-184</code> · <code>ui/src/closeConfirm.ts:9-18,253</code> · <code>ui/src-tauri/src/setup.rs:1101-1115</code></td></tr>
+        <tr><td>G3b</td><td>"replaces it while Trawler runs, and restores nothing when it quits"</td><td>The proxy stays on Trawler after a quit unless the user stops it</td><td><code>ui/src/verdicts.ts:608</code></td></tr>
+        <tr><td>G4</td><td>"Trawler stays in the menu bar" on every OS</td><td>The tray icon is the menu bar only on macOS</td><td><code>ui/src/KeepCapturingDialog.tsx:6</code> · <code>ui/src-tauri/src/tray.rs:138</code></td></tr>
+        <tr><td>A1</td><td>General: "Quit from the menu-bar icon.", "needs a menu-bar icon, which this desktop can't show"</td><td>Same icon, per OS</td><td><code>ui/src/General.tsx:97,105</code></td></tr>
+        <tr><td>A2</td><td>General: "Opens in the menu bar, with no window."</td><td>Without a tray a login launch opens the window</td><td><code>ui/src/General.tsx:117</code> · <code>ui/src-tauri/src/lifecycle.rs:101-102</code></td></tr>
+        <tr><td>A3</td><td>Menu shortcuts read ⌘ ⌥ ⇧ ⌫ on every OS</td><td>The handlers take Ctrl as well as ⌘; Windows and Linux have no ⌘ key</td><td><code>ui/src/components/Menu.tsx:213</code> · <code>ui/src/DataWindowScreen.tsx:658,732-885</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Per-OS replace ask</td><td>one text</td><td>the ask is reached on macOS and Windows only, both of which offer the button</td></tr>
+        <tr><td>Icon place words</td><td>one <code>trayPlace(os)</code> / <code>trayIcon(os)</code> in <code>generalPrefs.ts</code>, used by the dialog and General</td><td>W11 terms: "the menu-bar icon (macOS) · the tray icon"; one source</td></tr>
+        <tr><td>AppIndicator line</td><td>Linux keep ask and the Linux no-tray notice</td><td>a GNOME tray needs the extension to show the icon</td></tr>
+        <tr><td>Shortcut labels</td><td>Menu renders <code>keys</code> as <code>Ctrl+Alt+Shift+K</code> on Windows and Linux; macOS and unknown keep the glyphs</td><td>one place, every menu</td></tr>
+        <tr><td>Windows removal steps</td><td>untouched</td><td>W16 owns them</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W17 · plan Q2 (G3, G4) · W11 voice and terms · UC-BG · UC-ONBOARD · <code>ui/src-tauri/src/reach.rs</code>, <code>ui/src/KeepCapturingDialog.tsx</code>, <code>ui/src/General.tsx</code>, <code>ui/src/generalPrefs.ts</code>, <code>ui/src/verdicts.ts</code>, <code>ui/src/components/Menu.tsx</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Where</th><th>macOS</th><th>Windows</th><th>Linux</th></tr></thead>
+        <tbody>
+          <tr><td>keep capturing ask</td><td>stays in the menu bar</td><td>stays in the notification area (system tray)</td><td>stays in the system tray (on GNOME, the AppIndicator extension shows it)</td></tr>
+          <tr><td>General, tray</td><td>Quit from the menu-bar icon. · Opens in the menu bar, with no window.</td><td colspan="2">Quit from the tray icon. · Opens in the notification area / system tray, with no window.</td></tr>
+          <tr><td>General, no tray</td><td colspan="3">needs a menu-bar / tray icon, which this desktop can't show (Linux adds the AppIndicator hint) · Opens with its window.</td></tr>
+          <tr><td>replace-proxy ask</td><td colspan="2">the proxy stays on Trawler until you stop routing through Trawler; quitting asks first; stopping turns it off and does not put the old one back</td><td>— (no ask: no automatic proxy)</td></tr>
+          <tr><td>menu shortcuts</td><td>⇧⌘Z</td><td colspan="2">Ctrl+Shift+Z</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit (cargo)</td><td><code>reach.rs</code>: the replace ask says quitting asks and names <em>stop routing through Trawler</em>; never "When Trawler quits it turns"</td><td>yes</td></tr>
+          <tr><td>unit (vitest)</td><td>KeepCapturingDialog per OS: menu bar · notification area · system tray + AppIndicator; General per OS and tray/no tray: quit line, notice, login line; <code>foreignProxyNotice</code> without "while Trawler runs"; Menu shortcut labels per OS</td><td>yes</td></tr>
+          <tr><td>integration</td><td>waived: text only, no contract moves</td><td>—</td></tr>
+          <tr><td>e2e</td><td>waived: text only; existing specs keep running at the epic gate</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
