@@ -1,0 +1,21 @@
+schema: design/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W19
+base: e515acc17cc046df39a4c5e358ea68e20de29a1d
+design_sha256: 63f301e62bc9689549a76b8702b46d60885c1b913bee0ffa117940e5d0c70aa6
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/About.tsx
+    why: "the About pages (E-PRORELEASE.W13's design run) are unchanged; they now render inside the existing ModalShell frame instead of a window of their own, per the owner's W19 ruling (Q3); the window-only Esc handler and page marks are removed"
+  - path: ui/src/Settings.tsx
+    why: "the Settings pages (E-BGSVC.W5's design run) are unchanged; they render inside the existing ModalShell frame per the owner's W19 ruling (Q2); the panel now scrolls inside the frame"
+  - path: ui/src/ModalShell.tsx
+    why: "the existing modal frame gains a pages size from existing tokens (max-w-pane, h-pane) so a sidebar of pages fits; its anatomy, focus trap, Esc and scrim are unchanged"
+  - path: ui/src/App.tsx
+    why: "wiring only: mounts the Settings or About dialog beside the existing quit and keep-capturing dialogs; no layout of the main window changes"
+  - path: ui/src/main.tsx
+    why: "routing only: the settings and about page marks are gone, so a window renders the app or a data window"
+  - path: ui/src/components/PageSidebar.tsx
+    why: "a TSDoc @use line names Settings as a dialog; no rendered change"
+date: 2026-11-06
