@@ -89,6 +89,7 @@ cargo xtask mr confirm wu|epic <tip|HEAD> --as <id> \
   shared assets, dark-mode style, React widgets, the comment layer, and the
   snapshot/diff review flow are all owned by the global **`htmldoc` skill** — follow it; don't reinvent any of it (SUPER CRITICAL — ALWAYS FOLLOW THIS).
   **Snapshot a doc before editing it** and after a round share `<doc>.html?diff=latest`.
+- Root GitHub files (README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, PRIVACY, CHANGELOG, GUIDE) stay markdown (DEC-91).
 - **Docs are visual-first**: lead with diagrams, tables, cards; prose only as
   captions/one-liners. If a paragraph could be a diagram or table, make it one —
   walls of text fail review.
