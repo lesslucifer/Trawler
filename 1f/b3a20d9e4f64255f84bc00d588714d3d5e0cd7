@@ -1,0 +1,37 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W4
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "deferred row: every local window can call every app command (no app-command list; capabilities limit plugin and core permissions only)"
+  - path: "docs/decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html"
+    tier: T2
+    action: added
+    distills: "DEC-90: one own About window on every OS; links by closed name through open_link, no opener permission; a report carries version, OS + version, CPU, install kind only; the launch check obeys the stored switch, default on"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-90 index row"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "lexicon: licences, installed copy; keyboard: Esc closes the read-only About window, F1 opens the user guide off macOS; the licence list as a scroll-a-region sighting"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-ABOUT row (new); UC-UPDATE row names the switch and check now"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-ABOUT section (entries per OS, report fields, Settings updates block, proof); UC-UPDATE contract: the launch check obeys check for updates automatically, check now"
+  - path: "docs/work/2026-11-06-prorelease-w4-about-help-plan.html"
+    tier: T3
+    action: added
+    distills: "W4 plan: requirement, decisions, expected per OS, test plan"
+  - path: "docs/work/2026-11-06-prorelease-w4-about-help-result.html"
+    tier: T3
+    action: added
+    distills: "W4 result: rulings built, evidence per layer, round 2 of the ui/src-tauri review, hand-check, follow-ups"
