@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "epic E-RCFIX epic/rc-hotfix -> main"
+epic: E-RCFIX
+branch: epic/rc-hotfix
+base: 8d4b1ae44d07eadf6943432566e75baa1b4b2893
+head: a3b25a198426fc35d9d85495ca13d259e05e11fe
+diff_sha256: b2202d4400739aa5adcf295bb2fdb917133c2600718effbdfab20531832bbbb2
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 6
+  stage_seconds:
+    finders: 40
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 3 }
+findings: { found: 5, verified: 5, waived: 5 }
+waivers: []
+nits:
+  - finding: "closes_its_pipe_early matches only the prefixes grep -q, grep -l, grep -m and head, so grep -xq, grep -E -q, grep --quiet, sed '1q' or awk exit readers pass it"
+    waived: "it pins the class that failed v0.1.0-1 and the common forms; full early-exit detection needs a shell parser, and DEC-86 rule 8 states the rule for the forms the test cannot see"
+  - finding: "the guard reads each run: line alone and splits on every |, so a pipe continued with \\ or a | inside a quoted jq/sed string is mis-parsed"
+    waived: "no run: in release.yml continues a pipe across lines today, and a quoted | only misfires when the quoted text starts with an early reader, which fails loud (false red), never silent"
+  - finding: "the allow(clippy::unnecessary_wraps) on the cfg(not(unix)) make_executable silences the lint instead of reshaping the signature"
+    waived: "the Windows twin must keep the unix Result signature its caller propagates with ?; the same allow is the precedent in ui/src-tauri/src/lib.rs, and CLAUDE.md forbids a justifying comment"
+  - finding: "the host-check test matches the step's exact spelling, so an equivalent rewrite fails it"
+    waived: "deliberate: the spelling is the pipefail-safe form the fix chose; the previous test pinned spelling the same way"
+  - finding: "an empty $host (rustc output format change) fails closed but prints an empty host in the error"
+    waived: "the step prints rustc -vV in full on the line before, so the log already shows what rustc said"
+verdict: PASS
+date: 2026-11-06
