@@ -11,7 +11,7 @@
       <h1>DEC-82 — an update asks, is signed, and quits through the check</h1>
       <p>How an installed Trawler takes a new version: never silently, only when the owner's key signed that exact
         version, and only through the same quit every other quit goes through.</p>
-      <div class="meta">v3 · 2026-11-06 (rule 4: install is the quit request, so a windowless app asks — E-PKG2.W5) · v2 · 2026-11-05 (rule 4: a failed install is told — W1 review round 1) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W1</strong> from the owner's
+      <div class="meta">v4 · 2026-11-06 (known limits: the Linux deb/rpm root install, F3 of E-PKG2's close review) · v3 · 2026-11-06 (rule 4: install is the quit request, so a windowless app asks — E-PKG2.W5) · v2 · 2026-11-05 (rule 4: a failed install is told — W1 review round 1) · v1 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-PKG2.W1</strong> from the owner's
         rulings Q4, Q6, Q7 and Q20–Q22 · UC-UPDATE (written when a release exists, E-PKG2's close) · relates to
         <a href="dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>,
         <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a>,
@@ -83,6 +83,18 @@ flowchart LR
       <tr><td>signatures without a version</td><td>they allow a downgrade by an unsigned manifest</td></tr>
       <tr><td>a webview dialog for the offer</td><td>native dialogs need no design run and work with no window shown
         (Q6)</td></tr>
+    </table>
+
+    <h2 id="limits">Known limits</h2>
+    <table data-c="limits">
+      <tr><th>Limit</th><th>Why accepted</th></tr>
+      <tr><td>On Linux deb/rpm, <code>tauri-plugin-updater</code> 2.14.1 (<code>updater.rs</code> 1346–1400) writes the verified
+        bytes to <code>$TMP/tauri_deb_updateXXXX/package.deb</code> (a user-owned 0700 dir), then runs <code>pkexec dpkg -i</code>
+        / <code>rpm -U</code> as root on that path. The signature covered only the in-memory bytes, so a same-user process can
+        swap the file between write and read and turn the password prompt into root code execution. If <code>pkexec</code>
+        fails, the fallback pipes the password to <code>sudo -S</code>, so Trawler briefly holds it. No command injection: fixed
+        file names, <code>Command::arg</code></td><td>upstream code, not Trawler's; a same-user attacker already owns the user's
+        session. Recorded as an upstream limit, worth reporting upstream (F3, E-PKG2's close review)</td></tr>
     </table>
 
     <h2 id="held-by">Held by</h2>

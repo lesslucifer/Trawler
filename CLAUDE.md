@@ -21,6 +21,8 @@ Generated CA in `ca/` (headless, git-ignored) or the app's data dir (app).
 Node + pnpm; `-p trawler` = core only) · `cargo clippy` ·
 `cargo xtask ui build|dev|e2e` (front-end bundle · HMR window · WebDriver e2e) ·
 `cargo xtask package [--universal]` (host installers, ad-hoc signed; DEC-81) ·
+release = bump the workspace version on `main`, push tag `v<version>`
+(`release.yml` → draft release; DEC-86) ·
 `cargo xtask hooks install` (once per clone: git runs the tracked
 `.cargo-husky/hooks/` via `core.hooksPath`; every gate refuses without it).
 Quick check (either run): `curl -x http://127.0.0.1:7420 http://example.com/`
