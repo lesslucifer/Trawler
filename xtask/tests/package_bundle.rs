@@ -139,12 +139,15 @@ fn the_installed_window_owns_a_core_that_captures_and_frees_its_ports(dmg: &Path
     mark_the_update_check_done(home.path());
     let (proxy, api): (SocketAddr, SocketAddr) = (PROXY.parse().unwrap(), API.parse().unwrap());
 
+    refuse_a_running_trawler();
     let mut window = launch_window(&app, home.path());
-    wait_for("the app's own core to answer on 7421", Duration::from_secs(60), || {
-        TcpStream::connect(api).is_ok()
-    });
+    let ca = home.path().join(APP_DATA).join("ca/trawler-ca.pem");
+    wait_for(
+        "the app's own core to mint its CA and answer on 7421",
+        Duration::from_secs(60),
+        || ca.is_file() && TcpStream::connect(api).is_ok(),
+    );
     xtask::smoke::capture_through_the_proxy(proxy, api).unwrap();
-    assert!(home.path().join(APP_DATA).join("ca/trawler-ca.pem").is_file());
     assert_eq!(window.0.try_wait().unwrap(), None, "the window app is still running");
 
     let ended = Command::new("kill").arg(window.0.id().to_string()).status();
