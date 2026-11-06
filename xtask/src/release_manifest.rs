@@ -47,7 +47,7 @@ pub fn keys_of(name: &str) -> Result<Option<Vec<String>>, String> {
     Ok(Some(keys))
 }
 
-fn required_keys() -> Vec<String> {
+fn required_keys(version: &str) -> Vec<String> {
     let mut keys = Vec::new();
     for arch in ARCHS {
         keys.extend(
@@ -64,6 +64,9 @@ fn required_keys() -> Vec<String> {
             ]
             .map(|key| key.replace("{}", arch)),
         );
+    }
+    if !crate::package::rpm_takes(version) {
+        keys.retain(|key| !key.ends_with("-rpm"));
     }
     keys
 }
@@ -94,8 +97,10 @@ pub fn manifest(
             }
         }
     }
-    let missing: Vec<String> =
-        required_keys().into_iter().filter(|key| !platforms.contains_key(key)).collect();
+    let missing: Vec<String> = required_keys(release.version)
+        .into_iter()
+        .filter(|key| !platforms.contains_key(key))
+        .collect();
     if !missing.is_empty() {
         return Err(format!("the release lacks updater entries: {}", missing.join(", ")));
     }
@@ -221,7 +226,7 @@ mod tests {
         let latest = manifest(&release(), &full()).unwrap();
         assert_eq!(latest["version"], "0.1.0");
         assert_eq!(latest["notes"], "notes");
-        assert_eq!(latest["platforms"].as_object().unwrap().len(), required_keys().len());
+        assert_eq!(latest["platforms"].as_object().unwrap().len(), 18);
         let entry = &latest["platforms"]["windows-x86_64-nsis"];
         assert_eq!(entry["signature"], "sig-of-Trawler_0.1.0_x64-setup.exe");
         assert_eq!(entry["url"], "https://example.test/dl/Trawler_0.1.0_x64-setup.exe");
@@ -252,6 +257,20 @@ mod tests {
             "{refusal}"
         );
         assert!(!refusal.contains("windows"), "{refusal}");
+    }
+
+    #[test]
+    fn a_pre_release_needs_every_key_but_rpm_s_and_a_final_needs_all_eighteen() {
+        let without_rpm: Vec<_> =
+            full().into_iter().filter(|(name, _)| !has(name, ".rpm")).collect();
+        let pre = Release { version: "0.1.0-3", ..release() };
+        let latest = manifest(&pre, &without_rpm).unwrap();
+        let platforms = latest["platforms"].as_object().unwrap();
+        assert_eq!(platforms.len(), 16);
+        assert!(platforms.keys().all(|key| !key.ends_with("-rpm")));
+        assert_eq!(required_keys("0.1.0").len(), 18);
+        let refusal = manifest(&release(), &without_rpm).unwrap_err();
+        assert!(refusal.contains("linux-aarch64-rpm"), "{refusal}");
     }
 
     #[test]

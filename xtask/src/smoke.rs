@@ -255,7 +255,7 @@ pub fn parse(args: &[&str]) -> Result<package::Options, String> {
 pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let options = parse(args)?;
     let os = Os::named(std::env::consts::OS)?;
-    let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS)?;
+    let plan = package::plan(os, &options, &package::UNIVERSAL_PARTS, &package::version_of(repo)?)?;
     let artifacts = package::artifacts(&repo.join("target").join(&plan.bundle_dir))?;
     let source = pick(os, &artifacts)?;
 
