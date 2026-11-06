@@ -1,0 +1,47 @@
+schema: cr/v5
+scope: "epic E-PKG2 epic/packaging-v2 -> main"
+epic: E-PKG2
+branch: epic/packaging-v2
+base: 847712f3cc215f47778960b042f1c12a688eadd7
+head: 2b6aae30c2b6185b95474890709177600c8b377e
+diff_sha256: 00184be9476a4f09298819181c781123b863d98c2dc5dfb0c29b7f4325c755ae
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 9
+  stage_seconds:
+    gate0: 38
+    finders: 82
+    verifiers: 60
+    total: 225
+  by_finder:
+    correctness: { found: 6, verified: 5 }
+    efficiency: { found: 2, verified: 2 }
+    altitude: { found: 2, verified: 1 }
+findings: { found: 10, verified: 8, waived: 0 }
+waivers: []
+nits:
+  - finding: "package::run and sign walk the bundle dir with artifacts() up to three times"
+    waived: "a build tool reading one small directory a few times per release; nothing on the proxy path"
+  - finding: "updater_targets stats every artifact and keys_of allocates a Vec per name"
+    waived: "under 20 names once per release; not a hot path"
+  - finding: "assert!(x.is_empty()) rewritten to assert_eq!(x.len(), 0) in core and unrelated xtask tests"
+    waived: "forced by clippy 1.99's lint under the pinned toolchain (E-PKG2.W2, DEC-85); behaviour unchanged"
+  - finding: "the Windows smoke installs NSIS with /S into a temp dir and never uninstalls it, leaving its registry entry"
+    waived: "the smoke runs on ephemeral GitHub runners; recorded for a local Windows smoke"
+  - finding: "quit_cancelled is sent only from closeConfirm's cancel"
+    waived: "the finder traced cancelAsk and found it does not end the quit; no path was shown that drops a quit without cancel"
+  - finding: "release-manifest's flag() takes the next token even when it is a flag (--tag --repo)"
+    waived: "only release.yml calls it, with a fixed argv; a wrong argv still refuses, with a misleading message"
+  - finding: "an unreadable .sig is reported as missing, losing the cause"
+    waived: "the release job still fails loudly on that file; the message names the right artifact"
+  - finding: "arch_of matches architecture by substring over the whole file name"
+    waived: "the names are Tauri's fixed patterns for productName Trawler; a wrong mapping collides or leaves a platform missing, both refused"
+verdict: PASS
+date: 2026-11-06
