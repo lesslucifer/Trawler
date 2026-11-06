@@ -1,0 +1,6 @@
+schema: test/v2
+level: commit
+branch: 11147023
+tests:
+  unit: { waived: "the commit adds no logic to unit-test: it makes smoke::capture_through_the_proxy public and adds a test; the test is the e2e below" }
+  e2e: { count: 3, covers: "the packaged .dmg installed into a temp folder opens its window; its own core captures through the proxy, mints its CA under a temp HOME, and ending the app frees both fixed ports with no process left (J1, J4)" }
