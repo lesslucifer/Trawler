@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU readme-community -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: wu/prorelease/readme-community
+base: c5cc5d192814495b3d35f27d48a788c1c3eb8716
+head: 9f3658d0c66d432c2c7ff63a7da7660294e867c1
+diff_sha256: 8f1d0424490f9fc082badd6fdd426f4b16b34b07c1c49f2110022c2af7d4242d
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 10
+  stage_seconds:
+    finders: 39
+    verifiers: 14
+  by_finder:
+    correctness: { found: 8, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 10, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "public_text and screenshots nits of this round"
+    waived: "decided on the fixed tip"
+verdict: FAIL
+date: 2026-11-06
