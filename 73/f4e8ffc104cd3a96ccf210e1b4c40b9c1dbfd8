@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W2
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-88-the-app-ships-every-licence-it-links.html"
+    tier: T2
+    action: added
+    distills: "the notice's scope (release crates on every platform + production npm), order, dedup, standard-text fallback and refusal, committed + drift-tested, bundled as a resource not licenseFile; licence compatibility with MIT"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "the DEC-88 row"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL row names the third-party notice (DEC-88)"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL contract: every installer carries THIRD-PARTY-NOTICES.txt; its proof names the packaged resource check"
+  - path: "docs/work/2026-11-06-prorelease-w2-third-party-notice-plan.html"
+    tier: T3
+    action: added
+    distills: "the W2 requirement, flow, expected result and test plan"
+  - path: "docs/work/2026-11-06-prorelease-w2-third-party-notice-result.html"
+    tier: T3
+    action: added
+    distills: "what W2 changed, licence compatibility, the evidence, deviations, distillation and follow-ups"
