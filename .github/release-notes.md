@@ -18,6 +18,7 @@ Open at login needs macOS 13 or later.
 ## Linux
 
 - AppImage: `chmod +x` the file and run it.
-- `.deb`: `sudo apt install ./<file>.deb`. `.rpm`: `sudo dnf install ./<file>.rpm`.
+- `.deb`: `sudo apt install ./<file>.deb`.
+- `.rpm`: `sudo dnf install ./<file>.rpm`.
 - Keeping capture running with the window closed needs a tray icon. GNOME shows one only with the AppIndicator extension; where none shows, open Trawler again to bring its window back.
 - Open at login from an AppImage starts that file, so keep it where it is.

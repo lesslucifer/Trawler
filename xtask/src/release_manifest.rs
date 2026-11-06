@@ -113,7 +113,12 @@ pub fn manifest(
 }
 
 pub fn notes(template: &str, version: &str) -> String {
-    template.replace("{version}", version)
+    let shipped: String = if crate::package::rpm_takes(version) {
+        template.to_string()
+    } else {
+        template.split_inclusive('\n').filter(|line| !line.contains(".rpm")).collect()
+    };
+    shipped.replace("{version}", version)
 }
 
 fn flag<'a>(args: &[&'a str], name: &str) -> Option<&'a str> {
@@ -275,10 +280,7 @@ mod tests {
 
     #[test]
     fn the_notes_carry_the_version_and_every_os_s_first_open_steps() {
-        let template =
-            std::fs::read_to_string(crate::repo_root().expect("repo root").join(TEMPLATE))
-                .expect("the notes template");
-        let text = notes(&template, "0.2.0-1");
+        let text = rendered("0.2.0-1");
         assert!(text.starts_with("# Trawler 0.2.0-1"), "{text}");
         for needle in [
             "## macOS",
@@ -293,6 +295,53 @@ mod tests {
             assert!(text.contains(needle), "the notes lack {needle}");
         }
         assert!(!text.contains("{version}"));
+    }
+
+    fn rendered(version: &str) -> String {
+        let template =
+            std::fs::read_to_string(crate::repo_root().expect("repo root").join(TEMPLATE))
+                .expect("the notes template");
+        notes(&template, version)
+    }
+
+    #[test]
+    fn a_final_s_notes_give_the_deb_and_the_rpm_line() {
+        let text = rendered("0.1.0");
+        assert!(text.contains("sudo apt install ./<file>.deb"), "{text}");
+        assert!(text.contains("sudo dnf install ./<file>.rpm"), "{text}");
+    }
+
+    #[test]
+    fn a_pre_release_s_notes_give_the_deb_line_and_no_rpm() {
+        let text = rendered("0.1.0-4");
+        assert!(text.contains("sudo apt install ./<file>.deb"), "{text}");
+        assert!(!text.contains("rpm"), "{text}");
+    }
+
+    #[test]
+    fn run_writes_a_pre_release_s_notes_without_the_rpm_line() {
+        let dist = tempfile::tempdir().unwrap();
+        for (name, signature) in full().into_iter().filter(|(name, _)| !has(name, ".rpm")) {
+            std::fs::write(dist.path().join(&name), "bytes").unwrap();
+            std::fs::write(dist.path().join(format!("{name}.sig")), signature.unwrap()).unwrap();
+        }
+        let args = [
+            dist.path().to_str().unwrap(),
+            "--tag",
+            "v0.1.0-4",
+            "--repo",
+            "o/r",
+            "--pub-date",
+            "2026-11-06T00:00:00Z",
+        ];
+        run(&args, &crate::repo_root().unwrap()).unwrap();
+        let notes_md = std::fs::read_to_string(dist.path().join("notes.md")).unwrap();
+        assert!(notes_md.starts_with("# Trawler 0.1.0-4"), "{notes_md}");
+        assert!(notes_md.contains(".deb") && !notes_md.contains("rpm"), "{notes_md}");
+        let latest: Value =
+            serde_json::from_slice(&std::fs::read(dist.path().join("latest.json")).unwrap())
+                .unwrap();
+        assert_eq!(latest["notes"], notes_md.as_str());
     }
 
     #[test]
