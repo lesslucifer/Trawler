@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedd0d89f34851f0dfaf040" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W20 plan</title>
+  <style>
+    .mock { font-family: var(--mono, monospace); font-size: 0.85em; border: 1px solid var(--line); border-radius: 6px; padding: 0.4em 0; background: var(--paper); min-width: 16em; }
+    .mock div { padding: 0.15em 0.9em; }
+    .mock .off { color: var(--muted); }
+    .mock .sep { border-top: 1px solid var(--line); margin: 0.3em 0; padding: 0; }
+    .mock .new { color: var(--ok); }
+    .mock .chg { color: var(--warn); }
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W20: the tray menu's commands</h1>
+      <p>Round 1, audit and proposal: what the menu-bar / tray icon offers today on each OS, what a debugging proxy's user expects from it, and the owner questions that decide round 2's build.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan (round 1: the build waits on the owner's answers) · <span class="badge id">E-PRORELEASE.W20</span> · branch <code>wu/prorelease/tray-menu</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · amends DEC-77 rule 8 · UC-BG · DEC-64</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">The menu-bar / tray icon offers, on every OS and with no window open, each command a user needs to reach Trawler, see whether it captures and whether this machine routes through it, check for updates and quit; every label names what its item does in the lexicon's words, and no item shows an address.</p>
+
+    <h2 id="today">Today's menu</h2>
+    <table data-c="today">
+      <thead><tr><th>macOS (menu bar)</th><th>Windows (notification area)</th><th>Linux (AppIndicator)</th></tr></thead>
+      <tbody><tr>
+        <td><div class="mock"><div class="off">Capturing</div><div class="sep"></div><div>Open Trawler</div><div>Settings…</div><div class="off">Restart capture service</div><div class="sep"></div><div>Quit Trawler</div></div></td>
+        <td><div class="mock"><div class="off">Capturing</div><div class="sep"></div><div>Open Trawler</div><div>Settings…</div><div class="off">Restart capture service</div><div class="sep"></div><div>Quit Trawler</div></div></td>
+        <td><div class="mock"><div class="off">Capturing</div><div class="sep"></div><div>Open Trawler</div><div>Settings…</div><div class="off">Restart capture service</div><div class="sep"></div><div>Quit Trawler</div></div></td>
+      </tr></tbody>
+    </table>
+    <p>One menu on every OS (<code>ui/src-tauri/src/tray.rs:85-107</code>); grey = disabled. No tray click handler is installed (<code>tray.rs:147-152</code>), so each OS's default applies.</p>
+
+    <h3 id="today-items">Items, states and behaviour</h3>
+    <table data-c="today-items">
+      <thead><tr><th>Item</th><th>Does</th><th>Enabled / text by state</th><th>Label vs behaviour</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>status line</td><td>nothing (disabled)</td><td>starting: <em>Capture service starting</em> · running: <em>Capturing</em> · exited: <em>Capture service stopped</em> · attached: <em>Attached to http://127.0.0.1:9000</em></td><td><strong>attached prints an address</strong>, which the lexicon (capture service) forbids outside the Capture service page. <em>Capturing</em> is said while nothing routes here too: the service is ready, not capturing</td><td><code>tray.rs:62-70</code></td></tr>
+        <tr><td>Open Trawler</td><td>focuses, unminimizes or rebuilds the main window</td><td>always</td><td>true</td><td><code>lifecycle.rs:177-200</code></td></tr>
+        <tr><td>Settings…</td><td>opens the separate Settings window (W19 moves Settings into the main window)</td><td>always</td><td>true today; changes with W19</td><td><code>settings.rs:20-61</code></td></tr>
+        <tr><td>Restart capture service</td><td>restarts the owned core through the supervisor</td><td>only while an owned core has exited; never when attached</td><td>true; the captured list is already gone when it is enabled, so no ask is owed</td><td><code>tray.rs:69</code> · <code>core.rs:216-228</code></td></tr>
+        <tr><td>Quit Trawler</td><td>quit request: opens the main window, runs DEC-64's check, exits and stops the owned core</td><td>always</td><td>true (DEC-64 rule 1, DEC-77 rule 10: never the keep-capturing ask)</td><td><code>lifecycle.rs:206</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="today-host">Icon, clicks and tooltip per OS</h3>
+    <table data-c="today-host">
+      <thead><tr><th></th><th>macOS</th><th>Windows</th><th>Linux</th></tr></thead>
+      <tbody>
+        <tr><td>icon</td><td>template glyph tinted by the menu bar: ring + disc running/starting/attached, ring alone stopped</td><td colspan="2">coloured pair, same two states (DEC-89 rule 5)</td></tr>
+        <tr><td>left click</td><td>shows the menu</td><td>shows the menu (Tauri default)</td><td rowspan="3">AppIndicator reports no clicks: any click shows the menu</td></tr>
+        <tr><td>right click</td><td>shows the menu</td><td>shows the menu</td></tr>
+        <tr><td>double click</td><td>nothing</td><td>nothing (shows the menu twice)</td></tr>
+        <tr><td>tooltip</td><td colspan="2"><em>Trawler</em>, static: never the state</td><td>none (AppIndicator has no tooltip)</td></tr>
+        <tr><td>keyboard</td><td>VoiceOver / ⌃F8 reach the menu bar</td><td>Win+B then arrows, Enter or Shift+F10 opens the menu</td><td>the panel's own; no mnemonics, no accelerators</td></tr>
+        <tr><td>no icon</td><td colspan="3">the app never goes windowless (DEC-77 rule 1); GNOME needs the AppIndicator extension</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="today-gaps">What the menu cannot do with no window</h3>
+    <table data-c="today-gaps">
+      <thead><tr><th>Need</th><th>Today, windowless</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td>check for updates</td><td>unreachable: the app menu carries it, and a windowless app shows no app menu (macOS Accessory policy; Windows/Linux menus live in the window)</td><td>a login-launched app may run for days on an old version; the launch check runs once a day at most</td></tr>
+        <tr><td>know whether this machine routes through Trawler</td><td>not shown</td><td>the one fact that decides whether the internet works once Trawler stops (DEC-64)</td></tr>
+        <tr><td>stop routing without quitting</td><td>open the window, then setup</td><td>a user done debugging wants the internet back and Trawler still running</td></tr>
+        <tr><td>About, version, licences</td><td>unreachable windowless</td><td>a bug report asks for the version</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="proposal">Proposed menu</h2>
+    <table data-c="proposal" data-item="expected">
+      <thead><tr><th>macOS</th><th>Windows</th><th>Linux</th></tr></thead>
+      <tbody><tr>
+        <td><div class="mock"><div class="off">Capturing</div><div class="off new">This machine routes through Trawler</div><div class="sep"></div><div>Open Trawler</div><div>Settings…</div><div class="off chg">Restart Capture Service</div><div class="sep"></div><div class="new">Stop Routing Through Trawler</div><div class="sep"></div><div class="new">Check for Updates…</div><div class="new">About Trawler</div><div class="sep"></div><div>Quit Trawler</div></div></td>
+        <td><div class="mock"><div class="off">Capturing</div><div class="off new">This machine routes through Trawler</div><div class="sep"></div><div>Open Trawler</div><div>Settings…</div><div class="off chg">Restart capture service</div><div class="sep"></div><div class="new">Stop routing through Trawler</div><div class="sep"></div><div class="new">Check for updates…</div><div class="new">About Trawler</div><div class="sep"></div><div>Quit Trawler</div></div><p>left click opens Trawler, right click the menu (Q1)</p></td>
+        <td><div class="mock"><div class="off">Capturing</div><div class="off new">This machine routes through Trawler</div><div class="sep"></div><div>Open Trawler</div><div>Settings…</div><div class="off chg">Restart capture service</div><div class="sep"></div><div class="new">Check for updates…</div><div class="new">About Trawler</div><div class="sep"></div><div>Quit Trawler</div></div><p>no stop item: no automatic proxy on Linux (DEC-64 rule 7)</p></td>
+      </tr></tbody>
+    </table>
+    <p>Green = added, amber = reworded. Groups: state · window · routing · app · quit. The routing line and item show only while this machine routes through Trawler (Q2). Casing follows each OS (Q4).</p>
+
+    <h3 id="changes">Changes, ranked by value</h3>
+    <table data-c="changes">
+      <thead><tr><th>#</th><th>Change</th><th>Rationale</th><th>Risk</th><th>Per OS</th><th>Tests</th></tr></thead>
+      <tbody>
+        <tr><td>C1</td><td><strong>Check for updates…</strong> → <code>update::check(app, Asked::ByUser)</code></td><td>the only path windowless; the result is already a native dialog that needs no window (<code>update.rs:263-279</code>)</td><td>low: same call the app menu makes; an install is a quit request, which opens the window for DEC-64</td><td>all three</td><td>unit: <code>action_for</code> maps the id; menu order list</td></tr>
+        <tr><td>C2</td><td>Status line drops the address: attached reads <em>Attached to a capture service</em>; the tooltip mirrors the status line (<em>Trawler — Capturing</em>)</td><td>lexicon: no address outside the Capture service page; the tooltip shows state on hover without opening the menu</td><td>none</td><td>tooltip macOS, Windows; Linux has none</td><td>unit: <code>view()</code> per state, no <code>://</code> in any text; tooltip per state</td></tr>
+        <tr><td>C3</td><td><strong>This machine routes through Trawler</strong> (disabled line) and <strong>Stop routing through Trawler</strong>, both only while this machine's proxy reads ours (Q2)</td><td>DEC-64's own stake, visible and fixable without quitting; same words as the quit dialog's act</td><td>medium: the menu needs a fresh proxy reading. Read on the icon's click (macOS, Windows) and on a timer while windowless; Linux reads on the timer only. macOS asks for an admin approval, as setup does</td><td>stop on macOS, Windows (<code>setup.rs:1234</code>); Linux: line only</td><td>unit: visibility per reading (ours / foreign / none / unread); handler calls <code>unset_proxy</code>; integration: scenario build's scripted proxy reading drives the item</td></tr>
+        <tr><td>C4</td><td>Windows: left click opens Trawler, right click shows the menu (Q1)</td><td>Windows' notification-area convention; macOS keeps click = menu, its own convention</td><td>low: <code>show_menu_on_left_click(false)</code> + one click handler, Windows only</td><td>Windows only; Linux cannot</td><td>unit: click event → action, per OS</td></tr>
+        <tr><td>C5</td><td><strong>About Trawler</strong> → the About window (DEC-90)</td><td>version and licences windowless; About names the guide and issue links, so no Help items are added</td><td>none: <code>about::open_in_background</code> exists</td><td>all three</td><td>unit: id → <code>OpenAbout(Page::About)</code></td></tr>
+        <tr><td>C6</td><td><strong>Settings…</strong> follows W19 (Q3)</td><td>one way Settings opens</td><td>depends on W19's branch, not yet built</td><td>all three</td><td>W19's tests plus one: the tray item reaches the same open</td></tr>
+        <tr><td>C7</td><td>Casing per OS (Q4)</td><td>today the tray mixes <em>Restart capture service</em> with the app menu's Title Case</td><td>none</td><td>macOS Title Case, Windows/Linux sentence case</td><td>unit: label per OS</td></tr>
+      </tbody>
+    </table>
+    <p>Every change amends DEC-77 rule 8 (the menu's list) and UC-BG; round 2 distills both. e2e: waived per item, native menus are out of WebDriver's reach (UC-BG already owes them); the hand-check matrix gains a tray row per OS.</p>
+
+    <h3 id="rejected">Not proposed</h3>
+    <table data-c="rejected">
+      <thead><tr><th>Command</th><th>Why not</th></tr></thead>
+      <tbody>
+        <tr><td>pause / resume recording</td><td>the core has no pause (<code>src/api/mod.rs:40-70</code>); a core contract change, a roadmap item, not a menu item</td></tr>
+        <tr><td>clear the captured list</td><td>the app asks first (<em>the capture is not saved anywhere</em>, <code>CaptureControls.tsx:21</code>); a menu item with the list out of sight would skip or duplicate that ask</td></tr>
+        <tr><td>copy the proxy address</td><td>an address is outside the lexicon off the Capture service page; needs a clipboard dependency; setup shows the address where it is used</td></tr>
+        <tr><td>route this machine through Trawler</td><td>replacing a foreign proxy needs the replace ask (<code>reach.rs</code>), which lives in the window; setup owns the start</td></tr>
+        <tr><td>update-available state or a notification</td><td>DEC-77 rule 8: no notification; the update offer is already a dialog</td></tr>
+        <tr><td>User Guide / Report an Issue items</td><td>About names both links (DEC-90); one entry is enough</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="questions">Owner questions</h2>
+    <table data-c="questions">
+      <thead><tr><th>Q</th><th>Question</th><th>Options</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>What does a click on the Windows tray icon do?</td><td>A keep: left and right show the menu · B left opens Trawler, right shows the menu · C double-click opens Trawler, single click the menu</td><td><strong>B</strong>: Windows' convention; C fires the menu on the first click of a double-click</td></tr>
+        <tr><td>Q2</td><td>Does the tray show and stop this machine's routing?</td><td>A no · B line + <em>Stop routing through Trawler</em>, only while ours · C B plus a <em>Route this machine through Trawler</em> start</td><td><strong>B</strong>: the stake DEC-64 guards, fixable without quitting; C's start needs the replace ask in the window</td></tr>
+        <tr><td>Q3</td><td>Where does the tray's Settings… open once W19 lands?</td><td>A the main window, raised, with its Settings dialog open · B keep a separate Settings window for the tray only</td><td><strong>A</strong>, and W20's build merges after W19</td></tr>
+        <tr><td>Q4</td><td>Tray label casing</td><td>A Title Case everywhere, as the app menu · B Title Case on macOS, sentence case on Windows/Linux · C keep as is (mixed)</td><td><strong>B</strong>: each OS's own menu style; the app menu's Windows/Linux labels can follow in the same round</td></tr>
+        <tr><td>Q5</td><td>Scope for v0.1.0</td><td>A C1, C2, C5, C7 (no new reading, no click change) · B all of C1–C7</td><td><strong>B</strong> if Q1 and Q2 are B; else A</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="unverified">Not verified here</h2>
+    <ul data-c="unverified">
+      <li>Click, tooltip and keyboard rows per OS are read from Tauri 2 / tray-icon defaults, not run on Windows or Linux.</li>
+      <li>W19 has no commit yet on <code>wu/prorelease/settings-modal</code>; Q3 assumes its intent from the brief.</li>
+      <li>Whether macOS's stop asks for approval from the tray as it does from setup is assumed from <code>unset_proxy</code> being one code path.</li>
+    </ul>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W20 · DEC-77 rule 8 · DEC-64 rules 1, 7 · DEC-90 · UC-BG · lexicon (capture service, restart, attached) · <code>ui/src-tauri/src/tray.rs</code>, <code>menu.rs</code>, <code>lifecycle.rs</code>, <code>update.rs</code>, <code>setup.rs</code>.</p>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th></tr></thead>
+        <tbody>
+          <tr><td>unit (cargo)</td><td>tray.rs: each new id → its action; the menu's order per OS; <code>view()</code> per core state with no address; tooltip per state; routing visibility per proxy reading; Windows click → open; labels per OS casing</td></tr>
+          <tr><td>integration</td><td>scenario build: a scripted ours / foreign / unread reading shows and hides the routing items (C3 only; waived if Q2 = A)</td></tr>
+          <tr><td>e2e</td><td>waived: native tray menus are out of WebDriver's reach (UC-BG); hand-check matrix row per OS</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
