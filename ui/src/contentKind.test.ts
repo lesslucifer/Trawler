@@ -17,6 +17,8 @@ describe("a label names a kind, or nothing when it is generic or unknown", () =>
     ["text/json", "json"],
     ["application/problem+json", "json"],
     ["application/x-www-form-urlencoded", "form"],
+    ["text/rfc822-headers", "form"],
+    ["text/uri-list", "form"],
     ["application/xml", "xml"],
     ["text/xml", "xml"],
     ["application/atom+xml", "xml"],
@@ -172,12 +174,14 @@ describe("javascript, css and form come only from their label", () => {
     ["!function(){}();", "application/javascript", "javascript"],
     ["body{margin:0}", "text/css", "css"],
     ["a=1&b=2", "application/x-www-form-urlencoded", "form"],
+    ["host: a.example\naccept: */*", "text/rfc822-headers", "form"],
+    ["https://a.example/?q=1", "text/uri-list", "form"],
     ["<b>not markup to a script</b>", "application/javascript", "javascript"],
   ])("%j under %s is %s by its label", (text, label, kind) => {
     expect(readKind(bytes(text), label)).toEqual({ kind, by: "label", label });
   });
 
-  it.each([["function f(){return 1}"], ["body{margin:0}"], ["a=1&b=2"]])("%j with no label is text", (text) => {
+  it.each([["function f(){return 1}"], ["body{margin:0}"], ["a=1&b=2"], ["host: a.example"], ["https://a.example/?q=1"]])("%j with no label is text", (text) => {
     expect(readKind(bytes(text)).kind).toBe("text");
   });
 });

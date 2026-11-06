@@ -1,4 +1,5 @@
 import type { FlowView, Leg } from "./api";
+import { HEADERS_LABEL, URI_LABEL } from "./contentKind";
 import type { DataPayload, Heading } from "./dataWindow";
 
 export function flowCaption(flow: FlowView, what: string): Pick<DataPayload, "title" | "heading"> {
@@ -9,7 +10,7 @@ export function flowCaption(flow: FlowView, what: string): Pick<DataPayload, "ti
 }
 
 export function uriPayload(flow: FlowView): DataPayload {
-  return { key: `${flow.id}:uri`, ...flowCaption(flow, "uri"), bytes: new TextEncoder().encode(flow.uri) };
+  return { key: `${flow.id}:uri`, ...flowCaption(flow, "uri"), bytes: new TextEncoder().encode(flow.uri), typeHint: URI_LABEL };
 }
 
 export function headersPayload(flow: FlowView, leg: Leg): DataPayload {
@@ -19,5 +20,6 @@ export function headersPayload(flow: FlowView, leg: Leg): DataPayload {
     key: `${flow.id}:${leg}:headers`,
     ...flowCaption(flow, `${leg} headers`),
     bytes: new TextEncoder().encode(lines),
+    typeHint: HEADERS_LABEL,
   };
 }

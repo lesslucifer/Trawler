@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findBytes, formStructure, jsonStructure, markBytes, markText, mergeRanges, readHexQuery, structureNames } from "./find";
+import { formStructure } from "./formPairs";
+import { findBytes, jsonStructure, markBytes, markText, mergeRanges, readHexQuery, structureNames } from "./find";
 import type { FindChip } from "./findGrammar";
 import { parseJson, surfaceText } from "./jsonTools";
 
@@ -157,6 +158,29 @@ describe("marking text with chips", () => {
     expect(markText(text, [chip("value", "scope")], structure).ranges).toEqual([{ from: 26, to: 31 }]);
     expect(formStructure("").keys).toEqual([]);
     expect(formStructure("flag").values).toEqual([{ from: 4, to: 4 }]);
+  });
+
+  it("a URL's key: and value: mark only its query, never the head or the fragment", () => {
+    const text = "https://a.example/a=b?a=1&b=a#a=z";
+    const structure = formStructure(text, "url");
+    expect(markText(text, [chip("key", "a")], structure).ranges).toEqual([{ from: 22, to: 23 }]);
+    expect(markText(text, [chip("value", "a")], structure).ranges).toEqual([{ from: 28, to: 29 }]);
+    expect(formStructure("https://a.example/#f", "url")).toEqual({ keys: [], values: [], jsonEscaped: false });
+  });
+
+  it("header lines: key: marks the name, value: the value after the colon and its spaces", () => {
+    const text = "accept: a\r\nx-a:  b\r\n";
+    const structure = formStructure(text, "headers");
+    expect(structure.keys).toEqual([
+      { from: 0, to: 6 },
+      { from: 11, to: 14 },
+    ]);
+    expect(structure.values).toEqual([
+      { from: 8, to: 9 },
+      { from: 17, to: 18 },
+    ]);
+    expect(markText(text, [chip("value", "a")], structure).ranges).toEqual([{ from: 8, to: 9 }]);
+    expect(formStructure('{"a":1}', "none").keys).toEqual([]);
   });
 
   it("overlapping chips mark once and the union is in document order", () => {

@@ -19,6 +19,42 @@ describe("FormRenderer", () => {
     expect(screen.getByText("two words")).toBeInTheDocument();
   });
 
+  it("a URI reads as its parts, then its query's pairs, not as one key up to the first =", () => {
+    render(<FormRenderer text="https://cdn.example/v/a.mp4?_nc_cat=106&efg=eyJ2In0%3D" label="text/uri-list" />);
+    expect(screen.getByText("scheme")).toBeInTheDocument();
+    expect(screen.getByText("cdn.example")).toBeInTheDocument();
+    expect(screen.getByText("/v/a.mp4")).toBeInTheDocument();
+    expect(screen.getByText("_nc_cat")).toBeInTheDocument();
+    expect(screen.getByText("106")).toBeInTheDocument();
+    expect(screen.getByText("eyJ2In0=")).toBeInTheDocument();
+  });
+
+  it("name: value lines read one row per line, values verbatim", () => {
+    render(<FormRenderer text={"cache-control: max-age=1209600, no-transform\ntiming-allow-origin: *"} label="text/rfc822-headers" />);
+    expect(screen.getByText("cache-control")).toBeInTheDocument();
+    expect(screen.getByText("max-age=1209600, no-transform")).toBeInTheDocument();
+    expect(screen.getByText("*")).toBeInTheDocument();
+  });
+
+  it("a URL-encoded body is read as pairs whatever it looks like, with the window's decoding", () => {
+    render(<FormRenderer text={'/a="x"&note: y=<b>&bad=%E4&k=v'} label="application/x-www-form-urlencoded" />);
+    expect(screen.getByText("/a")).toBeInTheDocument();
+    expect(screen.getByText('"x"')).toBeInTheDocument();
+    expect(screen.getByText("note: y")).toBeInTheDocument();
+    expect(screen.getByText("%E4")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["header lines over the cap", `x-huge: ${"h".repeat(TEXT_MAX + 10)}\nnext: 1`, "text/rfc822-headers"],
+    ["a URL over the cap with no & or =", `https://a.example/${"p".repeat(TEXT_MAX + 10)}`, "text/uri-list"],
+    ["a list of two URIs", "https://a.example/1\nhttps://a.example/2", "text/uri-list"],
+    ["header lines with mixed line breaks", "a: 1\r\nb: 2\nc: 3", "text/rfc822-headers"],
+  ])("%s show as text, never a cut or misread table", (_, text, label) => {
+    render(<FormRenderer text={text} label={label} />);
+    expect(screen.queryByTestId("body-form")).toBeNull();
+    expect(screen.getByTestId("body-text")).toBeInTheDocument();
+  });
+
   it("composes KeyValueRow — the value cell's copy affordance is not re-drawn here", () => {
     render(<FormRenderer text="code=SplxlOBeZQQ" />);
 

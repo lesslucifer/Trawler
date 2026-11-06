@@ -5,7 +5,6 @@ import {
   bodyText,
   byteLength,
   decodeBody,
-  formEntries,
   formPairCut,
   hexDump,
   hexRows,
@@ -16,6 +15,7 @@ import {
   saveFilename,
 } from "./body";
 import type { FlowView } from "./api";
+import { parsePairs } from "./formPairs";
 
 test("humanBytes reads at a glance: one decimal below 10, integer above", () => {
   expect(humanBytes(0)).toBe("0 B");
@@ -79,21 +79,13 @@ test("hexDump caps output and reports the remainder", () => {
   expect(lines[1]).toBe("… 24 more bytes");
 });
 
-test("formEntries parses url-encoded pairs, decoding and keeping duplicates", () => {
-  expect(formEntries("a=1&b=two%20words&a=2")).toEqual([
-    ["a", "1"],
-    ["b", "two words"],
-    ["a", "2"],
-  ]);
-});
-
 test("formPairCut lands on a pair boundary, never inside a percent-escape", () => {
   const body = "a=1&price=%E2%82%AC99&b=2";
 
   for (let at = 0; at <= body.length; at += 1) {
     const kept = body.slice(0, formPairCut(body, at));
     expect(kept).not.toMatch(/%[0-9A-Fa-f]?$/);
-    expect(formEntries(kept).map(([, v]) => v).join("")).not.toContain("�");
+    expect(parsePairs(kept).some((pair) => pair.kept)).toBe(false);
   }
 });
 

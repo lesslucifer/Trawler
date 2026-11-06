@@ -8,7 +8,7 @@ import type { DataPayload } from "./dataWindow";
 import type { FlowView } from "./api";
 import * as codeTools from "./codeTools";
 import { loadBeautifier } from "./codeTools";
-import { headersPayload } from "./flowPayload";
+import { headersPayload, uriPayload } from "./flowPayload";
 import { systemZone, time, type TimeReading } from "./timeDecoder";
 
 const ROW = 20;
@@ -1141,7 +1141,7 @@ describe("decode", () => {
     expect(selected()).toBe(TOKEN);
   });
 
-  it("open all's headers open as text, and a right-click on a bearer token there reads it as a JWT", async () => {
+  it("open all's headers open as a form, and decoding the bearer row reads its token as a JWT; replace keeps the scheme", async () => {
     const flow: FlowView = {
       id: "f9",
       started_at: "2026-11-05T10:00:00Z",
@@ -1163,14 +1163,18 @@ describe("decode", () => {
       response_body: { state: "empty" },
     };
     await open(headersPayload(flow, "request"));
-    expect(doc()).toBe(`Accept: application/json\nAuthorization: Bearer ${TOKEN}\nCookie: session=${"x".repeat(4096)}`);
+    expect(footer()).toHaveTextContent("from text/rfc822-headers");
+    const rows = screen.getAllByTestId("form-pair");
+    expect(rows.map((row) => within(row).getAllByRole("button")[0].textContent)).toEqual(["Accept", "Authorization", "Cookie"]);
 
-    rightClickAt(doc().indexOf(TOKEN) + 12);
-    fireEvent.click(screen.getByRole("menuitem", { name: /^decode/ }));
+    fireEvent.contextMenu(rows[1], { clientX: 5, clientY: 5 });
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode the value/ }));
 
     expect(within(peek()).getByText("JWT")).toBeInTheDocument();
     expect(decodedText(1)).toBe('{\n  "sub": "8812"\n}');
-    expect(selected()).toBe(TOKEN);
+    fireEvent.click(within(peek()).getByRole("button", { name: "replace with the payload" }));
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith(`Accept: application/json\nAuthorization: Bearer {"sub":"8812"}\nCookie: session=${"x".repeat(4096)}`);
   });
 
   it("⌘⇧D takes the value out of a rough selection, its key and quotes dropped", async () => {
@@ -1567,5 +1571,90 @@ describe("the find bar's chips", () => {
     press(" ");
     expect(chipsShown()[2]).toHaveAttribute("aria-invalid", "true");
     expect(findCount()).toHaveTextContent("of 2");
+  });
+});
+
+describe("a form reads its text as lines, a URL or pairs", () => {
+  const URI =
+    "https://scontent.fper7-1.fna.fbcdn.net/o1/v/t2/f2/m366/AQO6_oXZ-c.mp4?_nc_cat=106&_nc_ht=scontent.fper7-1.fna.fbcdn.net&efg=eyJ2In0%3D&bytestart=1051#t=2";
+  const HEADERS = "timing-allow-origin: *\naccess-control-allow-origin: *\ncache-control: max-age=1209600, no-transform";
+  const uriFlow = { id: "f1", method: "GET", uri: URI } as FlowView;
+  const partRows = () => screen.getAllByTestId("form-part");
+  const keysShown = () => rowsShown().map((row) => within(row).getAllByRole("button")[0].textContent);
+  const valuesShown = () => rowsShown().map((row) => within(row).getAllByRole("button")[1].textContent);
+
+  it("the URI's open shows its parts as labelled rows, then the query's pairs from _nc_cat", async () => {
+    await open(uriPayload(uriFlow));
+    expect(screen.getByRole("button", { name: "treat the data as" })).toHaveTextContent("form");
+    expect(footer()).toHaveTextContent("from text/uri-list");
+    expect(partRows().map((row) => row.textContent)).toEqual([
+      "schemehttps",
+      "hostscontent.fper7-1.fna.fbcdn.net",
+      "path/o1/v/t2/f2/m366/AQO6_oXZ-c.mp4",
+      "fragmentt=2",
+    ]);
+    expect(keysShown()).toEqual(["_nc_cat", "_nc_ht", "efg", "bytestart"]);
+    expect(valuesShown()).toEqual(["106", "scontent.fper7-1.fna.fbcdn.net", "eyJ2In0=", "1051"]);
+    expect(footer()).toHaveTextContent("4 pairs");
+  });
+
+  it("find marks a part's value as well as the pairs', parts first", async () => {
+    await open(uriPayload(uriFlow));
+    findFor("fbcdn");
+    expect(findCount()).toHaveTextContent("1 of 2");
+    expect(partRows()[1].querySelector("mark")).toHaveTextContent("fbcdn");
+  });
+
+  it("a part offers decode and copy, never add or remove; removing a pair keeps the head and the fragment", async () => {
+    await open(uriPayload(uriFlow));
+    fireEvent.contextMenu(partRows()[2], { clientX: 5, clientY: 5 });
+    const items = screen.getAllByRole("menuitem").map((item) => item.textContent ?? "");
+    expect(items.some((item) => item.startsWith("copy the value"))).toBe(true);
+    expect(items.some((item) => item.startsWith("remove") || item.startsWith("add"))).toBe(false);
+    fireEvent.keyDown(document.body, { key: "Escape" });
+
+    fireEvent.contextMenu(rowsShown()[1], { clientX: 5, clientY: 5 });
+    fireEvent.click(screen.getByRole("menuitem", { name: /^remove the pair/ }));
+    fireEvent.click(screen.getByRole("button", { name: "copy" }));
+    expect(writeText).toHaveBeenLastCalledWith(URI.replace("&_nc_ht=scontent.fper7-1.fna.fbcdn.net", ""));
+  });
+
+  it("header lines read as text from their bytes; picking form shows one row per line", async () => {
+    await open(payload({ text: HEADERS, typeHint: "text/plain" }));
+    expect(screen.queryAllByTestId("form-pair")).toHaveLength(0);
+    pickKind("form");
+    expect(keysShown()).toEqual(["timing-allow-origin", "access-control-allow-origin", "cache-control"]);
+    expect(valuesShown()).toEqual(["*", "*", "max-age=1209600, no-transform"]);
+    expect(footer()).toHaveTextContent("3 pairs");
+  });
+
+  it("a body labelled URL-encoded reads as pairs even with raw quotes or a leading slash", async () => {
+    await open(payload({ text: '/a="x"&note: y=<b>', typeHint: FORM_HINT }));
+    expect(keysShown()).toEqual(["/a", "note: y"]);
+    expect(valuesShown()).toEqual(['"x"', "<b>"]);
+    expect(screen.queryByText(/^not a form/)).toBeNull();
+  });
+
+  it("a URI list of two URIs says it is not a form, never one URL across both lines", async () => {
+    await open(payload({ text: "https://a.example/1?x=1\nhttps://a.example/2?y=2", typeHint: "text/uri-list" }));
+    expect(screen.getByText("not a form: no name: value lines, URL or name=value pairs")).toBeInTheDocument();
+    expect(screen.queryAllByTestId("form-part")).toHaveLength(0);
+  });
+
+  it("decoding a value with nothing to decode still says why", async () => {
+    await open(payload({ text: HEADERS, typeHint: "text/rfc822-headers" }));
+    fireEvent.contextMenu(rowsShown()[0], { clientX: 5, clientY: 5 });
+    fireEvent.click(screen.getByRole("menuitem", { name: /^decode the value/ }));
+    expect(screen.getByTestId("decode-peek")).toHaveTextContent("not base64, URL-encoded, a JWT or a time");
+  });
+
+  it("form picked on JSON says it is not a form and shows the text, without the form's tools", async () => {
+    await open(payload({ text: '{"a":"b=c"}' }));
+    pickKind("form");
+    expect(screen.getByText("not a form: no name: value lines, URL or name=value pairs")).toBeInTheDocument();
+    expect(doc()).toBe('{"a":"b=c"}');
+    expect(screen.queryAllByTestId("form-pair")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "more" }));
+    expect(within(screen.getByRole("menu", { name: "more" })).queryByRole("menuitem", { name: /^sort by key/ })).toBeNull();
   });
 });

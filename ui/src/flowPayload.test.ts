@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FlowView } from "./api";
 import { bodyPayload } from "./body";
+import { readKind } from "./contentKind";
 import { headersPayload, uriPayload } from "./flowPayload";
 
 const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -33,12 +34,13 @@ function view(over: Partial<FlowView> = {}): FlowView {
 }
 
 describe("uriPayload — what the URI's open hands a data window", () => {
-  it("the whole URI, keyed by the flow alone, with no type hint", () => {
+  it("the whole URI, keyed by the flow alone, named a URI list so it reads as a form", () => {
     const payload = uriPayload(view());
 
     expect(payload.key).toBe("f7:uri");
     expect(text(payload.bytes)).toBe("https://api.example.com/v2/accounts/8812/sessions?page=2&sort=desc");
-    expect("typeHint" in payload).toBe(false);
+    expect(payload.typeHint).toBe("text/uri-list");
+    expect(readKind(payload.bytes, payload.typeHint).kind).toBe("form");
   });
 
   it("a 2 KiB URI goes whole, byte for byte", () => {
@@ -97,12 +99,13 @@ describe("headersPayload — what open all hands a data window", () => {
     expect(headersPayload(view({ request_headers: [] }), "request").bytes).toHaveLength(0);
   });
 
-  it("names its leg in the title and the heading, and sends no type hint", () => {
+  it("names its leg in the title and the heading, and names the lines headers so they read as a form", () => {
     const payload = headersPayload(view(), "request");
 
     expect(payload.title).toBe("request headers · GET api.example.com/v2/accounts/8812/sessions?page=2&sort=desc");
     expect(payload.heading?.what).toBe("request headers");
-    expect("typeHint" in payload).toBe(false);
+    expect(payload.typeHint).toBe("text/rfc822-headers");
+    expect(readKind(payload.bytes, payload.typeHint).kind).toBe("form");
   });
 
   it("splits the URI exactly as the body's payload does", () => {
