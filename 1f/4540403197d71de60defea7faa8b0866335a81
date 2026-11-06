@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 1f4540403197d71de60defea7faa8b0866335a81
+base: 2425dd656cf5c514bdd0b0b32251a28a661fb4f2
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w17-dialog-texts-result.html
+report_sha256: 21b2b145b158e1b36a62b1934cac29e6c80a4f505cf72c3adcd1b6bb0a78edc1
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECxd/lc9SwabmwuSjJpCqCZHUwkBIiSC8jolW/Y9fAZwiu7/VSUGDE5In
+  WDdiah631CJWNMUndjOmIVylUv9fcG
+  -----END SSH SIGNATURE-----
