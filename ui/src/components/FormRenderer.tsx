@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { byteLength, formPairCut, TEXT_MAX } from "../body";
-import { readForm, shapeOf } from "../formPairs";
+import { labelShape, readForm, shapeOf } from "../formPairs";
 import { CutMarker } from "./CutMarker";
 import { KeyValueRow } from "./KeyValueRow";
 import { TextRenderer } from "./TextRenderer";
@@ -11,16 +11,16 @@ import { TextRenderer } from "./TextRenderer";
  * @anatomy KeyValueRow× in a two-column grid this component supplies (KeyValueRow is display:contents, so column sizing is the parent's job): key mute and nowrap, value a CopyText — click copies the whole value, drag-select stays native · 4px row gap · a CutMarker when the raw text exceeds TEXT_MAX
  * @use a body dispatched to "form" — application/x-www-form-urlencoded, text/rfc822-headers, text/uri-list — and anywhere URL-encoded pairs must be presented
  * @avoid an inline <dl> that re-draws the pair: the value cell's click-to-copy is KeyValueRow's, not this member's · showing the raw encoded string when the decoded pairs are what the user reads
- * @states rendered · rendered+cut (URL-encoded pairs over TEXT_MAX) · as text (no form shape, or name: value lines or a URL over TEXT_MAX, which have no safe cut) — no empty state; a zero-byte body never reaches a member
+ * @states rendered · rendered+cut (URL-encoded pairs over TEXT_MAX) · as text (no form shape, or name: value lines or a URL over TEXT_MAX: only pairs have a safe cut, so an unlabelled text over it is read as pairs unscanned) — no empty state; a zero-byte body never reaches a member
  * @madeof KeyValueRow× · TextRenderer (T2) — the fallback
  */
 export function FormRenderer({ text, label = null }: { text: string; label?: string | null }) {
   // Cut on a pair boundary, never at a character offset into the raw text: an
   // offset can land mid-%XX or inside an escape run, and the half-decoded value
   // — a stray "%E" or U+FFFD — is what CopyText hands to the clipboard.
-  const shape = useMemo(() => shapeOf(text, label), [text, label]);
   const cut = text.length > TEXT_MAX;
-  const asText = shape === "none" || (cut && shape !== "query");
+  const shape = useMemo(() => (cut ? ((labelShape(label) ?? "query") === "query" ? "query" : "none") : shapeOf(text, label)), [cut, text, label]);
+  const asText = shape === "none";
   const shown = cut && !asText ? text.slice(0, formPairCut(text, TEXT_MAX)) : text;
   const entries = useMemo(() => {
     if (asText) return [];

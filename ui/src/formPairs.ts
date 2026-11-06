@@ -25,6 +25,7 @@ const FIELD_NAME = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:(?!\/\/)/;
 const ONE_FIELD = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:[ \t]/;
 const PSEUDO_NAME = /^:[!#$%&'*+.^_`|~0-9A-Za-z-]+:/;
 const FOLD = /^[ \t]/;
+const FINAL_BREAK = /\r?\n$/;
 const URL_START = /^(?:[a-z][a-z0-9+.-]*:\/\/|\/)/i;
 const NEVER_RAW_IN_A_FORM = /["<>]/;
 
@@ -33,8 +34,8 @@ export const labelShape = (label: string | null | undefined): FormShape | null =
 const mixedBreaks = (text: string) => text.includes("\r\n") && /(^|[^\r])\n/.test(text);
 
 export function formShape(text: string): FormShape {
-  const body = text.replace(/\r?\n$/, "");
-  if (mixedBreaks(body)) return "none";
+  const body = text.replace(FINAL_BREAK, "");
+  if (mixedBreaks(text)) return "none";
   const lines = body.split(/\r?\n/);
   if (lines.length === 1) {
     if (URL_START.test(body) && !/\s/.test(body)) return "url";
@@ -85,9 +86,11 @@ function frameOf(text: string, shape: FormShape): Frame {
     const tail = text.endsWith(lineBreak) ? lineBreak : "";
     return { head: "", opener: "", queried: false, raws: headerRaws(text.slice(0, text.length - tail.length), lineBreak), join: lineBreak, tail };
   }
+  const end = FINAL_BREAK.exec(text)?.[0] ?? "";
+  const body = text.slice(0, text.length - end.length);
   if (shape === "url") {
-    const hash = text.indexOf("#");
-    const beforeHash = hash < 0 ? text : text.slice(0, hash);
+    const hash = body.indexOf("#");
+    const beforeHash = hash < 0 ? body : body.slice(0, hash);
     const question = beforeHash.indexOf("?");
     return {
       head: question < 0 ? beforeHash : beforeHash.slice(0, question),
@@ -95,10 +98,10 @@ function frameOf(text: string, shape: FormShape): Frame {
       queried: question >= 0,
       raws: ampersandRaws(question < 0 ? "" : beforeHash.slice(question + 1)),
       join: "&",
-      tail: hash < 0 ? "" : text.slice(hash),
+      tail: (hash < 0 ? "" : body.slice(hash)) + end,
     };
   }
-  return { head: "", opener: "", queried: false, raws: ampersandRaws(text), join: "&", tail: "" };
+  return { head: "", opener: "", queried: false, raws: ampersandRaws(body), join: "&", tail: end };
 }
 
 function rebuild(frame: Frame, raws: string[]): string {
@@ -165,7 +168,7 @@ export function readForm(text: string, shape: FormShape): FormRead {
   if (shape === "none") return { parts: [], pairs: [] };
   const frame = frameOf(text, shape);
   return {
-    parts: shape === "url" ? urlParts(frame.head, frame.tail) : [],
+    parts: shape === "url" ? urlParts(frame.head, frame.tail.replace(FINAL_BREAK, "")) : [],
     pairs: frame.raws.map((raw, index) => pairOf(raw, index, shape)),
   };
 }
@@ -177,7 +180,8 @@ export function parsePairs(text: string, shape: FormShape = "query"): FormPair[]
 export function formStructure(text: string, shape: FormShape = "query"): Structure {
   const keys: TextRange[] = [];
   const values: TextRange[] = [];
-  if (shape === "none") return { keys, values, jsonEscaped: false };
+  const percentEncoded = shape !== "headers";
+  if (shape === "none") return { keys, values, jsonEscaped: false, percentEncoded };
   const frame = frameOf(text, shape);
   let at = frame.head.length + (frame.raws.length > 0 ? frame.opener.length : 0);
   for (const raw of frame.raws) {
@@ -193,7 +197,7 @@ export function formStructure(text: string, shape: FormShape = "query"): Structu
     }
     at += raw.length + frame.join.length;
   }
-  return { keys, values, jsonEscaped: false };
+  return { keys, values, jsonEscaped: false, percentEncoded };
 }
 
 const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g;

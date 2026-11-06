@@ -442,10 +442,9 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     const parsed = parseJson(flat);
     return parsed.ok ? jsonStructure(parsed.root) : null;
   }, [scoped, wantsNames, kind, flat, shape]);
-  const decodeNames = asTable && shape !== "headers";
   const names = useMemo(
-    () => (wantsNames && structure ? structureNames(structure, flat, decodeNames) : NO_NAMES),
-    [wantsNames, structure, flat, decodeNames],
+    () => (wantsNames && structure ? structureNames(structure, flat, asTable) : NO_NAMES),
+    [wantsNames, structure, flat, asTable],
   );
   const markable = useMemo(() => [...parts.map((part) => ({ ...part, key: "" })), ...pairs], [parts, pairs]);
   const found = useMemo((): Search => {

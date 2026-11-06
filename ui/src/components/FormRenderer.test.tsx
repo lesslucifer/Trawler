@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { TEXT_MAX } from "../body";
+import * as formPairs from "../formPairs";
 import { FormRenderer } from "./FormRenderer";
+
+vi.mock("../formPairs", async (importOriginal) => {
+  const actual = await importOriginal<typeof formPairs>();
+  return { ...actual, shapeOf: vi.fn(actual.shapeOf) };
+});
 
 const BODY = "grant_type=authorization_code&client_id=app_8f3a91c2&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback";
 
@@ -53,6 +59,16 @@ describe("FormRenderer", () => {
     render(<FormRenderer text={text} label={label} />);
     expect(screen.queryByTestId("body-form")).toBeNull();
     expect(screen.getByTestId("body-text")).toBeInTheDocument();
+  });
+
+  it("a body over the cap is never read whole for its shape: only pairs have a cut", () => {
+    const shapeOf = vi.mocked(formPairs.shapeOf);
+    shapeOf.mockClear();
+    render(<FormRenderer text={`x-huge: ${"h".repeat(TEXT_MAX + 10)}`} label="text/rfc822-headers" />);
+    render(<FormRenderer text={`a=${"h".repeat(TEXT_MAX + 10)}`} />);
+    expect(shapeOf.mock.calls.filter(([text]) => text.length > TEXT_MAX)).toEqual([]);
+    expect(screen.getByTestId("body-text")).toBeInTheDocument();
+    expect(screen.getByTestId("body-form")).toBeInTheDocument();
   });
 
   it("composes KeyValueRow — the value cell's copy affordance is not re-drawn here", () => {

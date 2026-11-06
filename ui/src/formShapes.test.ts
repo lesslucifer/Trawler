@@ -94,6 +94,13 @@ describe("headers read as name: value lines", () => {
     expect(pairs.some((p) => p.kept)).toBe(false);
   });
 
+  it("a final line break unlike the inner ones is a mixed block, not header lines", () => {
+    expect(formShape("a: 1\nb: 2\r\n")).toBe("none");
+    expect(formShape("a: 1\r\nb: 2\n")).toBe("none");
+    expect(formShape("a: 1\r\nb: 2\r\n")).toBe("headers");
+    expect(formShape("a: 1\nb: 2\n")).toBe("headers");
+  });
+
   it("CRLF lines read the same", () => {
     expect(parsePairs("a: 1\r\nb: 2\r\n", "headers").map((p) => [p.key, p.value])).toEqual([
       ["a", "1"],
@@ -222,6 +229,16 @@ describe("a URL reads as labelled parts, then its query's pairs", () => {
       ["next", "https://b.example/?x=1"],
       ["n", "2"],
     ]);
+  });
+
+  it("a final line break, as a uri-list line ends, is no part of the last value or the path, and an edit keeps it", () => {
+    const row = (text: string) => [...readForm(text, "url").parts, ...readForm(text, "url").pairs].map((p) => [p.key, p.value]);
+    expect(row("http://h/p?x=1\n")).toEqual([["scheme", "http"], ["host", "h"], ["path", "/p"], ["x", "1"]]);
+    expect(row("http://h/p\r\n")).toEqual([["scheme", "http"], ["host", "h"], ["path", "/p"]]);
+    expect(row("http://h/p#f\r\n")).toEqual([["scheme", "http"], ["host", "h"], ["path", "/p"], ["fragment", "f"]]);
+    expect(parsePairs("a=1\n").map((p) => [p.key, p.value])).toEqual([["a", "1"]]);
+    expect(editPair("http://h/p?x=1\r\n", 0, "value", "2", "url")).toBe("http://h/p?x=2\r\n");
+    expect(addPairAfter("a=1\n", 0)).toBe("a=1&=\n");
   });
 
   it("parts are numbered before the pairs, pairs from 0", () => {

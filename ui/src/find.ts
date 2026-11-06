@@ -123,6 +123,7 @@ export interface Structure {
   keys: TextRange[];
   values: TextRange[];
   jsonEscaped: boolean;
+  percentEncoded: boolean;
 }
 
 export function jsonStructure(root: JsonNode): Structure {
@@ -139,7 +140,7 @@ export function jsonStructure(root: JsonNode): Structure {
     else values.push({ from: node.from, to: node.to });
   };
   walk(root);
-  return { keys, values, jsonEscaped: true };
+  return { keys, values, jsonEscaped: true, percentEncoded: false };
 }
 
 export function structureNames(structure: Structure, text: string, decodeForm: boolean, limit = 500): string[] {
@@ -147,7 +148,7 @@ export function structureNames(structure: Structure, text: string, decodeForm: b
   for (const { from, to } of structure.keys) {
     const raw = text.slice(from, to);
     try {
-      names.add(structure.jsonEscaped ? (JSON.parse(`"${raw}"`) as string) : decodeForm ? decodeURIComponent(raw.replace(/\+/g, " ")) : raw);
+      names.add(structure.jsonEscaped ? (JSON.parse(`"${raw}"`) as string) : decodeForm && structure.percentEncoded ? decodeURIComponent(raw.replace(/\+/g, " ")) : raw);
     } catch {
       names.add(raw);
     }

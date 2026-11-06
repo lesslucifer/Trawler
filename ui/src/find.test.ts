@@ -165,7 +165,7 @@ describe("marking text with chips", () => {
     const structure = formStructure(text, "url");
     expect(markText(text, [chip("key", "a")], structure).ranges).toEqual([{ from: 22, to: 23 }]);
     expect(markText(text, [chip("value", "a")], structure).ranges).toEqual([{ from: 28, to: 29 }]);
-    expect(formStructure("https://a.example/#f", "url")).toEqual({ keys: [], values: [], jsonEscaped: false });
+    expect(formStructure("https://a.example/#f", "url")).toEqual({ keys: [], values: [], jsonEscaped: false, percentEncoded: true });
   });
 
   it("header lines: key: marks the name, value: the value after the colon and its spaces", () => {
@@ -236,6 +236,8 @@ describe("a structure's key names", () => {
     expect(structureNames(formStructure("a%20b=1&a%20b=2&c=3"), "a%20b=1&a%20b=2&c=3", true)).toEqual(["a b", "c"]);
     expect(structureNames(formStructure("a%20b=1&c=3"), "a%20b=1&c=3", false)).toEqual(["a%20b", "c"]);
     expect(structureNames(formStructure("a=1&b=2&c=3"), "a=1&b=2&c=3", true, 2)).toEqual(["a", "b"]);
+    expect(structureNames(formStructure("a%20b: 1", "headers"), "a%20b: 1", true)).toEqual(["a%20b"]);
+    expect(structureNames(formStructure("http://h/?a%20b=1", "url"), "http://h/?a%20b=1", true)).toEqual(["a b"]);
   });
 });
 
