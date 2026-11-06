@@ -22,4 +22,4 @@ changes:
   - path: "docs/work/2026-11-06-prorelease-w5-readme-community-result.html"
     tier: T3
     action: added
-    distills: "outcome, deviations, evidence, the router's round-2 findings and how each is held, the owner's S8/S9 and repo-settings lists, the CLAUDE.md line (the owner's signed mr commit 3225eaa7, DEC-91) landed apart, follow-ups"
+    distills: "outcome, deviations, evidence, the router's round-2 findings and how each is held, the owner's S8/S9 and repo-settings lists, the CLAUDE.md line staged apart, follow-ups"
