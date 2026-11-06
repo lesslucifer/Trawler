@@ -111,7 +111,11 @@ jobs:
           HOST: ${{ matrix.host }}
         run: |
           rustc -vV
-          rustc -vV | grep -qx "host: $HOST"
+          host=$(rustc -vV | sed -n 's/^host: //p')
+          if [ "$host" != "$HOST" ]; then
+            echo "::error::rustc host $host is not $HOST"
+            exit 1
+          fi
 
       - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
         with:

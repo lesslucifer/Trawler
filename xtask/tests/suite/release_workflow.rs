@@ -169,16 +169,34 @@ fn every_build_proves_its_rustc_host_is_the_row_s_architecture() {
     );
     let check = position(
         &build,
-        |s| run_of(s).contains("rustc -vV") && run_of(s).contains("grep -qx \"host: $HOST\""),
+        |s| run_of(s).contains("host=$(rustc -vV | sed -n 's/^host: //p')"),
         "a rustc host check",
     );
+    let run = run_of(&steps(&build)[check]);
+    assert!(run.contains("if [ \"$host\" != \"$HOST\" ]") && run.contains("exit 1"), "{run}");
     assert_eq!(steps(&build)[check]["env"]["HOST"].as_str(), Some("${{ matrix.host }}"));
     assert!(check < position(&build, builds, "compile"));
-    assert_eq!(
-        build["defaults"]["run"]["shell"].as_str(),
-        Some("bash"),
-        "grep runs on Windows too"
-    );
+    assert_eq!(build["defaults"]["run"]["shell"].as_str(), Some("bash"), "sed runs on Windows too");
+}
+
+fn closes_its_pipe_early(line: &str) -> bool {
+    line.replace("||", "").split('|').skip(1).any(|stage| {
+        let reader = stage.trim_start();
+        ["grep -q", "grep -l", "grep -m", "head"].iter().any(|early| reader.starts_with(early))
+    })
+}
+
+#[test]
+fn no_pipe_feeds_a_reader_that_stops_early_under_pipefail() {
+    assert!(closes_its_pipe_early("rustc -vV | grep -qx \"host: $HOST\""));
+    assert!(closes_its_pipe_early("ls |head -1"));
+    assert!(!closes_its_pipe_early("rustc -vV | sed -n 's/^host: //p'"));
+    assert!(!closes_its_pipe_early("a || grep -q b"));
+    for (job, step) in every_step() {
+        for line in run_of(&step).lines() {
+            assert!(!closes_its_pipe_early(line), "{job}: SIGPIPE under pipefail fails {line}");
+        }
+    }
 }
 
 #[test]
