@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-RELFIX
+wu: E-RELFIX.W2
+branch: HEAD
+tests:
+  unit: { count: 156, covers: "the form's shape reader over the owner's 19 response headers and fbcdn URI plus edge cases (repeats, folds, pseudo-headers, CRLF, user/port/fragment, IPv6, non-ASCII, relative and protocol-relative URLs, bare ?, + in query vs path, bad escapes kept, a URL inside a value, JSON/HTML/prose as none); each shape's parse, edit, add, remove, sort and find structure keeping the rest byte for byte; an edited header key kept to field-name characters; an unnamed header row keeping a value with a colon; an empty query kept by a sort; formCut on header lines keeping an over-cap first line's name and never splitting a fold; labelShape naming each form label's shape; URL parts flagged part; the two labels as form; the openers' hints. 54 of these and the integration tests fail with only the source reverted" }
+  integration: { count: 151, covers: "the data window over the URI opener's payload (parts rows, then _nc_cat first; find marks a part; a part offers decode and copy only; removing a pair keeps head and fragment), header lines picked as form, a URL-encoded label keeping a raw quote, a leading slash and a colon as pairs, form picked on JSON says not a form with no form tools, open all's bearer row decodes its token and replace keeps the scheme, a value with nothing to decode still says why; FormTable's read-only part rows; the pane's FormRenderer over a URI and header lines with a line-boundary cut, an over-cap first header line still named, a URL-encoded body decoded by readForm like the window. Whole UI vitest suite 106/106 files, 61762 tests green" }
+  e2e: { waived: "J1 in ui/e2e/specs/inspect-window-v2.spec.ts is updated for the form rows but was not run: the attached harness refuses while the owner's keep-capturing.json is on, and the owner's settings are not this session's to change; the owner runs it (result report)" }
