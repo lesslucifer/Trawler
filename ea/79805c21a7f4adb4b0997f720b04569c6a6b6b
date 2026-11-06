@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-RELFIX
+wu: E-RELFIX.W1
+branch: HEAD
+tests:
+  unit: { count: 39, covers: "package: a pre-release bundles Linux as deb,appimage and a final as deb,rpm,appimage in both the build-and-bundle and bundle-only stages, macOS and Windows unchanged by version; rpm_takes refuses any hyphen; the tree carries one version 0.1.0-3. release_manifest: a pre-release needs 16 keys and gets no rpm key, a final without rpm is refused naming linux-aarch64-rpm, a full final has 18. Both new tests red with rpm forced back in, green on the fix" }
+  integration: { count: 21, covers: "release.yml's build matrix is fail-fast: false and the release job still needs build (red on the old fail-fast: true); each row's upload dir still equals the bundle dir package::plan computes" }
+  e2e: { waived: "the release's end-to-end run is the owner's v0.1.0-3 tag on the epic tip on GitHub's five runners, which no local session can host; it is the epic's e2e (E-RELFIX plan)" }
