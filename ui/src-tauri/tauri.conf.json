@@ -62,6 +62,19 @@
       "signingIdentity": "-",
       "files": {
         "Library/LaunchAgents/dev.trawler.app.plist": "launch-agent/dev.trawler.app.plist"
+      },
+      "dmg": {
+        "background": "icons/installer/dmg-background.png"
+      }
+    },
+    "windows": {
+      "nsis": {
+        "headerImage": "icons/installer/nsis-header.bmp",
+        "sidebarImage": "icons/installer/nsis-sidebar.bmp"
+      },
+      "wix": {
+        "bannerPath": "icons/installer/wix-banner.bmp",
+        "dialogImagePath": "icons/installer/wix-dialog.bmp"
       }
     }
   }

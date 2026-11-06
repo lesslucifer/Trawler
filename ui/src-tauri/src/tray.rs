@@ -15,8 +15,17 @@ pub const OPEN_ID: &str = "tray-open";
 pub const SETTINGS_ID: &str = "tray-settings";
 pub const RESTART_ID: &str = "tray-restart";
 pub const QUIT_ID: &str = "tray-quit";
+/// macOS tints a template glyph to the menu bar; Windows and Linux draw the
+/// coloured pair as is (DEC-89 rule 5).
+pub const TEMPLATE: bool = cfg!(target_os = "macos");
+#[cfg(target_os = "macos")]
 const RUNNING_GLYPH: &[u8] = include_bytes!("../icons/tray-running.png");
+#[cfg(target_os = "macos")]
 const STOPPED_GLYPH: &[u8] = include_bytes!("../icons/tray-stopped.png");
+#[cfg(not(target_os = "macos"))]
+const RUNNING_GLYPH: &[u8] = include_bytes!("../icons/tray-running-color.png");
+#[cfg(not(target_os = "macos"))]
+const STOPPED_GLYPH: &[u8] = include_bytes!("../icons/tray-stopped-color.png");
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TrayAction {
@@ -137,7 +146,7 @@ fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     let shown = view(&latest(app, &CoreState::Starting));
     let tray = TrayIconBuilder::with_id(TRAY_ID)
         .icon(glyph_image(shown.glyph)?)
-        .icon_as_template(true)
+        .icon_as_template(TEMPLATE)
         .tooltip("Trawler")
         .on_menu_event(|app, event| handle(app, event.id().as_ref()))
         .build(app)?;
@@ -174,7 +183,7 @@ fn apply<R: Runtime>(app: &AppHandle<R>, reported: &CoreState) {
     let drawn = app.tray_by_id(TRAY_ID).map(|tray| {
         glyph_image(shown.glyph)
             .and_then(|image| tray.set_icon(Some(image)))
-            .and_then(|()| tray.set_icon_as_template(true))
+            .and_then(|()| tray.set_icon_as_template(TEMPLATE))
     });
     for failed in [listed, drawn].into_iter().flatten().filter_map(Result::err) {
         eprintln!("showing the capture service's state in the menu bar failed: {failed}");
@@ -246,9 +255,20 @@ mod tests {
     fn both_glyphs_decode_at_menu_bar_size_and_differ() {
         let running = glyph_image(Glyph::Running).unwrap();
         let stopped = glyph_image(Glyph::Stopped).unwrap();
+        let side = if cfg!(target_os = "macos") { 36 } else { 32 };
         for glyph in [&running, &stopped] {
-            assert_eq!((glyph.width(), glyph.height()), (36, 36));
+            assert_eq!((glyph.width(), glyph.height()), (side, side));
         }
         assert_ne!(running.rgba(), stopped.rgba());
+    }
+
+    #[test]
+    fn only_macos_shows_a_black_template_glyph_every_other_host_a_coloured_one() {
+        assert_eq!(TEMPLATE, cfg!(target_os = "macos"));
+        for glyph in [Glyph::Running, Glyph::Stopped] {
+            let image = glyph_image(glyph).unwrap();
+            let black = image.rgba().chunks(4).all(|px| px[..3] == [0, 0, 0]);
+            assert_eq!(black, TEMPLATE, "{glyph:?}");
+        }
     }
 }

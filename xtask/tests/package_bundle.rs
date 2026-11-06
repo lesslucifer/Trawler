@@ -14,6 +14,7 @@ const LAUNCHD_PATH: &str = "/usr/bin:/bin:/usr/sbin:/sbin";
 const APP_DATA: &str = "Library/Application Support/dev.trawler.app";
 const PROXY: &str = "127.0.0.1:7420";
 const API: &str = "127.0.0.1:7421";
+const ICONS: &str = xtask::icons::ICONS;
 
 fn repo() -> PathBuf {
     xtask::repo_root().unwrap()
@@ -101,10 +102,16 @@ fn install_from_the_dmg(dmg: &Path, into: &Path) -> PathBuf {
     assert!(attached.status.success(), "hdiutil attach: {attached:?}");
     let installed = into.join("Applications/Trawler.app");
     std::fs::create_dir_all(installed.parent().unwrap()).unwrap();
+    let background = std::fs::read(mount.join(".background/dmg-background.png"));
     let copied = Command::new("ditto").arg(mount.join("Trawler.app")).arg(&installed).status();
     let detached = Command::new("hdiutil").args(["detach", "-quiet"]).arg(&mount).status();
     assert!(copied.unwrap().success(), "ditto Trawler.app out of {}", dmg.display());
     assert!(detached.unwrap().success(), "hdiutil detach {}", mount.display());
+    assert_eq!(
+        background.unwrap(),
+        std::fs::read(repo().join(ICONS).join("installer/dmg-background.png")).unwrap(),
+        "the dmg window shows the generated background"
+    );
     installed
 }
 
@@ -200,6 +207,19 @@ fn a_package_is_ad_hoc_signed_and_passes_the_release_smoke() {
         std::fs::read(repo.join(xtask::licenses::NOTICE)).unwrap(),
         "the app carries the committed third-party notice"
     );
+    assert_eq!(
+        std::fs::read(app.join("Contents/Resources/icon.icns")).unwrap(),
+        std::fs::read(repo.join(ICONS).join("icon.icns")).unwrap(),
+        "the app's icon is the generated icon.icns"
+    );
+    let binary = std::fs::read(app.join("Contents/MacOS/trawler-ui")).unwrap();
+    for glyph in ["tray-running.png", "tray-stopped.png"] {
+        let glyph_bytes = std::fs::read(repo.join(ICONS).join(glyph)).unwrap();
+        assert!(
+            binary.windows(glyph_bytes.len()).any(|window| window == glyph_bytes),
+            "the menu bar loads the generated {glyph}"
+        );
+    }
     let archived = Command::new("tar")
         .arg("-tzf")
         .arg(bundle.join("macos/Trawler.app.tar.gz"))

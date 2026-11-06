@@ -1091,7 +1091,8 @@
             <code>#2b2622</code> tile), ink + amber <code>#e0a43a</code>, lowercase DM Mono wordmark. <code>ui/src-tauri/icons/source/</code>
             (plain-fill SVG, <code>MANIFEST.json</code>) is the only source of every icon, tray glyph and brand image; tray states differ
             by shape, templates on macOS only, a coloured pair elsewhere; amber is brand-only (DEC-19 holds in the UI); the W10-signed
-            installer art (DMG, NSIS/WiX BMPs) and social card are sources there too, with paper, deep amber and label-chip colours</td>
+            installer art (DMG, NSIS/WiX BMPs) and social card are sources there too, with paper, deep amber and label-chip colours;
+            <code>cargo xtask icons</code> regenerates the committed set reproducibly (drift-tested), the DMG background a 144-dpi PNG</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>
