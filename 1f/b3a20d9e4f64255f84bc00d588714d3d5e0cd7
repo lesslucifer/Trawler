@@ -1,0 +1,15 @@
+schema: design/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W4
+base: c5cc5d192814495b3d35f27d48a788c1c3eb8716
+design_sha256: abb277c16a8c1b83b13c056049c46e53ec42dbf89c685aa3ece4326dc28843d4
+verdict: PASS
+artifacts: []
+implements:
+  - path: docs/work/2026-11-06-prorelease-about-help-design-run.html
+    blob: 0ff9ee17766bd62f9a1dfb1962e05f2fcae121aa
+    built: [ui/src/About.tsx, ui/src/General.tsx]
+undesigned:
+  - path: ui/src/main.tsx
+    why: "routing only: the window the shell marks as about mounts About, as the settings mark mounts Settings; nothing rendered changes"
+date: 2026-11-06
