@@ -3,6 +3,7 @@ import { Button, TimestampText } from "./components/index";
 import type { LogEntry } from "./coreService";
 
 const BOTTOM_SLACK_PX = 2;
+const SGR = /\u001b\[[0-9;]*m/g;
 
 function atBottom(element: HTMLElement): boolean {
   return element.scrollHeight - element.scrollTop - element.clientHeight <= BOTTOM_SLACK_PX;
@@ -51,7 +52,7 @@ export function LogTail({ entries }: { entries: LogEntry[] }) {
               data-wire="log line"
               className="whitespace-pre-wrap break-words font-mono text-chrome text-ink-body"
             >
-              {entry.text}
+              {entry.text.replace(SGR, "")}
             </div>
           ),
         )}
