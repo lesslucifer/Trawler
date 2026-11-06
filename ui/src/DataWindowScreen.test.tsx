@@ -1635,6 +1635,12 @@ describe("a form reads its text as lines, a URL or pairs", () => {
     expect(screen.queryByText(/^not a form/)).toBeNull();
   });
 
+  it("a URI list of two URIs says it is not a form, never one URL across both lines", async () => {
+    await open(payload({ text: "https://a.example/1?x=1\nhttps://a.example/2?y=2", typeHint: "text/uri-list" }));
+    expect(screen.getByText("not a form: no name: value lines, URL or name=value pairs")).toBeInTheDocument();
+    expect(screen.queryAllByTestId("form-part")).toHaveLength(0);
+  });
+
   it("decoding a value with nothing to decode still says why", async () => {
     await open(payload({ text: HEADERS, typeHint: "text/rfc822-headers" }));
     fireEvent.contextMenu(rowsShown()[0], { clientX: 5, clientY: 5 });

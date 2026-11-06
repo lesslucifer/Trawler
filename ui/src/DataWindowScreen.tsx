@@ -38,13 +38,12 @@ import {
 import {
   addPairAfter,
   editPair,
-  formShape,
   formStructure,
-  labelShape,
   markPairs,
   pairsAsJson,
   readForm,
   removePair,
+  shapeOf,
   SORT_BY_KEY_STEP,
   sortByKey,
   type FormRead,
@@ -412,7 +411,7 @@ function Workbench({ payload, open }: { payload: DataPayload; open: Open }) {
     [settled, payload.bytes],
   );
   const shape = useMemo(
-    () => (picked === "form" ? (labelShape(reading.label) ?? formShape(original)) : "none"),
+    () => (picked === "form" ? shapeOf(original, reading.label) : "none"),
     [picked, reading.label, original],
   );
   const form = useMemo(() => (kind === "form" ? readForm(text, shape) : NO_FORM), [kind, text, shape]);

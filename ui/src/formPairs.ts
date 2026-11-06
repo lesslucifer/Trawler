@@ -1,4 +1,3 @@
-import { formPairCut } from "./body";
 import { FORM_LABEL_SHAPES, normalizeLabel } from "./contentKind";
 import { mergeRanges, MATCH_LIMIT, scanOf, type Scan, type Structure } from "./find";
 import type { FindChip } from "./findGrammar";
@@ -22,7 +21,7 @@ export interface FormRead {
   pairs: FormPair[];
 }
 
-const FIELD_NAME = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:/;
+const FIELD_NAME = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:(?!\/\/)/;
 const ONE_FIELD = /^:?[!#$%&'*+.^_`|~0-9A-Za-z-]+:[ \t]/;
 const PSEUDO_NAME = /^:[!#$%&'*+.^_`|~0-9A-Za-z-]+:/;
 const FOLD = /^[ \t]/;
@@ -31,8 +30,11 @@ const NEVER_RAW_IN_A_FORM = /["<>]/;
 
 export const labelShape = (label: string | null | undefined): FormShape | null => FORM_LABEL_SHAPES.get(normalizeLabel(label) ?? "") ?? null;
 
+const mixedBreaks = (text: string) => text.includes("\r\n") && /(^|[^\r])\n/.test(text);
+
 export function formShape(text: string): FormShape {
   const body = text.replace(/\r?\n$/, "");
+  if (mixedBreaks(body)) return "none";
   const lines = body.split(/\r?\n/);
   if (lines.length === 1) {
     if (URL_START.test(body) && !/\s/.test(body)) return "url";
@@ -40,6 +42,13 @@ export function formShape(text: string): FormShape {
     return NEVER_RAW_IN_A_FORM.test(body) ? "none" : "query";
   }
   return lines.every((line, i) => FIELD_NAME.test(line) || (i > 0 && FOLD.test(line))) ? "headers" : "none";
+}
+
+export function shapeOf(text: string, label: string | null | undefined): FormShape {
+  const named = labelShape(label);
+  if (named === "query") return named;
+  const read = formShape(text);
+  return named === null || named === read ? read : "none";
 }
 
 function decodePart(part: string, plusIsSpace = true): { text: string; kept: boolean } {
@@ -98,16 +107,6 @@ function rebuild(frame: Frame, raws: string[]): string {
   return head + (raws.length > 0 || keepsEmptyQuery ? opener + raws.join(join) : "") + tail;
 }
 
-function headerLineCut(text: string, at: number): number {
-  let boundary = text.lastIndexOf("\n", at);
-  while (boundary > 0 && FOLD.test(text.slice(boundary + 1))) boundary = text.lastIndexOf("\n", boundary - 1);
-  if (boundary > 0) return boundary;
-  const colon = text.indexOf(":", 1);
-  return colon > 0 && colon < at ? colon + 1 : 0;
-}
-
-export const formCut = (text: string, at: number, shape: FormShape) =>
-  shape === "headers" ? headerLineCut(text, at) : formPairCut(text, at);
 
 function splitRaw(raw: string): [key: string, value: string] {
   const eq = raw.indexOf("=");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addPairAfter, editPair, formShape, labelShape, parsePairs, readForm, removePair, repeats, sortByKey } from "./formPairs";
+import { addPairAfter, editPair, formShape, labelShape, parsePairs, readForm, removePair, repeats, shapeOf, sortByKey } from "./formPairs";
 
 const OWNER_HEADERS = [
   "content-type: image/jpeg",
@@ -59,6 +59,8 @@ describe("the shape a form's text is read in", () => {
     ["a=1\nb=2", "none"],
     ["  indented: first\nb: 2", "none"],
     ["https://a.example/ b", "query"],
+    ["a: 1\r\nb: 2\nc: 3", "none"],
+    ["https://a.example/1\nhttps://a.example/2", "none"],
   ])("%j reads as %s", (text, shape) => {
     expect(formShape(text)).toBe(shape);
   });
@@ -251,6 +253,19 @@ describe("a label that names a form names its shape; bytes are read only without
     [null, null],
   ])("%s → %s", (label, shape) => {
     expect(labelShape(label)).toBe(shape);
+  });
+
+  it.each([
+    ["host: a\naccept: b", "application/x-www-form-urlencoded", "query"],
+    ["https://a.example/?q=1", "text/uri-list", "url"],
+    ["https://a.example/1\nhttps://a.example/2", "text/uri-list", "none"],
+    ["# a comment\nhttps://a.example/", "text/uri-list", "none"],
+    ["host: a\r\naccept: b\nx: c", "text/rfc822-headers", "none"],
+    ["host: a\naccept: b", "text/rfc822-headers", "headers"],
+    ["https://a.example/?q=1", "text/rfc822-headers", "none"],
+    ["host: a\naccept: b", null, "headers"],
+  ])("shapeOf(%j, %s) is %s: a URL-encoded label is pairs, any other form label holds only where the bytes agree", (text, label, shape) => {
+    expect(shapeOf(text, label)).toBe(shape);
   });
 
   it("parts carry a part flag, pairs do not", () => {

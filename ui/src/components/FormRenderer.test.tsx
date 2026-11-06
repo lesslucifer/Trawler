@@ -44,19 +44,15 @@ describe("FormRenderer", () => {
     expect(screen.getByText("%E4")).toBeInTheDocument();
   });
 
-  it("a first header line over the cap still shows its name, with no partial value", () => {
-    render(<FormRenderer text={`x-huge: ${"h".repeat(TEXT_MAX + 10)}\nnext: 1`} label="text/rfc822-headers" />);
-    expect(screen.getByText("x-huge")).toBeInTheDocument();
-    expect(screen.queryByText(/^h+$/)).toBeNull();
-  });
-
-  it("long name: value lines are cut on a line, never mid-value", () => {
-    const line = `x-pad: ${"p".repeat(1000)}`;
-    const text = Array.from({ length: Math.ceil(TEXT_MAX / line.length) + 2 }, () => line).join("\n");
-    render(<FormRenderer text={text} label="text/rfc822-headers" />);
-    const values = screen.getAllByText(/^p+$/);
-    expect(values.length).toBeLessThan(text.split("\n").length);
-    expect(values.every((value) => value.textContent === "p".repeat(1000))).toBe(true);
+  it.each([
+    ["header lines over the cap", `x-huge: ${"h".repeat(TEXT_MAX + 10)}\nnext: 1`, "text/rfc822-headers"],
+    ["a URL over the cap with no & or =", `https://a.example/${"p".repeat(TEXT_MAX + 10)}`, "text/uri-list"],
+    ["a list of two URIs", "https://a.example/1\nhttps://a.example/2", "text/uri-list"],
+    ["header lines with mixed line breaks", "a: 1\r\nb: 2\nc: 3", "text/rfc822-headers"],
+  ])("%s show as text, never a cut or misread table", (_, text, label) => {
+    render(<FormRenderer text={text} label={label} />);
+    expect(screen.queryByTestId("body-form")).toBeNull();
+    expect(screen.getByTestId("body-text")).toBeInTheDocument();
   });
 
   it("composes KeyValueRow — the value cell's copy affordance is not re-drawn here", () => {
