@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "WU windows-remove-cert -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W16
+branch: wu/prorelease/windows-remove-cert
+base: 2425dd656cf5c514bdd0b0b32251a28a661fb4f2
+head: 53dbf7097668341e7f14215ac39d6f745a17d60e
+diff_sha256: 98914579ef921335d6994be9498bc3f54f89d7f639bc3bdd878df6d1e9423bb7
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    total: 34
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-06
