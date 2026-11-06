@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedbd7d9f34851f0dfaeebe" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W3 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W3 — build: brand assets from the signed sources</h1>
+      <p>The app still ships the temporary icon set, a black tray glyph on every OS and no installer art; the signed W9/W10 sources in <code>ui/src-tauri/icons/source/</code> generate nothing yet.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W3</span> · branch <code>wu/prorelease/brand-assets</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · rules <a href="../decisions/dec-89-one-signed-mark-one-source-folder.html">DEC-89</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement"><code>cargo xtask icons</code> regenerates, offline and byte-for-byte reproducibly, every shipped brand asset from the signed sources only (rasterised by the pinned <code>tauri icon</code> of <code>@tauri-apps/cli</code>): the bundle icon set (small variant for the 16–32 layers, master above), the macOS template tray pair and the coloured Windows/Linux pair, the DMG background, the NSIS/WiX BMPs, the favicon, the social preview and the README wordmarks, plus <code>SOURCES.sha256</code>; <code>tauri.conf.json</code> references the installer art and the tray is a template on macOS only.</p>
+
+    <h3 id="flow">Flow</h3>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  S["icons/source/*.svg<br/>+ MANIFEST.json"] --> W["square wrapper SVG<br/>(rect sources padded, top-left)"]
+  W --> R["pnpm exec tauri icon -p N<br/>(resvg, pinned 2.12.4)"]
+  R --> C["crop · encode"]
+  C --> I["icon.icns · icon.ico · PNG set"]
+  C --> T["tray-*.png (template) · tray-*-color.png"]
+  C --> B["installer/: dmg-background.png 144 dpi · 4 BMP 24-bit"]
+  C --> F["ui/public/favicon.svg · brand/: social + wordmarks"]
+  S --> H["icons/SOURCES.sha256"]
+    </pre></div>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE audit rows app icon set, tray icons, installer art, logo in UI · UC-INSTALL · DEC-89 (v3 amendment: the generated set) · <code>xtask/src/icons.rs</code>, <code>ui/src-tauri/icons/</code>, <code>ui/src-tauri/tauri.conf.json</code>, <code>ui/src-tauri/src/tray.rs</code>, <code>ui/index.html</code>, <code>ui/public/</code>, <code>xtask/tests/package_bundle.rs</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Check</th><th>Sees</th></tr></thead>
+        <tbody>
+          <tr><td><code>cargo xtask icons</code> twice</td><td>the same bytes; no network</td></tr>
+          <tr><td>A source edited, not regenerated</td><td>the hash test and the drift test fail naming the command</td></tr>
+          <tr><td>Generated files</td><td>exact pixel sizes; icns/ico carry their layers; BMPs 24-bit uncompressed, no alpha; DMG PNG 1320×800 at 144 dpi</td></tr>
+          <tr><td>macOS tray</td><td>black + alpha glyphs, template flag on; Windows/Linux: coloured glyphs, no template</td></tr>
+          <tr><td>Packaged <code>Trawler.app</code> + <code>.dmg</code></td><td>bundle icon = the generated <code>icon.icns</code>; the binary embeds both glyphs; <code>.background/</code> holds the generated PNG</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit</td><td><code>icons</code>: every manifest file exists, its viewBox matches, no <code>var()</code>/<code>&lt;text&gt;</code>/external href</td><td>yes: no module</td></tr>
+          <tr><td>unit</td><td><code>icons</code>: <code>SOURCES.sha256</code> equals the sources' hashes</td><td>yes: no file</td></tr>
+          <tr><td>unit</td><td><code>icons</code>: committed outputs have their consumers' sizes/formats; tauri.conf references the installer art</td><td>yes: no BMPs, no conf keys</td></tr>
+          <tr><td>unit</td><td><code>icons</code>: drift — a regeneration equals the committed set</td><td>yes: temporary art</td></tr>
+          <tr><td>unit</td><td><code>icons</code>: BMP/ICO/ICNS writers produce valid headers</td><td>yes</td></tr>
+          <tr><td>unit</td><td><code>tray</code>: template only on macOS; glyph form per OS (template black + alpha, coloured elsewhere)</td><td>yes: template on every OS</td></tr>
+          <tr><td>integration</td><td><code>package_bundle</code>: app icon hash, both glyphs embedded, DMG background</td><td>yes</td></tr>
+          <tr><td>e2e</td><td>waived: no user journey changes; the owner's per-OS look is the hand-check below</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="hand-check">Hand-check (owner, built bundles)</h2>
+    <table data-c="hand-check">
+      <thead><tr><th>Item (W10 unverified)</th><th>How W3 closes it</th></tr></thead>
+      <tbody>
+        <tr><td>DMG @2x form</td><td>resolved: bundler refuses non png/jpg/gif → one 1320×800 PNG at 144 dpi; proved by a real package + read-only mount</td></tr>
+        <tr><td>BMP writer</td><td>resolved: xtask writes 24-bit BMP itself (image's <code>bmp</code> feature is off; no new crate)</td></tr>
+        <tr><td>Finder label y (light/dark), whole background visible</td><td>owner hand-check on the opened dmg</td></tr>
+        <tr><td>NSIS/WiX blur at 125/150 %, WiX text x-offset</td><td>owner hand-check on Windows (W7 matrix)</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
