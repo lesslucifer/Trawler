@@ -9,6 +9,9 @@ export interface KindReading {
   label: string | null;
 }
 
+export const HEADERS_LABEL = "text/rfc822-headers";
+export const URI_LABEL = "text/uri-list";
+
 const JAVASCRIPT = new Set([
   "application/javascript",
   "text/javascript",
@@ -26,7 +29,7 @@ export function labelKind(label: string | null | undefined): ContentKind | null 
   const mime = normalizeLabel(label);
   if (mime === null) return null;
   if (mime === "application/json" || mime === "text/json" || mime.endsWith("+json")) return "json";
-  if (mime === "application/x-www-form-urlencoded") return "form";
+  if (mime === "application/x-www-form-urlencoded" || mime === HEADERS_LABEL || mime === URI_LABEL) return "form";
   if (mime === "text/html" || mime === "application/xhtml+xml") return "html";
   if (mime === "application/xml" || mime === "text/xml" || mime.endsWith("+xml")) return "xml";
   if (JAVASCRIPT.has(mime)) return "javascript";

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
-import { addPairAfter, editPair, markPairs, parsePairs, removePair } from "../formPairs";
+import { addPairAfter, editPair, markPairs, parsePairs, readForm, removePair } from "../formPairs";
 import { FormTable } from "./FormTable";
 
 const ROW = 20;
@@ -190,5 +190,38 @@ describe("revealing the current match", () => {
     expect(scrolledDown()).toBe(false);
     rerender(<FormTable {...props} reveal={1} />);
     expect(scrolledDown()).toBe(true);
+  });
+});
+
+describe("a URL's parts", () => {
+  const { parts, pairs } = readForm("https://a.example/p%20q?k=v#%", "url");
+
+  it("read above the pairs, labelled, unnumbered, not editable, a bad escape said in words", () => {
+    table({ parts, pairs });
+    const shown = screen.getAllByTestId("form-part");
+    expect(shown.map((row) => row.textContent)).toEqual([
+      "schemehttps",
+      "hosta.example",
+      "path/p q",
+      "fragment%kept as sent: not a valid percent-escape",
+    ]);
+    expect(within(shown[0]).queryAllByRole("button")).toHaveLength(0);
+    expect(within(pairRows()[0]).getAllByText("1")).toHaveLength(1);
+  });
+
+  it("a click selects a part by its own index, a right-click asks for its menu", () => {
+    const onSelect = vi.fn();
+    const onContext = vi.fn();
+    table({ parts, pairs, onSelect, onContext });
+    fireEvent.click(screen.getAllByTestId("form-part")[1]);
+    expect(onSelect).toHaveBeenLastCalledWith(-3);
+    fireEvent.contextMenu(screen.getAllByTestId("form-part")[0], { clientX: 3, clientY: 4 });
+    expect(onContext).toHaveBeenLastCalledWith(-4, { x: 3, y: 4 });
+  });
+
+  it("marks a part's value with the caller's numbering", () => {
+    const found = markPairs([...parts.map((part) => ({ ...part, key: "" })), ...pairs], [{ key: "plain", value: "a" }]);
+    table({ parts, pairs, matches: found.byPair, current: 0 });
+    expect(screen.getAllByTestId("form-part")[1].querySelector("mark")).toHaveAttribute("data-match", "0");
   });
 });

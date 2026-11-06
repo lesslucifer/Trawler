@@ -19,6 +19,32 @@ describe("FormRenderer", () => {
     expect(screen.getByText("two words")).toBeInTheDocument();
   });
 
+  it("a URI reads as its parts, then its query's pairs, not as one key up to the first =", () => {
+    render(<FormRenderer text="https://cdn.example/v/a.mp4?_nc_cat=106&efg=eyJ2In0%3D" />);
+    expect(screen.getByText("scheme")).toBeInTheDocument();
+    expect(screen.getByText("cdn.example")).toBeInTheDocument();
+    expect(screen.getByText("/v/a.mp4")).toBeInTheDocument();
+    expect(screen.getByText("_nc_cat")).toBeInTheDocument();
+    expect(screen.getByText("106")).toBeInTheDocument();
+    expect(screen.getByText("eyJ2In0=")).toBeInTheDocument();
+  });
+
+  it("name: value lines read one row per line, values verbatim", () => {
+    render(<FormRenderer text={"cache-control: max-age=1209600, no-transform\ntiming-allow-origin: *"} />);
+    expect(screen.getByText("cache-control")).toBeInTheDocument();
+    expect(screen.getByText("max-age=1209600, no-transform")).toBeInTheDocument();
+    expect(screen.getByText("*")).toBeInTheDocument();
+  });
+
+  it("long name: value lines are cut on a line, never mid-value", () => {
+    const line = `x-pad: ${"p".repeat(1000)}`;
+    const text = Array.from({ length: Math.ceil(TEXT_MAX / line.length) + 2 }, () => line).join("\n");
+    render(<FormRenderer text={text} />);
+    const values = screen.getAllByText(/^p+$/);
+    expect(values.length).toBeLessThan(text.split("\n").length);
+    expect(values.every((value) => value.textContent === "p".repeat(1000))).toBe(true);
+  });
+
   it("composes KeyValueRow — the value cell's copy affordance is not re-drawn here", () => {
     render(<FormRenderer text="code=SplxlOBeZQQ" />);
 

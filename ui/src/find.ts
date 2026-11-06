@@ -142,19 +142,6 @@ export function jsonStructure(root: JsonNode): Structure {
   return { keys, values, jsonEscaped: true };
 }
 
-export function formStructure(text: string): Structure {
-  const keys: TextRange[] = [];
-  const values: TextRange[] = [];
-  let at = 0;
-  for (const raw of text === "" ? [] : text.split("&")) {
-    const eq = raw.indexOf("=");
-    keys.push({ from: at, to: at + (eq < 0 ? raw.length : eq) });
-    values.push({ from: eq < 0 ? at + raw.length : at + eq + 1, to: at + raw.length });
-    at += raw.length + 1;
-  }
-  return { keys, values, jsonEscaped: false };
-}
-
 export function structureNames(structure: Structure, text: string, decodeForm: boolean, limit = 500): string[] {
   const names = new Set<string>();
   for (const { from, to } of structure.keys) {

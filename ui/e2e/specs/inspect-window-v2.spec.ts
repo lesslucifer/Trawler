@@ -16,7 +16,6 @@ import {
   pick,
   ports,
   recordClipboard,
-  rightClickOn,
   shellIsUp,
   showFlow,
 } from "./data.ts";
@@ -30,6 +29,8 @@ const JWT =
 const LONG_QUERY = "?q=" + "u".repeat(2048);
 const OPEN_ALL = (leg: "request" | "response") => `button[aria-label="open all ${leg} headers in data window"]`;
 const PREVIEW = '[data-testid="data-preview"]';
+const FORM_PAIR = '[data-testid="form-pair"]';
+const FORM_PART = '[data-testid="form-part"]';
 const BEACON_QUIET_MS = 2_500;
 
 async function flowDetail(path: string) {
@@ -59,8 +60,21 @@ const panelOverflowsSideways = () =>
     return scroll.scrollWidth > scroll.clientWidth || document.documentElement.scrollWidth > window.innerWidth;
   });
 
-async function windowLines(): Promise<string[]> {
-  return browser.execute((surface: string) => Array.from(document.querySelectorAll(`${surface} .cm-line`)).map((line) => line.textContent ?? ""), SURFACE);
+async function rowTexts(selector: string): Promise<string[][]> {
+  return browser.execute(
+    (rows: string) =>
+      Array.from(document.querySelectorAll(rows)).map((row) =>
+        Array.from(row.children)
+          .slice(1, 3)
+          .map((cell) => (cell.firstElementChild ?? cell).textContent ?? ""),
+      ),
+    selector,
+  );
+}
+
+async function rightClickRow(selector: string, key: string) {
+  const row = await $$(selector).find(async (candidate) => (await candidate.$("[data-wire=key]").getText()) === key);
+  await row.click({ button: "right" });
 }
 
 async function closeEveryDataWindow() {
@@ -137,16 +151,17 @@ describe("E-INSPWIN2 — inspect long values and read data by its bytes", () => 
       expect(await copied(() => $('[aria-label="copy uri"]').click())).toBe(uri);
     });
 
-    it("open all hands the leg's headers, every value whole and in wire order", async () => {
+    it("open all hands the leg's headers, every value whole and in wire order, read as a form of name and value rows", async () => {
       await $(OPEN_ALL("response")).click();
       headersWindow = await onNewDataWindow([]);
       const { response_headers } = await flowDetail(WIRE);
-      const wire = response_headers.map(({ name, value }) => `${name}: ${value}`);
-      await browser.waitUntil(async () => (await windowLines()).join("\n") === wire.join("\n"), {
-        timeout: 5_000,
-        timeoutMsg: "the window never held every response header whole, in wire order",
-      });
-      expect((await windowLines()).some((line) => line === `set-cookie: ${COOKIE}`)).toBe(true);
+      await $(FORM_PAIR).waitForDisplayed({ timeout: 5_000 });
+      expect(await detected()).toBe("from text/rfc822-headers");
+      const [first] = await rowTexts(FORM_PAIR);
+      expect(first).toEqual([response_headers[0].name, response_headers[0].value]);
+      expect(response_headers.some(({ name, value }) => name === "set-cookie" && value === COOKIE)).toBe(true);
+      await recordClipboard();
+      expect(await copyOnScreen()).toBe(response_headers.map(({ name, value }) => `${name}: ${value}`).join("\n"));
     });
 
     it("the request's JWT decodes in the window to its header and payload", async () => {
@@ -154,8 +169,9 @@ describe("E-INSPWIN2 — inspect long values and read data by its bytes", () => 
       await $('[data-testid="detail"] header [role="radiogroup"]').$("button=request").click();
       await $(OPEN_ALL("request")).click();
       await onNewDataWindow([headersWindow]);
-      await rightClickOn(JWT);
-      await pick("decode");
+      await $(FORM_PAIR).waitForDisplayed({ timeout: 5_000 });
+      await rightClickRow(FORM_PAIR, "authorization");
+      await pick("decode the value");
       const peek = $('[data-testid="decode-peek"]');
       await peek.waitForDisplayed({ timeout: 5_000 });
       const reading = await peek.getText();
@@ -169,6 +185,12 @@ describe("E-INSPWIN2 — inspect long values and read data by its bytes", () => 
       const known = await dataWindows();
       await $('button[aria-label="open uri in data window"]').click();
       await onNewDataWindow(known);
+      await $(FORM_PART).waitForDisplayed({ timeout: 5_000 });
+      expect(await detected()).toBe("from text/uri-list");
+      const parts = await rowTexts(FORM_PART);
+      expect(parts.map(([label]) => label.toLowerCase())).toEqual(["scheme", "host", "port", "path"]);
+      expect(parts[3][1]).toBe(WIRE);
+      expect((await rowTexts(FORM_PAIR))[0]).toEqual(["q", "u".repeat(2048)]);
       await recordClipboard();
       expect(await copyOnScreen()).toBe(uri);
 
