@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W16
+branch: HEAD
+changes:
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "the remove-the-certificate row covers Windows: the machine ROOT copy under set-up's UAC approval, the user's with none, one store per click with the machine first, the steps lead with the machine store"
+  - path: "docs/work/2026-11-06-prorelease-w16-windows-remove-cert-plan.html"
+    tier: T3
+    action: added
+    distills: "the W16 requirement, flow, choices and red-first test plan, round 2's CN gate and Stop tests included"
+  - path: "docs/work/2026-11-06-prorelease-w16-windows-remove-cert-result.html"
+    tier: T3
+    action: added
+    distills: "the W16 outcome, the round-2 review resolutions, evidence, Windows hand-check recipe and follow-ups"
