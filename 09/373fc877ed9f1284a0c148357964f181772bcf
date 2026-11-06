@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU readme-community -> epic/prorelease (after W4 merge, third pass)"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W5
+branch: wu/prorelease/readme-community
+base: 1bf8162c5838f66fd097d138bdfbfe4cc268c155
+head: 09373fc877ed9f1284a0c148357964f181772bcf
+diff_sha256: ed47fcbec047906070c5c26a187e5ce3ddf23c31019a9083b87e34219f9f2868
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 2
+    nit: 12
+  by_finder:
+    correctness: { found: 9, verified: 0 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 14, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "an ATX heading with closing hashes (## Foo ##) slugs with a trailing dash"
+    waived: "no published heading uses closing hashes; the link test turns red, never silent, if one does"
+  - finding: "a dash rule under a list item or quote registers a setext heading"
+    waived: "no published file has the shape; it adds an anchor only for that contrived input"
+  - finding: "cargo xtask ui screenshots needs HOME, unset on Windows"
+    waived: "the README shots are taken on macOS (result report); the run errors loudly elsewhere"
+  - finding: "the S3 chip cleanup clicks element references fetched before the first removal"
+    waived: "the run passes 8/8 on this tree; a stale reference throws and fails the run loudly"
+verdict: PASS
+date: 2026-11-06
