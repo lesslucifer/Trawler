@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: a3b25a198426fc35d9d85495ca13d259e05e11fe
+base: 8d4b1ae44d07eadf6943432566e75baa1b4b2893
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-06-rc-hotfix-epic-result.html
+report_sha256: 9700707b00d907758a60a0471c127d572e79bf9dfd36dfcd24448d2d06ddb0ae
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBIz9YShoqyCaxvrXN4ktMv0X3p0tqcYFN5NqNLIPkdCgz/ClORqCRRZw
+  1lxh+npvcqM4wAZ0vRtOu0bPQOax8I
+  -----END SSH SIGNATURE-----
