@@ -1,0 +1,49 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W19
+branch: HEAD
+changes:
+  - path: "docs/backlog/roadmap.html"
+    tier: T2
+    action: updated
+    distills: "the lifecycle row no longer lists a Settings window showing a stale switch: Settings now waits behind the once-question and reads the switch when it shows"
+  - path: "docs/decisions/dec-69-the-app-supervises-its-core.html"
+    tier: T2
+    action: updated
+    distills: "Q7's rationale notes Settings is a dialog of the main window since W19 and cannot outlive it"
+  - path: "docs/decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html"
+    tier: T2
+    action: updated
+    distills: "the main window reopens where it was left; Settings keeps no place of its own since W19"
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 4's example is a windowless app's last data window, not a Settings window"
+  - path: "docs/decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html"
+    tier: T2
+    action: updated
+    distills: "amended: About is a dialog of the main window raised or rebuilt first (rule 1), adds no capability and about.json is gone (rule 5); the flow diagram and held-by list follow"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "DEC-90 and DEC-70 rows say About and Settings are dialogs of the main window"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "open Settings raises or rebuilds main and shows the dialog; Close Window closes the topmost dialog, then the window; About's pages and licence list are the dialog's"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "UC-BG: the icon's Settings… rebuilds main with Settings as its dialog; UC-ABOUT: one About dialog of the main window"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-SVC: Settings is a dialog with no saved size or place; UC-BG: Settings… rebuilds or raises main, waits behind the ask and the quit check, a quit over it shows the check and a cancel finds Settings, ⌘W closes the topmost dialog; UC-ABOUT: the About dialog and its e2e proof"
+  - path: "docs/work/2026-11-06-prorelease-w19-settings-modal-design.html"
+    tier: T3
+    action: updated
+    distills: "the owner's rulings Q1-Q6 and the quit rule, each with what was built"
+  - path: "docs/work/2026-11-06-prorelease-w19-settings-modal-plan.html"
+    tier: T3
+    action: updated
+    distills: "ready: the requirement with About and Close Window, the expected results and the round-2 test plan"
