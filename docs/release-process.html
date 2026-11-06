@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9aec9f34851f0dfaebcb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — Release process</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Release process</h1>
+      <p>How a version becomes a published release: numbering, notes, the tag, what the owner ticks when publishing, the final's cut, and rollback.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T1 process · written by <span class="badge id">E-PRORELEASE.W7</span> · mechanism and its why: <a href="decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a> · update channel: <a href="decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a> · hand checks: <a href="backlog/hand-check-matrix.html">matrix</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="flow">The flow</h2>
+    <div class="diagram" data-c="flow"><pre class="mermaid">
+flowchart LR
+  A["epic: CHANGELOG section + one-version bump"] --> B["gated merge"]
+  B --> C(["owner: tag v‹version› on the gated tip"])
+  C --> D["release.yml → draft (DEC-86)"]
+  D --> E{"draft review"}
+  E -- bad --> F["next number"]
+  F --> A
+  E -- ok --> G(["owner publishes with the ticks below"])
+  G --> H{"rc?"}
+  H -- yes --> I["hand-check matrix"]
+  I -- a ❌ --> F
+  I -- all pass --> J["the final (0.1.0 worked below)"]
+  J --> A
+</pre><div class="caption">Every arrow into a tag is a new version; nothing published is ever replaced.</div></div>
+
+    <h2 id="versions">Version policy</h2>
+    <table data-c="versions">
+      <thead><tr><th>Change since the last final</th><th>Next final</th><th>Its rcs</th></tr></thead>
+      <tbody>
+        <tr><td>fixes only</td><td>patch: <code>0.1.0</code> → <code>0.1.1</code></td><td><code>0.1.1-1</code>, <code>0.1.1-2</code>, …</td></tr>
+        <tr><td>any feature or behaviour change (breaking included while <code>0.x</code>)</td><td>minor: <code>0.1.x</code> → <code>0.2.0</code></td><td><code>0.2.0-1</code>, …</td></tr>
+        <tr><td><code>1.0.0</code></td><td>owner decision</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <ul data-c="version-rules">
+      <li>One version for the workspace (<code>Cargo.toml</code>, <code>Cargo.lock</code>, <code>ui/package.json</code>; <code>cargo xtask package</code> refuses drift). Numeric rcs only, numbered from 1: <code>‹final›-N</code>, never <code>rc.N</code> (DEC-86 rule 7).</li>
+      <li>A version is used once: a red run, a bad draft or a bad release takes the next number. A pushed tag is never moved or deleted.</li>
+      <li>Every final is preceded by an rc of the same final whose matrix passed.</li>
+    </ul>
+
+    <h2 id="notes">Notes and CHANGELOG</h2>
+    <table data-c="notes">
+      <thead><tr><th>Part of the notes</th><th>Source</th><th>Who writes it</th></tr></thead>
+      <tbody>
+        <tr><td>What's new</td><td><code>CHANGELOG.md</code> <code>## ‹final›</code> section; an rc reads its final's</td><td>the epic that bumps the version, in the same commit; a release_manifest unit test is red while the workspace version has no section</td></tr>
+        <tr><td>Install + first-open steps</td><td><code>.github/release-notes.md</code></td><td>edited when an installer or prompt changes</td></tr>
+        <tr><td>Verify your download</td><td>same template; <code>SHA256SUMS</code> is written by <code>release-manifest</code></td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="draft">Reviewing the draft</h2>
+    <table data-c="draft">
+      <thead><tr><th>Check</th><th>Expect</th></tr></thead>
+      <tbody>
+        <tr><td>Run</td><td><code>gh run list --workflow release.yml -L 1</code>: every job green</td></tr>
+        <tr><td>Assets</td><td>installers (rc: no <code>.rpm</code>), a <code>.sig</code> per updater archive, <code>latest.json</code> (16 entries rc · 18 final), <code>SHA256SUMS</code></td></tr>
+        <tr><td>Notes</td><td>title = the version, What's new = the CHANGELOG section, install steps, verify section</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="publish">Publishing: what the owner ticks</h2>
+    <table data-c="publish">
+      <thead><tr><th>Release</th><th>Set as a pre-release</th><th>Set as the latest release</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>rc, no final published yet (up to <code>0.1.0</code>)</td><td>no</td><td>yes</td><td>installed rcs are offered it: the rc→rc update check</td></tr>
+        <tr><td>final</td><td>no</td><td>yes</td><td>every install is offered it</td></tr>
+        <tr><td>rc after the first final</td><td>yes</td><td>no</td><td>no install is offered it; testers install it by hand</td></tr>
+      </tbody>
+    </table>
+    <p class="kd" data-c="publish-why">Installed apps read <code>releases/latest/download/latest.json</code>; GitHub's latest skips drafts and pre-releases. The workflow never ticks anything (DEC-86 rule 6).</p>
+
+    <h2 id="final">From the last rc to the final (0.1.0)</h2>
+    <div class="callout warn" data-c="final-not-promotion">A final is <b>not</b> a promotion of the rc's files: it is a new tag <code>v0.1.0</code> and a fresh build of a gated commit whose version is <code>0.1.0</code>. The rc's draft, assets and tag stay as they are.</div>
+    <div class="diagram" data-c="final-flow"><pre class="mermaid">
+flowchart LR
+  R["rc 0.1.0-N published"] --> M{"hand-check matrix"}
+  M -- a ❌ --> X["fix, rc 0.1.0-N+1"]
+  M -- all pass --> B["bump commit: 0.1.0-N → 0.1.0"]
+  B --> G["gates + mr confirm epic → main"]
+  G --> T(["owner: push, tag v0.1.0"])
+  T --> W["release.yml → draft v0.1.0"]
+  W --> D{"draft review"}
+  D -- ok --> P(["owner: publish as latest"])
+  P --> U["installed rcs are offered 0.1.0"]
+</pre><div class="caption">Worked for 0.1.0; any final follows it with its own number.</div></div>
+    <table data-c="final-steps">
+      <thead><tr><th>#</th><th>Step</th><th>Who</th><th>Command / check</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>the last rc <code>0.1.0-N</code> passed every row of the <a href="backlog/hand-check-matrix.html">matrix</a></td><td>owner + testers</td><td>—</td></tr>
+        <tr><td>2</td><td>bump the workspace version to <code>0.1.0</code>, nothing else: <code>Cargo.toml</code> <code>[workspace.package] version</code>, <code>Cargo.lock</code> (refreshed by any <code>cargo build</code>), <code>ui/package.json</code></td><td>worker</td><td><code>cargo xtask package</code> refuses drift; <code>CHANGELOG.md</code> <code>## 0.1.0</code> already exists (every rc's notes read it), edit it only if the matrix fixes changed what it says</td></tr>
+        <tr><td>3</td><td>gate the bump in its shape (below): <code>test/v2</code> + <code>doc/v1</code>, code-review, <code>verify-dod</code></td><td>worker</td><td>staged <code>cargo xtask mr confirm epic &lt;tip&gt; --as &lt;id&gt; --target main --report docs/.archive/&lt;epic&gt;-result.html</code></td></tr>
+        <tr><td>4</td><td>confirm, merge <code>--no-ff</code> into <code>main</code>, push</td><td>owner</td><td>the staged <code>mr confirm</code>; <code>git merge --no-ff epic/&lt;slug&gt;</code>; <code>git push origin main</code></td></tr>
+        <tr><td>5</td><td>tag the merged <code>main</code> tip</td><td>owner</td><td><code>git tag v0.1.0 &amp;&amp; git push origin v0.1.0</code></td></tr>
+        <tr><td>6</td><td>build every platform, write <code>latest.json</code> and <code>SHA256SUMS</code>, leave a draft</td><td><span class="badge auto">release.yml</span></td><td><code>gh run watch $(gh run list --workflow release.yml -L 1 --json databaseId -q '.[0].databaseId')</code></td></tr>
+        <tr><td>7</td><td>review the draft: installers incl. <code>.rpm</code>, a <code>.sig</code> per updater archive, <code>latest.json</code> with 18 platform entries, <code>SHA256SUMS</code>, notes = <code>## 0.1.0</code> + install + verify</td><td>owner (router checks)</td><td><code>gh release view v0.1.0 --json assets,body</code>; <code>gh release download v0.1.0 -p latest.json -O - | jq '.platforms|length'</code> → <code>18</code></td></tr>
+        <tr><td>8</td><td>publish: pre-release <b>unticked</b>, latest <b>ticked</b></td><td>owner</td><td>GitHub release page → Publish</td></tr>
+      </tbody>
+    </table>
+    <table data-c="cut">
+      <thead><tr><th>Shape (router picks per release)</th><th>Step 2–3 in practice</th><th>Gains</th><th>Costs</th></tr></thead>
+      <tbody>
+        <tr><td>A · a cut epic (the E-RC4 shape)</td><td>a one-commit epic <code>epic/&lt;slug&gt;</code> off <code>main</code> after the rc's epic merged: plan, the bump commit, archive; <code>mr confirm epic</code> → <code>main</code></td><td>the release epic closes on its rc; the final provably carries only the bump</td><td>one more epic, gate run and merge</td></tr>
+        <tr><td>B · the epic's last commit</td><td>the release epic stays open through the hand checks, then its last commit is the bump; one <code>mr confirm epic</code> → <code>main</code></td><td>one merge fewer</td><td>the epic is open (and unmerged) while people test; anything landing in it after the rc is untested by the matrix</td></tr>
+      </tbody>
+    </table>
+    <table data-c="final-users">
+      <thead><tr><th>Who</th><th>Sees after the publish</th></tr></thead>
+      <tbody>
+        <tr><td>installed rc <code>0.1.0-N</code></td><td>the update offer to <code>0.1.0</code>: the updater offers a release when its version is semver-greater (tauri-plugin-updater default comparator, no override in Trawler), and a pre-release ranks below its final</td></tr>
+        <tr><td>new users</td><td>the <code>v0.1.0</code> installers on the Latest release; the rcs stay listed below it</td></tr>
+      </tbody>
+    </table>
+    <ul data-c="final-never">
+      <li>Never move, delete or re-push <code>v0.1.0</code> or an rc tag; a red run or bad draft of <code>v0.1.0</code> burns the number: the next final is <code>0.1.1</code>, after its own rc (Version policy, Rollback).</li>
+      <li>Never reuse an rc number or re-cut <code>0.1.0-N</code> with new code: a fix is <code>0.1.0-N+1</code> and its own matrix pass.</li>
+      <li>Never upload the rc's installers or edit its <code>latest.json</code> into the final.</li>
+    </ul>
+
+    <h2 id="rollback">Rollback</h2>
+    <table data-c="rollback">
+      <thead><tr><th>Found</th><th>Do</th><th>Never</th></tr></thead>
+      <tbody>
+        <tr><td>a red run or a bad draft</td><td>delete the draft (or leave it: a re-run replaces it); fix; next number</td><td>move or delete the tag</td></tr>
+        <tr><td>a bad published release</td><td><code>gh release edit v‹bad› --draft</code>: the channel falls back to the previous release; then fix forward with the next version, published as latest</td><td>replace an asset (the <code>.sig</code>, <code>latest.json</code> and <code>SHA256SUMS</code> bind them); reuse the number</td></tr>
+        <tr><td>installs already on the bad version</td><td>they stay on it until the fix-forward release, which the updater offers them</td><td>expect a downgrade: the updater only offers a newer version (DEC-82)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="trust">What users see without paid signing</h2>
+    <table data-c="trust">
+      <thead><tr><th>OS</th><th>First open</th><th>Integrity</th></tr></thead>
+      <tbody>
+        <tr><td>macOS</td><td>ad-hoc signed: “cannot verify” → Privacy &amp; Security → Open Anyway</td><td rowspan="3"><code>SHA256SUMS</code> for the download; every later update is minisign-signed and must name its version (DEC-82)</td></tr>
+        <tr><td>Windows</td><td>unsigned: SmartScreen → More info → Run anyway</td></tr>
+        <tr><td>Linux</td><td>no prompt</td></tr>
+      </tbody>
+    </table>
+    <p class="kd" data-c="trust-note">No paid signing for <code>0.1.0</code> (owner ruling, DEC-81 rule 4 stands). Developer ID notarization and a Windows signer are post-<code>0.1.0</code> follow-ups.</p>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
