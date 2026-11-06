@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU rpm-prerelease -> epic/release-fixes"
+epic: E-RELFIX
+wu: E-RELFIX.W1
+branch: wu/release-fixes/rpm-prerelease
+base: 200005e742d49bf0c70a99e99f306f692947476a
+head: ea79805c21a7f4adb4b0997f720b04569c6a6b6b
+diff_sha256: 0065e65607508037d8970177ac4ff1b641c120202afe08895ec0e115037e3e0f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 1
+    nit: 3
+  stage_seconds:
+    gate0: 31
+    finders: 15
+    verifiers: 15
+    total: 79
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency:  { found: 1, verified: 1 }
+    altitude:    { found: 2, verified: 1 }
+findings: { found: 4, verified: 3, waived: 3 }
+waivers: []
+nits:
+  - finding: "release_manifest keys_of has no version gate, so an .rpm present in a pre-release's dist would still be mapped into latest.json"
+    waived: "package::plan never bundles rpm for a pre-release (the same rpm_takes predicate), so no such asset can reach dist; an rpm entry would also be harmless, only extra"
+  - finding: "package::run reads the workspace version on every stage, including --build-only, which does not use it"
+    waived: "one cargo metadata read in a dev/release tool; the version is read the same way the sign stage already did, and a tree whose version cannot be read is broken for every later stage anyway"
+  - finding: "rpm_takes is a Linux-bundle rule exposed from package.rs as a cross-module predicate that release_manifest calls"
+    waived: "it sits beside msi_takes, the existing version-rule predicate, and is the single source both the bundle list and the key set read; DEC-86 rule 7 names it"
+verdict: PASS
+date: 2026-11-06
