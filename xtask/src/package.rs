@@ -327,6 +327,9 @@ fn verify_signature(app: &Path) -> Result<(), String> {
 
 /// The crate whose version Tauri stamps on every artifact.
 pub const SHIPPED: &str = "trawler-ui";
+pub const LICENCE: &str = "MIT";
+pub const HOLDER: &str = "Vu Luu";
+pub const HOMEPAGE: &str = "https://github.com/lesslucifer/Trawler";
 
 #[derive(Debug, Deserialize)]
 struct Members {
@@ -337,6 +340,14 @@ struct Members {
 pub struct Member {
     pub name: String,
     pub version: String,
+    #[serde(default)]
+    pub license: Option<String>,
+    #[serde(default)]
+    pub publish: Option<Vec<String>>,
+    #[serde(default)]
+    pub authors: Vec<String>,
+    #[serde(default)]
+    pub homepage: Option<String>,
 }
 
 fn workspace_members(repo: &Path) -> Result<Vec<Member>, String> {
@@ -403,17 +414,96 @@ fn msi_takes(version: &str) -> bool {
         && parts[2].parse::<u16>().is_ok()
 }
 
+fn read_json(repo: &Path, path: &str) -> Result<serde_json::Value, String> {
+    let text = std::fs::read_to_string(repo.join(path)).map_err(|e| format!("read {path}: {e}"))?;
+    serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))
+}
+
 pub fn version_drift(repo: &Path) -> Result<Vec<String>, String> {
-    let json = |path: &str| -> Result<serde_json::Value, String> {
-        let text =
-            std::fs::read_to_string(repo.join(path)).map_err(|e| format!("read {path}: {e}"))?;
-        serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))
-    };
     drift_of(
         &workspace_members(repo)?,
-        &json("ui/src-tauri/tauri.conf.json")?,
-        &json("ui/package.json")?,
+        &read_json(repo, "ui/src-tauri/tauri.conf.json")?,
+        &read_json(repo, "ui/package.json")?,
     )
+}
+
+/// Every licence or publishing field that disagrees with the one licence and holder, one line each.
+pub fn metadata_drift_of(
+    members: &[Member],
+    tauri_conf: &serde_json::Value,
+    ui_package: &serde_json::Value,
+    licence_text: Option<&str>,
+) -> Vec<String> {
+    let mut drift = Vec::new();
+    for member in members {
+        let name = &member.name;
+        if member.license.as_deref() != Some(LICENCE) {
+            drift.push(format!("{name}: license {:?}, the app is {LICENCE}", member.license));
+        }
+        if member.publish.as_ref().is_none_or(|registries| !registries.is_empty()) {
+            drift.push(format!("{name}: publishable; the crates.io name is not ours"));
+        }
+        if !member.authors.iter().any(|author| author == HOLDER) {
+            drift.push(format!("{name}: authors {:?} lack {HOLDER}", member.authors));
+        }
+        if member.homepage.as_deref() != Some(HOMEPAGE) {
+            drift.push(format!("{name}: homepage {:?}, want {HOMEPAGE}", member.homepage));
+        }
+    }
+    if ui_package["license"].as_str() != Some(LICENCE) {
+        drift.push(format!(
+            "ui/package.json: license {}, the app is {LICENCE}",
+            ui_package["license"]
+        ));
+    }
+    let bundle = &tauri_conf["bundle"];
+    let copyright = format!("Copyright \u{a9} 2026 {HOLDER}");
+    let expected = [
+        ("license", LICENCE),
+        ("publisher", HOLDER),
+        ("copyright", copyright.as_str()),
+        ("homepage", HOMEPAGE),
+    ];
+    for (field, want) in expected {
+        if bundle[field].as_str() != Some(want) {
+            drift.push(format!("tauri.conf.json bundle.{field}: {}, want {want:?}", bundle[field]));
+        }
+    }
+    if bundle.get("licenseFile").is_some() {
+        drift.push(
+            "tauri.conf.json bundle.licenseFile: set; the .dmg would ask to agree before it mounts"
+                .to_string(),
+        );
+    }
+    for (field, value) in [
+        ("longDescription", &bundle["longDescription"]),
+        ("linux.deb.section", &bundle["linux"]["deb"]["section"]),
+    ] {
+        if value.as_str().is_none_or(str::is_empty) {
+            drift.push(format!("tauri.conf.json bundle.{field}: empty"));
+        }
+    }
+    let holder_line = format!("Copyright (c) 2026 {HOLDER}");
+    match licence_text {
+        None => drift.push("LICENSE: absent".to_string()),
+        Some(text)
+            if !(text.starts_with("MIT License")
+                && text.lines().any(|line| line == holder_line)) =>
+        {
+            drift.push(format!("LICENSE: not the MIT licence with {holder_line:?}"));
+        }
+        Some(_) => {}
+    }
+    drift
+}
+
+pub fn metadata_drift(repo: &Path) -> Result<Vec<String>, String> {
+    Ok(metadata_drift_of(
+        &workspace_members(repo)?,
+        &read_json(repo, "ui/src-tauri/tauri.conf.json")?,
+        &read_json(repo, "ui/package.json")?,
+        std::fs::read_to_string(repo.join("LICENSE")).ok().as_deref(),
+    ))
 }
 
 #[cfg(test)]
@@ -745,7 +835,14 @@ mod tests {
     }
 
     fn member(name: &str, version: &str) -> Member {
-        Member { name: name.to_string(), version: version.to_string() }
+        Member {
+            name: name.to_string(),
+            version: version.to_string(),
+            license: Some(LICENCE.to_string()),
+            publish: Some(Vec::new()),
+            authors: vec![HOLDER.to_string()],
+            homepage: Some(HOMEPAGE.to_string()),
+        }
     }
 
     fn one_version() -> Vec<Member> {
@@ -816,6 +913,73 @@ mod tests {
     fn the_tree_carries_one_version() {
         let repo = crate::repo_root().expect("repo root");
         assert_eq!(version_drift(&repo).unwrap(), Vec::<String>::new());
+    }
+
+    const MIT: &str = "MIT License\n\nCopyright (c) 2026 Vu Luu\n\nPermission is hereby granted";
+
+    fn full_bundle() -> serde_json::Value {
+        json(
+            r#"{"bundle":{"license":"MIT","publisher":"Vu Luu",
+            "copyright":"Copyright \u00a9 2026 Vu Luu","homepage":"https://github.com/lesslucifer/Trawler",
+            "longDescription":"A proxy.","linux":{"deb":{"section":"devel"}}}}"#,
+        )
+    }
+
+    #[test]
+    fn one_licence_and_full_metadata_is_no_drift() {
+        let drift = metadata_drift_of(
+            &one_version(),
+            &full_bundle(),
+            &json(r#"{"license":"MIT"}"#),
+            Some(MIT),
+        );
+        assert_eq!(drift, Vec::<String>::new());
+    }
+
+    #[test]
+    fn each_licence_or_metadata_field_that_disagrees_is_named() {
+        let mut members = one_version();
+        members[0].license = Some("Apache-2.0".to_string());
+        members[1].publish = None;
+        members[2].authors.clear();
+        members[2].homepage = None;
+        let mut conf = full_bundle();
+        conf["bundle"]["publisher"] = json(r#""trawler""#);
+        conf["bundle"]["linux"]["deb"]["section"] = json(r#""""#);
+        conf["bundle"]["licenseFile"] = json(r#""../../LICENSE""#);
+        let drift = metadata_drift_of(
+            &members,
+            &conf,
+            &json(r#"{"license":"ISC"}"#),
+            Some("MIT License\n"),
+        );
+        assert_eq!(
+            drift,
+            [
+                "trawler: license Some(\"Apache-2.0\"), the app is MIT",
+                "trawler-ui: publishable; the crates.io name is not ours",
+                "xtask: authors [] lack Vu Luu",
+                "xtask: homepage None, want https://github.com/lesslucifer/Trawler",
+                "ui/package.json: license \"ISC\", the app is MIT",
+                "tauri.conf.json bundle.publisher: \"trawler\", want \"Vu Luu\"",
+                "tauri.conf.json bundle.licenseFile: set; the .dmg would ask to agree before it mounts",
+                "tauri.conf.json bundle.linux.deb.section: empty",
+                "LICENSE: not the MIT licence with \"Copyright (c) 2026 Vu Luu\"",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_tree_without_licence_or_bundle_metadata_names_every_gap() {
+        let drift = metadata_drift_of(&one_version(), &json("{}"), &json("{}"), None);
+        assert_eq!(drift.len(), 8, "{drift:?}");
+        assert_eq!(drift.last().map(String::as_str), Some("LICENSE: absent"));
+    }
+
+    #[test]
+    fn the_tree_carries_one_licence_and_full_metadata() {
+        let repo = crate::repo_root().expect("repo root");
+        assert_eq!(metadata_drift(&repo).unwrap(), Vec::<String>::new());
     }
 
     #[test]
