@@ -1,0 +1,33 @@
+schema: cr/v5
+scope: "WU release-process -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W7
+branch: wu/prorelease/release-process
+base: 856ba1cea651b360fdc1dd8ad09e2dbb5198fc48
+head: 5433ea7fbf9c98ffc658407cd606144f4f5da6be
+diff_sha256: 1f9f33463333b1e18dae07058411c6371ae24e6e81b688015ebe6905f3cc0cc4
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 0
+    finders: 20
+    total: 60
+  by_finder:
+    correctness: { found: 1, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 1, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "a second release-manifest run into the same dist hashes the first run's SHA256SUMS, latest.json and notes.md as assets"
+    waived: "the release job always runs it once on a freshly downloaded dist; latest.json and notes.md already behaved so before this diff"
+verdict: PASS
+date: 2026-11-06
