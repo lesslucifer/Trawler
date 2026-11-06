@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedbf259f34851f0dfaeee0" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W3 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W3 result — brand assets from the signed sources</h1>
+      <p>What W3 changed, how it is proven, and what the owner still checks by eye.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W3</span> · <code>wu/prorelease/brand-assets</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w3-brand-assets-plan.html">W3 plan</a> · epic <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>Generator</td><td><code>xtask/src/icons.rs</code>, <code>cargo xtask icons</code></td><td>none → wraps each source in a square SVG, rasterises with the lockfile-pinned <code>pnpm exec tauri icon -p</code>, crops 1:1, writes PNG (pHYs when asked), 24-bit BMP, ICO and ICNS itself</td></tr>
+          <tr><td>Icon set</td><td><code>ui/src-tauri/icons/</code> 32x32, 128x128, 128x128@2x, icon.png, icon.icns, icon.ico</td><td>temporary art → 7b2 Sonar; <code>icon-small.svg</code> feeds 16/24/32 (ico) and icp4/icp5/ic11 (icns), <code>icon.svg</code> the rest</td></tr>
+          <tr><td>Tray</td><td><code>tray-running/stopped.png</code> (36 px template), <code>tray-*-color.png</code> (32 px); <code>ui/src-tauri/src/tray.rs</code></td><td>one black glyph as a template on every OS → template pair + <code>TEMPLATE = cfg!(macos)</code> on macOS; coloured pair, no template, on Windows/Linux</td></tr>
+          <tr><td>Installer art</td><td><code>icons/installer/</code>; <code>tauri.conf.json</code> <code>bundle.macOS.dmg.background</code>, <code>windows.nsis.headerImage/sidebarImage</code>, <code>windows.wix.bannerPath/dialogImagePath</code></td><td>none → DMG PNG 1320×800 @144 dpi; NSIS 150×57, 164×314; WiX 493×58, 493×312 (24-bit, BI_RGB, alpha flattened on white)</td></tr>
+          <tr><td>Favicon, repo face</td><td><code>ui/public/favicon.svg</code> + <code>ui/index.html</code> link; <code>icons/brand/</code> social-preview.png 1280×640, wordmark-light/-dark.png 1480×336</td><td>none → from the sources (W5's README and the owner's social upload use <code>brand/</code>)</td></tr>
+          <tr><td>Source lock</td><td><code>icons/SOURCES.sha256</code></td><td>none → <code>shasum -a 256 -c</code> format over every source</td></tr>
+          <tr><td>Dependency</td><td><code>xtask/Cargo.toml</code> <code>png = "0.18"</code>; <code>Cargo.lock</code> one line</td><td>png 0.18.1 was already locked (via tauri); no new crate; <code>cargo xtask licenses</code> rerun: notice unchanged (xtask is not release-built)</td></tr>
+          <tr><td>Docs</td><td>DEC-89 v3 (rules 10–11, Held by) + index row; UC-INSTALL contract</td><td>amended</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="verify-items">W10's open items</h2>
+    <table data-c="verify-items">
+      <thead><tr><th>Item</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>DMG @2x delivery</td><td><strong>resolved</strong>: tauri-bundler 2.10.4 refuses a background whose extension is not png/jpg/gif, so the TIFF form is out; one 1320×800 PNG at 144 dpi. A real <code>cargo xtask package</code> built the dmg; read-only <code>hdiutil attach</code>: <code>.background/dmg-background.png</code> 1320×800 at 144 dpi, <code>.DS_Store</code> holds its <code>backgroundImageAlias</code>; detached</td></tr>
+        <tr><td>BMP feature of <code>image</code></td><td><strong>resolved</strong>: the locked <code>image</code> has only <code>png</code>; xtask writes BMP itself (54-byte header, BGR bottom-up, 4-byte rows); unit-tested and read back by <code>file</code></td></tr>
+        <tr><td>Finder label y vs chips (light/dark); whole background shown at 660×400 pt</td><td>owner hand-check (below)</td></tr>
+        <tr><td>NSIS/WiX blur at 125/150 %; WiX text x-offset ≈ 180 px</td><td>owner hand-check on Windows (W7 matrix); needs a Windows build</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">The coloured tray ships one 32 px glyph, not the manifest's 16/20/24/32 and 22/24/32 sets: a Tauri tray takes one image and the OS scales it (32 → 16 is an exact halving). <code>dmg-background.svg</code> (1x) is not consumed; the @2x source draws the same art. No favicon PNG: both webviews show the SVG. The sources and <code>MANIFEST.json</code> are untouched.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Red on the old tree</td><td>7 of the 11 <code>icons</code> unit tests failed before the first generation (missing files, old ico order, no conf keys, stale favicon)</td></tr>
+          <tr><td>Reproducible</td><td>a second <code>cargo xtask icons</code> left the staged set byte-identical; <code>the_committed_brand_assets_are_the_ones_the_sources_generate</code> regenerates and compares every file</td></tr>
+          <tr><td>Sources sound</td><td><code>every_manifest_source_exists_with_its_view_box_and_plain_svg_only</code>, <code>the_recorded_source_hashes_are_the_sources_hashes</code>, <code>a_hidden_file_finder_leaves_in_the_source_folder_is_not_a_source</code> (review round 1: a Finder <code>.DS_Store</code> made the hash test red; red before the fix)</td></tr>
+          <tr><td>Review round 1 fixes</td><td>the rasteriser runs <code>package::Os::pnpm()</code> (<code>pnpm.cmd</code> on Windows) instead of a literal <code>pnpm</code>; a zero-size viewBox is an error, not a division by zero</td></tr>
+          <tr><td>Consumer formats</td><td><code>the_icon_set_has_the_sizes_its_bundle_entries_name</code>, <code>the_macos_tray_pair_is_black_and_alpha_and_the_coloured_pair_is_not</code>, <code>the_installer_art_has_the_exact_size_and_format_each_installer_takes</code>, <code>the_repo_face_and_favicon_come_from_the_sources</code>, <code>the_bundle_config_names_the_generated_installer_art</code></td></tr>
+          <tr><td>Template on macOS only</td><td><code>tray.rs</code> <code>only_macos_shows_a_black_template_glyph_every_other_host_a_coloured_one</code> (runs per OS in CI)</td></tr>
+          <tr><td>Packaged bundle</td><td><code>xtask/tests/package_bundle.rs</code> <code>a_package_is_ad_hoc_signed_and_passes_the_release_smoke</code>: <code>Contents/Resources/icon.icns</code> equals the generated one, the binary embeds both tray glyphs, the dmg's background equals the generated PNG; 1 passed in 106 s</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green</td></tr>
+          <tr><td>e2e</td><td>waived: no user journey changes; the look per OS is the hand-check</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="hand-check">Owner hand-check</h2>
+    <table data-c="hand-check">
+      <thead><tr><th>OS</th><th>Look at</th></tr></thead>
+      <tbody>
+        <tr><td>macOS</td><td><code>cargo xtask package</code>, open the dmg: the whole background fills the 660×400 window sharp (not a zoomed quarter); “Trawler” and “Applications” labels sit on the grey chips in light and dark mode; Dock/Finder icon; menu-bar glyph tints in light/dark, running vs stopped by shape</td></tr>
+        <tr><td>Windows</td><td>NSIS header/sidebar and WiX banner/dialog at 100/125/150 %; WiX title text clear of the mark; coloured tray on light and dark taskbars</td></tr>
+        <tr><td>Ubuntu</td><td>coloured tray in the AppIndicator panel; desktop entry icon</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">DEC-89 v3: rule 10 (the generated set, the pinned rasteriser, committed and drift-tested), rule 11 (DMG background = one 144-dpi PNG and why), Held by names the tests; its index row; UC-INSTALL names the brand assets and DEC-89. Snapshots of <code>decisions-index.html</code> and <code>web-ui.html</code> were refused by the htmldoc server (413, too large); their diff is in git only.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Where it closes</th></tr></thead>
+        <tbody>
+          <tr><td>README header (<code>brand/wordmark-*.png</code> in a <code>&lt;picture&gt;</code>)</td><td>W5</td></tr>
+          <tr><td>About / onboarding logo (import the source SVG or <code>brand/</code>)</td><td>W4</td></tr>
+          <tr><td>Upload <code>icons/brand/social-preview.png</code> in repo settings</td><td>owner (Q11)</td></tr>
+          <tr><td>Windows/Linux look and BMP scaling</td><td>W7 hand-check matrix on the next rc</td></tr>
+          <tr><td>Per-DPI coloured tray sizes, if 32 px scales poorly on a real taskbar</td><td>only if the hand-check shows it</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
