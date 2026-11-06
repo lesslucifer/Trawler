@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="6aedd0b49f34851f0dfaf03a" data-artifact="wu-plan" data-status="draft">
+<html lang="en" data-htmldoc-id="6aedd0b49f34851f0dfaf03a" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,18 +10,18 @@
     <div class="inner">
       <h1>E-PRORELEASE.W19: Settings is a dialog of the main window</h1>
       <p>Owner request: Settings is no longer a detached window; it is a dialog on top of the main window and blocks it, from every place that opens it, the menu-bar / tray icon included.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W19</span> · branch <code>wu/prorelease/settings-modal</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · design <a href="2026-11-06-prorelease-w19-settings-modal-design.html">W19 design (round 1, open questions)</a></div>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W19</span> · branch <code>wu/prorelease/settings-modal</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · design <a href="2026-11-06-prorelease-w19-settings-modal-design.html">W19 design (ruled)</a></div>
     </div>
   </header>
   <main>
     <h2 id="requirement">Requirement</h2>
-    <p data-item="requirement">Every way of opening Settings (app menu ⌘, / Ctrl+,, the capture controls' Settings, the menu-bar / tray icon's Settings…) shows it as a modal dialog over the main window, which takes no input until Settings closes; with no main window (windowless, DEC-77) the main window is brought up first; Esc and the dialog's close end it; a quit request (DEC-64) is never blocked by it.</p>
+    <p data-item="requirement">Every way of opening Settings (app menu ⌘, / Ctrl+,, the capture controls' Settings, the menu-bar / tray icon's Settings…) and About (app menu About, Help → About Trawler, Third-Party Licences, Privacy, a link the browser would not open) shows it as a modal dialog inside the main window, which takes no input until it closes; with no main window (windowless, DEC-77) the main window is rebuilt first; Esc, the dialog's ✕ and ⌘W / Ctrl+W (Trawler's own Close Window: topmost dialog first, else the window) end it; a request while another dialog is up waits; a quit request (DEC-64) is never blocked by it.</p>
 
     <h2 id="status">Status</h2>
-    <p class="callout warn" data-c="status">Round 1 is investigation only. The shape (in-window dialog vs native modal window) and the About rule are owner questions in the <a href="2026-11-06-prorelease-w19-settings-modal-design.html#questions">design doc</a>; this plan is revised to <code>ready</code> with the ruled shape before any code.</p>
+    <p class="callout" data-c="status">Ready (round 2). Owner rulings 2026-11-06 in the <a href="2026-11-06-prorelease-w19-settings-modal-design.html#rulings">design doc</a>: shape A (in-window <code>ModalShell</code>), tray rebuilds main first, About is the same kind of dialog, ⌘W closes the topmost dialog, a request waits behind another dialog, data windows stay free.</p>
 
     <h2 id="maps-to">Maps to</h2>
-    <p data-item="maps-to">E-PRORELEASE W19 · UC-BG · DEC-64 · DEC-77 · DEC-90 (About) · DEC-76 (data windows) · DEC-84 (unsafe) · <code>ui/src-tauri/src/settings.rs</code>, <code>tray.rs</code>, <code>menu.rs</code>, <code>lifecycle.rs</code>, <code>capabilities/default.json</code>, <code>ui/src/Settings.tsx</code>, <code>ui/src/main.tsx</code>, <code>ui/src/App.tsx</code>, <code>ui/src/ModalShell.tsx</code>, <code>ui/e2e/specs/</code>.</p>
+    <p data-item="maps-to">E-PRORELEASE W19 · UC-BG · DEC-64 · DEC-77 · DEC-90 (About) · DEC-76 (data windows) · DEC-84 (unsafe) · <code>ui/src-tauri/src/settings.rs</code>, <code>tray.rs</code>, <code>menu.rs</code>, <code>lifecycle.rs</code>, <code>capabilities/default.json</code>, <code>ui/src/Settings.tsx</code>, <code>ui/src/main.tsx</code>, <code>ui/src/App.tsx</code>, <code>ui/src/ModalShell.tsx</code>, <code>ui/src/About.tsx</code>, <code>ui/src/shellDialogs.ts</code>, <code>about.rs</code>, <code>capabilities/about.json</code> (removed), <code>ui/e2e/specs/</code>.</p>
 
     <h2 id="expected">Expected result</h2>
     <div data-item="expected">
@@ -31,7 +31,9 @@
           <tr><td>⌘, / Ctrl+, · capture controls</td><td>Settings dialog over it, main blocked</td><td>—</td></tr>
           <tr><td>tray Settings…</td><td>main raised and focused, Settings dialog over it</td><td>main rebuilt, then Settings dialog over it</td></tr>
           <tr><td>a second open</td><td colspan="2">the open dialog is focused, never a second one</td></tr>
-          <tr><td>quit request while open</td><td colspan="2">the quit check is reachable and answers; Settings never blocks it</td></tr>
+          <tr><td>quit request while open</td><td colspan="2">the quit check shows in Settings' place; a cancelled quit finds Settings again</td></tr>
+          <tr><td>About from any Help / app-menu entry</td><td>About dialog on the named page</td><td>main rebuilt, then About dialog</td></tr>
+          <tr><td>⌘W / Ctrl+W</td><td colspan="2">closes the quit check, the keep-capturing ask, then Settings/About, then the window</td></tr>
         </tbody>
       </table>
     </div>
@@ -41,10 +43,10 @@
       <table data-c="test-plan">
         <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
         <tbody>
-          <tr><td>unit (cargo)</td><td>every Settings entry routes through one open that targets the main window (reopening it first); no <code>settings</code> window label is built</td><td>yes</td></tr>
-          <tr><td>unit (vitest)</td><td>the Settings dialog: opens on the show event, Esc and ✕ close it, focus trap, focus returns to the invoker, a quit request closes it before the quit check shows</td><td>yes</td></tr>
-          <tr><td>integration</td><td>the shell's open-Settings request survives a main window still being built (the flag + event pattern of <code>request_quit</code>)</td><td>yes</td></tr>
-          <tr><td>e2e</td><td><code>one-app</code>, <code>background-keep</code>, <code>sticky</code> move from the <code>settings</code> window to the dialog; windowless + tray Settings… rebuilds main with the dialog up</td><td>yes</td></tr>
+          <tr><td>unit (cargo)</td><td>dialog requests queue and are taken once, and serialize as the page reads them; Close Window targets the main page's dialog, any other window outright</td><td>yes</td></tr>
+          <tr><td>unit (vitest)</td><td>the Settings and About dialogs (modal, Esc, ✕, focus trap, focus returns, About on the asked page); the queue (taken on mount and on the event, one per kind, waits behind another dialog); ⌘W topmost order; a quit over Settings shows its check and a cancel finds Settings again</td><td>yes</td></tr>
+          <tr><td>integration</td><td>mock runtime: the tray's Settings… with no main window builds it and the request is taken there; every Settings/About entry (command, menu, Help) reaches the one main window and builds no other; a request that cannot open main is dropped; the shipped capabilities name only <code>main</code> and <code>data-*</code></td><td>yes</td></tr>
+          <tr><td>e2e</td><td><code>one-app</code>, <code>background-keep</code>, <code>background-off</code>, <code>service-attached</code>, <code>about</code>, <code>sticky</code>(<code>-relaunched</code>) move from the <code>settings</code> window to the dialog; windowless + tray Settings… rebuilds main with the dialog up; Help → Third-Party Licences opens About on that page</td><td>yes</td></tr>
         </tbody>
       </table>
     </div>

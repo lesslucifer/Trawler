@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Settings as a dialog: today, options, owner questions</h1>
       <p>Owner request: Settings must be a dialog on top of the main window that blocks it, not a detached window, most of all when the menu-bar / tray icon opens it.</p>
-      <div class="meta">Round 1 · 2026-11-06 · Trawler · T3 design · <span class="badge id">E-PRORELEASE.W19</span> · <a href="2026-11-06-prorelease-w19-settings-modal-plan.html">WU plan</a> · Tauri 2.12.5 · tauri-runtime-wry 2.12.3 · tao 0.37.2 (Cargo.lock)</div>
+      <div class="meta">Ruled · round 2 built · 2026-11-06 · Trawler · T3 design · <span class="badge id">E-PRORELEASE.W19</span> · <a href="2026-11-06-prorelease-w19-settings-modal-plan.html">WU plan</a> · Tauri 2.12.5 · tauri-runtime-wry 2.12.3 · tao 0.37.2 (Cargo.lock)</div>
     </div>
   </header>
   <main>
@@ -136,6 +136,20 @@ stateDiagram-v2
         <tr><td>Q4</td><td>⌘W / Ctrl+W while Settings is open</td><td>(a) closes Settings (Trawler's own Close Window item: topmost dialog first, else the window) · (b) closes main as today; Esc closes Settings</td><td><strong>(a)</strong>: what a Mac user expects of a sheet</td></tr>
         <tr><td>Q5</td><td>Settings asked while another dialog (keep-capturing, quit, onboarding) is up</td><td>(a) wait until it closes · (b) replace it · (c) ignore the request</td><td><strong>(a)</strong>: no answer is lost and no dialog stacks</td></tr>
         <tr><td>Q6</td><td>Data windows (DEC-76)</td><td>(a) stay free windows · (b) children of main</td><td><strong>(a)</strong>: they exist to sit beside main</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rulings">Owner rulings (2026-11-06) and what was built</h2>
+    <table data-c="rulings">
+      <thead><tr><th>#</th><th>Ruling</th><th>Built as</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>(a) rebuild main, dialog over it</td><td><code>lifecycle::request_dialog</code>: flag + <code>dialog-requested</code> event after <code>reopen_main</code> (the quit request's pattern); a failed open drops the request</td></tr>
+        <tr><td>Q2</td><td>(A) in-window <code>ModalShell</code></td><td><code>ModalShell size="pages"</code>; the <code>settings</code> window, its saved size and place, and <code>open_in_background</code> are gone</td></tr>
+        <tr><td>Q3</td><td>(b) About is the same dialog</td><td><code>AboutDialog</code> on the asked page; <code>about</code> window and <code>capabilities/about.json</code> gone; every Help / app-menu entry goes through <code>request_dialog</code></td></tr>
+        <tr><td>Q4</td><td>(a) Trawler's own Close Window</td><td>the native item replaced in every default submenu; main's page closes quit check → keep ask → shell dialog → window (<code>close_window</code> command); other windows close outright</td></tr>
+        <tr><td>Q5</td><td>(a) wait</td><td>a queue, one per kind; hidden behind the keep-capturing ask and the quit check. Onboarding is a screen, not a dialog, in this build: Settings opens over it</td></tr>
+        <tr><td>Q6</td><td>(a) data windows stay free</td><td>unchanged</td></tr>
+        <tr><td>quit</td><td>DEC-64's check runs in main</td><td>a quit over Settings shows the check in its place; cancelled, Settings returns; answered, the app ends</td></tr>
       </tbody>
     </table>
 
