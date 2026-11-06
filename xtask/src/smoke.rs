@@ -95,6 +95,7 @@ fn make_executable(path: &Path) -> Result<(), String> {
 }
 
 #[cfg(not(unix))]
+#[allow(clippy::unnecessary_wraps)]
 fn make_executable(_path: &Path) -> Result<(), String> {
     Ok(())
 }

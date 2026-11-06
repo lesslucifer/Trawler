@@ -4,8 +4,6 @@ use std::sync::Arc;
 use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
 use tauri::{App, Manager};
 use trawler_ui_lib::core::{self, Core};
-use trawler_ui_lib::lifecycle::{self, Lifecycle};
-use trawler_ui_lib::settings::MAIN_WINDOW;
 use trawler_ui_lib::supervisor::{CoreState, Supervisor};
 use trawler_ui_lib::tray::{self, Glyph, TrayView, RESTART_ID};
 
@@ -65,6 +63,9 @@ fn the_menu_follows_a_killed_core_and_restarts_it_on_its_ports() {
 #[cfg(target_os = "macos")]
 #[test]
 fn a_host_that_cannot_build_the_tray_is_never_left_windowless() {
+    use trawler_ui_lib::lifecycle::{self, Lifecycle};
+    use trawler_ui_lib::settings::MAIN_WINDOW;
+
     let app = app();
     let dir = tempfile::tempdir().unwrap();
     trawler_ui_lib::keep_capturing::write_keep_capturing(dir.path(), true).unwrap();
