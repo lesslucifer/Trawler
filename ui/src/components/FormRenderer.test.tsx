@@ -36,6 +36,12 @@ describe("FormRenderer", () => {
     expect(screen.getByText("*")).toBeInTheDocument();
   });
 
+  it("a first header line over the cap still shows its name, with no partial value", () => {
+    render(<FormRenderer text={`x-huge: ${"h".repeat(TEXT_MAX + 10)}\nnext: 1`} />);
+    expect(screen.getByText("x-huge")).toBeInTheDocument();
+    expect(screen.queryByText(/^h+$/)).toBeNull();
+  });
+
   it("long name: value lines are cut on a line, never mid-value", () => {
     const line = `x-pad: ${"p".repeat(1000)}`;
     const text = Array.from({ length: Math.ceil(TEXT_MAX / line.length) + 2 }, () => line).join("\n");

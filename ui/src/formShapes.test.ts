@@ -115,6 +115,13 @@ describe("headers read as name: value lines", () => {
     expect(sortByKey("b: 2\na: 1\n", "headers")).toBe("a: 1\nb: 2\n");
   });
 
+  it("an edited key keeps only what a field name can hold, so it reads back as typed", () => {
+    expect(editPair("x: v", 0, "key", "a:b c", "headers")).toBe("abc: v");
+    expect(parsePairs(editPair("x: v", 0, "key", "a:b c", "headers"), "headers")[0]).toMatchObject({ key: "abc", value: "v" });
+    expect(editPair("x: v", 0, "key", ":authority", "headers")).toBe(":authority: v");
+    expect(editPair("no-colon", 0, "key", "a b", "headers")).toBe("ab");
+  });
+
   it("a new pair's key and value land on its own line", () => {
     const added = addPairAfter("a: 1", 0, "headers");
     const keyed = editPair(added, 1, "key", "x-new", "headers");

@@ -180,10 +180,14 @@ const encodePart = (text: string) => encodeURIComponent(text.replace(LONE_SURROG
 
 const oneLine = (text: string) => text.replace(/\r?\n|\r/g, " ");
 
+const NOT_IN_A_FIELD_NAME = /[^!#$%&'*+.^_`|~0-9A-Za-z-]/g;
+
+const fieldName = (text: string) => (text.startsWith(":") ? ":" : "") + text.replace(NOT_IN_A_FIELD_NAME, "");
+
 function editField(raw: string, part: PairPart, edited: string): string {
   const [name, rest] = splitField(raw);
   if (part === "value") return `${name}: ${oneLine(edited)}`;
-  return rest === undefined ? oneLine(edited) : `${oneLine(edited)}:${rest}`;
+  return rest === undefined ? fieldName(edited) : `${fieldName(edited)}:${rest}`;
 }
 
 function editEncoded(raw: string, part: PairPart, edited: string): string {

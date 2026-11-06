@@ -1,4 +1,5 @@
-import { byteLength, formEntries, formPairCut, TEXT_MAX } from "../body";
+import { useMemo } from "react";
+import { byteLength, formCut, formEntries, TEXT_MAX } from "../body";
 import { formShape, readForm } from "../formPairs";
 import { CutMarker } from "./CutMarker";
 import { KeyValueRow } from "./KeyValueRow";
@@ -16,10 +17,9 @@ export function FormRenderer({ text }: { text: string }) {
   // Cut on a pair boundary, never at a character offset into the raw text: an
   // offset can land mid-%XX or inside an escape run, and the half-decoded value
   // — a stray "%E" or U+FFFD — is what CopyText hands to the clipboard.
-  const shape = formShape(text);
+  const shape = useMemo(() => formShape(text), [text]);
   const cut = text.length > TEXT_MAX;
-  const cutAt = shape === "headers" ? Math.max(text.lastIndexOf("\n", TEXT_MAX), 0) : formPairCut(text, TEXT_MAX);
-  const shown = cut ? text.slice(0, cutAt) : text;
+  const shown = cut ? text.slice(0, formCut(text, TEXT_MAX, shape)) : text;
   const read = shape === "url" || shape === "headers" ? readForm(shown, shape) : null;
   const entries = read ? [...read.parts, ...read.pairs].map((row): [string, string] => [row.key, row.value]) : formEntries(shown);
 

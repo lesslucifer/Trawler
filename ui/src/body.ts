@@ -1,6 +1,7 @@
 import type { BodyFetch, BodyView, FlowView, Leg } from "./api";
 import type { DataPayload } from "./dataWindow";
 import { flowCaption } from "./flowPayload";
+import type { FormShape } from "./formPairs";
 
 // Raw bodies sniff bytes (rawKind), because stored bytes may be compressed
 // regardless of what the type claims; the pretty body's kind is readKind's.
@@ -140,6 +141,18 @@ export function formPairCut(text: string, at: number): number {
   const key = text.indexOf("=");
   return key > 0 && key < at ? key + 1 : 0;
 }
+
+// Header lines are cut the same way on a line boundary: a first line over the
+// cap keeps its name and drops its value, never a partial one.
+function headerLineCut(text: string, at: number): number {
+  const boundary = text.lastIndexOf("\n", at);
+  if (boundary > 0) return boundary;
+  const colon = text.indexOf(":", 1);
+  return colon > 0 && colon < at ? colon + 1 : 0;
+}
+
+export const formCut = (text: string, at: number, shape: FormShape) =>
+  shape === "headers" ? headerLineCut(text, at) : formPairCut(text, at);
 
 // null = the body is captured and viewable; a string is the notice to show
 // instead of a viewer — states never render blank.

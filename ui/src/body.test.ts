@@ -6,6 +6,7 @@ import {
   byteLength,
   decodeBody,
   formEntries,
+  formCut,
   formPairCut,
   hexDump,
   hexRows,
@@ -85,6 +86,14 @@ test("formEntries parses url-encoded pairs, decoding and keeping duplicates", ()
     ["b", "two words"],
     ["a", "2"],
   ]);
+});
+
+test("formCut cuts header lines on a line; a first line over the cap keeps its name with no value", () => {
+  expect(formCut("a: 1\nb: 2\nc: 3", 8, "headers")).toBe(4);
+  expect(formCut(`x-big: ${"v".repeat(50)}\nb: 2`, 20, "headers")).toBe(6);
+  expect(formCut(`:path: ${"v".repeat(50)}`, 20, "headers")).toBe(6);
+  expect(formCut("a=1&b=2&c=3", 6, "query")).toBe(formPairCut("a=1&b=2&c=3", 6));
+  expect(formCut("https://a.example/?a=1&b=2", 23, "url")).toBe(22);
 });
 
 test("formPairCut lands on a pair boundary, never inside a percent-escape", () => {
