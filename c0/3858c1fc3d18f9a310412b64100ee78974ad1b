@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W13
+branch: HEAD
+tests:
+  unit: { waived: "design WU, no code: the run is a closed design input; its build WU W4 carries the tests" }
+  integration: { waived: "design WU, no code: the run is a closed design input; its build WU W4 carries the tests" }
+  e2e: { waived: "design WU, no code: the run is a closed design input; its build WU W4 carries the tests" }
