@@ -12,6 +12,7 @@ import {
   isAlive,
   onWindow,
   pressButton,
+  quitAppUnasked,
   runningCore,
   sendThroughProxy,
   storedKeepCapturing,
@@ -79,7 +80,7 @@ describe("UC-BG — keep capturing with no window", () => {
   });
 
   it("quit_app ends the app and frees both ports", async () => {
-    await invoke("quit_app");
+    await quitAppUnasked();
     await theAppExits();
     expect(await everythingStopped(core, appPid)).toBe(true);
   });

@@ -89,6 +89,13 @@ export const askToCloseTheWindow = () =>
 
 export const askToQuitTheApp = () => invoke("e2e_request_quit");
 
+// quit_app exits before it can answer, so it is sent and not awaited.
+export const quitAppUnasked = () =>
+  browser.execute(() => {
+    const tauri = (window as unknown as { __TAURI__: { core: { invoke: (c: string) => Promise<unknown> } } }).__TAURI__;
+    setTimeout(() => void tauri.core.invoke("quit_app"), 50);
+  });
+
 export const switchesRead = () =>
   browser.execute(() =>
     Array.from(document.querySelectorAll('label:has(input[type="checkbox"])')).map((label) => ({
