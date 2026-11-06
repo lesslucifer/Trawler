@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "epic E-PKG2 epic/packaging-v2 -> main"
+epic: E-PKG2
+branch: epic/packaging-v2
+base: 847712f3cc215f47778960b042f1c12a688eadd7
+head: 00776fac6bedf1a3a12b68e6a33789b46307b537
+diff_sha256: 00184be9476a4f09298819181c781123b863d98c2dc5dfb0c29b7f4325c755ae
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 1
+  stage_seconds:
+    gate0: 0
+    finders: 44
+    total: 74
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 1, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "with --appimage-extract-and-run, if the AppImage runtime forks rather than execs the core, Core::drop kills only the wrapper and an early smoke failure can leave the extracted core running"
+    waived: "unverified, low-confidence finder nit; the smoke runs on ephemeral GitHub runners that are torn down after the job"
+verdict: PASS
+date: 2026-11-06
