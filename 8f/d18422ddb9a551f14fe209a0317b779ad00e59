@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W14
+base: d62447dcb1b958ac1bf3ecd2f32c0f44d6879820
+tip: 8fd18422ddb9a551f14fe209a0317b779ad00e59
+diff_sha256: 338c66a76c7c1c92f7f5870457d9f4946673962d40cb2fe3cda07c0493989e86
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-06
