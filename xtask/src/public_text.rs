@@ -1,5 +1,5 @@
 use std::collections::BTreeSet;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 
 use crate::package::Os;
 
@@ -40,12 +40,49 @@ pub fn targets(text: &str) -> Vec<String> {
         let mut rest = text;
         while let Some(at) = rest.find(open) {
             rest = &rest[at + open.len()..];
-            if let Some(end) = rest.find(close) {
-                found.push(rest[..end].trim().to_string());
+            let Some(end) = rest.find(close) else { continue };
+            let candidates: Vec<&str> = if open == "srcset=\"" {
+                rest[..end].split(',').collect()
+            } else {
+                vec![&rest[..end]]
+            };
+            for candidate in candidates {
+                if let Some(target) = candidate.split_whitespace().next() {
+                    found.push(target.to_string());
+                }
             }
         }
     }
     found
+}
+
+fn normalized(path: &Path) -> Option<PathBuf> {
+    let mut parts = PathBuf::new();
+    for part in path.components() {
+        match part {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !parts.pop() {
+                    return None;
+                }
+            }
+            other => parts.push(other),
+        }
+    }
+    Some(parts)
+}
+
+// macOS and Windows find "readme.md" for README.md; GitHub does not.
+fn exists_as_named(repo: &Path, path: &Path) -> bool {
+    let mut dir = repo.to_path_buf();
+    for part in path.components() {
+        let listed = std::fs::read_dir(&dir).into_iter().flatten().flatten();
+        if !listed.into_iter().any(|entry| entry.file_name() == part.as_os_str()) {
+            return false;
+        }
+        dir.push(part);
+    }
+    true
 }
 
 pub fn slug(heading: &str) -> String {
@@ -79,15 +116,20 @@ pub fn broken_targets(repo: &Path, file: &str, text: &str) -> Vec<String> {
             continue;
         }
         let (path, anchor) = target.split_once('#').unwrap_or((&target, ""));
-        let resolved = if path.is_empty() { Path::new(file).to_path_buf() } else { dir.join(path) };
-        let name = resolved.to_string_lossy().replace('\\', "/");
-        if NOT_YET_WRITTEN.contains(&name.as_str()) {
-            continue;
-        }
-        let Ok(content) = std::fs::read(repo.join(&resolved)) else {
-            broken.push(format!("{file}: {target} (no {name})"));
+        let joined = if path.is_empty() { Path::new(file).to_path_buf() } else { dir.join(path) };
+        let name = joined.to_string_lossy().replace('\\', "/");
+        let Some(resolved) = normalized(&joined) else {
+            broken.push(format!("{file}: {target} (outside the repo)"));
             continue;
         };
+        if NOT_YET_WRITTEN.iter().any(|pending| resolved == Path::new(pending)) {
+            continue;
+        }
+        if !exists_as_named(repo, &resolved) {
+            broken.push(format!("{file}: {target} (no {name})"));
+            continue;
+        }
+        let Ok(content) = std::fs::read(repo.join(&resolved)) else { continue };
         let markdown = resolved.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
         if !anchor.is_empty()
             && markdown
@@ -137,12 +179,15 @@ fn os_of(row: &str) -> Option<Os> {
 }
 
 pub fn install_table_drift(readme: &str) -> Vec<String> {
-    let readme = format!("\n{readme}");
-    let section = readme.split("\n## Install").nth(1).unwrap_or_default();
-    let section = section.split("\n## ").next().unwrap_or_default();
+    let section: Vec<&str> = readme
+        .lines()
+        .skip_while(|line| line.trim_end() != "## Install")
+        .skip(1)
+        .take_while(|line| !line.starts_with("## "))
+        .collect();
     let mut drift = Vec::new();
     let mut seen = BTreeSet::new();
-    for row in section.lines().filter(|line| line.starts_with('|')) {
+    for row in section.iter().filter(|line| line.starts_with('|')) {
         let Some(os) = os_of(row) else { continue };
         seen.insert(format!("{os:?}"));
         let named: BTreeSet<&str> = KINDS
@@ -252,6 +297,38 @@ mod tests {
         assert_eq!(slug(" Contributing · Security · Licence"), "contributing--security--licence");
         assert_eq!(slug("Check your download"), "check-your-download");
         assert_eq!(slug("Why don't I see an app's traffic?"), "why-dont-i-see-an-apps-traffic");
+    }
+
+    #[test]
+    fn a_link_must_match_the_file_s_case_as_github_does() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir(dir.path().join("docs")).unwrap();
+        std::fs::write(dir.path().join("README.md"), "# Top\n").unwrap();
+        std::fs::write(dir.path().join("docs/A.png"), "").unwrap();
+        let text = "[a](readme.md) [b](docs/a.png) [c](README.md) [d](docs/A.png)";
+        assert_eq!(
+            broken_targets(dir.path(), "README.md", text),
+            ["README.md: readme.md (no readme.md)", "README.md: docs/a.png (no docs/a.png)"]
+        );
+    }
+
+    #[test]
+    fn a_title_a_directory_a_parent_path_and_a_srcset_list_resolve() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join(".github/x")).unwrap();
+        std::fs::write(dir.path().join("A.md"), "# Top\n").unwrap();
+        std::fs::write(dir.path().join("b.png"), "").unwrap();
+        let text = "[t](../A.md \"title\") [d](x/) [p](../GUIDE.md#install) \
+                    <source srcset=\"../b.png 1x, ../b.png 2x\">";
+        assert_eq!(broken_targets(dir.path(), ".github/n.md", text), Vec::<String>::new());
+    }
+
+    #[test]
+    fn only_the_install_heading_itself_holds_the_table() {
+        let readme = "## Installation notes\n| macOS | x |\n## Install\n| System |\n|---|\n\
+                      | macOS | `a.dmg` |\n| Windows | `a-setup.exe` `a.msi` |\n\
+                      | Linux | `a.AppImage` `a.deb` `a.rpm` final |\n";
+        assert_eq!(install_table_drift(readme), Vec::<String>::new());
     }
 
     #[test]
