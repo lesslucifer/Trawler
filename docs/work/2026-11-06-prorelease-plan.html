@@ -9,8 +9,8 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-PRORELEASE — plan: the first official public release (v0.1.0)</h1>
-      <p>An audit of everything a professional public release needs, by area, and the Working Units that close each gap. Plan only: owner rulings recorded (Q1 MIT, Q2 Vu Luu, Q7 no paid signing); Q3 logo still open.</p>
-      <div class="meta">v2 · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-PRORELEASE</span> · branch <code>epic/prorelease</code> off <code>main</code> 6a1ab80d</div>
+      <p>An audit of everything a professional public release needs, by area, and the Working Units that close each gap. Plan only: every content item gets an owner-reviewed design WU before its build WU (v3); rulings Q1 MIT, Q2 Vu Luu, Q7 no paid signing; Q3 now asks the scope of the logo design WU.</p>
+      <div class="meta">v3 · 2026-11-06 · Trawler · T3 epic plan · <span class="badge id">E-PRORELEASE</span> · branch <code>epic/prorelease</code> off <code>main</code> 6a1ab80d</div>
     </div>
   </header>
   <main>
@@ -28,15 +28,15 @@
     </div>
 
     <h2 id="audit">Audit — per area</h2>
-    <p>✅ ready · ⚠️ partial · ❌ missing. Evidence paths are relative to the repo root at <code>6a1ab80d</code>.</p>
+    <p>✅ ready · ⚠️ partial · ❌ missing. Evidence paths are relative to the repo root at <code>6a1ab80d</code>. WU column: <code>design → build</code>.</p>
 
     <h3 id="audit-brand">A. Branding</h3>
     <table data-c="audit-brand">
       <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
-      <tr><td>App icon set</td><td>⚠️</td><td><code>ui/src-tauri/icons/</code>: <code>32x32</code>, <code>128x128</code>, <code>128x128@2x</code> (256), <code>icon.png</code> (512), <code>icon.icns</code>, <code>icon.ico</code>; listed in <code>tauri.conf.json</code> <code>bundle.icon</code></td><td>Temporary art; no source file, not reproducible</td><td>W3</td></tr>
-      <tr><td>Tray icons</td><td>⚠️</td><td><code>tray-running.png</code>/<code>tray-stopped.png</code> 36×36, <code>include_bytes!</code> at <code>ui/src-tauri/src/tray.rs:18-19</code>, <code>icon_as_template(true)</code> <code>tray.rs:138-141</code></td><td>Template applies on macOS only; Windows/Linux get the same black glyph (unreadable on a dark taskbar). New: macOS template + coloured Windows/Linux states (<a href="#brand-kit">Brand kit</a>)</td><td>W3</td></tr>
-      <tr><td>Installer art</td><td>❌</td><td><code>tauri.conf.json</code> has no <code>macOS.dmg</code>, <code>windows.nsis</code>, <code>windows.wix</code></td><td>DMG background + layout, NSIS header/sidebar, WiX banner/dialog</td><td>W3</td></tr>
-      <tr><td>Logo in UI / docs</td><td>❌</td><td>No SVG/image in <code>ui/src</code>, no <code>ui/public</code>, no favicon in <code>ui/index.html</code></td><td>Logo in About, onboarding header, README</td><td>W3 · W4 · W5</td></tr>
+      <tr><td>App icon set</td><td>⚠️</td><td><code>ui/src-tauri/icons/</code>: <code>32x32</code>, <code>128x128</code>, <code>128x128@2x</code> (256), <code>icon.png</code> (512), <code>icon.icns</code>, <code>icon.ico</code>; listed in <code>tauri.conf.json</code> <code>bundle.icon</code></td><td>Temporary art; no source file, not reproducible</td><td>W9 → W3</td></tr>
+      <tr><td>Tray icons</td><td>⚠️</td><td><code>tray-running.png</code>/<code>tray-stopped.png</code> 36×36, <code>include_bytes!</code> at <code>ui/src-tauri/src/tray.rs:18-19</code>, <code>icon_as_template(true)</code> <code>tray.rs:138-141</code></td><td>Template applies on macOS only; Windows/Linux get the same black glyph (unreadable on a dark taskbar). New: macOS template + coloured Windows/Linux states (<a href="#brand-kit">Brand kit</a>)</td><td>W9 → W3</td></tr>
+      <tr><td>Installer art</td><td>❌</td><td><code>tauri.conf.json</code> has no <code>macOS.dmg</code>, <code>windows.nsis</code>, <code>windows.wix</code></td><td>DMG background + layout, NSIS header/sidebar, WiX banner/dialog</td><td>W10 → W3</td></tr>
+      <tr><td>Logo in UI / docs</td><td>❌</td><td>No SVG/image in <code>ui/src</code>, no <code>ui/public</code>, no favicon in <code>ui/index.html</code></td><td>Logo in About, onboarding header, README</td><td>W9 → W3 · W4 · W5</td></tr>
       <tr><td>Product name / identifier</td><td>✅</td><td><code>productName: "Trawler"</code>, <code>identifier: "dev.trawler.app"</code>; window titles "Trawler"/"Settings"</td><td>Identifier must never change (updater, CA dir, login item)</td><td>—</td></tr>
       <tr><td>Bundle metadata</td><td>❌</td><td><code>tauri.conf.json</code> <code>bundle</code>: only <code>category</code>, <code>shortDescription</code>, <code>icon</code>, macOS min 11.0</td><td>No <code>publisher</code>, <code>copyright</code>, <code>license</code>/<code>licenseFile</code>, <code>homepage</code>, <code>longDescription</code>, <code>linux.deb</code>/<code>rpm</code> section/description</td><td>W1</td></tr>
       <tr><td>Crate / package metadata</td><td>⚠️</td><td><code>Cargo.toml:25-31</code>, <code>ui/src-tauri/Cargo.toml:1-8</code> set description/license/repository; no <code>authors</code>/<code>homepage</code>; <code>ui/package.json</code> private</td><td><code>trawler</code> and <code>trawler-ui</code> lack <code>publish = false</code> while the name <code>trawler</code> is taken on crates.io</td><td>W1</td></tr>
@@ -45,21 +45,21 @@
     <h3 id="audit-face">B. Public face</h3>
     <table data-c="audit-face">
       <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
-      <tr><td>README</td><td>⚠️</td><td><code>README.md</code> (88 lines): features, <code>cargo run</code>, API table, stale roadmap checklist, project layout</td><td>No installers, screenshots, first run, usage, FAQ, license; roadmap list contradicts what shipped (Compose, HAR)</td><td>W5</td></tr>
-      <tr><td>Screenshots</td><td>❌</td><td>Only <code>doc-assets/w2-*.png</code> (internal); <code>cargo xtask ui walkthrough</code> films the setup screen</td><td>Reproducible product screenshots (list, inspector, setup) from the e2e harness</td><td>W5</td></tr>
-      <tr><td>CONTRIBUTING · SECURITY · CODE_OF_CONDUCT</td><td>❌</td><td>none at the root or in <code>.github/</code></td><td>All three</td><td>W5</td></tr>
-      <tr><td>CHANGELOG / notes policy</td><td>⚠️</td><td><code>.github/release-notes.md</code> = install steps only, rendered by <code>xtask/src/release_manifest.rs:115-122</code></td><td>No "what's new"; no CHANGELOG</td><td>W7</td></tr>
-      <tr><td>Issue / PR templates</td><td>❌</td><td><code>.github/</code> holds only <code>workflows/</code> + <code>release-notes.md</code></td><td>Bug report (OS, version, install type), feature request, PR template</td><td>W5</td></tr>
+      <tr><td>README</td><td>⚠️</td><td><code>README.md</code> (88 lines): features, <code>cargo run</code>, API table, stale roadmap checklist, project layout</td><td>No installers, screenshots, first run, usage, FAQ, license; roadmap list contradicts what shipped (Compose, HAR)</td><td>W11 → W5</td></tr>
+      <tr><td>Screenshots</td><td>❌</td><td>Only <code>doc-assets/w2-*.png</code> (internal); <code>cargo xtask ui walkthrough</code> films the setup screen</td><td>Reproducible product screenshots (list, inspector, setup) from the e2e harness</td><td>W11 → W5</td></tr>
+      <tr><td>CONTRIBUTING · SECURITY · CODE_OF_CONDUCT</td><td>❌</td><td>none at the root or in <code>.github/</code></td><td>All three</td><td>W11 → W5</td></tr>
+      <tr><td>CHANGELOG / notes policy</td><td>⚠️</td><td><code>.github/release-notes.md</code> = install steps only, rendered by <code>xtask/src/release_manifest.rs:115-122</code></td><td>No "what's new"; no CHANGELOG</td><td>W7 · W11 → W14</td></tr>
+      <tr><td>Issue / PR templates</td><td>❌</td><td><code>.github/</code> holds only <code>workflows/</code> + <code>release-notes.md</code></td><td>Bug report (OS, version, install type), feature request, PR template</td><td>W11 → W5</td></tr>
       <tr><td>Repo settings</td><td>⚠️</td><td><code>gh repo view</code>: description set, no topics, no homepage, no license detected, Discussions off</td><td>Owner sets them (Q11); never set by an agent</td><td>owner</td></tr>
     </table>
 
     <h3 id="audit-docs">C. Docs and in-app help</h3>
     <table data-c="audit-docs">
       <tr><th>Item</th><th>Status</th><th>Evidence</th><th>Gap</th><th>WU</th></tr>
-      <tr><td>User-facing docs</td><td>❌</td><td>Every <code>docs/*.html</code> is engineering/process; <code>docs/use-cases/</code> are specs; only end-user text is the release notes</td><td>A user guide: install, trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (incl. removing the CA)</td><td>W6</td></tr>
-      <tr><td>About</td><td>⚠️</td><td>macOS predefined About <code>ui/src-tauri/src/menu.rs:126-140</code>; Windows/Linux none</td><td>About on every OS with version, license, copyright, links</td><td>W4</td></tr>
-      <tr><td>Version display</td><td>⚠️</td><td>About (macOS) + update dialogs <code>ui/src-tauri/src/update.rs:162,211,264</code>; React UI never shows it</td><td>Version in Settings</td><td>W4</td></tr>
-      <tr><td>Help menu / links</td><td>❌</td><td>No Help items, no external links; no opener plugin in <code>ui/src-tauri/Cargo.toml</code></td><td>Help → User guide · Report an issue · Third-party licenses · Privacy</td><td>W4</td></tr>
+      <tr><td>User-facing docs</td><td>❌</td><td>Every <code>docs/*.html</code> is engineering/process; <code>docs/use-cases/</code> are specs; only end-user text is the release notes</td><td>A user guide: install, trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (incl. removing the CA)</td><td>W12 → W6</td></tr>
+      <tr><td>About</td><td>⚠️</td><td>macOS predefined About <code>ui/src-tauri/src/menu.rs:126-140</code>; Windows/Linux none</td><td>About on every OS with version, license, copyright, links</td><td>W13 → W4</td></tr>
+      <tr><td>Version display</td><td>⚠️</td><td>About (macOS) + update dialogs <code>ui/src-tauri/src/update.rs:162,211,264</code>; React UI never shows it</td><td>Version in Settings</td><td>W13 → W4</td></tr>
+      <tr><td>Help menu / links</td><td>❌</td><td>No Help items, no external links; no opener plugin in <code>ui/src-tauri/Cargo.toml</code></td><td>Help → User guide · Report an issue · Third-party licenses · Privacy</td><td>W13 → W4</td></tr>
     </table>
 
     <h3 id="audit-legal">D. Legal and privacy</h3>
@@ -108,119 +108,33 @@
       <tr><td>CI actions pinned by tag, not SHA</td><td>roadmap 149</td><td>follow-up</td></tr>
     </table>
 
-    <h2 id="logo">Logo — three directions (owner picks, Q3)</h2>
-    <p>The UI is warm-dark with zero chromatic accent (DEC-19): canvas <code>#2b2622</code>, ink <code>#f7f5f0</code>, ink-strong <code>#dad2c1</code>, mute <code>#aea69c</code>; the wordmark is Instrument Serif italic. Each direction keeps that palette; only C spends one semantic colour.</p>
-    <div class="cards" data-c="logo-directions">
-      <div class="card"><h4>A · The net</h4><p>A trawl net drawn as 4–5 converging hairlines closing into a knot, ink on a canvas squircle. Says "captures what passes through". Tray glyph = the same cone, solid. Scales well to 16px as a triangle-ish silhouette.</p></div>
-      <div class="card"><h4>B · The serif T</h4><p>Instrument Serif italic "T" in ink on canvas, one thin horizontal line crossing the stem (the wire). Matches the existing wordmark exactly; most restrained. Weak at 16px unless the stem is thickened for the small sizes.</p></div>
-      <div class="card"><h4>C · Hook and packet</h4><p>A hook catching a pair of braces <code>{ }</code>, ink on canvas, with one ok-green <code>#4cc38a</code> dot as the "capturing" light; tray running = dot shown, stopped = dot hollow. Most literal; the only one that spends colour.</p></div>
-    </div>
+    <h2 id="logo">Logo — designed in W9, with the owner in the loop</h2>
+    <div class="callout warn"><strong>Owner ruling (v3): none of the v2 drafts A (net), B (serif T), C (hook and packet) is good.</strong> They are not options any more. W9 starts from a fresh, wider exploration; the drafts stay only in this doc's v2 snapshot (<code>?diff</code>) as rejected round 0.</div>
+    <p>Palette constraint carried into W9: the UI is warm-dark with zero chromatic accent (DEC-19) — canvas <code>#2b2622</code>, ink <code>#f7f5f0</code>, ink-strong <code>#dad2c1</code>, mute <code>#aea69c</code>; wordmark face Instrument Serif italic. W9 may propose a brand accent; spending colour in the UI stays a DEC-19 question.</p>
+    <table data-c="logo-roles">
+      <tr><th>Owner supplies</th><th>Agent produces</th></tr>
+      <tr><td>Kickoff taste brief, answered in the W9 doc's comments: 3–5 adjectives, logos/apps liked and disliked, must-avoid motifs, colour allowed or ink-only</td><td>A T3 design doc <code>docs/work/&lt;date&gt;-brand-design.html</code> (htmldoc), one revision per round, snapshot + <code>?diff=latest</code></td></tr>
+      <tr><td>Per round: a pick (shortlist) + what to keep / drop, as htmldoc comments</td><td>Per candidate: hand-authored text SVG; rendered previews at <strong>16 · 32 · 128 · 1024 px</strong> on <strong>light and dark</strong>; in-context mocks (macOS Dock + menu bar, Windows taskbar, Linux panel, README header)</td></tr>
+      <tr><td>The final signature: a ruling comment "signed: &lt;candidate&gt;" on the final round</td><td>The signed system committed as sources: <code>ui/src-tauri/icons/source/</code> <code>icon.svg</code>, <code>icon-small.svg</code>, <code>tray-{running,stopped}-template.svg</code>, <code>tray-{running,stopped}.svg</code>, <code>wordmark-{dark,light}.svg</code> + the palette table</td></tr>
+    </table>
+    <table data-c="logo-rounds">
+      <tr><th>Round</th><th>Agent shows</th><th>Owner returns</th></tr>
+      <tr><td>R1 explore</td><td>6–8 concepts across distinct families (pictorial, letterform, abstract, symbol), app icon + 16 px glyph each</td><td>2–3 picks + notes</td></tr>
+      <tr><td>R2 refine</td><td>2–3 variants per pick; tray template + coloured pairs; wordmark lockups</td><td>1 finalist (or back to R1 with a new brief)</td></tr>
+      <tr><td>R3 system</td><td>The finalist as the full system: app icon, small-size variant, tray glyph states (macOS template running/stopped by shape; Windows/Linux coloured), wordmark dark/light, palette</td><td><strong>signature</strong> — the exit criterion</td></tr>
+      <tr><td>R4+</td><td>Only on owner request; each extra round repeats R2 or R3</td><td>—</td></tr>
+    </table>
+    <p><strong>Exit:</strong> the owner signs the final mark and the signed SVG sources are committed on the W9 branch. <strong>Blocked until then:</strong> W10 (installer art needs the mark) · W3 (generates from the sources) · and through W3: W4, W5, W6. Not blocked: W1, W2, W7, W8, W11, W12, W13, W14 (they keep a logo slot).</p>
     <table data-c="logo-pipeline">
       <tr><th>Step</th><th>How (reproducible)</th></tr>
-      <tr><td>Source</td><td><code>ui/src-tauri/icons/source/icon.svg</code> (1024 viewBox, full-bleed squircle) + <code>tray.svg</code> (monochrome, alpha only) + installer-art SVGs, all hand-authored text SVG in git</td></tr>
+      <tr><td>Source</td><td>The W9-signed sources in <code>ui/src-tauri/icons/source/</code> (icon 1024 viewBox, small-size variant, tray template + coloured pairs, wordmarks) + the W10-signed installer-art SVGs, all hand-authored text SVG in git</td></tr>
       <tr><td>Generate</td><td><code>cargo xtask icons</code> → <code>pnpm tauri icon source/icon.svg -o &lt;tmp&gt;</code> (Tauri 2 CLI takes SVG), copies the five files <code>bundle.icon</code> lists, renders the tray pairs and installer BMP/PNG at the sizes in <a href="#brand-kit">Brand kit</a></td></tr>
       <tr><td>Prove</td><td>A unit test: every generated file matches the dimensions/format its consumer requires (icns, ico layers, BMP for NSIS/WiX), and a recorded source hash equals the current SVG's — a source edited without regenerating is red</td></tr>
       <tr><td>Use</td><td>Favicon + About + onboarding header import the same SVG; README uses a PNG export</td></tr>
     </table>
 
-    <h3 id="logo-examples">Examples — drafts, not final art</h3>
-    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-      <defs>
-        <symbol id="icon-a" viewBox="0 0 1024 1024">
-          <rect x="100" y="100" width="824" height="824" rx="185" fill="#2b2622" stroke="#3d3631" stroke-width="6"/>
-          <g fill="none" stroke-linecap="round">
-            <path d="M300 300 Q250 512 300 724" stroke="#f7f5f0" stroke-width="18"/>
-            <g stroke="#f7f5f0" stroke-width="18">
-              <path d="M300 300 L740 512"/><path d="M300 406 L740 512"/><path d="M300 512 L740 512"/><path d="M300 618 L740 512"/><path d="M300 724 L740 512"/>
-            </g>
-            <g stroke="#aea69c" stroke-width="10">
-              <path d="M410 353 Q390 512 410 671"/><path d="M520 406 Q505 512 520 618"/><path d="M630 459 Q622 512 630 565"/>
-            </g>
-            <path d="M788 512 L830 512" stroke="#dad2c1" stroke-width="14"/>
-          </g>
-          <circle cx="762" cy="512" r="28" fill="#f7f5f0"/>
-        </symbol>
-        <symbol id="icon-b" viewBox="0 0 1024 1024">
-          <rect x="100" y="100" width="824" height="824" rx="185" fill="#2b2622" stroke="#3d3631" stroke-width="6"/>
-          <path d="M180 560 L844 560" stroke="#aea69c" stroke-width="10" stroke-linecap="round"/>
-          <g fill="#f7f5f0">
-            <polygon points="330,290 740,290 728,350 318,350"/>
-            <polygon points="520,350 600,350 520,740 440,740"/>
-            <polygon points="400,724 568,724 564,744 396,744"/>
-          </g>
-        </symbol>
-        <symbol id="icon-c" viewBox="0 0 1024 1024">
-          <rect x="100" y="100" width="824" height="824" rx="185" fill="#2b2622" stroke="#3d3631" stroke-width="6"/>
-          <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M400 330 C340 330 360 420 360 470 C360 500 340 512 300 512 C340 512 360 524 360 554 C360 604 340 694 400 694" stroke="#f7f5f0" stroke-width="34"/>
-            <path d="M624 330 C684 330 664 420 664 470 C664 500 684 512 724 512 C684 512 664 524 664 554 C664 604 684 694 624 694" stroke="#f7f5f0" stroke-width="34"/>
-            <path d="M512 210 V450 Q512 520 462 520 Q430 520 430 486" stroke="#dad2c1" stroke-width="26"/>
-          </g>
-          <circle cx="512" cy="610" r="36" fill="#4cc38a"/>
-        </symbol>
-        <symbol id="tray-a-run" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3 L12.5 8 L1.5 13 Z"/><circle cx="13.6" cy="8" r="1.6"/></symbol>
-        <symbol id="tray-a-stop" viewBox="0 0 16 16"><path d="M2 3.8 L12 8 L2 12.2 Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="13.6" cy="8" r="1.4" fill="none" stroke="currentColor" stroke-width="1.1"/></symbol>
-        <symbol id="tray-b-run" viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14.2,2 13.8,4.4 3.6,4.4"/><polygon points="8.4,4.4 10.6,4.4 8,14 5.8,14"/><rect x="0.5" y="8.6" width="15" height="1.3"/></symbol>
-        <symbol id="tray-b-stop" viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14.2,2 13.8,4.4 3.6,4.4"/><polygon points="8.4,4.4 10.6,4.4 8,14 5.8,14"/></symbol>
-        <symbol id="tray-c-run" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 2.5 C3.5 2.5 4 5 4 6.5 C4 7.5 3.5 8 2.5 8 C3.5 8 4 8.5 4 9.5 C4 11 3.5 13.5 5 13.5"/><path d="M11 2.5 C12.5 2.5 12 5 12 6.5 C12 7.5 12.5 8 13.5 8 C12.5 8 12 8.5 12 9.5 C12 11 12.5 13.5 11 13.5"/></g><circle cx="8" cy="8" r="2.1" style="fill:var(--dot,currentColor)"/></symbol>
-        <symbol id="tray-c-stop" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 2.5 C3.5 2.5 4 5 4 6.5 C4 7.5 3.5 8 2.5 8 C3.5 8 4 8.5 4 9.5 C4 11 3.5 13.5 5 13.5"/><path d="M11 2.5 C12.5 2.5 12 5 12 6.5 C12 7.5 12.5 8 13.5 8 C12.5 8 12 8.5 12 9.5 C12 11 12.5 13.5 11 13.5"/><circle cx="8" cy="8" r="1.7" stroke-width="1.2"/></g></symbol>
-      </defs>
-    </svg>
-    <table data-c="logo-examples">
-      <tr><th>Dir.</th><th>App icon (1024 source, shown at 128)</th><th>macOS tray — template, running · stopped (16 and 32 px, on light and dark menu bar)</th><th>Windows / Linux tray — coloured, running · stopped (16 and 32 px)</th><th>Wordmark lockup (dark · light)</th></tr>
-      <tr>
-        <td><strong>A</strong><br>net</td>
-        <td><svg width="128" height="128"><use href="#icon-a"/></svg></td>
-        <td>
-          <div style="background:#ececec;color:#000;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-a-run"/></svg><svg width="16" height="16"><use href="#tray-a-stop"/></svg><svg width="32" height="32"><use href="#tray-a-run"/></svg><svg width="32" height="32"><use href="#tray-a-stop"/></svg></div><br>
-          <div style="background:#1e1e1e;color:#fff;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-a-run"/></svg><svg width="16" height="16"><use href="#tray-a-stop"/></svg><svg width="32" height="32"><use href="#tray-a-run"/></svg><svg width="32" height="32"><use href="#tray-a-stop"/></svg></div>
-        </td>
-        <td>
-          <div style="background:#202020;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16" style="color:#4cc38a"><use href="#tray-a-run"/></svg><svg width="16" height="16" style="color:#aea69c"><use href="#tray-a-stop"/></svg><svg width="32" height="32" style="color:#4cc38a"><use href="#tray-a-run"/></svg><svg width="32" height="32" style="color:#aea69c"><use href="#tray-a-stop"/></svg></div><br>
-          <div style="background:#f3f3f3;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16" style="color:#1f8f5b"><use href="#tray-a-run"/></svg><svg width="16" height="16" style="color:#6b645c"><use href="#tray-a-stop"/></svg><svg width="32" height="32" style="color:#1f8f5b"><use href="#tray-a-run"/></svg><svg width="32" height="32" style="color:#6b645c"><use href="#tray-a-stop"/></svg></div>
-        </td>
-        <td>
-          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#2b2622"/><use href="#icon-a" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#f7f5f0">Trawler</text></svg><br>
-          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#f7f5f0"/><use href="#icon-a" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#2b2622">Trawler</text></svg>
-        </td>
-      </tr>
-      <tr>
-        <td><strong>B</strong><br>serif T</td>
-        <td><svg width="128" height="128"><use href="#icon-b"/></svg></td>
-        <td>
-          <div style="background:#ececec;color:#000;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-b-run"/></svg><svg width="16" height="16"><use href="#tray-b-stop"/></svg><svg width="32" height="32"><use href="#tray-b-run"/></svg><svg width="32" height="32"><use href="#tray-b-stop"/></svg></div><br>
-          <div style="background:#1e1e1e;color:#fff;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-b-run"/></svg><svg width="16" height="16"><use href="#tray-b-stop"/></svg><svg width="32" height="32"><use href="#tray-b-run"/></svg><svg width="32" height="32"><use href="#tray-b-stop"/></svg></div>
-        </td>
-        <td>
-          <div style="background:#202020;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16" style="color:#4cc38a"><use href="#tray-b-run"/></svg><svg width="16" height="16" style="color:#aea69c"><use href="#tray-b-stop"/></svg><svg width="32" height="32" style="color:#4cc38a"><use href="#tray-b-run"/></svg><svg width="32" height="32" style="color:#aea69c"><use href="#tray-b-stop"/></svg></div><br>
-          <div style="background:#f3f3f3;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16" style="color:#1f8f5b"><use href="#tray-b-run"/></svg><svg width="16" height="16" style="color:#6b645c"><use href="#tray-b-stop"/></svg><svg width="32" height="32" style="color:#1f8f5b"><use href="#tray-b-run"/></svg><svg width="32" height="32" style="color:#6b645c"><use href="#tray-b-stop"/></svg></div>
-        </td>
-        <td>
-          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#2b2622"/><use href="#icon-b" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#f7f5f0">Trawler</text></svg><br>
-          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#f7f5f0"/><use href="#icon-b" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#2b2622">Trawler</text></svg>
-        </td>
-      </tr>
-      <tr>
-        <td><strong>C</strong><br>hook + packet</td>
-        <td><svg width="128" height="128"><use href="#icon-c"/></svg></td>
-        <td>
-          <div style="background:#ececec;color:#000;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32"><use href="#tray-c-stop"/></svg></div><br>
-          <div style="background:#1e1e1e;color:#fff;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32"><use href="#tray-c-stop"/></svg></div>
-        </td>
-        <td>
-          <div style="background:#202020;color:#dad2c1;--dot:#4cc38a;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16" style="color:#aea69c"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32" style="color:#aea69c"><use href="#tray-c-stop"/></svg></div><br>
-          <div style="background:#f3f3f3;color:#2b2622;--dot:#1f8f5b;padding:4px 8px;display:inline-flex;gap:8px;align-items:center;border-radius:4px;margin-top:4px"><svg width="16" height="16"><use href="#tray-c-run"/></svg><svg width="16" height="16" style="color:#6b645c"><use href="#tray-c-stop"/></svg><svg width="32" height="32"><use href="#tray-c-run"/></svg><svg width="32" height="32" style="color:#6b645c"><use href="#tray-c-stop"/></svg></div>
-        </td>
-        <td>
-          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#2b2622"/><use href="#icon-c" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#f7f5f0">Trawler</text></svg><br>
-          <svg width="220" height="64"><rect width="220" height="64" rx="6" fill="#f7f5f0"/><use href="#icon-c" x="4" y="4" width="56" height="56"/><text x="66" y="42" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="34" fill="#2b2622">Trawler</text></svg>
-        </td>
-      </tr>
-    </table>
-    <div class="callout warn">Drafts to choose a direction, not shipping art: hand-drawn SVG geometry, the wordmark uses live text (Georgia if Instrument Serif is not installed; the final converts it to outlines). The tray glyphs are redrawn for 16 px rather than shrunk from the 1024 icon — C drops its hook at tray size. Swatch backgrounds mimic a light/dark macOS menu bar and a dark/light Windows taskbar.</div>
-
     <h2 id="brand-kit">Brand kit — what you prepare, what is generated</h2>
-    <p>Minimum from you: pick A, B or C (or hand over your own master SVG). W3 then draws everything in the first table from it; you approve the rendered set at real size on each OS before it merges.</p>
+    <p>#1–#5 are signed in W9, #6–#9 in W10; W3 then generates everything in the second table from the signed sources, and you approve the rendered set at real size on each OS before it merges.</p>
     <table data-c="brand-kit-supply">
       <tr><th>#</th><th>Deliverable</th><th>Format · size</th><th>Platform rules</th><th>You</th></tr>
       <tr><td>1</td><td>Master app icon</td><td>SVG, 1024×1024 viewBox (or PNG 1024×1024 RGBA, sRGB)</td><td>macOS grid: body 824×824 centred (100 px margin), continuous corner ≈185 px, transparent outside, no baked shadow. Windows/Linux reuse it as is (padding is fine there)</td><td>supply or approve</td></tr>
@@ -274,42 +188,74 @@
     </div>
 
     <h2 id="wu-graph">WU graph</h2>
+    <p>Rule (v3): every content item has an owner-reviewed <strong>design</strong> WU before its <strong>build</strong> WU. W1–W8 keep their ids; W3–W6 are now the build WUs of W9–W13; W9–W14 are appended.</p>
     <div class="diagram" data-c="wu-graph">
       <pre class="mermaid">
 flowchart LR
-  Q1([Q1 licence]) --> W1
-  Q2([Q2 holder]) --> W1
-  Q3([Q3 brand]) --> W3
-  Q4([Q4 md files]) --> W5
-  Q5([Q5 auto-check]) --> W4
-  Q6([Q6 guide home]) --> W6
-  W1[W1 licence + metadata] --> W2[W2 third-party notice]
-  W2 --> W4[W4 About + Help]
-  W3[W3 brand assets] --> W4
-  W3 --> W5[W5 README + community]
-  W5 --> W6[W6 user guide]
-  W7[W7 release process + matrix]
-  W8[W8 updater F4 + F7]
-  W4 --> RC([last rc: matrix run])
+  classDef design stroke-dasharray: 4 3
+  classDef running stroke-width:3px
+  W1[W1 licence + metadata]:::running --> W2[W2 third-party notice]
+  W7[W7 release process + matrix]:::running
+  W8[W8 updater F4 + F7]:::running
+  W9{{W9 design: logo + brand system}}:::design -- owner signs mark --> W10{{W10 design: installer art + social}}:::design
+  W9 --> W3[W3 build: brand assets]
+  W10 --> W3
+  W11{{W11 design: public text}}:::design --> W12{{W12 design: user guide}}:::design
+  W11 --> W5[W5 build: README + community]
+  W11 --> W14[W14 build: notes + CHANGELOG copy]
+  W7 --> W14
+  W13{{W13 design: About / Help / version UX}}:::design --> W4[W4 build: About + Help]
+  W2 --> W4
+  W3 --> W4
+  W3 --> W5
+  W5 --> W6[W6 build: user guide]
+  W12 --> W6
+  W4 --> RC([rc 0.1.0-5: matrix run])
   W6 --> RC
-  W7 --> RC
   W8 --> RC
+  W14 --> RC
       </pre>
-      <div class="caption">Parallel starts: W1 and W7/W8 now (Q1, Q2, Q8, Q9 answered); W3 once Q3 picks a logo (separate worktrees). W9 (paid signing) dropped by Q7.</div>
+      <div class="caption">Hexagon dashed = design WU (owner review via htmldoc comments, exit = owner sign-off). Thick = running now (W1, W7, W8). Every arrow is "merged into <code>epic/prorelease</code>" except a design WU's outgoing edge, which is "signed off by the owner".</div>
     </div>
+
+    <h3 id="run-order">Run order — waves</h3>
+    <table data-c="run-order">
+      <tr><th>Wave</th><th>WUs (one worktree each, in parallel)</th><th>Entry condition</th></tr>
+      <tr><td>1</td><td>W1 · W7 · W8 <em>(running)</em> · W9 · W11 · W13</td><td>W1/W7/W8: started. W9/W11/W13: this plan v3 committed on the epic; W9 also needs the owner's kickoff taste brief</td></tr>
+      <tr><td>2</td><td>W2 · W10 · W12 · W14</td><td>W2: W1 merged · W10: the owner signed the W9 mark · W12: W11 signed off · W14: W7 merged and W11 signed off</td></tr>
+      <tr><td>3</td><td>W3</td><td>W9 and W10 signed off</td></tr>
+      <tr><td>4</td><td>W4 · W5</td><td>W4: W2 and W3 merged, W13 signed off · W5: W3 merged, W11 signed off</td></tr>
+      <tr><td>5</td><td>W6</td><td>W5 merged, W12 signed off</td></tr>
+      <tr><td>6</td><td>rc <code>0.1.0-5</code> + the W7 hand-check matrix</td><td>every WU merged; the epic gate green (Q9)</td></tr>
+    </table>
+    <p>A design WU may start in the wave listed and stay open across later waves while rounds run; only its sign-off moves its dependents. A design WU whose dependent build is already running is not reopened — a change after sign-off is a new design round recorded in the same design doc.</p>
 
     <h2 id="wu-summaries">WU summaries</h2>
     <div data-item="wu-summaries">
       <table data-c="wu-table">
-        <tr><th>WU</th><th>Owner Q</th><th>Parallel</th><th>Independent router review</th><th>Design review</th></tr>
-        <tr><td>W1</td><td>Q1 ✅ Q2 ✅ Q10 ✅</td><td>start</td><td>yes (<code>ui/src-tauri</code>)</td><td>—</td></tr>
-        <tr><td>W2</td><td>—</td><td>after W1</td><td>yes (<code>ui/src-tauri</code> resources)</td><td>—</td></tr>
-        <tr><td>W3</td><td>Q3 ⏳</td><td>start</td><td>yes (<code>ui/src-tauri</code> icons, conf)</td><td>—</td></tr>
-        <tr><td>W4</td><td>Q5 ✅</td><td>after W2, W3</td><td>yes (<code>ui/src-tauri</code> menu, opener capability)</td><td>yes (renders <code>ui/src</code>)</td></tr>
-        <tr><td>W5</td><td>Q4 ✅</td><td>after W3</td><td>yes (<code>.github/</code> templates)</td><td>—</td></tr>
-        <tr><td>W6</td><td>Q6 ✅</td><td>after W5</td><td>—</td><td>—</td></tr>
-        <tr><td>W7</td><td>Q8 ✅ Q9 ✅</td><td>start</td><td>yes (<code>.github/workflows</code>, <code>release-notes.md</code>)</td><td>—</td></tr>
-        <tr><td>W8</td><td>Q8 ✅</td><td>start</td><td>yes (<code>ui/src-tauri/src/update.rs</code>)</td><td>—</td></tr>
+        <tr><th>WU</th><th>Kind</th><th>Title</th><th>Depends</th><th>Owner input</th><th>Wave</th><th>Status</th><th>Independent router review</th><th>Design review</th></tr>
+        <tr><td>W1</td><td>build</td><td>licence + metadata</td><td>Q1 ✅ Q2 ✅</td><td>—</td><td>1</td><td>running</td><td>yes (<code>ui/src-tauri</code>)</td><td>—</td></tr>
+        <tr><td>W2</td><td>build</td><td>third-party notice</td><td>W1</td><td>—</td><td>2</td><td>planned</td><td>yes (<code>ui/src-tauri</code> resources)</td><td>—</td></tr>
+        <tr><td>W3</td><td>build</td><td>brand assets</td><td>W9, W10</td><td>approve the rendered set per OS</td><td>3</td><td>planned</td><td>yes (<code>ui/src-tauri</code> icons, conf, tray)</td><td>—</td></tr>
+        <tr><td>W4</td><td>build</td><td>About + Help + version</td><td>W2, W3, W13</td><td>—</td><td>4</td><td>planned</td><td>yes (<code>ui/src-tauri</code> menu, opener)</td><td>yes (cites W13's design run)</td></tr>
+        <tr><td>W5</td><td>build</td><td>README + community files</td><td>W3, W11</td><td>—</td><td>4</td><td>planned</td><td>yes (<code>.github/</code> templates)</td><td>—</td></tr>
+        <tr><td>W6</td><td>build</td><td>user guide</td><td>W5, W12</td><td>—</td><td>5</td><td>planned</td><td>—</td><td>—</td></tr>
+        <tr><td>W7</td><td>build</td><td>release process, notes, checksums, matrix</td><td>Q8 ✅ Q9 ✅</td><td>—</td><td>1</td><td>running</td><td>yes (<code>.github/workflows</code>)</td><td>—</td></tr>
+        <tr><td>W8</td><td>build</td><td>updater F4 + F7</td><td>Q8 ✅</td><td>—</td><td>1</td><td>running</td><td>yes (<code>update.rs</code>)</td><td>—</td></tr>
+        <tr><td>W9</td><td>design</td><td>logo + brand system</td><td>Q3</td><td>taste brief, picks per round, <strong>signs the mark</strong></td><td>1</td><td>planned</td><td>—</td><td>—</td></tr>
+        <tr><td>W10</td><td>design</td><td>installer art + social preview</td><td>W9 signed</td><td>picks, sign-off</td><td>2</td><td>planned</td><td>—</td><td>—</td></tr>
+        <tr><td>W11</td><td>design</td><td>public text: voice, README, community, notes voice</td><td>—</td><td>pitch + tone pick, sign-off</td><td>1</td><td>planned</td><td>—</td><td>—</td></tr>
+        <tr><td>W12</td><td>design</td><td>user guide</td><td>W11 signed</td><td>outline review, sign-off</td><td>2</td><td>planned</td><td>—</td><td>—</td></tr>
+        <tr><td>W13</td><td>design</td><td>About / Help / Settings-version UX</td><td>—</td><td>mockup review, sign-off</td><td>1</td><td>planned</td><td>—</td><td>the design run W4 cites</td></tr>
+        <tr><td>W14</td><td>build</td><td>release notes + CHANGELOG copy</td><td>W7, W11</td><td>—</td><td>2</td><td>planned</td><td>yes (<code>.github/release-notes.md</code>)</td><td>—</td></tr>
+      </table>
+      <table data-c="design-merges">
+        <tr><th>Merged into one design WU</th><th>Why one design covers them</th></tr>
+        <tr><td>W9: mark · wordmark · palette · tray glyph states · app icon</td><td>One mark drawn at every size; the tray glyph and wordmark are that mark redrawn, not separate ideas — splitting them would sign a mark before its 16 px form is known</td></tr>
+        <tr><td>W10: DMG · NSIS · WiX art · GitHub social preview</td><td>All are the signed mark composed on a fixed canvas; one layout grammar (margins, text-safe areas) serves all four</td></tr>
+        <tr><td>W11: voice · README information architecture + pitch + screenshot list · community files · release notes / CHANGELOG voice</td><td>One voice for every GitHub-facing text, and one information architecture decides which fact lives in which file (one fact per place); notes are the same reader on the same surface</td></tr>
+        <tr><td>W12 kept apart from W11</td><td>The guide is the largest text with per-OS flows that need their own mockups (unsigned-app steps, CA trust, uninstall); it starts once W11 fixes the README/guide boundary</td></tr>
+        <tr><td>W13 kept apart</td><td>It renders <code>ui/src</code>: design rules apply and the design-review step needs a <code>design-run</code> artifact, which the text designs do not produce</td></tr>
       </table>
 
       <div data-wu="E-PRORELEASE.W1">
@@ -329,35 +275,35 @@ flowchart LR
       </div>
 
       <div data-wu="E-PRORELEASE.W3">
-        <h3 id="w3">W3 — brand assets from one source</h3>
-        <p data-item="wu-summary">The chosen mark as SVG sources (<a href="#brand-kit">Brand kit</a> #1–#8); <code>cargo xtask icons</code> regenerates the app icon set, the macOS template and Windows/Linux coloured tray pairs (template set on macOS only), DMG background/layout, NSIS header/sidebar, WiX banner/dialog and the favicon; <code>tauri.conf.json</code> references the installer art.</p>
+        <h3 id="w3">W3 — build: brand assets from the signed sources</h3>
+        <p data-item="wu-summary">From the W9 + W10 signed SVG sources (<a href="#brand-kit">Brand kit</a> #1–#8, unchanged — a needed edit goes back to its design WU), <code>cargo xtask icons</code> regenerates the app icon set, the macOS template and Windows/Linux coloured tray pairs (template set on macOS only), DMG background/layout, NSIS header/sidebar, WiX banner/dialog and the favicon; <code>tauri.conf.json</code> references the installer art.</p>
         <p data-item="wu-maps-to">UC-INSTALL; new DEC (one source, generated icon set).</p>
         <p data-item="wu-expected">Unit: generated files have the sizes/formats their consumers require and the recorded source hash matches the SVG. Integration: the packaged bundle's icon is the generated one (hash), the tray loads both glyphs.</p>
-        <p data-item="wu-deps">Q3</p>
+        <p data-item="wu-deps">W9 signed, W10 signed</p>
       </div>
 
       <div data-wu="E-PRORELEASE.W4">
-        <h3 id="w4">W4 — About and Help on every OS</h3>
-        <p data-item="wu-summary">About on Windows/Linux (version, licence, copyright, logo) matching macOS; Help menu: User guide, Report an issue (prefilled with version and OS), Third-party licences (opens the bundled notice), Privacy; version shown in Settings; the auto-check switch if Q5 says so.</p>
+        <h3 id="w4">W4 — build: About, Help and version on every OS</h3>
+        <p data-item="wu-summary">Built from the W13 design run (cited in its <code>design/v1</code> note). About on Windows/Linux (version, licence, copyright, logo) matching macOS; Help menu: User guide, Report an issue (prefilled with version and OS), Third-party licences (opens the bundled notice), Privacy; version shown in Settings; the auto-check switch if Q5 says so.</p>
         <p data-item="wu-maps-to">UC-ABOUT, UC-UPDATE.</p>
         <p data-item="wu-expected">Unit: menu builder carries the Help items on each OS; the issue URL encodes version + OS. Integration: Settings renders the version from the core/app. E2E: WebDriver opens Settings and reads the running version.</p>
-        <p data-item="wu-deps">W2, W3, Q5</p>
+        <p data-item="wu-deps">W2, W3, W13 signed, Q5 ✅</p>
       </div>
 
       <div data-wu="E-PRORELEASE.W5">
-        <h3 id="w5">W5 — README and community files</h3>
-        <p data-item="wu-summary">User-first README (logo, pitch, screenshots, install per OS with the unsigned-download explanation (Gatekeeper "Open Anyway", SmartScreen "More info → Run anyway", with screenshots) and checksum check, first run, usage, privacy, FAQ, known limits, licence); developer content moves to CONTRIBUTING; SECURITY (private advisories, CA-key note), CODE_OF_CONDUCT, issue/PR templates; screenshots produced by an e2e script, not by hand.</p>
+        <h3 id="w5">W5 — build: README and community files</h3>
+        <p data-item="wu-summary">Written to the W11 signed outline, voice and screenshot list. User-first README (logo, pitch, screenshots, install per OS with the unsigned-download explanation (Gatekeeper "Open Anyway", SmartScreen "More info → Run anyway", with screenshots) and checksum check, first run, usage, privacy, FAQ, known limits, licence); developer content moves to CONTRIBUTING; SECURITY (private advisories, CA-key note), CODE_OF_CONDUCT, issue/PR templates; screenshots produced by an e2e script, not by hand.</p>
         <p data-item="wu-maps-to">UC-INSTALL, UC-ABOUT.</p>
         <p data-item="wu-expected">Unit: a check that every README link/image path resolves and the install table names exactly the artifacts <code>package.rs</code> builds per host. The screenshot script runs under the e2e harness.</p>
-        <p data-item="wu-deps">W3, Q4</p>
+        <p data-item="wu-deps">W3, W11 signed, Q4 ✅</p>
       </div>
 
       <div data-wu="E-PRORELEASE.W6">
-        <h3 id="w6">W6 — user guide</h3>
-        <p data-item="wu-summary">Install (incl. getting past the unsigned-app prompt: macOS Privacy &amp; Security → Open Anyway, Windows SmartScreen → More info → Run anyway; verifying <code>SHA256SUMS</code>), trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (remove the app, the CA trust and the app data dir), troubleshooting; where per Q6.</p>
+        <h3 id="w6">W6 — build: user guide</h3>
+        <p data-item="wu-summary">Written to the W12 signed outline and per-OS flows. Install (incl. getting past the unsigned-app prompt: macOS Privacy &amp; Security → Open Anyway, Windows SmartScreen → More info → Run anyway; verifying <code>SHA256SUMS</code>), trust the CA per OS, per-app proxy, filters, inspect, compose/replay, HAR export, uninstall (remove the app, the CA trust and the app data dir), troubleshooting; where per Q6.</p>
         <p data-item="wu-maps-to">UC-INSTALL, UC-ONBOARD, UC-ABOUT (Help → User guide target).</p>
         <p data-item="wu-expected">Unit: the Help → User guide URL resolves to the guide's location; links resolve. Docs-only otherwise (test layer waived with reason).</p>
-        <p data-item="wu-deps">W5, Q6</p>
+        <p data-item="wu-deps">W5, W12 signed, Q6 ✅</p>
       </div>
 
       <div data-wu="E-PRORELEASE.W7">
@@ -376,6 +322,54 @@ flowchart LR
         <p data-item="wu-deps">Q8</p>
       </div>
 
+      <div data-wu="E-PRORELEASE.W9">
+        <h3 id="w9">W9 — design: logo and brand system</h3>
+        <p data-item="wu-summary">Owner-in-the-loop design of the mark, wordmark, palette, tray glyph states (macOS template running/stopped by shape; Windows/Linux coloured pair) and app icon incl. small-size variant, in rounds R1 explore → R2 refine → R3 system (R4+ on request) as laid out in <a href="#logo">Logo</a>. Owner supplies the taste brief, picks and the signature; the agent supplies SVG candidates and rendered previews at 16/32/128/1024 on light and dark plus in-context mocks. Ends by committing the signed sources to <code>ui/src-tauri/icons/source/</code>.</p>
+        <p data-item="wu-maps-to">UC-INSTALL (brand in the installed app); the W3 DEC (one-source brand assets) records the signed mark.</p>
+        <p data-item="wu-expected">Design doc only, no code: test layer waived ("design WU, no code; its build WU carries the tests"); <code>verify-doc</code> green; exit = the owner's sign-off ruling recorded in the doc. The committed sources are valid SVG with the viewBoxes in <a href="#brand-kit">Brand kit</a> #1–#5 (checked by W3's unit test).</p>
+        <p data-item="wu-deps">Q3; the owner's kickoff taste brief. Blocks W10, W3 (and through W3: W4, W5, W6).</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W10">
+        <h3 id="w10">W10 — design: installer art and social preview</h3>
+        <p data-item="wu-summary">Layouts for the DMG background (icon + Applications positions, window size), NSIS header/sidebar, WiX banner/dialog (text-safe light areas) and the 1280×640 GitHub social preview, each mocked at real size with the installer chrome around it; 2 rounds (layout → final art); signed SVG sources committed for W3 to rasterize.</p>
+        <p data-item="wu-maps-to">UC-INSTALL.</p>
+        <p data-item="wu-expected">Design doc only, no code: test layer waived ("design WU, no code; its build WU carries the tests"); <code>verify-doc</code> green; exit = the owner's sign-off ruling recorded in the doc.</p>
+        <p data-item="wu-deps">W9 signed. Blocks W3.</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W11">
+        <h3 id="w11">W11 — design: public text (voice, README, community files, release-notes voice)</h3>
+        <p data-item="wu-summary">A voice guide (tone, person, terms, what never to promise); the README information architecture (section order, the one-line pitch with 2–3 alternatives for the owner, which fact lives in README vs GUIDE vs CONTRIBUTING vs SECURITY), the screenshot list (screen, state, size, light/dark) the W5 script must produce, outlines for CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, issue/PR templates, and the release notes / CHANGELOG entry voice with one sample entry. Mocked as rendered GitHub pages.</p>
+        <p data-item="wu-maps-to">UC-INSTALL, UC-ABOUT.</p>
+        <p data-item="wu-expected">Design doc only, no code: test layer waived ("design WU, no code; its build WU carries the tests"); <code>verify-doc</code> green; exit = the owner's sign-off ruling recorded in the doc.</p>
+        <p data-item="wu-deps">none (logo slot placeholder). Blocks W5, W12, W14.</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W12">
+        <h3 id="w12">W12 — design: user guide</h3>
+        <p data-item="wu-summary">The guide outline and per-OS flows as step tables with screenshot slots: download + verify <code>SHA256SUMS</code>, the unsigned-app prompt (macOS Privacy &amp; Security → Open Anyway; Windows SmartScreen → More info → Run anyway; Linux none), first run and CA trust per OS, per-app proxy, filters, inspect, compose/replay, HAR export, update, uninstall (app, CA trust, data dir), troubleshooting; the Help → User guide anchor scheme.</p>
+        <p data-item="wu-maps-to">UC-INSTALL, UC-ONBOARD, UC-ABOUT.</p>
+        <p data-item="wu-expected">Design doc only, no code: test layer waived ("design WU, no code; its build WU carries the tests"); <code>verify-doc</code> green; exit = the owner's sign-off ruling recorded in the doc.</p>
+        <p data-item="wu-deps">W11 signed (README/guide boundary, voice), Q6 ✅. Blocks W6.</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W13">
+        <h3 id="w13">W13 — design: About, Help menu and Settings version</h3>
+        <p data-item="wu-summary">A <code>design-run</code> doc under the design rules (<code>docs/design-rules/</code> loaded first): mockup of the About window (Windows/Linux, matching macOS), the Help menu per OS, the version row and the auto-check switch (Q5) in Settings, the third-party-licences and privacy views; capabilities, keyboard, proposals, owner review. Logo slot uses the W9 mark once signed, a placeholder before.</p>
+        <p data-item="wu-maps-to">UC-ABOUT, UC-UPDATE.</p>
+        <p data-item="wu-expected">Design doc only, no code: test layer waived ("design WU, no code; its build WU carries the tests"); <code>verify-doc</code> green; exit = the owner's sign-off ruling recorded in the doc. The design run is closed (archived status) so W4's <code>design-review</code> can cite it.</p>
+        <p data-item="wu-deps">none. Blocks W4.</p>
+      </div>
+
+      <div data-wu="E-PRORELEASE.W14">
+        <h3 id="w14">W14 — build: release notes and CHANGELOG copy</h3>
+        <p data-item="wu-summary">Apply the W11 signed voice to the W7 mechanism: rewrite <code>.github/release-notes.md</code> copy (install, unsigned-app note, verify) and write the <code>CHANGELOG.md</code> entry for the 0.1.0 line.</p>
+        <p data-item="wu-maps-to">UC-INSTALL, UC-UPDATE; DEC-86 (as amended by W7).</p>
+        <p data-item="wu-expected">Unit (<code>release_manifest.rs</code>, W7's tests extended): the rendered notes for a pre-release and a final carry the CHANGELOG section and the verify section; actionlint untouched (no workflow change).</p>
+        <p data-item="wu-deps">W7 merged, W11 signed.</p>
+      </div>
+
     </div>
 
     <h2 id="e2e-plan">E2E test plan</h2>
@@ -384,6 +378,7 @@ flowchart LR
         <tr><th>Journey</th><th>Proof</th></tr>
         <tr><td>Installed bundle carries brand, licence, notice</td><td><code>xtask/tests/package_bundle.rs</code> extended: icon hash, <code>Info.plist</code> copyright, notice resource present, window opens</td></tr>
         <tr><td>About/version visible</td><td>WebDriver e2e reads the version in Settings (W4)</td></tr>
+        <tr><td>Design WUs W9–W13</td><td>No test layer (design docs, no code; waived in their <code>test/v2</code> note); proof = the owner's sign-off ruling in each design doc; their builds (W3–W6, W14) carry the tests</td></tr>
         <tr><td>Install → first open → update → uninstall on each OS</td><td>The W7 matrix, run by hand on the last rc (OS prompts and real updates cannot run in CI)</td></tr>
       </table>
     </div>
@@ -393,7 +388,7 @@ flowchart LR
       <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th><th>Ruling</th></tr>
       <tr><td>Q1</td><td>Licence</td><td>MIT (already declared) · MIT OR Apache-2.0 (Rust norm, adds patent grant) · Apache-2.0 · GPL-3.0 / AGPL-3.0 (forks stay open; fewer adopters)</td><td><strong>MIT OR Apache-2.0</strong>; plain MIT is fine if you want the shortest</td><td>✅ <strong>MIT</strong></td></tr>
       <tr><td>Q2</td><td>Copyright holder / publisher name</td><td>Your legal name · "The Trawler contributors" · an organisation</td><td>Your name in LICENSE; "Trawler contributors" as publisher only if you expect outside contributors</td><td>✅ <strong>Vu Luu</strong> (LICENSE, publisher, copyright)</td></tr>
-      <tr><td>Q3</td><td>Logo direction</td><td>A net · B serif T · C hook and packet (see <a href="#logo">Logo</a>), or supply your own SVG</td><td><strong>A</strong>: readable at 16px, fits the tray template, no colour spent</td><td>⏳ open — see <a href="#logo-examples">Examples</a></td></tr>
+      <tr><td>Q3</td><td>Logo design WU (W9) scope — v2 drafts A/B/C rejected</td><td>(a) as planned: kickoff taste brief, R1 6–8 concepts → R2 refine → R3 full system, R4+ on request · (b) shorter: R1 3–4 concepts, then R3 · (c) you bring an outside designer's master SVG; W9 only adapts it (tray, small size, wordmark)</td><td><strong>(a)</strong>; colour: ink-only mark, brand accent allowed only in installer art and social preview</td><td>⏳ open — W9 starts on your answer + taste brief</td></tr>
       <tr><td>Q4</td><td>Root GitHub files (README, CONTRIBUTING, SECURITY, CODE_OF_CONDUCT, CHANGELOG, templates) in markdown — exempt from the HTML-docs rule as GitHub surface? Needs a CLAUDE.md edit you approve</td><td>yes · no (then GitHub shows raw HTML)</td><td><strong>yes</strong>; they are GitHub infrastructure like CLAUDE.md</td><td>✅ as proposed</td></tr>
       <tr><td>Q5</td><td>Launch update check is always on</td><td>keep, disclose · add a Settings switch (default on) · default off</td><td><strong>switch, default on</strong></td><td>✅ as proposed</td></tr>
       <tr><td>Q6</td><td>Where the user guide lives</td><td>README sections + <code>docs/guide/</code> markdown · GitHub Pages site · wiki</td><td><strong>One <code>GUIDE.md</code> at the root</strong> linked from README and Help; Pages later (Q12)</td><td>✅ as proposed</td></tr>
@@ -409,7 +404,7 @@ flowchart LR
     <div class="diagram" data-c="q9-diagram">
       <pre class="mermaid">
 flowchart LR
-  A[E-PRORELEASE: W1–W8 land] --> B[tag v0.1.0-5<br>release candidate]
+  A[E-PRORELEASE: W1–W14 land] --> B[tag v0.1.0-5<br>release candidate]
   B --> C{hand-check matrix<br>on macOS, Windows, Ubuntu}
   C -- a check fails --> D[fix, tag 0.1.0-6]
   D --> C
@@ -429,17 +424,18 @@ flowchart LR
     <div data-item="distillation-plan">
       <table>
         <tr><th>Tier</th><th>Change</th></tr>
-        <tr><td>T2 decisions</td><td>new DEC: licence + metadata + notice; new DEC: one-source brand assets; DEC-81 rule 4 stands (ad-hoc/unsigned confirmed by Q7, consequence documented); DEC-86 amended (checksums, CHANGELOG notes, publish rules); DEC-82 (F4, F7)</td></tr>
+        <tr><td>T2 decisions</td><td>new DEC: licence + metadata + notice; new DEC: one-source brand assets (records the W9 signed mark and palette); DEC-81 rule 4 stands (ad-hoc/unsigned confirmed by Q7, consequence documented); DEC-86 amended (checksums, CHANGELOG notes, publish rules); DEC-82 (F4, F7)</td></tr>
         <tr><td>T2 use cases</td><td>UC-INSTALL (metadata, verification), UC-UPDATE (F4/F7/switch), new UC-ABOUT; index</td></tr>
         <tr><td>T2 backlog</td><td>roadmap: a "v0.1.0 public release" row; rows 148/149 point to the matrix and what stayed open</td></tr>
         <tr><td>T1</td><td>new release-process doc (W7); <code>architecture.html</code> untouched unless W4 adds a plugin</td></tr>
+        <tr><td>T3</td><td>Each design doc (W9–W13) archives when its build WU merges (DEC-3); the W13 design run per DEC-28</td></tr>
         <tr><td>T0</td><td>CLAUDE.md markdown exemption only if Q4 = yes, edited on your request</td></tr>
       </table>
     </div>
 
     <h2 id="open-questions">Open questions</h2>
     <div data-item="open-questions">
-      <p>Only <strong>Q3 (logo direction)</strong> remains open — pick A, B or C from <a href="#logo-examples">Examples</a> or supply a master SVG; it gates W3 and through it W4 and W5. Q1–Q2, Q4–Q12 ruled. Unverified here: a trademark search; whether the app offers any "remove CA trust" action (the guide's uninstall steps depend on it); real rendering of the icon at 16px on each OS.</p>
+      <p>Only <strong>Q3 (logo design WU scope)</strong> remains open, plus the W9 kickoff taste brief; W9's sign-off gates W10 and W3, and through W3 W4, W5, W6. Q1–Q2, Q4–Q12 ruled. Design WUs W11 and W13 need no answer to start. Unverified here: a trademark search; whether the app offers any "remove CA trust" action (the guide's uninstall steps depend on it); real rendering of the icon at 16px on each OS.</p>
     </div>
 
   </main>

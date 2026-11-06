@@ -3,6 +3,9 @@ name = "xtask"
 version.workspace = true
 edition = "2021"
 description = "Repo tooling: the verify-dod done-gate over git-note evidence"
+license = "MIT"
+authors = ["Vu Luu"]
+homepage = "https://github.com/lesslucifer/Trawler"
 publish = false
 
 [lib]
