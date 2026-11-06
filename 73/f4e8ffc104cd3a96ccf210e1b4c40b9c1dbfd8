@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU third-party-notice -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W2
+branch: wu/prorelease/third-party-notice
+base: 5e15f58a2079cdfe096afad496935628f69342b7
+head: 73f4e8ffc104cd3a96ccf210e1b4c40b9c1dbfd8
+diff_sha256: b5056fc926837ee637a5c9cda5af12cb69e3b804dc49ba5753256f2bde371080
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 7
+  stage_seconds:
+    finders: 32
+    verifiers: 67
+  by_finder:
+    correctness: { found: 5, verified: 2 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 9, verified: 2, waived: 2 }
+waivers: []
+nits:
+  - finding: "standard_for keeps '+' in SPDX tokens, so an 'MPL-2.0+'-style expression on a package without a licence file is refused instead of falling back"
+    waived: "no package in today's crate or npm set carries '+'; the failure is a loud refusal naming the package, which DEC-88 rule 3 prefers to a silent gap"
+  - finding: "the AND refusal applies only to packages without their own text, so an AND-licensed package whose files cover only one of its licences passes"
+    waived: "DEC-88 rule 3 specifies this; every AND-licensed package in today's set ships texts for its licences (aws-lc-sys's single LICENSE is the combined text)"
+verdict: PASS
+date: 2026-11-06
