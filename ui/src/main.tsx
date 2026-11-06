@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { About } from "./About";
 import App from "./App";
 import { DataWindowScreen } from "./DataWindowScreen";
 import { isDataWindow } from "./dataWindow";
@@ -25,6 +26,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <DataWindowScreen />
     ) : page === "settings" ? (
       <Settings />
+    ) : page === "about" ? (
+      <About />
     ) : (
       <App />
     )}

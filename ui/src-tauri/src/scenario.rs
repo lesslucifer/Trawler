@@ -561,7 +561,12 @@ pub fn install(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::Wry
             crate::lifecycle::quit_app,
             crate::data_window::open_data_window,
             crate::data_window::take_data_payload,
-            crate::update::quit_cancelled
+            crate::update::quit_cancelled,
+            crate::update::update_prefs_read,
+            crate::update::update_automatic_write,
+            crate::update::check_for_updates,
+            crate::about::about_read,
+            crate::links::open_link
         ],
     )
 }

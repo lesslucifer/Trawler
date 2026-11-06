@@ -2,6 +2,7 @@
 // keeps the signature of the real command it stands in for.
 #![allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
 
+pub mod about;
 #[cfg(test)]
 mod bundle;
 pub mod core;
@@ -10,6 +11,7 @@ pub mod data_window;
 pub mod keep_capturing;
 pub mod layout;
 pub mod lifecycle;
+pub mod links;
 pub mod login_item;
 mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
@@ -137,7 +139,12 @@ pub fn run() {
         lifecycle::e2e_request_quit,
         data_window::open_data_window,
         data_window::take_data_payload,
-        update::quit_cancelled
+        update::quit_cancelled,
+        update::update_prefs_read,
+        update::update_automatic_write,
+        update::check_for_updates,
+        about::about_read,
+        links::open_link
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);

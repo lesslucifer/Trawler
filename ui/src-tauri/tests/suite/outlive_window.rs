@@ -15,7 +15,7 @@ use trawler_ui_lib::lifecycle::{self, Lifecycle};
 use trawler_ui_lib::settings::MAIN_WINDOW;
 use trawler_ui_lib::supervisor::{CoreState, Supervisor};
 
-use crate::common::{alive, bindable, eventually, flows_status, launch};
+use crate::common::{alive, bindable, eventually, flows_status, launch, LOCAL_URL};
 
 const SHIPPED_CONFIG: &str = include_str!("../../tauri.conf.json");
 const ROLE_VAR: &str = "TRAWLER_WINDOWLESS_ROLE_DIR";
@@ -78,7 +78,7 @@ fn invoke(window: &WebviewWindow<MockRuntime>, cmd: &str, body: serde_json::Valu
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::Json(body),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),

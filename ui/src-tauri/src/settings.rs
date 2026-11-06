@@ -6,7 +6,7 @@ use crate::window_geometry::{self, MinSize};
 
 pub const SETTINGS_WINDOW: &str = "settings";
 pub const MAIN_WINDOW: &str = "main";
-const PAGE_GLOBAL: &str = "__TRAWLER_PAGE__";
+pub const PAGE_GLOBAL: &str = "__TRAWLER_PAGE__";
 const SETTINGS_PAGE: &str = "settings";
 const SETTINGS_MIN: MinSize = MinSize { width: 440.0, height: 360.0 };
 

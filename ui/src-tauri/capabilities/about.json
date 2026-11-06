@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "about",
+  "description": "The About window gets the core defaults and may close itself (Esc); this limits plugin and core permissions only, not which app commands it may call",
+  "windows": ["about"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-close"
+  ]
+}

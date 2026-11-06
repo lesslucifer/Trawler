@@ -20,11 +20,13 @@
       "capabilities": [
         "default",
         "data-window",
+        "about",
         {
           "identifier": "wdio",
           "windows": [
             "main",
             "settings",
+            "about",
             "data-*"
           ],
           "permissions": [
