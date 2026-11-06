@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU inspect-form-parse -> epic/release-fixes (round 3)"
+epic: E-RELFIX
+wu: E-RELFIX.W2
+branch: wu/release-fixes/inspect-form-parse
+base: 200005e742d49bf0c70a99e99f306f692947476a
+head: ba74cb897a35452d1de1eb1d68b9d70c8753192a
+diff_sha256: 1de8b84a0abf1dbf8b75ec2037fe9f662ce2ac12bc5c0902b9a140070abc4f92
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 4
+    nit: 5
+  stage_seconds:
+    gate0: 22
+    finders: 52
+    verifiers: 33
+    total: 191
+  by_finder:
+    correctness: { found: 4, verified: 2 }
+    efficiency: { found: 1, verified: 1 }
+    altitude: { found: 3, verified: 2 }
+findings: { found: 8, verified: 5, waived: 0 }
+waivers: []
+nits:
+  - finding: "the window sniffs formShape over every payload whose label names no form, whatever its kind"
+    waived: "voids with this FAIL; the fix round gates it on the form kind"
+verdict: FAIL
+date: 2026-11-06
