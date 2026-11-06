@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU release-process -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W7
+branch: wu/prorelease/release-process
+base: 3e703f3a6542f09f54c039c9397d3509d0f91075
+head: fdca60b3726e415bc99e2bff62274dcce944b97b
+diff_sha256: beabfd3ea47b1c990bb31d44f46d5c51dfd019fe74330600fc0c7d233c1e765b
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 5
+  stage_seconds:
+    gate0: 33
+    finders: 23
+    total: 120
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency: { found: 2, verified: 1 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 5, verified: 4, waived: 0 }
+waivers: []
+nits:
+  - finding: "a second release-manifest run into the same dist hashes the first run's SHA256SUMS, latest.json and notes.md as assets"
+    waived: "the release job always runs it once on a freshly downloaded dist; latest.json and notes.md already behaved so before this diff"
+  - finding: "changes() ends a section at any '## ' line, so one inside a fenced code block in CHANGELOG.md truncates the notes"
+    waived: "CHANGELOG.md is plain bullet sections under '## <version>'; no entry carries a fenced block, and the truncation shows in the draft the owner reviews before publish"
+  - finding: "a release-notes template without {changes} still renders Ok with no What's new"
+    waived: "the template is committed and the unit test that renders the repo's own template fails on a dropped placeholder"
+  - finding: "checksums() reads each whole installer into memory before hashing"
+    waived: "a one-off release step on a CI runner over installers of tens of MB; sha256_hex is the repo's shared hashing helper"
+verdict: PASS
+date: 2026-11-06
