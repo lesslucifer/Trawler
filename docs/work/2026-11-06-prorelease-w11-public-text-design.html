@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9bf79f34851f0dfaebf8">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W11 public text design</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W11 — public text design</h1>
+      <p>One voice for every GitHub-facing text, the README's shape and pitch, the screenshot list, the community files and the release-notes voice. Proposals for the owner to review through comments; nothing here ships until signed.</p>
+      <div class="meta">Round 1 · 2026-11-06 · Trawler · T3 design · <span class="badge id">E-PRORELEASE.W11</span> · <code>wu/prorelease/public-text-design</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-plan.html#w11">E-PRORELEASE W11</a> · feeds W5 (README + community), W12 (guide), W14 (notes + CHANGELOG)</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="how-to-review">How to review</h2>
+    <table data-c="how-to-review">
+      <tr><th>Step</th><th>You</th><th>Then</th></tr>
+      <tr><td>1</td><td>Pick a pitch in <a href="#pitch">Pitch</a> (comment "pick A/B/C" or rewrite it)</td><td>Round 2 rewrites the README mock with it</td></tr>
+      <tr><td>2</td><td>Answer <a href="#owner-questions">Owner questions</a> Q1–Q10 (comment "as proposed" or your ruling)</td><td>Rulings recorded in the table</td></tr>
+      <tr><td>3</td><td>Comment on any draft line: tone, facts, missing items</td><td>Each comment resolved with what changed; <code>?diff=latest</code> shows it</td></tr>
+      <tr><td>4</td><td>Comment <strong>"signed: W11"</strong> on <a href="#sign-off">Sign-off</a></td><td>W5, W12, W14 may start (plan waves 2 and 4)</td></tr>
+    </table>
+
+    <h2 id="facts">Facts the text may claim (verified in code)</h2>
+    <p>Every public claim below is backed by a line in the tree at <code>8b24b74e</code>. A sentence that cannot point here is not written.</p>
+    <table data-c="facts">
+      <tr><th>Claim</th><th>Evidence</th></tr>
+      <tr><td>Captured traffic lives in memory only; quitting clears it; HAR export is the only way it reaches disk</td><td><code>src/store.rs</code> ring buffer; no persistence module; export = <code>GET /flows/export</code> (UC-3·UC-4, on user action)</td></tr>
+      <tr><td>Proxy and control API listen on loopback only (<code>127.0.0.1:7420</code>, <code>:7421</code>) unless the user allows another device</td><td><code>src/config.rs:6-10,29-35</code> (DEC-55: allowing reach is an explicit confirm)</td></tr>
+      <tr><td>Each install generates its own certificate; the private key is stored <strong>unencrypted</strong> in the app data folder</td><td><code>src/ca.rs:66-78</code>; <code>ui/src-tauri/src/core.rs:158</code> (<code>app_data_dir</code>/<code>ca</code>)</td></tr>
+      <tr><td>Outbound call 1: update check to GitHub at launch (at most once a day) and on Check for Updates…</td><td><code>ui/src-tauri/src/update.rs:12,144-157</code>; endpoint <code>github.com/lesslucifer/Trawler/releases/latest/download/latest.json</code> (<code>tauri.conf.json:29-31</code>)</td></tr>
+      <tr><td>Outbound call 2: the setup screen's test request to <code>https://example.com/?trawler-check=…</code>, only when clicked</td><td><code>ui/src/ownRequest.ts:12-29</code></td></tr>
+      <tr><td>Updates are signed; an unsigned or mismatched update is refused</td><td><code>tauri.conf.json:28-32</code> (<code>pubkey</code>, <code>requireSignedVersion</code>); DEC-82</td></tr>
+      <tr><td>No telemetry, analytics, crash reporting, account or licence key</td><td>no such crate or call in <code>src/</code>, <code>ui/src/</code>, <code>ui/src-tauri/src/</code>; plugins = dialog, fs, single-instance, updater (<code>ui/src-tauri/Cargo.toml:34-44</code>)</td></tr>
+      <tr><td>Settings and window layout stay in the app config folder</td><td><code>ui/src-tauri/src/setup.rs:1775-1777</code> (<code>app_config_dir</code>)</td></tr>
+      <tr><td>Automatic certificate removal exists on macOS only; Windows/Linux get written steps</td><td><code>ui/src-tauri/src/setup.rs:1337-1340</code></td></tr>
+      <tr><td>A body over 10 MB is forwarded in full but not kept</td><td><code>src/config.rs:56</code>; <code>src/capture.rs:125</code> (<code>over_cap_not_captured_but_forwarded_in_full</code>)</td></tr>
+      <tr><td>The app UI is dark only (no light theme)</td><td>no <code>prefers-color-scheme</code> / theme switch in <code>ui/src</code>; DEC-19 warm-dark</td></tr>
+    </table>
+
+    <h2 id="voice">Voice and tone</h2>
+    <div class="cards" data-c="voice-rules">
+      <div class="card"><h4>Plain</h4><p>Short sentences, everyday words. A term a user won't know gets a gloss once ("certificate (CA)").</p></div>
+      <div class="card"><h4>To you</h4><p>Second person, present tense, active voice. No "we" in user text; Trawler is "Trawler" or "it".</p></div>
+      <div class="card"><h4>Step, not theory</h4><p>Say what to click, exactly as the OS labels it, in <strong>bold</strong>. Why comes after, in one line, if at all.</p></div>
+      <div class="card"><h4>Honest</h4><p>Limits are stated where they bite, not hidden. Never claim what the code can't show (see <a href="#facts">Facts</a>).</p></div>
+      <div class="card"><h4>Calm</h4><p>No hype: no "best-in-class", "blazing", "100×", emojis in prose, exclamation marks, user counts or awards.</p></div>
+      <div class="card"><h4>No futures</h4><p>No "coming soon", dates or roadmap promises in public text. What ships is what's described.</p></div>
+    </div>
+
+    <h3 id="voice-terms">Terms</h3>
+    <table data-c="voice-terms">
+      <tr><th>Say</th><th>Not</th><th>Note</th></tr>
+      <tr><td>certificate · Trawler's certificate</td><td>CA, root CA, cert (alone)</td><td>"certificate authority (CA)" once per page, where it matters (SECURITY, PRIVACY)</td></tr>
+      <tr><td>request · response · traffic</td><td>flow, exchange</td><td>"flow" only where the UI shows that word, and in API docs</td></tr>
+      <tr><td>capture · inspect · send again</td><td>sniff, intercept (in user text), MITM</td><td>"intercept" and "MITM" stay in CONTRIBUTING/SECURITY</td></tr>
+      <tr><td>HTTPS · HTTP/2 · HTTP/3</td><td>SSL, HTTP(s), https traffic</td><td>"HTTP and HTTPS" in full sentences</td></tr>
+      <tr><td>macOS · Windows · Linux · Apple Silicon and Intel · x64 · arm64</td><td>Mac OS, OSX, Win, M1, amd64 (outside file names)</td><td>file names stay as built</td></tr>
+      <tr><td>the setup screen · Settings · the menu-bar icon (macOS) · the tray icon</td><td>onboarding, preferences</td><td>match the UI labels; W5's link check runs against them</td></tr>
+      <tr><td>allow another device</td><td>arm reach, expose</td><td>DEC-55's act in user words</td></tr>
+    </table>
+
+    <h3 id="voice-examples">Before → after</h3>
+    <table data-c="voice-examples">
+      <tr><th>Where</th><th>Before (today)</th><th>After (proposed)</th><th>Rule</th></tr>
+      <tr><td>README line 1</td><td>A native HTTP(S) debugging proxy written in Rust — a lightweight, hackable take on Charles and Proxyman.</td><td>See every HTTP and HTTPS request your apps make, and read what's inside.</td><td>Plain · to you · no competitor in line 1</td></tr>
+      <tr><td>README feature</td><td><strong>Self-managed CA</strong> — generates and persists a local Certificate Authority on first run; downloadable at <code>/ca.crt</code>.</td><td>Trawler makes its own certificate the first time it runs. The setup screen walks you through trusting it.</td><td>Step, not theory · terms</td></tr>
+      <tr><td>README feature</td><td><strong>Body capture</strong> — buffer-then-forward up to a 10 MB per-request cap, with a streaming (SSE) fast-path that is never buffered.</td><td>Live streams pass straight through. Bodies up to 10 MB are kept for you to read; a larger one still reaches the app, unread.</td><td>Plain · honest</td></tr>
+      <tr><td>README warning</td><td>⚠️ <strong>For debugging your own traffic only.</strong> Intercepting TLS traffic requires installing a custom root CA. Only run this against devices and services you own or are authorized to inspect.</td><td>Use Trawler on your own devices, or on traffic you're allowed to inspect. Trusting its certificate lets Trawler read HTTPS on this machine; remove it when you're done.</td><td>Calm · step</td></tr>
+      <tr><td>Release notes intro</td><td>Trawler is not signed with a paid certificate, so your OS asks before the first open. Installed copies later offer each new release from inside the app.</td><td><em>Keep</em> — already the target voice. Add: "To check your download, compare it with <code>SHA256SUMS</code> (below)."</td><td>Example of the voice done right</td></tr>
+      <tr><td>Roadmap list</td><td>☐ Replay and breakpoints / request rewriting · ☐ A TUI or web dashboard client …</td><td><em>Removed</em> from the README; shipped items go in CHANGELOG, open ones stay in issues</td><td>No futures</td></tr>
+    </table>
+
+    <h2 id="survey">Competitor survey</h2>
+    <p>Read-only, 2026-11-06. What their public text does above the fold and what Trawler takes or leaves.</p>
+    <table data-c="survey">
+      <tr><th>Tool</th><th>Opening line (verbatim)</th><th>Shape</th><th>Borrow</th><th>Leave</th></tr>
+      <tr><td><a href="https://github.com/mitmproxy/mitmproxy">mitmproxy</a> (MIT, CLI/web)</td><td>"an interactive, SSL/TLS-capable intercepting proxy with a console interface for HTTP/1, HTTP/2, and WebSockets"</td><td>badges → one-line definition per tool → install (links out) → docs → contributing; <a href="https://github.com/mitmproxy/mitmproxy/security/policy">SECURITY</a>: private report, ack within 48 h, DoS = ordinary bug, only latest release supported</td><td>Precise one-sentence definition; SECURITY's scope split (local DoS is not a vulnerability) and "latest release only"</td><td>Install hidden behind an external site; badge wall</td></tr>
+      <tr><td><a href="https://httptoolkit.com/">HTTP Toolkit</a> (AGPL, free + Pro)</td><td>"Intercept, view & edit any HTTP traffic" / "With one click"</td><td>verb triplet hero → per-OS download grid with arch and package type (Installer · Winget · DMG Apple Silicon/Intel · DEB · RPM · AppImage) → features; <a href="https://github.com/httptoolkit/httptoolkit-desktop">desktop repo</a> README is dev-only, no screenshots</td><td>Verb-led headline; per-OS × arch × package table; plain free/paid line</td><td>A repo README with no screenshot or install</td></tr>
+      <tr><td><a href="https://proxyman.com/">Proxyman</a> (proprietary, macOS-first)</td><td>"Capture HTTP(s) in a second" / "Best-in-class native macOS app to capture, decrypt, and mock your HTTP(s) requests/ responses…"</td><td>hero + download → requirements line ("Apple Silicon & Intel • macOS 14+") → awards, logos, user counts → feature carousel → mobile capture → testimonials</td><td>Requirements right under the download; mobile/simulator capture as a headline feature</td><td>Hype words, awards, user counts, testimonials</td></tr>
+      <tr><td><a href="https://www.charlesproxy.com/">Charles</a> (proprietary, trial)</td><td>"Charles is an HTTP proxy / HTTP monitor / Reverse Proxy that enables a developer to view all of the HTTP and SSL / HTTPS traffic between their machine and the Internet."</td><td>definition + screenshots → long plain changelog back to 2005 → reviews → download trial</td><td>"between your machine and the Internet" mental model; a plain, dated changelog</td><td>"SSL" wording; slash-list definitions</td></tr>
+      <tr><td><a href="https://www.telerik.com/fiddler/fiddler-everywhere">Fiddler Everywhere</a> (subscription)</td><td>"Capture, inspect, modify and replay real HTTP/S traffic so you can debug what actually happened across applications, services, devices, and AI-assisted workflows."</td><td>hero → why → features → social proof → per-role use cases → features → testimonials → <strong>FAQ</strong> → what's new</td><td>Verb list naming what you do; FAQ near the end</td><td>Role marketing, buzzwords, trial/buy CTAs</td></tr>
+    </table>
+    <div class="callout" data-c="survey-takeaway"><strong>Pattern across all five:</strong> a verb-led line saying what you do with your traffic → download with requirements → one big screenshot → features → FAQ. Trawler's differentiators to lead with, true today: free and open source (MIT) · native on all three desktops · local-only, no account, no telemetry · phones, simulators and emulators from one setup screen.</div>
+
+    <h2 id="pitch">Pitch — pick one</h2>
+    <table data-c="pitch">
+      <tr><th></th><th>Tagline (H1 subtitle)</th><th>Second line</th><th>Leans on</th></tr>
+      <tr><td><strong>A</strong> (recommended)</td><td>See every HTTP and HTTPS request your apps make.</td><td>A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</td><td>Outcome first (the HTTP Toolkit/Charles pattern), privacy as the closer</td></tr>
+      <tr><td><strong>B</strong></td><td>A native HTTPS debugging proxy. Free, open source, local.</td><td>Capture, inspect and replay traffic from your machine, simulators and phones. No account, no telemetry.</td><td>Category first (the mitmproxy pattern); three adjectives as the differentiator</td></tr>
+      <tr><td><strong>C</strong></td><td>Capture. Inspect. Send again.</td><td>Trawler shows the HTTP and HTTPS traffic between your apps and the Internet — on macOS, Windows and Linux, free and open source.</td><td>Verb triplet (Fiddler/HTTP Toolkit); shortest, least specific</td></tr>
+    </table>
+    <p>Not offered: naming Charles or Proxyman in the pitch (their names are trademarks and invite a feature comparison Trawler loses on breakpoints and rewrite rules). The repo description (Q11 in the plan) gets the same line as the chosen pitch.</p>
+
+    <h3 id="readme-mock">Above the fold — mock (pitch A)</h3>
+    <div data-c="readme-mock" style="border:1px solid var(--line);border-radius:6px;padding:16px 20px;background:var(--paper);max-width:860px">
+      <p style="color:var(--muted);margin:0 0 8px">github.com/lesslucifer/Trawler · README.md</p>
+      <p style="margin:0;font-size:1.6em"><em>[wordmark — W9 slot, light/dark <code>&lt;picture&gt;</code>]</em></p>
+      <p style="margin:6px 0 0;font-size:1.15em"><strong>See every HTTP and HTTPS request your apps make.</strong></p>
+      <p style="margin:6px 0">A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</p>
+      <p style="margin:6px 0"><code>release v0.1.0</code> <code>licence MIT</code> <code>macOS · Windows · Linux</code></p>
+      <p style="margin:6px 0"><strong>Download</strong> for macOS · Windows · Linux → <em>(the install table)</em></p>
+      <div style="border:1px dashed var(--line);padding:40px;text-align:center;color:var(--muted);margin-top:10px">S1 hero screenshot — the list with one JSON response open</div>
+    </div>
+
+    <h2 id="readme-ia">README information architecture</h2>
+    <div class="diagram" data-c="fact-placement">
+      <pre class="mermaid">flowchart LR
+  R[README.md<br/>what · install · first run · FAQ] --> G[GUIDE.md<br/>every task step by step]
+  R --> P[PRIVACY.md<br/>what leaves, what stays]
+  R --> C[CONTRIBUTING.md<br/>build · test · layout · API]
+  R --> S[SECURITY.md<br/>report · scope · CA key]
+  R --> L[CHANGELOG.md<br/>per version, user words]
+  L --> N[Release notes<br/>CHANGELOG section + install + verify]
+  App[Help menu W4] --> G
+  App --> P
+  App --> I[Issue forms]</pre>
+      <div class="caption">One fact, one file. The README states each fact once in a line and links the file that owns it.</div>
+    </div>
+
+    <h3 id="readme-order">Section order</h3>
+    <table data-c="readme-order">
+      <tr><th>#</th><th>Section</th><th>Content (draft direction)</th><th>Owns / links</th></tr>
+      <tr><td>1</td><td>Header</td><td>Wordmark (W9), pitch (2 lines), 3 badges: latest release · licence · platforms</td><td>—</td></tr>
+      <tr><td>2</td><td>Hero screenshot</td><td>S1</td><td><a href="#screenshots">Screenshots</a></td></tr>
+      <tr><td>3</td><td>What you can do</td><td>6 one-line bullets: capture this machine · phones, iOS Simulator, Android emulator · filter with chips · inspect bodies (JSON, XML, HTML, forms…) · send a request again, edited · HAR export/import · keep capturing with the window closed</td><td>GUIDE per task</td></tr>
+      <tr><td>4</td><td>Install</td><td>The <a href="#install-table">install table</a>; under it, collapsed <code>&lt;details&gt;</code> "First open on macOS / Windows" (why the prompt, the exact clicks) and "Check your download" (<code>SHA256SUMS</code>)</td><td>GUIDE → Install (with OS screenshots)</td></tr>
+      <tr><td>5</td><td>First run</td><td>3 steps: open Trawler → the setup screen trusts the certificate and sets the proxy → requests appear in the list</td><td>GUIDE → First run</td></tr>
+      <tr><td>6</td><td>More screens</td><td>S2, S3, S5 in a 3-up row</td><td>—</td></tr>
+      <tr><td>7</td><td>Privacy</td><td>3 lines: stays on your machine · two outbound calls · certificate key note → PRIVACY.md</td><td>PRIVACY.md</td></tr>
+      <tr><td>8</td><td>Known limits</td><td>The <a href="#known-limits">short table</a></td><td>GUIDE → Troubleshooting</td></tr>
+      <tr><td>9</td><td>FAQ</td><td><a href="#faq">FAQ</a>, each a collapsed <code>&lt;details&gt;</code></td><td>—</td></tr>
+      <tr><td>10</td><td>Scripting</td><td>2 lines + one <code>curl</code>: the local API on <code>127.0.0.1:7421</code>; the headless core (<code>cargo run -p trawler</code>)</td><td>CONTRIBUTING → API</td></tr>
+      <tr><td>11</td><td>Contributing · Security · Licence</td><td>One line each, linking the file; "MIT © 2026 Vu Luu"</td><td>the three files</td></tr>
+    </table>
+
+    <h3 id="fact-owners">Which fact lives where</h3>
+    <table data-c="fact-owners">
+      <tr><th>Fact</th><th>README</th><th>GUIDE</th><th>PRIVACY</th><th>CONTRIBUTING</th><th>SECURITY</th><th>CHANGELOG / notes</th></tr>
+      <tr><td>Download per OS/arch</td><td>✅ owns</td><td>link</td><td></td><td></td><td></td><td>notes: install</td></tr>
+      <tr><td>Unsigned-app prompt steps</td><td>short</td><td>✅ owns (screenshots)</td><td></td><td></td><td></td><td>notes: short</td></tr>
+      <tr><td>Trusting / removing the certificate</td><td>1 line</td><td>✅ owns</td><td>link</td><td></td><td>key risk</td><td></td></tr>
+      <tr><td>Outbound calls, data at rest</td><td>3 lines</td><td></td><td>✅ owns</td><td></td><td></td><td></td></tr>
+      <tr><td>Known limits</td><td>✅ owns (table)</td><td>workarounds</td><td></td><td></td><td></td><td>per version</td></tr>
+      <tr><td>Build, test, layout, control API</td><td>link</td><td></td><td></td><td>✅ owns</td><td></td><td></td></tr>
+      <tr><td>Reporting a vulnerability</td><td>link</td><td></td><td></td><td>link</td><td>✅ owns</td><td></td></tr>
+      <tr><td>What changed in a version</td><td></td><td></td><td></td><td></td><td></td><td>✅ CHANGELOG owns; notes render it (W7)</td></tr>
+    </table>
+
+    <h2 id="screenshots">Screenshot list</h2>
+    <p>All produced by the W5 e2e script from a fixture capture (reserved hosts such as <code>api.example.com</code>, no real tokens). Window 1440×800 logical (the default size, <code>tauri.conf.json:16-17</code>), captured at 2× on macOS, PNG, dark (the only theme). OS prompt shots are hand-captured once (Q8).</p>
+    <table data-c="screenshots">
+      <tr><th>#</th><th>Screen</th><th>State</th><th>Used in</th><th>Source</th></tr>
+      <tr><td>S1</td><td>Main window: list + inspector</td><td>~25 mixed requests (JSON API, HTML, images, one 4xx, one pending); a JSON response selected, pretty body</td><td>README hero · social preview (W10)</td><td>e2e</td></tr>
+      <tr><td>S2</td><td>Setup screen — this machine</td><td>Certificate trusted, proxy set, first HTTPS captured (all tasks done)</td><td>README · GUIDE first run</td><td>e2e</td></tr>
+      <tr><td>S3</td><td>Query bar filtering</td><td>Chips <code>status:4xx</code> and <code>-method:OPTIONS</code> applied, list narrowed</td><td>README · GUIDE filters</td><td>e2e</td></tr>
+      <tr><td>S4</td><td>Inspector headers + timing</td><td>HTTP/2 request, headers and per-leg versions visible</td><td>GUIDE inspect</td><td>e2e</td></tr>
+      <tr><td>S5</td><td>Send again (composer)</td><td>A replay with one edited header, response shown</td><td>README · GUIDE compose</td><td>e2e</td></tr>
+      <tr><td>S6</td><td>Setup screen — iPhone</td><td>Address allowed, certificate step showing</td><td>GUIDE devices</td><td>e2e</td></tr>
+      <tr><td>S7</td><td>Settings → service</td><td>Running, addresses, live log lines</td><td>GUIDE troubleshooting</td><td>e2e</td></tr>
+      <tr><td>S8</td><td>macOS Privacy &amp; Security "Open Anyway"</td><td>First open of an ad-hoc build</td><td>GUIDE install</td><td>hand (Q8)</td></tr>
+      <tr><td>S9</td><td>Windows SmartScreen "More info" → "Run anyway"</td><td>Both dialogs</td><td>GUIDE install</td><td>hand (Q8)</td></tr>
+    </table>
+
+    <h2 id="install-table">Install table</h2>
+    <table data-c="install-table">
+      <tr><th>System</th><th>Download</th><th>First open</th></tr>
+      <tr><td>macOS 11 or later · Apple Silicon and Intel</td><td><code>Trawler_&lt;v&gt;_universal.dmg</code></td><td>Privacy &amp; Security → <strong>Open Anyway</strong></td></tr>
+      <tr><td>Windows x64</td><td><code>…_x64-setup.exe</code> (recommended) · <code>…_x64_en-US.msi</code></td><td>SmartScreen → <strong>More info</strong> → <strong>Run anyway</strong></td></tr>
+      <tr><td>Windows arm64</td><td><code>…_arm64-setup.exe</code> · <code>…_arm64_en-US.msi</code></td><td>same</td></tr>
+      <tr><td>Linux x64</td><td><code>…_amd64.AppImage</code> · <code>…_amd64.deb</code> · <code>.rpm</code></td><td>no prompt</td></tr>
+      <tr><td>Linux arm64</td><td><code>…_aarch64.AppImage</code> · <code>…_arm64.deb</code> · <code>.rpm</code></td><td>no prompt</td></tr>
+    </table>
+    <p>Links point at <code>releases/latest</code> (file names carry the version). W5's unit test checks the names against <code>xtask/src/package.rs</code>. Every installed copy updates itself from inside the app.</p>
+
+    <h2 id="faq">FAQ</h2>
+    <table data-c="faq">
+      <tr><th>Question</th><th>Answer (draft)</th></tr>
+      <tr><td>Is it free?</td><td>Yes. MIT licence, no paid tier, no account.</td></tr>
+      <tr><td>Why does my computer warn me when I first open it?</td><td>Trawler isn't signed with a paid certificate. The warning is the OS saying it doesn't know the publisher. Check your download against <code>SHA256SUMS</code>, then follow the steps in Install.</td></tr>
+      <tr><td>Is it safe to trust Trawler's certificate?</td><td>The certificate is made on your machine and is unique to your install. While it's trusted, anyone who can read your user files could use its key to read your HTTPS. Remove it when you stop using Trawler (GUIDE → Uninstall).</td></tr>
+      <tr><td>Does Trawler send my traffic anywhere?</td><td>No. It forwards each request to where it was going and keeps a copy in memory on your machine. See PRIVACY.</td></tr>
+      <tr><td>Where are captured requests saved?</td><td>Nowhere: they live in memory and go away when you quit. Export to HAR to keep them.</td></tr>
+      <tr><td>Why don't I see an app's traffic?</td><td>The app ignores the system proxy, pins its own certificates, or uses HTTP/3. See Known limits.</td></tr>
+      <tr><td>Can I capture my phone, a simulator or an emulator?</td><td>Yes: iPhone, Android, the iOS Simulator and the Android emulator, from the setup screen.</td></tr>
+      <tr><td>How do updates work?</td><td>Trawler checks GitHub when it starts (at most once a day) and when you choose Check for Updates…. It asks before installing, and only installs a release signed by the project.</td></tr>
+      <tr><td>How is it different from Charles, Proxyman, mitmproxy or HTTP Toolkit?</td><td>Trawler is native on all three desktops, open source and local-only. It doesn't have breakpoints, rewrite rules or scripting yet.</td></tr>
+      <tr><td>Can I script it?</td><td>Yes: a local HTTP API on <code>127.0.0.1:7421</code> lists, streams, exports and replays requests (CONTRIBUTING → API).</td></tr>
+      <tr><td>How do I remove it completely?</td><td>Remove the app, the certificate's trust and the app data folder (GUIDE → Uninstall).</td></tr>
+    </table>
+
+    <h2 id="known-limits">Known limits — wording</h2>
+    <table data-c="known-limits">
+      <tr><th>Limit (user words)</th><th>Source</th></tr>
+      <tr><td>HTTP/3 traffic isn't captured: it goes around any HTTP proxy.</td><td><code>docs/core-technical-design.html</code> limits (HTTP/3 / QUIC)</td></tr>
+      <tr><td>Apps that pin their certificates refuse Trawler's, so their requests fail while capture is on.</td><td>same (certificate pinning)</td></tr>
+      <tr><td>WebSocket: the opening request is captured; messages aren't shown yet.</td><td>same (wss, NoopHandler)</td></tr>
+      <tr><td>A body over 10 MB still reaches the app, but Trawler doesn't keep it.</td><td><code>src/config.rs:56</code>, <code>src/capture.rs:125</code></td></tr>
+      <tr><td>Captured requests are cleared when you quit. Export to HAR to keep them.</td><td><code>src/store.rs</code></td></tr>
+      <tr><td>Removing the certificate from the app works on macOS; on Windows and Linux, follow the GUIDE steps.</td><td><code>ui/src-tauri/src/setup.rs:1338</code></td></tr>
+      <tr><td>On GNOME, the tray icon needs the AppIndicator extension.</td><td><code>.github/release-notes.md</code></td></tr>
+      <tr><td>Open at login needs macOS 13 or later.</td><td><code>.github/release-notes.md</code></td></tr>
+      <tr><td>Updating a <code>.deb</code> or <code>.rpm</code> install asks for your password.</td><td>DEC-82</td></tr>
+      <tr><td><code>.rpm</code> is built for final releases only.</td><td>DEC-86 rule 7</td></tr>
+    </table>
+
+    <h2 id="privacy">Privacy statement — draft (PRIVACY.md)</h2>
+    <div data-c="privacy-draft" style="border:1px solid var(--line);border-radius:6px;padding:12px 20px;background:var(--paper)">
+      <p><strong>Trawler keeps your traffic on your machine.</strong> It has no account, no analytics, no crash reporting and no telemetry.</p>
+      <table>
+        <tr><th>What</th><th>Where it goes</th></tr>
+        <tr><td>Requests you capture</td><td>Memory only, on your machine. Gone when you quit. Saved to a file only when you export HAR.</td></tr>
+        <tr><td>Trawler's certificate and its private key</td><td>Your app data folder, <strong>unencrypted</strong>: <code>~/Library/Application Support/dev.trawler.app/ca</code> (macOS) · <code>%APPDATA%\dev.trawler.app\ca</code> (Windows) · <code>~/.local/share/dev.trawler.app/ca</code> (Linux). Never sent anywhere.</td></tr>
+        <tr><td>Settings and window layout</td><td>Your app config folder. Never sent anywhere.</td></tr>
+        <tr><td>Update check</td><td>A request to GitHub when Trawler starts (at most once a day) and when you choose Check for Updates…. GitHub sees your IP address and Trawler's version. A Settings switch turns the launch check off.</td></tr>
+        <tr><td>Setup test</td><td>When you click the test on the setup screen, one request to <code>https://example.com</code>.</td></tr>
+        <tr><td>Other devices</td><td>Trawler listens only on this machine until you allow another device; then it also listens on the one network address you chose.</td></tr>
+      </table>
+      <p>Everything else Trawler sends is the traffic you route through it, going where it was already going.</p>
+    </div>
+    <p>The settings switch is the plan's Q5 ruling, built in W4; the line ships only with it. Linux path follows Tauri's <code>app_data_dir</code> (<code>$XDG_DATA_HOME</code> when set) — W12 confirms each path on a real install.</p>
+
+    <h2 id="community">Community files — outlines</h2>
+    <table data-c="community">
+      <tr><th>File</th><th>Sections</th></tr>
+      <tr><td><code>CONTRIBUTING.md</code></td><td>Welcome + what helps most (bug reports with version/OS, docs fixes) · open an issue before a feature · build from source (Rust stable, Node + pnpm, <code>cargo xtask hooks install</code>, <code>cargo run</code>, <code>cargo test</code>) · project layout (moved from today's README) · control API table (moved) · tests required with every change (link <code>docs/testing-strategy.html</code>) · lints: clippy pedantic, no <code>unsafe</code> · contributions are MIT, no CLA · how a PR lands: the maintainer takes it through the project's gates (link <code>docs/workflow.html</code>)</td></tr>
+      <tr><td><code>SECURITY.md</code></td><td>Supported: the latest release only · report privately via GitHub "Report a vulnerability" (private vulnerability reporting, plan Q11), never a public issue · include version, OS, install type, steps · in scope: certificate key handling, the local API or proxy answering beyond this machine without an allow, the updater accepting an unsigned or downgraded release, data leaving the machine · out of scope: slowing or crashing the local proxy with local traffic (an ordinary bug, as mitmproxy does), the documented risk of a trusted certificate · acknowledgment target (Q3) · the certificate-key note from PRIVACY</td></tr>
+      <tr><td><code>CODE_OF_CONDUCT.md</code></td><td>Contributor Covenant 2.1, verbatim, with the enforcement contact (Q2)</td></tr>
+      <tr><td><code>.github/ISSUE_TEMPLATE/bug_report.yml</code></td><td>Issue form: Trawler version (required; Settings or About) · OS + version (required) · install type dropdown (dmg · setup.exe · msi · AppImage · deb · rpm · from source) · what you did · what you expected · what happened · does <code>curl -x http://127.0.0.1:7420 https://example.com</code> show up? · service log (Settings → service) · reminder: remove tokens and cookies</td></tr>
+      <tr><td><code>.github/ISSUE_TEMPLATE/feature_request.yml</code></td><td>The problem you hit · what you'd like · how you do it today (another tool, a workaround)</td></tr>
+      <tr><td><code>.github/ISSUE_TEMPLATE/config.yml</code></td><td>Blank issues off · contact links: Report a vulnerability (security advisory) · Questions (Discussions, plan Q11)</td></tr>
+      <tr><td><code>.github/pull_request_template.md</code></td><td>What and why · linked issue · how you tested (which tests) · checklist: tests added, <code>cargo test</code>, <code>cargo clippy</code> green</td></tr>
+    </table>
+
+    <h2 id="notes-voice">Release notes and CHANGELOG voice</h2>
+    <table data-c="notes-rules">
+      <tr><th>Rule</th><th>Why</th></tr>
+      <tr><td><code>CHANGELOG.md</code> in Keep a Changelog 1.1 shape, newest first, <code>## 0.1.0 — 2026-MM-DD</code></td><td>One familiar format; W7's renderer reads the section by version</td></tr>
+      <tr><td>Groups in user words: <strong>New</strong> · <strong>Improved</strong> · <strong>Fixed</strong> · <strong>Known limits</strong> (Q6)</td><td>Readers scan by what matters to them</td></tr>
+      <tr><td>Each line starts with what the user can now do or no longer hits; one line each</td><td>Voice: to you, step not theory</td></tr>
+      <tr><td>No internal ids (DEC, UC, WU, epic), no file names, no PR numbers in text</td><td>The reader is a user, not a maintainer</td></tr>
+      <tr><td>Release notes = the version's CHANGELOG section + install + "Check your download" (W7 mechanism, W14 copy)</td><td>One fact, one place</td></tr>
+      <tr><td>Release candidates get a one-line header: "Release candidate — for testing; the final follows."</td><td>Honest about what an rc is</td></tr>
+    </table>
+    <h3 id="notes-sample">Sample entry</h3>
+    <pre data-c="notes-sample">## 0.1.0 — 2026-MM-DD
+
+The first public release.
+
+### New
+- Capture HTTP and HTTPS from this machine, an iPhone or Android phone,
+  the iOS Simulator and the Android emulator, set up from one screen.
+- Filter the list with chips such as `status:4xx` or `-method:OPTIONS`.
+- Read headers, timing and bodies, with viewers for JSON, XML, HTML,
+  forms and more; open any value in its own window.
+- Send a request again, edited, or write one from scratch.
+- Export what you captured to HAR, and open a HAR file.
+- Keep capturing with the window closed, from the menu-bar or tray icon.
+- Update from inside the app. Every update is signed.
+
+### Known limits
+- HTTP/3 traffic isn't captured.
+- On Windows and Linux, remove Trawler's certificate by hand (see the guide).
+
+### Check your download
+macOS / Linux:  shasum -a 256 -c SHA256SUMS --ignore-missing
+Windows:        Get-FileHash .\&lt;file&gt; -Algorithm SHA256  (compare with SHA256SUMS)</pre>
+
+    <h2 id="owner-questions">Owner questions</h2>
+    <table data-c="owner-questions">
+      <tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th><th>Ruling</th></tr>
+      <tr><td>Q1</td><td>Pitch</td><td>A · B · C (<a href="#pitch">Pitch</a>) · your own</td><td><strong>A</strong></td><td>⏳</td></tr>
+      <tr><td>Q2</td><td>Code of conduct</td><td>Contributor Covenant 2.1 · a short custom one · none</td><td>Contributor Covenant 2.1; contact = an email you choose (needed in the file)</td><td>⏳</td></tr>
+      <tr><td>Q3</td><td>SECURITY acknowledgment target</td><td>48 h (mitmproxy) · 7 days · no number</td><td>"within 7 days" — honest for one maintainer</td><td>⏳</td></tr>
+      <tr><td>Q4</td><td>Privacy statement home</td><td><code>PRIVACY.md</code> at the root · a GUIDE section</td><td><code>PRIVACY.md</code>: a stable target for Help → Privacy and the README link</td><td>⏳</td></tr>
+      <tr><td>Q5</td><td>Name competitors anywhere?</td><td>FAQ line only · a comparison table · never</td><td>FAQ line only (honest, no feature claims about them)</td><td>⏳</td></tr>
+      <tr><td>Q6</td><td>CHANGELOG groups</td><td>New/Improved/Fixed/Known limits · Keep a Changelog's Added/Changed/Deprecated/Removed/Fixed/Security</td><td>New/Improved/Fixed/Known limits (+ Security when needed)</td><td>⏳</td></tr>
+      <tr><td>Q7</td><td>README badges</td><td>3 (release, licence, platforms) · CI too · none</td><td>3; CI status is for contributors</td><td>⏳</td></tr>
+      <tr><td>Q8</td><td>OS prompt screenshots (S8, S9)</td><td>hand-captured once, committed · skipped (text only)</td><td>Hand-captured once on the last rc; CI cannot show OS dialogs</td><td>⏳</td></tr>
+      <tr><td>Q9</td><td>Scripting section in the README</td><td>2 lines + link · full API table (today) · none</td><td>2 lines + link; the table moves to CONTRIBUTING</td><td>⏳</td></tr>
+      <tr><td>Q10</td><td>Outside pull requests at 0.1.0</td><td>welcome, issue first for features · issues only</td><td>Welcome, issue first for features</td><td>⏳</td></tr>
+    </table>
+
+    <h2 id="sign-off">Sign-off</h2>
+    <table data-c="sign-off">
+      <tr><th>Round</th><th>Shown</th><th>Owner returns</th><th>State</th></tr>
+      <tr><td>R1</td><td>this doc</td><td>Q1–Q10, comments</td><td>⏳ waiting</td></tr>
+      <tr><td>R2</td><td>rulings applied; README mock in the chosen pitch</td><td>"signed: W11" or more comments</td><td>—</td></tr>
+    </table>
+    <p>Exit: the comment <strong>"signed: W11"</strong> here. A change after sign-off is a new round in this doc, not a reopened build.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
