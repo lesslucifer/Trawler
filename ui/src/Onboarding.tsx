@@ -246,13 +246,14 @@ const UNROUTE_EMULATORS_NOTE: ActionNotes = {
   },
 };
 
-const REMOVE_CA_NOTE: ActionNotes = {
+const removeCaNote = (os: HostOs): ActionNotes => ({
+  refused: os === "windows" ? APPROVAL_CANCELLED : PROMPT_CANCELLED,
   running: { tone: "pending", text: "removing the certificate…" },
   failed: {
     tone: "warn",
     text: "couldn't remove the certificate — do it by hand below.",
   },
-};
+});
 
 const unsetProxyNote = (os: HostOs): ActionNotes => ({
   running: {
@@ -1350,8 +1351,7 @@ function PlatformSetup({
     routeHere && unsetProxyAction.trigger && routeAct !== "unset"
       ? routeDone || routeAct === "set"
       : false;
-  const removeHere =
-    trustHere && os === "macos" && trustDone ? removeCa.trigger : undefined;
+  const removeHere = trustHere && trustDone ? removeCa.trigger : undefined;
 
   // The action the user just took outranks the re-read it triggers, and the one
   // combined action outranks both halves it is running.
@@ -1727,7 +1727,7 @@ function PlatformSetup({
                 testId="remove-ca"
                 label="remove the certificate"
                 action={removeCa}
-                note={REMOVE_CA_NOTE}
+                note={removeCaNote(os)}
                 onClick={removeHere}
                 frame="bare"
                 disabled={probing}

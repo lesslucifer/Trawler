@@ -650,8 +650,8 @@ const TRUSTED_ROOT_STORE = [
 
 // Windows' certificate dialog imports into the user's Trusted Root store,
 // which asks for no administrator; the command writes the same store (W14's
-// Q3). "Set up this PC" and older commands wrote every user's, so the way back
-// reaches both.
+// Q3). "Set up this PC" writes every user's, so the way back leads with that
+// one and reaches the user's too (W16).
 const WINDOWS_IMPORT: GuideStep[] = [
   [
     "Click",
@@ -675,13 +675,13 @@ const windowsTrustCommand = (file: string): GuideStep => [
 const WINDOWS_CERT_UNDO: GuideStep[] = [
   [
     "Start, search",
-    { path: ["Manage user certificates", "Trusted Root Certification Authorities", "Certificates", CA_NAME] },
+    { path: ["Manage computer certificates", "Trusted Root Certification Authorities", "Certificates", CA_NAME] },
     "and delete it",
   ],
-  [`Or ${lowered(IN_POWERSHELL)}`, { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
+  [`Or ${lowered(POWERSHELL_ADMIN)}`, { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
   [
-    `If it was trusted for every user, ${lowered(POWERSHELL_ADMIN)}`,
-    { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the administrator's removal command" },
+    `If you added it by hand, ${lowered(IN_POWERSHELL)}`,
+    { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the user store's removal command" },
   ],
 ];
 

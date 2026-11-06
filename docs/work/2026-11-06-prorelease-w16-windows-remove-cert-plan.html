@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-htmldoc-id="b16e2a7f04c95d31e8a6c217" data-artifact="wu-plan" data-status="ready">
+<html lang="en" data-htmldoc-id="6aedb56e9f34851f0dfaedeb" data-artifact="wu-plan" data-status="ready">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,7 +18,7 @@
     <p data-item="requirement">On Windows, once the certificate task reads trusted, task 1 offers <em>remove the certificate</em> exactly as macOS does; it deletes the live certificate (by SHA-1 thumbprint) from the machine ROOT store through the same UAC <code>Start-Process -Verb RunAs</code> set-up uses, or from the user's ROOT store unelevated when only that holds it; a cancelled approval reads as <em>the approval was cancelled</em>; the by-hand steps name the machine store first.</p>
 
     <h2 id="flow">Flow</h2>
-    <pre class="mermaid">
+    <div class="diagram" data-c="flow-diagram"><pre class="mermaid">
 flowchart LR
   B[remove the certificate] --> R{certutil -store ROOT · -user -store ROOT}
   R -- a store did not answer --> E[couldn't read the certificate stores]
@@ -26,7 +26,7 @@ flowchart LR
   R -- only the user's holds it --> U["certutil -user -delstore ROOT ‹thumbprint›"]
   R -- neither --> N[nothing to run]
   M & U & N --> T[trust re-read → task 1 not done]
-    </pre>
+    </pre><div class="caption">One click removes one store's copy; the re-read decides what the screen offers next.</div></div>
 
     <h2 id="decisions">Decisions taken here</h2>
     <table data-c="decisions">
@@ -69,6 +69,14 @@ flowchart LR
       </table>
     </div>
   </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
   <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
 </body>
 </html>

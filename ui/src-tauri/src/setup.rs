@@ -268,11 +268,10 @@ fn ca_trust(os: &str, pem: &str) -> Option<Trust> {
             || ran("security", &["find-certificate", "-a", "-c", CA_COMMON_NAME, "-p"]),
             || macos_live_verifies(pem),
         ),
-        "windows" => windows_trust(
-            &thumbprint(&live)?,
-            ran("certutil", &["-store", "ROOT"]).as_ref(),
-            ran("certutil", &["-user", "-store", "ROOT"]).as_ref(),
-        ),
+        "windows" => {
+            let [machine, user] = windows_root_stores();
+            windows_trust(&thumbprint(&live)?, machine.as_ref(), user.as_ref())
+        }
         "linux" => bundle_trust(&live, first_readable(&CA_BUNDLES).as_deref()),
         _ => None,
     }
@@ -1297,18 +1296,19 @@ struct Held {
 // A keychain that did not answer cannot vouch for holding nothing. The admin
 // trust list names certificates, not bytes, so a name in it only asks for the
 // removal that is harmless where it finds nothing.
+fn store_holds(store: Option<&Ran>, thumbprint: &str) -> Option<bool> {
+    store.filter(|out| out.ok).map(|out| lists_thumbprint(&out.stdout, thumbprint))
+}
+
 fn macos_held(
     thumbprint: &str,
     login: Option<&Ran>,
     system: Option<&Ran>,
     admin_trust: Option<&Ran>,
 ) -> Option<Held> {
-    let holds = |out: Option<&Ran>| {
-        out.filter(|out| out.ok).map(|out| lists_thumbprint(&out.stdout, thumbprint))
-    };
     Some(Held {
-        login: holds(login)?,
-        system: holds(system)?,
+        login: store_holds(login, thumbprint)?,
+        system: store_holds(system, thumbprint)?,
         admin_trust: admin_trust.is_some_and(|out| out.stdout.contains(CA_COMMON_NAME)),
     })
 }
@@ -1333,14 +1333,51 @@ fn remove_ca_commands(cert: &Path, thumbprint: &str, held: &Held) -> Vec<Vec<Str
     commands
 }
 
+#[derive(Debug, Default, PartialEq, Eq)]
+struct RootStores {
+    machine: bool,
+    user: bool,
+}
+
+fn windows_held(thumbprint: &str, machine: Option<&Ran>, user: Option<&Ran>) -> Option<RootStores> {
+    Some(RootStores {
+        machine: store_holds(machine, thumbprint)?,
+        user: store_holds(user, thumbprint)?,
+    })
+}
+
+// The user's ROOT view can list the machine's roots too, so a user delete
+// planned beside the machine one may find nothing left and fail a removal that
+// worked. One store per click; the re-read keeps the button while a copy is left.
+fn windows_remove_commands(thumbprint: &str, held: &RootStores) -> Vec<Vec<String>> {
+    if held.machine {
+        vec![elevated_argv("windows", &argv(&["certutil", "-delstore", "ROOT", thumbprint]))]
+    } else if held.user {
+        vec![argv(&["certutil", "-user", "-delstore", "ROOT", thumbprint])]
+    } else {
+        Vec::new()
+    }
+}
+
+fn windows_root_stores() -> [Option<Ran>; 2] {
+    [ran("certutil", &["-store", "ROOT"]), ran("certutil", &["-user", "-store", "ROOT"])]
+}
+
 #[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn remove_ca(pem: String) -> Result<(), SetupError> {
-    if std::env::consts::OS != "macos" {
+    let os = std::env::consts::OS;
+    if os != "macos" && os != "windows" {
         return Err(setup_error("no automatic removal on this system — follow the steps"));
     }
     let thumbprint = live_body(&pem)
         .and_then(|live| thumbprint(&live))
         .ok_or_else(|| setup_error("not a PEM certificate"))?;
+    if os == "windows" {
+        let [machine, user] = windows_root_stores();
+        let held = windows_held(&thumbprint, machine.as_ref(), user.as_ref())
+            .ok_or_else(|| setup_error("couldn't read the certificate stores"))?;
+        return run_all(windows_remove_commands(&thumbprint, &held), NO_REMOVE_DETAIL);
+    }
     let cert = staged_cert(&pem)?;
     let search = |keychain: &str| {
         ran("security", &["find-certificate", "-a", "-c", CA_COMMON_NAME, "-Z", keychain])
@@ -2611,6 +2648,57 @@ mod tests {
             remove_ca_commands(Path::new("/tmp/trawler-ca.pem"), HASH, &Held::default()).len(),
             0
         );
+    }
+
+    #[test]
+    fn windows_removal_reads_which_root_store_holds_the_live_certificate_by_its_thumbprint() {
+        let listed = answered(&format!("Cert Hash(sha1): {}", HASH.to_ascii_uppercase()));
+        let other = answered("Cert Hash(sha1): 0000000000000000000000000000000000000000");
+        assert_eq!(
+            windows_held(HASH, listed.as_ref(), other.as_ref()),
+            Some(RootStores { machine: true, user: false })
+        );
+        assert_eq!(
+            windows_held(HASH, other.as_ref(), listed.as_ref()),
+            Some(RootStores { machine: false, user: true })
+        );
+    }
+
+    #[test]
+    fn windows_removal_that_could_not_read_a_store_cannot_say_what_to_remove() {
+        let other = answered("");
+        assert_eq!(windows_held(HASH, None, other.as_ref()), None);
+        assert_eq!(windows_held(HASH, other.as_ref(), exited_non_zero("").as_ref()), None);
+    }
+
+    #[test]
+    fn removing_the_machine_copy_asks_for_the_uac_approval_set_up_used() {
+        let commands = windows_remove_commands(HASH, &RootStores { machine: true, user: false });
+        assert_eq!(commands.len(), 1);
+        assert_eq!(
+            commands[0],
+            elevated_argv("windows", &argv(&["certutil", "-delstore", "ROOT", HASH]))
+        );
+        assert!(commands[0][3].contains(&format!(
+            "Start-Process -FilePath 'certutil' -ArgumentList '-delstore','ROOT','{HASH}' -Verb RunAs"
+        )));
+    }
+
+    #[test]
+    fn removing_the_users_own_copy_asks_no_administrator() {
+        assert_eq!(
+            windows_remove_commands(HASH, &RootStores { machine: false, user: true }),
+            vec![argv(&["certutil", "-user", "-delstore", "ROOT", HASH])]
+        );
+    }
+
+    #[test]
+    fn a_copy_in_both_stores_leaves_the_machine_first_and_the_users_for_the_next_reading() {
+        assert_eq!(
+            windows_remove_commands(HASH, &RootStores { machine: true, user: true }),
+            windows_remove_commands(HASH, &RootStores { machine: true, user: false })
+        );
+        assert_eq!(windows_remove_commands(HASH, &RootStores::default()).len(), 0);
     }
 
     #[test]
