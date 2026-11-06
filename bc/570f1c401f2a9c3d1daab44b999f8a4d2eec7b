@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: bc570f1c401f2a9c3d1daab44b999f8a4d2eec7b
+base: 856ba1cea651b360fdc1dd8ad09e2dbb5198fc48
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w1-licence-metadata-result.html
+report_sha256: e57a47e784f03370d2728da88504e5bb7d936acbcd628d322b66cf1dbbbec1c8
+date: 2026-11-06
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBO8I09qqc7LmDrC/mkQI3gJgO+mKKe0aaDv0IXaNpt0omCWJrRtBphy3
+  MBSB/Y0DbCqWwu1aNqOJClcyM29ckG
+  -----END SSH SIGNATURE-----
