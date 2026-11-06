@@ -42,7 +42,7 @@ flowchart LR
     </table>
 
     <h2 id="maps-to">Maps to</h2>
-    <p data-item="maps-to">E-PRORELEASE W16 · owner ruling Q1 · W12 guide facts (Uninstall, Windows) · <code>docs/use-cases/web-ui.html</code> remove-the-certificate row · <code>ui/src-tauri/src/setup.rs</code>, <code>ui/src-tauri/src/scenario.rs</code>, <code>ui/src/Onboarding.tsx</code>, <code>ui/src/setup.ts</code>, <code>ui/e2e/walkthrough/script.ts</code>.</p>
+    <p data-item="maps-to">E-PRORELEASE W16 · owner ruling Q1 · W12 guide facts (Uninstall, Windows) · <code>docs/use-cases/web-ui.html</code> remove-the-certificate row · <code>ui/src-tauri/src/setup.rs</code>, <code>ui/src/Onboarding.tsx</code>, <code>ui/src/setup.ts</code>, <code>ui/e2e/walkthrough/script.ts</code>.</p>
 
     <h2 id="expected">Expected result</h2>
     <div data-item="expected">
@@ -62,8 +62,8 @@ flowchart LR
       <table data-c="test-plan">
         <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
         <tbody>
-          <tr><td>unit</td><td><code>setup.rs</code>: <code>windows_held</code> reads each store by thumbprint and refuses an unread store; <code>windows_remove_commands</code>: machine → one UAC <code>Start-Process certutil -delstore ROOT ‹thumb›</code>, user only → unelevated <code>certutil -user -delstore</code>, both → the machine one only, neither → none. <code>setup.test.ts</code>: the Windows undo leads with the machine store</td><td>yes: neither function exists; the undo leads with the user's store</td></tr>
-          <tr><td>integration</td><td><code>scenario.rs</code> (the walkthrough's mock runtime): a UAC refusal's stderr reads refused and leaves the certificate trusted. <code>App.test.tsx</code>: on a Windows host the button invokes <code>remove_ca</code> with the served PEM and the re-read clears task 1. <code>Onboarding.test.tsx</code>: the button on Windows, its cancelled line per host</td><td>yes: no button on Windows</td></tr>
+          <tr><td>unit</td><td><code>setup.rs</code>: <code>windows_held</code> reads each store by thumbprint and refuses an unread store; <code>windows_remove_commands</code>: machine → one UAC <code>Start-Process certutil -delstore ROOT ‹thumb›</code>, user only → unelevated <code>certutil -user -delstore</code>, both → the machine one only, neither → none; <code>removal_thumbprint</code> refuses a PEM whose subject CN is not <em>Trawler Proxy CA</em> before any store is read (round 2); <code>elevated_argv</code> on Windows starts with <code>$ErrorActionPreference = 'Stop'</code> so a cancelled UAC exits non-zero (round 2). <code>setup.test.ts</code>: the Windows undo leads with the machine store</td><td>yes: neither function exists; the undo leads with the user's store</td></tr>
+          <tr><td>integration</td><td><code>App.test.tsx</code>: on a Windows host the button invokes <code>remove_ca</code> with the served PEM and the re-read clears task 1. <code>Onboarding.test.tsx</code>: the button on Windows, its cancelled line per host</td><td>yes: no button on Windows</td></tr>
           <tr><td>e2e</td><td>walkthrough chapter <code>ca-removed</code> extended to Windows (script only; not run here: port 4445 shared). Real elevation: owner hand-check on a Windows VM</td><td>—</td></tr>
         </tbody>
       </table>

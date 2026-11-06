@@ -38,6 +38,9 @@ fn elevated_script(script: &str) -> Vec<String> {
     ]
 }
 
+// A UAC prompt the user cancels leaves `$p` unset, and `exit $p.ExitCode` would
+// then exit 0: the refusal must stop the script so it reaches stderr and a
+// non-zero exit.
 fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     match os {
         "macos" => elevated_script(&quoted(argv)),
@@ -49,7 +52,7 @@ fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
                 "-NoProfile".into(),
                 "-Command".into(),
                 format!(
-                    "$p = Start-Process -FilePath '{}' -ArgumentList {argument_list} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
+                    "$ErrorActionPreference = 'Stop'; $p = Start-Process -FilePath '{}' -ArgumentList {argument_list} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
                     argv[0]
                 ),
             ]
@@ -1283,6 +1286,8 @@ pub fn set_up_this_machine(pem: String, host: String, port: u16) -> Result<(), S
     run_all(commands, NO_INSTALL_DETAIL)
 }
 
+const NOT_TRAWLERS_CA: &str = "not Trawler's certificate";
+
 pub(crate) const NO_REMOVE_DETAIL: &str =
     "couldn't remove the certificate — no detail; use the steps below";
 
@@ -1363,15 +1368,36 @@ fn windows_root_stores() -> [Option<Ran>; 2] {
     [ran("certutil", &["-store", "ROOT"]), ran("certutil", &["-user", "-store", "ROOT"])]
 }
 
+fn names_trawlers_ca(der: &[u8]) -> bool {
+    let name = CA_COMMON_NAME.as_bytes();
+    let Some(len) = u8::try_from(name.len()).ok() else { return false };
+    der_subject(der).is_some_and(|subject| {
+        [0x0c, 0x13].into_iter().any(|string_tag| {
+            let common_name = [&[0x06, 0x03, 0x55, 0x04, 0x03, string_tag, len], name].concat();
+            subject.windows(common_name.len()).any(|field| field == common_name)
+        })
+    })
+}
+
+// The PEM comes from the webview, and a delete keyed on its thumbprint would
+// take any root the stores hold: only a certificate whose subject names
+// Trawler's CA may be removed.
+fn removal_thumbprint(pem: &str) -> Result<String, SetupError> {
+    let live = live_body(pem).ok_or_else(|| setup_error("not a PEM certificate"))?;
+    let der = der_bytes(&live).ok_or_else(|| setup_error("not a PEM certificate"))?;
+    if !names_trawlers_ca(&der) {
+        return Err(setup_error(NOT_TRAWLERS_CA));
+    }
+    Ok(sha1_smol::Sha1::from(der).digest().to_string())
+}
+
 #[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn remove_ca(pem: String) -> Result<(), SetupError> {
     let os = std::env::consts::OS;
     if os != "macos" && os != "windows" {
         return Err(setup_error("no automatic removal on this system — follow the steps"));
     }
-    let thumbprint = live_body(&pem)
-        .and_then(|live| thumbprint(&live))
-        .ok_or_else(|| setup_error("not a PEM certificate"))?;
+    let thumbprint = removal_thumbprint(&pem)?;
     if os == "windows" {
         let [machine, user] = windows_root_stores();
         let held = windows_held(&thumbprint, machine.as_ref(), user.as_ref())
@@ -1911,6 +1937,12 @@ mod tests {
         assert_eq!(argv[0], "powershell");
         assert!(argv[3]
             .contains("Start-Process -FilePath 'certutil' -ArgumentList '-f','ROOT' -Verb RunAs"));
+    }
+
+    #[test]
+    fn a_cancelled_uac_prompt_exits_non_zero_rather_than_with_the_missing_process_exit() {
+        let argv = elevated_argv("windows", &["certutil".into(), "-f".into(), "ROOT".into()]);
+        assert!(argv[3].starts_with("$ErrorActionPreference = 'Stop'; "), "{}", argv[3]);
     }
 
     #[test]
@@ -3209,6 +3241,29 @@ AG886uAwCrn33L+l2vQyCCnJrUIyCQGJozIwMDAdBgNVHQ4EFgQUijMZ8kLjBgTM
 bcHkeIM1PHjeaiIwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAs
 k+Jq39rckTYg7cUtzO/mFYYtpuuo+0MW+mC0/NjqZQIgBvaqdde8xAjOw9nqsBrB
 NecwLoyuObd5tf9Qwxdkolo=
+-----END CERTIFICATE-----";
+
+    #[test]
+    fn removal_takes_only_a_certificate_issued_under_trawlers_name() {
+        let ours = removal_thumbprint(ANDROID_CA).unwrap();
+        assert_eq!(ours, thumbprint(&live_body(ANDROID_CA).unwrap()).unwrap());
+        assert_eq!(removal_thumbprint(FOREIGN_ROOT), Err(setup_error(NOT_TRAWLERS_CA)));
+        assert_eq!(
+            removal_thumbprint("not a certificate"),
+            Err(setup_error("not a PEM certificate"))
+        );
+    }
+
+    const FOREIGN_ROOT: &str = "-----BEGIN CERTIFICATE-----
+MIIBpzCCAUygAwIBAgIUFvElQK2ssdKW+JSzCySWZEuMZA4wCgYIKoZIzj0EAwIw
+OTEcMBoGA1UEAwwTRXhhbXBsZSBQdWJsaWMgUm9vdDEZMBcGA1UECgwQVHJhd2xl
+ciBQcm94eSBDQTAeFw0yNjExMDYxMTE3MDlaFw0zNjExMDMxMTE3MDlaMDkxHDAa
+BgNVBAMME0V4YW1wbGUgUHVibGljIFJvb3QxGTAXBgNVBAoMEFRyYXdsZXIgUHJv
+eHkgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQV/9dIHvoK9COGFDLmVP34
+VdZ/g9ztLIUE6hTfru0PG7blQ6TQ+E6ZWb6EqqVKKJn/HDi7rOZcaXJYov/SVc4Z
+ozIwMDAdBgNVHQ4EFgQUDPnFUxxL/dUxrwOZbljGAeQvz7kwDwYDVR0TAQH/BAUw
+AwEB/zAKBggqhkjOPQQDAgNJADBGAiEApE61rLlAqm/LgZIkUswS4GSFBz4usd5N
+gBnoij0/0IQCIQD4QX+078Dg8FwuNiEpnY8AxbzTrAaccrf5tMfKfP2mtg==
 -----END CERTIFICATE-----";
 
     #[test]

@@ -795,16 +795,6 @@ mod tests {
     }
 
     #[test]
-    fn a_refused_uac_approval_leaves_the_certificate_trusted() {
-        let refusal = "Start-Process : The operation was canceled by the user.";
-        let mut s = patched(&format!(
-            r#"{{"trust":"trusted","remove_ca":{{"fails":{{"stderr":"{refusal}"}}}}}}"#
-        ));
-        assert_eq!(s.remove_ca(), Err(command_failed(refusal, NO_REMOVE_DETAIL)));
-        assert_eq!(s.trust_reading(), "trusted");
-    }
-
-    #[test]
     fn a_failed_tool_keeps_its_own_words_and_changes_nothing() {
         let mut s =
             patched(r#"{"set_proxy":{"fails":{"stderr":"networksetup: no such service"}}}"#);
