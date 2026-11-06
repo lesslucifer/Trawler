@@ -33,6 +33,17 @@ fn the_shipped_menu_closes_through_trawler_s_own_item_only() {
     assert!(native.is_empty(), "no native close item remains: {native:?}");
 }
 
+// cargo-nextest lists a test binary with libtest's `--list` before it runs each
+// test by name; a binary that ignores the list runs nothing under the gate.
+#[allow(clippy::print_stdout)]
 fn main() {
+    const NAME: &str = "the_shipped_menu_closes_through_trawler_s_own_item_only";
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.iter().any(|arg| arg == "--list") {
+        if !args.iter().any(|arg| arg == "--ignored") {
+            println!("{NAME}: test");
+        }
+        return;
+    }
     the_shipped_menu_closes_through_trawler_s_own_item_only();
 }
