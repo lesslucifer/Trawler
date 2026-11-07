@@ -8,9 +8,9 @@
 // probes live in Rust.
 
 // What the shell read of the live certificate: trusted; installed and not
-// trusted (a keychain copy nobody marked Always Trust); not installed; or
-// nothing on this host could read a store.
-export type TrustProbe = "trusted" | "installed" | "absent" | "unknown";
+// trusted (a keychain copy nobody marked Always Trust); only an older Trawler
+// CA in the store; not installed; or nothing on this host could read a store.
+export type TrustProbe = "trusted" | "installed" | "stale" | "absent" | "unknown";
 export type ProxyProbe = "ours" | "foreign" | "none" | "unknown";
 
 // What the shell read of this machine's system proxy: the classification, and
@@ -183,6 +183,8 @@ export function trustStatus(
   if (probe === "trusted") return verdict("done", trusted);
   if (probe === "installed")
     return verdict("not-done", "installed, not trusted");
+  if (probe === "stale")
+    return verdict("not-done", "only an older Trawler certificate is installed");
   if (probe === "absent") return verdict("not-done", "not installed");
   return unread;
 }

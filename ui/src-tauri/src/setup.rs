@@ -205,6 +205,7 @@ fn holds(store: &str, live: &str) -> bool {
 pub(crate) enum Trust {
     Trusted,
     Installed,
+    Stale,
     Absent,
 }
 
@@ -213,7 +214,8 @@ pub(crate) enum Trust {
 // certificate: deleted from the keychain, the bytes handed to `verify-cert`
 // still pass. So the keychain answers first, and only a certificate it holds is
 // verified, which tells installed-and-untrusted (a -60007, a double-click that
-// never chose Always Trust) apart from trusted (D2).
+// never chose Always Trust) apart from trusted (D2). The search is by name, so
+// any copy it finds that is not the live one is an older CA's.
 fn macos_trust(
     live: &str,
     keychain: impl FnOnce() -> Option<Ran>,
@@ -221,7 +223,8 @@ fn macos_trust(
 ) -> Option<Trust> {
     let keychain = keychain().filter(|out| out.ok)?;
     if !holds(&keychain.stdout, live) {
-        return Some(Trust::Absent);
+        let older = !pem_blocks(&keychain.stdout).is_empty();
+        return Some(if older { Trust::Stale } else { Trust::Absent });
     }
     Some(if verifies()? { Trust::Trusted } else { Trust::Installed })
 }
@@ -255,15 +258,19 @@ fn lists_thumbprint(listing: &str, thumbprint: &str) -> bool {
 }
 
 // A browser trusts a root from the machine's store or the user's (D4). Absent
-// needs both read; a store that did not answer cannot vouch for itself.
+// needs both read; a store that did not answer cannot vouch for itself. A
+// listing names each subject in plain text, so Trawler's CA under another
+// thumbprint is an older one (a reinstall mints a new CA; D1).
 fn windows_trust(thumbprint: &str, machine: Option<&Ran>, user: Option<&Ran>) -> Option<Trust> {
     let read: Vec<&Ran> = [machine, user].into_iter().flatten().filter(|out| out.ok).collect();
     if read.iter().any(|out| lists_thumbprint(&out.stdout, thumbprint)) {
         Some(Trust::Trusted)
-    } else if read.len() == 2 {
-        Some(Trust::Absent)
-    } else {
+    } else if read.len() < 2 {
         None
+    } else if read.iter().any(|out| out.stdout.contains(CA_COMMON_NAME)) {
+        Some(Trust::Stale)
+    } else {
+        Some(Trust::Absent)
     }
 }
 
@@ -315,6 +322,7 @@ pub(crate) fn trust_word(reading: Option<Trust>) -> &'static str {
     match reading {
         Some(Trust::Trusted) => "trusted",
         Some(Trust::Installed) => "installed",
+        Some(Trust::Stale) => "stale",
         Some(Trust::Absent) => "absent",
         None => "unknown",
     }
@@ -2826,8 +2834,8 @@ mod tests {
 
     // D1: the old same-name certificate verifies, and the live one is nowhere.
     #[test]
-    fn a_same_name_certificate_never_answers_for_the_live_one() {
-        assert_eq!(macos_trust(&live(), || answered(STALE), never_verified), Some(Trust::Absent));
+    fn a_same_name_certificate_never_answers_for_the_live_one_and_reads_as_older() {
+        assert_eq!(macos_trust(&live(), || answered(STALE), never_verified), Some(Trust::Stale));
     }
 
     #[test]
@@ -2998,6 +3006,19 @@ mod tests {
         assert_eq!(windows_trust(THUMB, None, listing.as_ref()), Some(Trust::Trusted));
     }
 
+    // Recorded on the rc5 Windows VM: ROOT held an older Trawler CA, and the
+    // screen read it as never installed.
+    #[test]
+    fn windows_tells_an_older_trawler_ca_apart_from_none() {
+        let older = answered(&format!(
+            "Subject: CN={CA_COMMON_NAME}, O=Trawler\nCert Hash(sha1): 66cf84f1ffea3c63aeadcb477d37f2dcdf512d3f"
+        ));
+        let other = answered("Cert Hash(sha1): 0000000000000000000000000000000000000000");
+        assert_eq!(windows_trust(THUMB, older.as_ref(), other.as_ref()), Some(Trust::Stale));
+        assert_eq!(windows_trust(THUMB, other.as_ref(), older.as_ref()), Some(Trust::Stale));
+        assert_eq!(windows_trust(THUMB, older.as_ref(), None), None);
+    }
+
     #[test]
     fn windows_reads_absent_only_once_both_stores_answered() {
         let other = answered("Cert Hash(sha1): 0000000000000000000000000000000000000000");
@@ -3045,6 +3066,7 @@ mod tests {
     fn each_reading_has_its_own_word() {
         assert_eq!(trust_word(Some(Trust::Trusted)), "trusted");
         assert_eq!(trust_word(Some(Trust::Installed)), "installed");
+        assert_eq!(trust_word(Some(Trust::Stale)), "stale");
         assert_eq!(trust_word(Some(Trust::Absent)), "absent");
         assert_eq!(trust_word(None), "unknown");
     }

@@ -132,6 +132,15 @@ test("trustStatus: a certificate installed and not trusted says so, apart from o
   expect(trustStatus("installed", null, UNREAD).short).not.toBe(trustStatus("absent", null, UNREAD).short);
 });
 
+// rc5's Windows VM: ROOT held an older Trawler CA, read as never installed.
+test("trustStatus: an older Trawler CA says so, apart from none at all", () => {
+  expect(trustStatus("stale", null, UNREAD)).toMatchObject({
+    glyph: "○",
+    short: "not done — only an older Trawler certificate is installed",
+  });
+  expect(trustStatus("stale", null, UNREAD).short).not.toBe(trustStatus("absent", null, UNREAD).short);
+});
+
 test("trustStatus: a store nothing read reads what the caller names for it, never not done", () => {
   const view = trustStatus("unknown", null, UNREAD);
 
