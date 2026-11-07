@@ -1,0 +1,29 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W20
+branch: HEAD
+changes:
+  - path: "docs/backlog/hand-check-matrix.html"
+    tier: T2
+    action: updated
+    distills: "row 7b: the tray menu's order, casing, routing line, Stop, update check, About, tooltip and Windows click per OS"
+  - path: "docs/decisions/dec-77-the-app-outlives-its-window.html"
+    tier: T2
+    action: updated
+    distills: "rule 8: the menu's new list and groups, the routing line and its reading triggers, Stop, no address, casing per OS, the Windows click"
+  - path: "docs/decisions/dec-89-one-signed-mark-one-source-folder.html"
+    tier: T2
+    action: updated
+    distills: "rule 12: the routing-*.svg dot sources in UI colours, and what each OS's menu item draws"
+  - path: "docs/design-rules/design-rules-index.html"
+    tier: T2
+    action: updated
+    distills: "lexicon: routes through Trawler / stop routing and tray casing; chromatic meanings: the routing dot's ok / warn / ink-mute sightings"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-BG: the menu's routing line, Stop, Check for updates and About, the Windows left click, and what is proven where"
+  - path: "docs/work/2026-11-06-prorelease-w20-tray-menu-plan.html"
+    tier: T3
+    action: updated
+    distills: "round 2: the owner's rulings as built, the routing visibility rule, the reading cost, the dot evidence per OS, the hand check per OS"
