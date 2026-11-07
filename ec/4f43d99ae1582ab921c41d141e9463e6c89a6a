@@ -1,0 +1,7 @@
+schema: test/v2
+level: commit
+branch: HEAD
+tests:
+  unit: { count: 29, covers: "the_linux_notes_say_a_close_without_a_tray_icon_quits renders the real .github/release-notes.md and pins the corrected Linux line (red on the old text); the 30 other release_manifest tests stay green" }
+  integration: { waived: "no integration contract changed: release-manifest's inputs and outputs are as before; only the template's words moved" }
+  e2e: { waived: "the notes reach users through the owner's v0.1.0-5 tag run on GitHub runners" }
