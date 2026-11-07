@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: f3dfadfccd9a98fe2a22320489fc672e2779da2e
+base: 642bf72887c699f0b10960493aa65ee03dcafade
+tier: key
+signer: vuluu
+report: docs/work/2026-11-07-prorelease-w22-login-message-result.html
+report_sha256: 0feef33bfc075e3118741383991b43e50e443fe13843aca312e4f4e25c1c1ad9
+date: 2026-11-07
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB8FZzhDEXvuKS3JcnhOlge5bv+ideAYjuvo8KsphBhAo+nUR4xPIpAOh
+  lYghWycKWQ49KHRl2g/T1HXnx5HEgE
+  -----END SSH SIGNATURE-----
