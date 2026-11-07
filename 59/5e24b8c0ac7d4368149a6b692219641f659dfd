@@ -1,0 +1,4 @@
+schema: test/v2
+level: commit
+tests:
+  unit: { count: 240, covers: "verdicts.test 'trustStatus: an older Trawler CA says so, apart from none at all' pins the new stale probe to 'not done — only an older Trawler certificate is installed', distinct from absent's words; onboardingMatrix sweeps the four readings each screen branches on (SweptTrust excludes stale, so the sweep is unchanged); setup::tests::windows_tells_an_older_trawler_ca_apart_from_none reads a ROOT listing naming Trawler Proxy CA under another thumbprint as stale, and a_same_name_certificate_never_answers_for_the_live_one_and_reads_as_older reads macOS's by-name hit on other bytes as stale. vitest on these files and cargo test -p trawler-ui --lib setup:: (133) green." }
