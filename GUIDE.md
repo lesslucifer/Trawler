@@ -290,7 +290,11 @@ On Windows, a left click on the tray icon opens Trawler and a right click opens 
 
 Turn on **Settings → General → open Trawler at login**. Trawler then opens in the menu bar or tray when you log in, with no window.
 
-- macOS: unavailable for now. macOS starts only a developer-signed app at login, and Trawler isn't signed yet.
+- macOS: the switch is unavailable for now. macOS starts only a developer-signed app at login, and Trawler isn't signed yet. Add it by hand instead:
+  1. Open **System Settings → General → Login Items & Extensions** (**Login Items** on macOS 13 and 14).
+  2. Under **Open at Login**, click **+**, choose **Trawler** in Applications and click **Open**.
+
+  Trawler then opens with its window when you log in. With **keep capturing when the window closes** on, close the window and Trawler keeps capturing from the menu bar. To undo it, select **Trawler** in that list and click **−**. On macOS 12 and earlier, the list is in **System Preferences → Users & Groups → Login Items**.
 - Windows: it starts for your account.
 - Linux: it adds `~/.config/autostart/dev.trawler.app.desktop`. From an AppImage, it starts that file, so keep it where it is.
 
@@ -313,7 +317,7 @@ Do these in order. The first two need Trawler open.
 
 1. **Stop the proxy.** On the setup screen, under the second task, click **stop routing through Trawler** (macOS and Windows). On Linux, run `gsettings set org.gnome.system.proxy mode 'none'`. Without this, your system has no internet once Trawler is gone.
 2. **Remove the certificate** (below, per system).
-3. **Turn off open Trawler at login** in **Settings → General**.
+3. **Turn off open Trawler at login** in **Settings → General**. On macOS, remove Trawler from Login Items if you added it by hand.
 4. **Quit Trawler**, then remove the app and its folders (below).
 
 Did you capture a phone, a simulator or an emulator? Undo it there too (below).
