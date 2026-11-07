@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aee88c39f34851f0dfafc9d" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W21 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W21 result: an elevated script survives every layer it is spliced into</h1>
+      <p>What W21 changed, how it is proven, and what stays for the router.</p>
+      <div class="meta">v1 · 2026-11-07 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W21</span> · <code>wu/prorelease/applescript-escape</code> → <code>epic/prorelease</code> · plan <a href="2026-11-07-prorelease-w21-applescript-escape-plan.html">W21 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Layer</th><th>Where (<code>ui/src-tauri/src/setup.rs</code>)</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>AppleScript literal</td><td><code>elevated_script</code></td><td>script spliced raw → <code>\</code>→<code>\\</code> then <code>"</code>→<code>\"</code>; every macOS elevated path (set up, proxy on/off, remove CA, W20's tray off) routes through it</td></tr>
+          <tr><td>Shell</td><td><code>quoted</code></td><td><code>'arg'</code> with a bare <code>'</code> → <code>shell_quote</code> (<code>'\''</code>)</td></tr>
+          <tr><td>PowerShell literal</td><td><code>elevated_argv</code> windows, <code>powershell_quote</code></td><td><code>'</code> unescaped → doubled (<code>''</code>), also in <code>-FilePath</code></td></tr>
+          <tr><td>Windows command line</td><td><code>command_line_word</code></td><td>Start-Process joined a spaced path into several arguments → an argument with whitespace is wrapped in <code>"…"</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="audit">Audit outcome</h2>
+    <p data-c="audit">A1, A2, A4, A5 fixed; A3, A6–A9 checked and kept (constants, hex hashes, a <code>valid_host</code> host, or already escaped and tested) — see the plan's audit table.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">None from the plan. Newlines and control bytes are passed literally rather than refused: <code>osascript</code> keeps them inside a literal (checked on this host), and only <code>\\ \" \n \t \r</code> are AppleScript escapes.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Tests red first</td><td>5 new <code>setup::tests</code> failed on the old code: the literal round-trip, the <code>Wi-Fi "x" \ y</code> service, the unprivileged <code>osascript -e 'return "…"'</code> parse, the <code>'</code> in <code>quoted</code>, the Windows <code>O'Brien Li</code> path; all green after</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1491 tests)</td></tr>
+          <tr><td>No privilege prompt</td><td>the osascript test runs <code>return "…"</code> only, never <code>do shell script</code></td></tr>
+          <tr><td>Review</td><td><code>cr/v5</code> note on this tip</td></tr>
+          <tr><td>integration / e2e</td><td>waived: a pure string builder; running the built command needs an admin prompt</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="hand-check">Hand check (no privileged action)</h2>
+    <p data-c="hand-check"><code>cd ../Trawler-pr-w21 &amp;&amp; cargo test -p trawler-ui --lib setup::tests::osascript_parses -- --nocapture</code> runs the real <code>osascript</code> parser on the escaped literal. A full check needs a network service renamed to <code>Wi-Fi "x" \ y</code> and Proxy on/off, which does prompt for a password — owner's call.</p>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">No T2 change: UC-ONBOARD's behaviour is unchanged; the escaping is a correctness property of the code. No DEC (no new rule).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Independent review of <code>ui/src-tauri/src/setup.rs</code> (outside the cr gate)</td><td>router</td></tr>
+          <tr><td>W20 merges first; its <code>unset_trawler_proxy_commands</code> inherits the fix through <code>elevated_script</code></td><td>router</td></tr>
+          <tr><td>Windows hand check: set up with a user folder holding a space or <code>'</code></td><td>owner</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
