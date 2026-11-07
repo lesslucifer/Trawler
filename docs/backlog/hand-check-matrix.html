@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Hand-check matrix</h1>
       <p>What a person checks on each OS before an rc becomes a final: what CI cannot run (OS prompts, real installs, real updates, uninstall).</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T2 backlog · written by <span class="badge id">E-PRORELEASE.W7</span> · process: <code>docs/release-process.html</code> · UC-INSTALL, UC-UPDATE, UC-ONBOARD, UC-BG · <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a></div>
+      <div class="meta">v2 · 2026-11-07 · Trawler · T2 backlog · written by <span class="badge id">E-PRORELEASE.W7</span>, rows from W1–W21 added for v0.1.0-5 · process: <code>docs/release-process.html</code> · UC-INSTALL, UC-UPDATE, UC-ONBOARD, UC-BG · <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a></div>
     </div>
   </header>
   <main>
@@ -40,32 +40,43 @@ flowchart LR
     <table data-c="matrix">
       <thead><tr><th>#</th><th>Step</th><th>Passes when</th><th>macOS</th><th>Win x64</th><th>Win arm64</th><th>Ubuntu x64</th><th>Ubuntu arm64</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td>Download + verify</td><td>the notes' <em>Verify your download</em> command says OK for the installer</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>1</td><td>Download + verify</td><td>the notes' <em>Check your download</em> command says OK for the installer</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
         <tr><td>2</td><td>Install</td><td>the installer finishes; the app is where the OS keeps apps</td><td>☐</td><td>☐ exe · ☐ msi</td><td>☐</td><td>☐ AppImage · ☐ deb</td><td>☐ AppImage · ☐ deb</td></tr>
         <tr><td>3</td><td>First-open prompt</td><td>exactly the prompt the notes name, and their steps get past it (macOS: Privacy &amp; Security → Open Anyway · Windows: SmartScreen → More info → Run anyway · Linux: none)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
         <tr><td>4</td><td>First window</td><td>the window opens on setup; Settings shows the core running; About names this version</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>4b</td><td>About, Help, Settings</td><td>macOS: Trawler → About Trawler; Help lists Trawler User Guide · Report an Issue… · Third-Party Licences · Privacy and the search field · Windows/Linux: <kbd>F1</kbd> opens the guide, <kbd>Alt</kbd>+<kbd>H</kbd> the Help menu, About last in Help · Settings… from the Trawler menu <kbd>⌘,</kbd> (macOS), File <kbd>Ctrl+,</kbd> (Windows), Edit <kbd>Ctrl+,</kbd> (Linux) and the tray, also while windowless, minimised and fullscreen · with About or Settings open <kbd>Esc</kbd> and <kbd>⌘W</kbd>/<kbd>Ctrl+W</kbd> close the dialog and Trawler stays; with no dialog <kbd>⌘W</kbd>/<kbd>Ctrl+W</kbd> closes the window as before · Report an Issue… opens the issue form carrying only version, OS + version + CPU and install kind (E-PRORELEASE.W4, W19)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
         <tr><td>5</td><td>Setup: this machine</td><td>the setup steps trust the CA and route the proxy; setup ends on its own on a captured https row</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>5b</td><td>Remove the certificate</td><td>Windows, the seven steps below: never a silent success; one store per click; a public root refused · macOS: <em>remove the certificate</em> asks the password and the task reads not done (E-PRORELEASE.W16)</td><td>☐</td><td>☐</td><td>☐</td><td>n/a</td><td>n/a</td></tr>
+        <tr><td>5c</td><td>A user folder with a space or <code>'</code></td><td>on a Windows account whose user folder holds a space or an apostrophe (<code>C:\Users\Jo Ann's</code>): set up this PC trusts the CA after one UAC, and remove the certificate removes it (E-PRORELEASE.W21)</td><td>n/a</td><td>☐</td><td>☐</td><td>n/a</td><td>n/a</td></tr>
         <tr><td>6</td><td>Capture</td><td>a browser page's requests list live, https decrypted; a filter chip narrows them; a flow opens in the inspector</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
         <tr><td>7</td><td>Keep capturing</td><td>the first ✕ asks; with it on the window closes and capture continues behind the menu-bar/tray icon; the icon's menu opens and quits</td><td>☐</td><td>☐</td><td>☐</td><td>☐ needs AppIndicator</td><td>☐</td></tr>
-        <tr><td>7b</td><td>Tray menu</td><td>the menu reads, top to bottom: the capture line (no address), a dotted routing line, Open Trawler · Settings… · Restart capture service | Stop routing through Trawler (not on Linux) | Check for updates… · About Trawler | Quit Trawler, Title Case on macOS, sentence case elsewhere; after setup the dot is green and <em>This machine routes through Trawler</em>, Stop asks the admin approval (macOS) and the line turns grey <em>The system proxy is off</em>; macOS with Wi-Fi on Trawler and another service on a different proxy: Stop leaves that other proxy on; a proxy switched elsewhere after the menu opened: Stop changes nothing and the line reads <em>Another proxy is set</em>; Check for updates… answers with a dialog windowless; About opens the dialog; the tooltip reads <em>Trawler — Capturing</em> (macOS, Windows); Windows: left click opens Trawler, right click the menu (E-PRORELEASE.W20)</td><td>☐</td><td>☐</td><td>☐</td><td>☐ line only, dot may not draw</td><td>☐</td></tr>
+        <tr><td>7b</td><td>Tray menu</td><td>the menu reads, top to bottom: the capture line (no address), a dotted routing line, Open Trawler · Settings… · Restart capture service | Stop routing through Trawler (not on Linux) | Check for updates… · About Trawler | Quit Trawler, Title Case on macOS, sentence case elsewhere; after setup the dot is green and <em>This machine routes through Trawler</em>, Stop asks the admin approval (macOS) and the line turns grey <em>The system proxy is off</em>; macOS with Wi-Fi on Trawler and another service on a different proxy: Stop leaves that other proxy on; a proxy switched elsewhere after the menu opened: Stop changes nothing and the line reads <em>Another proxy is set</em>; Check for updates… answers with a dialog windowless; About opens the dialog; the tooltip reads <em>Trawler — Capturing</em> (macOS, Windows); Windows: left click opens Trawler, right click the menu, and an open menu refreshes only on reopen; record whether macOS dims a disabled item's dot and whether AppIndicator draws the dot (E-PRORELEASE.W20)</td><td>☐</td><td>☐</td><td>☐</td><td>☐ line only, dot may not draw</td><td>☐</td></tr>
         <tr><td>8</td><td>Open at login</td><td>switch on, log out and in: the app runs with no window (macOS 11/12: reads unavailable; AppImage: the file's own path)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
-        <tr><td>9</td><td>Update rc → rc</td><td>with the previous rc installed and this rc published as latest: the dialog names both versions, DEC-64's check runs, the app relaunches as this rc, the CA's SHA-256 and settings unchanged</td><td>☐</td><td>☐</td><td>☐</td><td>☐ AppImage · ☐ deb</td><td>☐ AppImage · ☐ deb</td></tr>
+        <tr><td>9</td><td>Update rc → rc</td><td>with the previous rc installed and this rc published as latest (needs that older rc published: v0.1.0-4 → v0.1.0-5): the dialog names both versions, DEC-64's check runs, the app relaunches as this rc, the CA's SHA-256 and settings unchanged</td><td>☐</td><td>☐</td><td>☐</td><td>☐ AppImage · ☐ deb</td><td>☐ AppImage · ☐ deb</td></tr>
+        <tr><td>9b</td><td>Offline launch</td><td>launch with the network off: no update dialog and no error; launch again online the same day: it checks (a failed check stamps nothing); Settings → General unticked + relaunch: no launch check, <em>check now</em> still answers (E-PRORELEASE.W8, W4)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
         <tr><td>10</td><td>Update with keep capturing</td><td>row 9 with keep capturing and open at login on and the window closed: the window opens to ask; the login item survives</td><td>☐</td><td>☐</td><td>n/a</td><td>☐</td><td>n/a</td></tr>
         <tr><td>11</td><td>Update rc → final</td><td>(the final's own run) the last rc installed, and the previous final if there is one, is offered the final and becomes it, as row 9; an rpm install of the final on Fedora installs and opens</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
-        <tr><td>12</td><td>Uninstall</td><td>the app is gone, then the CA trust and the data dir removed by hand as listed below leave no Trawler certificate and no <code>dev.trawler.app</code> folder</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+        <tr><td>12</td><td>Uninstall</td><td>GUIDE.md <em>Uninstall</em> followed word for word leaves no Trawler certificate, no proxy set, no login item and no <code>dev.trawler.app</code> folder; the labels, paths and package name it quotes match what the OS shows; record whether removing the app alone clears the login item (macOS) or the Run value (Windows)</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td><td>☐</td></tr>
+              <tr><td>13</td><td>Guide shots</td><td>the last rc's first open captured for GUIDE.md: S8 macOS “can't verify” → Privacy &amp; Security → Open Anyway (and macOS 11/12's button names when one is at hand) as <code>.github/screenshots/s8-macos-open-anyway.png</code>; S9 SmartScreen → More info → Run anyway, and whether the installer asks for admin, as <code>s9-windows-smartscreen.png</code> (E-PRORELEASE.W6)</td><td>☐</td><td>☐</td><td>n/a</td><td>n/a</td><td>n/a</td></tr>
       </tbody>
     </table>
 
-    <h2 id="uninstall">Uninstall per OS (row 12)</h2>
-    <table data-c="uninstall">
-      <thead><tr><th>OS</th><th>App</th><th>CA trust (“Trawler Proxy CA”)</th><th>Data</th></tr></thead>
+    <h2 id="remove-ca-windows">Remove the certificate on Windows (row 5b)</h2>
+    <table data-c="remove-ca-windows">
+      <thead><tr><th>#</th><th>Do</th><th>Sees</th></tr></thead>
       <tbody>
-        <tr><td>macOS</td><td>drag Trawler from Applications to the Bin</td><td>Keychain Access → System → delete “Trawler Proxy CA”</td><td><code>~/Library/Application Support/dev.trawler.app</code></td></tr>
-        <tr><td>Windows</td><td>Settings → Apps → Trawler → Uninstall</td><td><code>certmgr.msc</code> → Trusted Root Certification Authorities → delete “Trawler Proxy CA”</td><td><code>%APPDATA%\dev.trawler.app</code></td></tr>
-        <tr><td>Ubuntu</td><td>deb: <code>sudo apt remove trawler</code> · AppImage: delete the file and <code>~/.config/autostart/</code>'s Trawler entry</td><td><code>sudo rm /usr/local/share/ca-certificates/trawler-ca.crt &amp;&amp; sudo update-ca-certificates --fresh</code>; browsers: <code>certutil -D -n trawler</code> on the NSS db setup used</td><td><code>~/.local/share/dev.trawler.app</code>, <code>~/.config/dev.trawler.app</code></td></tr>
+        <tr><td>1</td><td>Install, open, <em>set up this PC</em>, approve UAC</td><td>task 1 done; <em>remove the certificate</em> under it</td></tr>
+        <tr><td>2</td><td><em>remove the certificate</em>, then <strong>No</strong> on UAC</td><td><em>the approval was cancelled. Try again, or do it by hand.</em>; still trusted</td></tr>
+        <tr><td>3</td><td>Again, <strong>Yes</strong></td><td>task 1 not done; <code>certutil -store ROOT "Trawler Proxy CA"</code> finds nothing</td></tr>
+        <tr><td>4</td><td><code>certutil -user -addstore -f ROOT %USERPROFILE%\Downloads\trawler-ca.pem</code>, wait for the re-read, click the button</td><td>no UAC; Windows' own delete-root warning, <strong>Yes</strong>; task 1 not done</td></tr>
+        <tr><td>5</td><td>Both stores (steps 1 and 4), click twice</td><td>first click UAC, the button stays; second click the user-store warning; then not done</td></tr>
+        <tr><td>6</td><td>From that state, <em>set up this PC</em>, <strong>No</strong> on UAC</td><td>the cancelled line; task 1 not done, proxy untouched</td></tr>
+        <tr><td>7</td><td>Debug build devtools: <code>__TAURI_INTERNALS__.invoke("remove_ca", {pem: ‹a public root's PEM›})</code></td><td>rejects with <em>not Trawler's certificate</em>; no UAC; <code>certutil -store ROOT</code> still lists that root</td></tr>
       </tbody>
     </table>
-    <p class="kd" data-c="uninstall-note">The app offers no “remove CA trust” action today; these steps are what the user guide (E-PRORELEASE W6) repeats.</p>
+
+    <h2 id="uninstall">Uninstall (row 12)</h2>
+    <p class="kd" data-c="uninstall-note">The steps are <a href="../../GUIDE.md#uninstall">GUIDE.md <em>Uninstall</em></a>, per OS; the check is that a user following them ends clean, so the matrix does not repeat them.</p>
 
     <h2 id="not-here">Not on the matrix</h2>
     <table data-c="not-here">
@@ -73,6 +84,7 @@ flowchart LR
       <tbody>
         <tr><td>Each installer builds, installs headless, captures and frees its ports</td><td><code>cargo xtask smoke</code> in every release row (DEC-86 rule 3)</td></tr>
         <tr><td><code>latest.json</code> entries, signatures, <code>SHA256SUMS</code> digests</td><td><code>release-manifest</code> refusals and the release job's <code>sha256sum -c</code></td></tr>
+        <tr><td>The updater refuses an <code>http://</code> endpoint; a failed check leaves the stamp</td><td><code>ui/src-tauri/tests/suite/updater.rs</code> (DEC-82 rules 1 and 7)</td></tr>
         <tr><td>Another device (phone, Simulator) setup</td><td>UC-ONBOARD's own tests; by hand only when a release changes it</td></tr>
       </tbody>
     </table>
