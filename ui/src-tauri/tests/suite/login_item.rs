@@ -93,7 +93,7 @@ fn the_commands_turn_the_entry_on_for_this_binary_and_off_again() {
         ])
         .build(mock_context(noop_assets()))
         .expect("a mock app");
-    app.manage(LoginItemPlace(Some(Place::Service(Arc::new(Registered::default())))));
+    app.manage(LoginItemPlace(Ok(Place::Service(Arc::new(Registered::default())))));
     let main =
         WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default()).build().unwrap();
     let this = std::env::current_exe().unwrap();
@@ -122,7 +122,7 @@ fn from_a_binary_with_no_bundle_the_commands_say_the_item_is_unavailable() {
         .invoke_handler(tauri::generate_handler![login_item::login_item_read])
         .build(mock_context(noop_assets()))
         .expect("a mock app");
-    app.manage(LoginItemPlace(None));
+    app.manage(LoginItemPlace(Err(login_item::UNAVAILABLE)));
     let main =
         WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default()).build().unwrap();
     let refused = get_ipc_response(
