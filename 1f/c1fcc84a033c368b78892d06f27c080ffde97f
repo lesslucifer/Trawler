@@ -1,0 +1,32 @@
+schema: cr/v5
+scope: "WU user-guide -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W6
+branch: wu/prorelease/user-guide
+base: 6ed6e3581e0ff6c1901a15d881ac3fec3090b5f7
+head: 1fc1fcc84a033c368b78892d06f27c080ffde97f
+diff_sha256: f521c7d1477f26b7305cc45dfe06231aa7c3a62b5094952bfa6083fefb3b8f3d
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 16
+    finders: 12
+    verifiers: 0
+    total: 34
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-07
