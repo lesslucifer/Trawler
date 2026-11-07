@@ -1,4 +1,3 @@
-use std::process::Command;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
@@ -8,7 +7,7 @@ use trawler_ui_lib::core::{self, Core};
 use trawler_ui_lib::supervisor::{CoreState, Supervisor};
 use trawler_ui_lib::tray::{self, Glyph, Machine, Routing, TrayView, RESTART_ID, STOP_ROUTING_ID};
 
-use crate::common::{eventually, launch};
+use crate::common::{eventually, kill_hard, launch};
 
 fn app() -> App<MockRuntime> {
     mock_builder().build(mock_context(noop_assets())).expect("a mock app")
@@ -47,7 +46,7 @@ fn the_menu_follows_a_killed_core_and_restarts_it_on_its_ports() {
         }
     );
 
-    Command::new("kill").args(["-9", &pid.to_string()]).status().unwrap();
+    assert!(kill_hard(pid), "the core is killed");
     eventually("the icon reads stopped", || shown(&app).glyph == Glyph::Stopped);
     assert_eq!(
         shown(&app),

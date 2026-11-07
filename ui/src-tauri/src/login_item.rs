@@ -360,6 +360,8 @@ mod tests {
         );
     }
 
+    // A rooted path with no drive is not absolute on Windows, which has no AppImage.
+    #[cfg(unix)]
     #[test]
     fn an_appimage_is_started_at_login_from_its_file_not_its_mount() {
         let exe = PathBuf::from("/tmp/.mount_TrawlXYZ/usr/bin/trawler-ui");
