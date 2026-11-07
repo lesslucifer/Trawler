@@ -120,6 +120,18 @@ pub fn routing_line(routing: Routing) -> Option<(&'static str, Dot)> {
     }
 }
 
+/// What showing `wanted` takes from a menu listing `listed`: whether the line
+/// comes out, and whether one goes in. GTK keeps an icon item's first label
+/// (muda gives it a box child, and `set_label` renames only a label child), so
+/// a changed line goes in afresh: renamed, it froze on Linux at the reading
+/// taken at launch.
+pub fn relisting(listed: Option<&str>, wanted: Option<&str>) -> (bool, bool) {
+    if listed == wanted {
+        return (false, false);
+    }
+    (listed.is_some(), wanted.is_some())
+}
+
 pub fn dot_image(dot: Dot) -> tauri::Result<Image<'static>> {
     Image::from_bytes(match dot {
         Dot::Ours => OURS_DOT,
@@ -259,7 +271,7 @@ struct NativeItems<R: Runtime> {
     menu: Menu<R>,
     status: MenuItem<R>,
     routing: IconMenuItem<R>,
-    routing_listed: Mutex<bool>,
+    routing_listed: Mutex<Option<&'static str>>,
     restart: MenuItem<R>,
     stop_routing: Option<MenuItem<R>>,
 }
@@ -302,14 +314,8 @@ impl<R: Runtime> NativeItems<R> {
                 }
             }
         }
-        let items = Self {
-            menu,
-            status,
-            routing,
-            routing_listed: Mutex::new(false),
-            restart,
-            stop_routing,
-        };
+        let items =
+            Self { menu, status, routing, routing_listed: Mutex::new(None), restart, stop_routing };
         items.show(shown)?;
         Ok(items)
     }
@@ -321,20 +327,17 @@ impl<R: Runtime> NativeItems<R> {
             stop.set_enabled(shown.stop_routing())?;
         }
         let mut listed = self.routing_listed.lock().unwrap_or_else(PoisonError::into_inner);
-        match routing_line(shown.routing) {
-            Some((line, dot)) => {
-                self.routing.set_text(line)?;
-                self.routing.set_icon(Some(dot_image(dot)?))?;
-                if !*listed {
-                    self.menu.insert(&self.routing as &dyn IsMenuItem<R>, 1)?;
-                    *listed = true;
-                }
-            }
-            None if *listed => {
-                self.menu.remove(&self.routing as &dyn IsMenuItem<R>)?;
-                *listed = false;
-            }
-            None => {}
+        let wanted = routing_line(shown.routing);
+        let (take_out, put_in) = relisting(*listed, wanted.map(|(line, _)| line));
+        if take_out {
+            self.menu.remove(&self.routing as &dyn IsMenuItem<R>)?;
+            *listed = None;
+        }
+        if let (true, Some((line, dot))) = (put_in, wanted) {
+            self.routing.set_text(line)?;
+            self.routing.set_icon(Some(dot_image(dot)?))?;
+            self.menu.insert(&self.routing as &dyn IsMenuItem<R>, 1)?;
+            *listed = Some(line);
         }
         Ok(())
     }
@@ -664,6 +667,19 @@ mod tests {
         assert_eq!(routing_line(Routing::Foreign), Some(("Another proxy is set", Dot::Foreign)));
         assert_eq!(routing_line(Routing::Off), Some(("The system proxy is off", Dot::Off)));
         assert_eq!(routing_line(Routing::Unread), None);
+    }
+
+    // Ubuntu, rc5: the line read at launch, before the proxy was set, stayed
+    // "The system proxy is off" while gsettings pointed at Trawler.
+    #[test]
+    fn a_changed_routing_line_is_listed_afresh_and_an_unchanged_one_is_left() {
+        let off = routing_line(Routing::Off).map(|(line, _)| line);
+        let ours = routing_line(Routing::Ours).map(|(line, _)| line);
+        assert_eq!(relisting(off, ours), (true, true));
+        assert_eq!(relisting(ours, ours), (false, false));
+        assert_eq!(relisting(None, ours), (false, true));
+        assert_eq!(relisting(ours, None), (true, false));
+        assert_eq!(relisting(None, None), (false, false));
     }
 
     #[test]
