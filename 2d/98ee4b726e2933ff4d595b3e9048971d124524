@@ -1,5 +1,0 @@
-schema: test/v2
-level: commit
-branch: HEAD
-tests:
-  unit: { count: 23, covers: "General.test \"an unsigned Mac's login item reads as a state with the way by hand, not as a refused save\" (disabled box, the shell's reason verbatim with macOS capitalised, no \"couldn't save\", the link button sends open_link {link: login}), \"a browser that won't open leaves the way by hand's address to copy\", \"off a Mac, an unavailable login item has no way by hand to point at\"; links::tests the_login_link_lands_on_a_heading_of_the_guide (GUIDE.md has the ### heading #open-at-login names) and the_webview_names_a_link_and_never_an_address with login. The General tests fail on 1a5b8cec (box enabled, no notice). Full vitest 61819 green, gate0 green." }
