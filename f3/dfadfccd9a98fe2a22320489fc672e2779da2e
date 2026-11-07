@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W22
+branch: HEAD
+tests:
+  unit: { count: 32, covers: "a refused login_item_read reads as a state: the box disabled, the shell's reason verbatim (no 'couldn't save', macOS kept), and on macOS a 'how to do it by hand' button calling open_link {link: login}; a refused browser leaves the address to copy; off a Mac no button. 'login' deserialises to Link::Login and its anchor is a ### heading of GUIDE.md; every login reason starts 'unavailable — ' and never writes 'macos', and OLD_MACOS names macOS 13. Red first: the 3 General tests fail on the plan commit's General.tsx; the Rust tests do not compile without Link::Login / OLD_MACOS" }
+  integration: { waived: "the state needs an ad-hoc-signed packaged app on a Mac (codesign reads Signature=adhoc); the shell side is a constant reason and a link address, both unit-tested; the existing General and onboardingMatrix specs reran green (58741); the owner hand-checks the packaged build" }
+  e2e: { waived: "the e2e app is not an ad-hoc-signed bundle, so it never shows the unavailable state; the owner's hand check on the packaged build covers it" }
