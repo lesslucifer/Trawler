@@ -49,6 +49,8 @@ Your file must say `OK`, or the two hashes must match. If they don't, the downlo
 3. Open **System Settings → Privacy & Security**. Scroll down to the message about Trawler and click **Open Anyway**.
 4. Click **Open Anyway** again and enter your password.
 
+On macOS 11 and 12, step 3 is in **System Preferences → Security & Privacy → General**. The wording differs slightly on older versions: if the warning has no **Done**, close it without moving Trawler to the Bin (Trash).
+
 ### Windows
 
 1. Run the `-setup.exe` (or the `.msi`).
@@ -124,7 +126,7 @@ Trawler can't change these for you on Linux. Each place below keeps its own list
 
 Click **make a request to example.com**. When it says **example.com answered through Trawler.**, you're set. If it says **the request reached Trawler and didn't decrypt.**, restart your browser: it reads the trusted list when it starts.
 
-While Trawler's certificate is trusted, anyone who can read your user files could use its key to read your HTTPS. Remove it when you stop using Trawler ([Uninstall](#uninstall)).
+Trawler stores the certificate's private key unencrypted in its app data folder ([SECURITY.md](SECURITY.md#about-trawlers-certificate)). While the certificate is trusted, anyone who can read your user files could use that key to read your HTTPS. Remove it when you stop using Trawler ([Uninstall](#uninstall)).
 
 ## Capture another device
 
@@ -319,14 +321,14 @@ Did you capture a phone, a simulator or an emulator? Undo it there too (below).
 ### macOS
 
 1. On the setup screen, under the first task, click **remove the certificate** and enter your password.
-2. Drag **Trawler** from Applications to the Bin.
-3. Delete `~/Library/Application Support/dev.trawler.app`.
+2. Drag **Trawler** from Applications to the Bin (Trash).
+3. Delete `~/Library/Application Support/dev.trawler.app`, `~/Library/WebKit/dev.trawler.app` and `~/Library/Caches/dev.trawler.app`. The last two hold only the app window's web data: nothing secret.
 
 ### Windows
 
 1. On the setup screen, under the first task, click **remove the certificate** and approve once. If the task still says **installed and trusted** (you also added it by hand), click it again.
 2. **Settings → Apps → Installed apps → Trawler → Uninstall.**
-3. Delete `%APPDATA%\dev.trawler.app`.
+3. Delete `%APPDATA%\dev.trawler.app` and `%LOCALAPPDATA%\dev.trawler.app`. The second holds only the app window's web data: nothing secret.
 
 ### Linux
 
@@ -372,9 +374,9 @@ The app doesn't trust user certificates. Chrome does; another app does only if i
 
 ### No internet after quitting
 
-The system proxy still points at Trawler. Open Trawler and click **stop routing through Trawler** on the setup screen, or turn the proxy off by hand:
+The system proxy still points at Trawler. On macOS and Windows, open Trawler and click **stop routing through Trawler** on the setup screen. Or turn the proxy off by hand:
 
-- macOS: `networksetup -setwebproxystate Wi-Fi off && networksetup -setsecurewebproxystate Wi-Fi off`
+- macOS (every network service): `networksetup -listallnetworkservices | tail -n +2 | grep -v '^\*' | while read -r s; do networksetup -setwebproxystate "$s" off; networksetup -setsecurewebproxystate "$s" off; done`
 - Windows (PowerShell): `reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings" /v ProxyEnable /t REG_DWORD /d 0 /f`
 - Linux: `gsettings set org.gnome.system.proxy mode 'none'`
 

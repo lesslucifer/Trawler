@@ -50,10 +50,10 @@ Every installed copy updates itself from inside the app.
 
 Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher. You do this once; updates install from inside Trawler.
 
-- **macOS:** open Trawler from Applications, click **Done** on the warning, then open **System Settings → Privacy & Security**, scroll to the message about Trawler and click **Open Anyway**.
+- **macOS:** open Trawler from Applications, click **Done** on the warning, then open **System Settings → Privacy & Security**, scroll to the message about Trawler and click **Open Anyway**. On macOS 11 and 12 it's **System Preferences → Security & Privacy → General**; the wording differs slightly on older versions.
 - **Windows:** when **Windows protected your PC** appears, click **More info**, then **Run anyway**.
 
-Step by step, with pictures: [the guide](GUIDE.md#install).
+Step by step: [the guide](GUIDE.md#install).
 </details>
 
 <details>
