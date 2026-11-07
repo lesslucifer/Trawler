@@ -1,0 +1,17 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W22
+branch: HEAD
+changes:
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-BG's open-at-login row: a build that cannot register (unbundled, below macOS 13, ad-hoc signed) shows the switch disabled with the shell's reason, and on macOS a 'how to do it by hand' button opens the guide's Open at login section, the address to copy when no browser opens"
+  - path: "docs/work/2026-11-07-prorelease-w22-login-message-plan.html"
+    tier: T3
+    action: added
+    distills: "W22's requirement, the reasons table, decisions (button on macOS for any reason, OLD_MACOS worded truthfully, undesigned), test plan"
+  - path: "docs/work/2026-11-07-prorelease-w22-login-message-result.html"
+    tier: T3
+    action: added
+    distills: "W22's outcome, files and review split, deviations from the ready patch, evidence, the owner's hand check, follow-ups"
