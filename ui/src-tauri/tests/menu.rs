@@ -35,6 +35,34 @@ fn the_shipped_menu_closes_through_trawler_s_own_item_only() {
     assert!(native.is_empty(), "no native close item remains: {native:?}");
 }
 
+// Ubuntu, rc5: Alt+H and Alt+E opened nothing.
+fn every_menu_off_macos_opens_with_alt_and_its_own_letter() {
+    let app = mock_builder().build(mock_context(noop_assets())).expect("a mock app");
+    let built = menu::build(app.handle()).expect("the shipped menu");
+    let labels: Vec<String> = built
+        .items()
+        .expect("the menu's submenus")
+        .into_iter()
+        .filter_map(|item| item.as_submenu().map(|submenu| submenu.text().expect("a label")))
+        .collect();
+    if cfg!(target_os = "macos") {
+        assert!(labels.iter().all(|label| !label.contains('&')), "{labels:?}");
+        return;
+    }
+    let keys: Vec<char> = labels
+        .iter()
+        .map(|label| {
+            let (_, key) = label.split_once('&').unwrap_or_else(|| panic!("no Alt key: {label}"));
+            key.chars().next().expect("a letter after &").to_ascii_lowercase()
+        })
+        .collect();
+    assert!(keys.contains(&'h') && keys.contains(&'e'), "{labels:?}");
+    let mut distinct = keys.clone();
+    distinct.sort_unstable();
+    distinct.dedup();
+    assert_eq!(distinct.len(), keys.len(), "one menu per Alt key: {labels:?}");
+}
+
 fn menu_id(menu: Option<Menu<MockRuntime>>) -> MenuId {
     menu.expect("a menu").id().clone()
 }
@@ -65,12 +93,16 @@ fn a_main_window_carries_a_menu_built_for_it() {
 // test by name; a binary that ignores the list runs nothing under the gate.
 #[allow(clippy::print_stdout)]
 fn main() {
-    const TESTS: [(&str, fn()); 2] = [
+    const TESTS: [(&str, fn()); 3] = [
         (
             "the_shipped_menu_closes_through_trawler_s_own_item_only",
             the_shipped_menu_closes_through_trawler_s_own_item_only,
         ),
         ("a_main_window_carries_a_menu_built_for_it", a_main_window_carries_a_menu_built_for_it),
+        (
+            "every_menu_off_macos_opens_with_alt_and_its_own_letter",
+            every_menu_off_macos_opens_with_alt_and_its_own_letter,
+        ),
     ];
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|arg| arg == "--list") {

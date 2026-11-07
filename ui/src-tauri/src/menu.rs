@@ -179,7 +179,24 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     if let Err(err) = own_close_window(app, &menu) {
         eprintln!("Close Window keeps its native item: {err}");
     }
+    if !cfg!(target_os = "macos") {
+        with_alt_keys(&menu)?;
+    }
     Ok(menu)
+}
+
+// GTK and Win32 take a menu's Alt key from an `&` in its label, and tauri's
+// default menu writes none: Alt+H and Alt+E opened nothing.
+fn with_alt_keys<R: Runtime>(menu: &Menu<R>) -> tauri::Result<()> {
+    for item in menu.items()? {
+        if let MenuItemKind::Submenu(submenu) = item {
+            let label = submenu.text()?;
+            if !label.contains('&') {
+                submenu.set_text(format!("&{label}"))?;
+            }
+        }
+    }
+    Ok(())
 }
 
 // muda keys a window's menu bar by the window's address, and tauri drops no key
