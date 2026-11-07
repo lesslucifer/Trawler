@@ -434,7 +434,7 @@ pub fn machine<R: tauri::Runtime>() -> crate::tray::Machine<R> {
             with(&app.state(), |s| s.quit_reading(&proxy.ip().to_string(), proxy.port(), &own))
                 .routing()
         },
-        stop: |app| {
+        stop: |app, _, _| {
             if let Err(err) = with(&app.state(), Scenario::unset_proxy) {
                 eprintln!("the scripted stop failed: {err:?}");
             }

@@ -1142,6 +1142,40 @@ fn unset_proxy_commands(os: &str, services: &[String]) -> Option<Vec<Vec<String>
     }
 }
 
+// The menu's stop, narrower than setup's: on macOS only the switches whose
+// proxy names Trawler go off, so another service's proxy, or this service's
+// other scheme set elsewhere, stays on. Elsewhere the proxy is one setting and
+// the menu's fresh reading before the stop is the guard.
+fn unset_trawler_proxy_commands(
+    os: &str,
+    services: &[String],
+    ours: impl Fn(&str, u16) -> bool,
+    mut read: impl FnMut(&str, &str) -> Option<Ran>,
+) -> Option<Vec<Vec<String>>> {
+    if os != "macos" {
+        return unset_proxy_commands(os, services);
+    }
+    let switches: Vec<String> = services
+        .iter()
+        .flat_map(|svc| {
+            [
+                ("-getwebproxy", "-setwebproxystate"),
+                ("-getsecurewebproxy", "-setsecurewebproxystate"),
+            ]
+            .map(|(get, set)| (svc, get, set))
+        })
+        .filter_map(|(svc, get, set)| {
+            let out = read(get, svc).filter(|out| out.ok)?;
+            let (host, port) = parse_active_proxy(&out.stdout)?;
+            ours(&host, port).then(|| format!("networksetup {set} {} off", shell_quote(svc)))
+        })
+        .collect();
+    if switches.is_empty() {
+        return Some(Vec::new());
+    }
+    Some(vec![elevated_script(&switches.join(" && "))])
+}
+
 fn reg_add(value: &str, kind: &str, data: &str) -> Vec<String> {
     ["reg", "add", WININET_KEY, "/v", value, "/t", kind, "/d", data, "/f"]
         .map(ToString::to_string)
@@ -1235,6 +1269,17 @@ pub fn unset_proxy() -> Result<(), SetupError> {
     let os = std::env::consts::OS;
     let services = services_to_configure(os)?;
     let commands = unset_proxy_commands(os, &services).ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
+    run_all(commands, NO_UNSET_PROXY_DETAIL)
+}
+
+pub(crate) fn unset_trawler_proxy(host: &str, port: u16, own: &[String]) -> Result<(), SetupError> {
+    let os = std::env::consts::OS;
+    let services = services_to_configure(os)?;
+    let ours = |set: &str, at: u16| names_trawler_at(set, at, host, port, own);
+    let commands = unset_trawler_proxy_commands(os, &services, ours, |flag, svc| {
+        ran("networksetup", &[flag, svc])
+    })
+    .ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
     run_all(commands, NO_UNSET_PROXY_DETAIL)
 }
 
@@ -1807,8 +1852,9 @@ impl ProxyReading {
 pub(crate) fn machine<R: tauri::Runtime>() -> crate::tray::Machine<R> {
     crate::tray::Machine {
         read: |_, proxy, own| proxy_status(proxy.ip().to_string(), proxy.port(), own).routing(),
-        stop: |app| {
-            if let Some(text) = unset_proxy().err().as_ref().and_then(unrouted_notice) {
+        stop: |app, proxy, own| {
+            let stopped = unset_trawler_proxy(&proxy.ip().to_string(), proxy.port(), &own);
+            if let Some(text) = stopped.err().as_ref().and_then(unrouted_notice) {
                 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
                 app.dialog()
                     .message(text)
@@ -2504,6 +2550,44 @@ mod tests {
         assert!(script.contains("networksetup -setwebproxystate 'Thunderbolt Bridge' off"));
         assert!(script.contains("networksetup -setsecurewebproxystate 'Thunderbolt Bridge' off"));
         assert!(!script.contains("127.0.0.1"), "off keeps the saved address, never rewrites it");
+    }
+
+    #[test]
+    fn the_menus_stop_turns_off_only_the_switches_that_name_trawler() {
+        let svcs = ["Wi-Fi".into(), "Ethernet".into()];
+        let cmds = unset_trawler_proxy_commands("macos", &svcs, trawler, |flag, svc| {
+            answered(match (svc, flag) {
+                ("Wi-Fi", "-getwebproxy") => MAC_ON,
+                ("Wi-Fi", _) | ("Ethernet", "-getwebproxy") => MAC_WORK,
+                _ => MAC_OFF,
+            })
+        })
+        .unwrap();
+        assert_eq!(cmds.len(), 1);
+        let script = &cmds[0][2];
+        assert!(script.contains("with administrator privileges"));
+        assert!(script.contains("networksetup -setwebproxystate 'Wi-Fi' off"));
+        assert!(!script.contains("-setsecurewebproxystate 'Wi-Fi'"), "Wi-Fi's HTTPS is foreign");
+        assert!(!script.contains("Ethernet"), "a service set elsewhere is never touched");
+    }
+
+    #[test]
+    fn the_menus_stop_asks_nothing_when_no_switch_names_trawler() {
+        let svcs = ["Wi-Fi".into()];
+        let none = unset_trawler_proxy_commands("macos", &svcs, trawler, |_, _| answered(MAC_WORK));
+        assert_eq!(none, Some(Vec::new()));
+        let unread = unset_trawler_proxy_commands("macos", &svcs, trawler, |_, _| None);
+        assert_eq!(unread, Some(Vec::new()), "a switch nothing could read is left as it is");
+    }
+
+    #[test]
+    fn the_menus_stop_is_setups_own_unset_wherever_the_proxy_is_one_setting() {
+        let never = |_: &str, _: &str| -> Option<Ran> { panic!("only macOS reads per service") };
+        assert_eq!(
+            unset_trawler_proxy_commands("windows", &[], trawler, never),
+            unset_proxy_commands("windows", &[])
+        );
+        assert_eq!(unset_trawler_proxy_commands("linux", &[], trawler, never), None);
     }
 
     #[test]

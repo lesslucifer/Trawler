@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::time::Duration;
 
@@ -245,12 +246,13 @@ pub fn glyph_image(glyph: Glyph) -> tauri::Result<Image<'static>> {
 /// tools, the scenario build's script, or a test's.
 pub struct Machine<R: Runtime> {
     pub read: fn(&AppHandle<R>, &SocketAddr, Vec<String>) -> Routing,
-    pub stop: fn(&AppHandle<R>),
+    pub stop: fn(&AppHandle<R>, &SocketAddr, Vec<String>),
 }
 
 struct Shown {
     view: Mutex<TrayView>,
     proxy: Mutex<Option<SocketAddr>>,
+    reading: AtomicBool,
 }
 
 struct NativeItems<R: Runtime> {
@@ -343,6 +345,7 @@ pub fn track<R: Runtime>(app: &AppHandle<R>, state: &CoreState) {
     app.manage(Shown {
         view: Mutex::new(view(state, Routing::Unread)),
         proxy: Mutex::new(running_proxy(state)),
+        reading: AtomicBool::new(false),
     });
 }
 
@@ -458,10 +461,9 @@ fn draw<R: Runtime>(app: &AppHandle<R>) {
 /// listened on and shows the answer; with no such address, or no reader,
 /// nothing is read.
 #[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
-pub fn read_routing<R: Runtime>(app: &AppHandle<R>) {
-    let Some(recorded) = app.try_state::<Shown>() else { return };
-    let proxy = *recorded.proxy.lock().unwrap_or_else(PoisonError::into_inner);
-    let routing = match (app.try_state::<Machine<R>>(), proxy) {
+pub fn read_routing<R: Runtime>(app: &AppHandle<R>) -> Routing {
+    let Some(recorded) = app.try_state::<Shown>() else { return Routing::Unread };
+    let routing = match (app.try_state::<Machine<R>>(), last_proxy(app)) {
         (Some(machine), Some(proxy)) => (machine.read)(app, &proxy, own_addresses()),
         _ => Routing::Unread,
     };
@@ -470,42 +472,80 @@ pub fn read_routing<R: Runtime>(app: &AppHandle<R>) {
     if let Err(err) = app.run_on_main_thread(move || draw(&main)) {
         eprintln!("queueing the menu bar's routing line failed: {err}");
     }
+    routing
+}
+
+fn last_proxy<R: Runtime>(app: &AppHandle<R>) -> Option<SocketAddr> {
+    let recorded = app.try_state::<Shown>()?;
+    let proxy = *recorded.proxy.lock().unwrap_or_else(PoisonError::into_inner);
+    proxy
 }
 
 fn own_addresses() -> Vec<String> {
     trawler::reach::interfaces().into_iter().map(|found| found.address.to_string()).collect()
 }
 
+struct ReadClaim<R: Runtime>(AppHandle<R>);
+
+impl<R: Runtime> Drop for ReadClaim<R> {
+    fn drop(&mut self) {
+        if let Some(recorded) = self.0.try_state::<Shown>() {
+            recorded.reading.store(false, Ordering::SeqCst);
+        }
+    }
+}
+
+// A host tool can hang for its whole patience, and presses arrive faster: one
+// reading at a time, and a press or poll during it takes that reading's answer.
+fn claim_read<R: Runtime>(app: &AppHandle<R>) -> Option<ReadClaim<R>> {
+    let recorded = app.try_state::<Shown>()?;
+    (!recorded.reading.swap(true, Ordering::SeqCst)).then(|| ReadClaim(app.clone()))
+}
+
 // Reading runs the host's proxy tools, which may take a moment: never on the
 // main thread, where the menu is.
 #[allow(clippy::disallowed_methods)] // a thread of its own, never a tokio worker
-fn read_routing_in_background<R: Runtime>(app: &AppHandle<R>) -> std::thread::JoinHandle<()> {
-    let app = app.clone();
-    std::thread::spawn(move || read_routing(&app))
+pub fn read_routing_in_background<R: Runtime>(
+    app: &AppHandle<R>,
+) -> Option<std::thread::JoinHandle<()>> {
+    let claim = claim_read(app)?;
+    Some(std::thread::spawn(move || {
+        read_routing(&claim.0);
+    }))
+}
+
+fn read_unless_reading<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(claim) = claim_read(app) {
+        read_routing(&claim.0);
+    }
 }
 
 #[allow(clippy::disallowed_methods)] // a thread of its own, never a tokio worker
 fn read_while_windowless<R: Runtime>(app: &AppHandle<R>) {
     let app = app.clone();
     std::thread::spawn(move || {
-        read_routing(&app);
+        read_unless_reading(&app);
         loop {
             std::thread::sleep(WINDOWLESS_READ);
             if app.get_webview_window(MAIN_WINDOW).is_none() {
-                read_routing(&app);
+                read_unless_reading(&app);
             }
         }
     });
 }
 
-/// Turns this machine's proxy off through the reader's own path, then reads it
-/// again so the menu shows what the stop left.
+/// Reads this machine's proxy again and turns it off only while that reading
+/// is still Trawler's: the menu may have opened on an older one. Either way
+/// the menu ends on what this machine routes through now.
 #[allow(clippy::disallowed_methods)] // a thread of its own, never a tokio worker
 pub fn stop_routing_in_background<R: Runtime>(app: &AppHandle<R>) -> std::thread::JoinHandle<()> {
     let app = app.clone();
     std::thread::spawn(move || {
-        if let Some(machine) = app.try_state::<Machine<R>>() {
-            (machine.stop)(&app);
+        if read_routing(&app) != Routing::Ours {
+            return;
+        }
+        if let (Some(machine), Some(proxy)) = (app.try_state::<Machine<R>>(), last_proxy(&app)) {
+            (machine.stop)(&app, &proxy, own_addresses());
         }
         read_routing(&app);
     })

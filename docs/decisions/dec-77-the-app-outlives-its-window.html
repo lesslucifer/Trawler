@@ -74,9 +74,10 @@ flowchart LR
         a routing line with a coloured dot (<code>ok</code> This machine routes through Trawler · <code>warn</code> Another
         proxy is set · <code>ink-mute</code> The system proxy is off; hidden while unread or with no known proxy address),
         read against the address the core last listened on with the quit check's classifier, when the icon is pressed
-        (macOS, Windows), at install and every 15 s while windowless. Then Open Trawler, Settings…, Restart capture service
+        (macOS, Windows), at install and every 15 s while windowless, one reading at a time (a press during one takes its answer). Then Open Trawler, Settings…, Restart capture service
         (enabled only while an owned core is stopped) | Stop routing through Trawler (macOS and Windows; enabled only while
-        ours; setup's <code>unset_proxy</code> with its approval) | Check for updates… (the app menu's by-user check), About
+        ours; it reads the proxy again first and stops only while that reading is still ours, turning off on macOS only the
+        services' switches that name Trawler, on Windows the one HKCU switch; setup's approval) | Check for updates… (the app menu's by-user check), About
         Trawler (DEC-90's dialog) | Quit Trawler. Title Case on macOS, sentence case on Windows and Linux. A Windows left
         click opens Trawler, its right click shows the menu; macOS shows the menu on any click. No notification, no pause,
         no clear, no address (E-PRORELEASE.W20)</td><td>Q4, Q10: one place that always says whether capture runs and

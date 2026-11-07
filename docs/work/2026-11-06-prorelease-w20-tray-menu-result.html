@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PRORELEASE.W20 result: the tray menu says and stops this machine's routing</h1>
       <p>What W20 built from the owner's rulings, how each layer proves it, and what stays open.</p>
-      <div class="meta">v1 · 2026-11-07 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W20</span> · <code>wu/prorelease/tray-menu</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w20-tray-menu-plan.html#round-2">W20 plan, round 2</a></div>
+      <div class="meta">v2 · 2026-11-07 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W20</span> · <code>wu/prorelease/tray-menu</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w20-tray-menu-plan.html#round-2">W20 plan, round 2</a></div>
     </div>
   </header>
   <main>
@@ -34,11 +34,12 @@
     <div class="diagram" data-c="mechanism">
       <pre class="mermaid">
 flowchart LR
-  T["install · icon pressed · 15 s windowless · after Stop"] --> R["tray::read_routing (background thread)"]
+  T["install · icon pressed · 15 s windowless (one at a time: Shown.reading)"] --> R["tray::read_routing (background thread)"]
   R --> A["address the core last listened on + this machine's own addresses"]
   A --> M["tray::Machine.read: setup::proxy_status (scenario: its script)"]
   M --> V["Shown.routing"] --> D["draw on the main thread: line text + dot icon, insert / remove, Stop enabled"]
-  S["Stop routing through Trawler"] --> U["Machine.stop: setup::unset_proxy (macOS approval) · failure → native dialog"] --> R
+  S["Stop routing through Trawler"] --> SR["read_routing again"] -->|"still ours"| U["Machine.stop: setup::unset_trawler_proxy (macOS: only switches naming Trawler, approval) · failure → native dialog"] --> R
+  SR -->|"not ours"| N["nothing changed; the line shows the fresh reading"]
       </pre>
       <div class="caption">One reader and one stop behind <code>tray::Machine</code>: the real build plugs in setup's, the scenario build its script, the integration test a scripted fake.</div>
     </div>
@@ -52,6 +53,17 @@ flowchart LR
         <tr><td>—</td><td>web-ui.html (UC-BG) edited without a server snapshot</td><td>the htmldoc server refuses its size (413); <code>git diff</code> is the review</td></tr>
       </tbody>
     </table>
+
+    <h2 id="round-3">Round 3 — independent review</h2>
+    <table data-c="round-3" data-item="round-3">
+      <thead><tr><th>#</th><th>Finding</th><th>Resolution</th><th>Proof</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>IMPORTANT: Stop acted on the menu's last, possibly stale reading, and <code>unset_proxy</code> turned off every macOS service's proxy</td><td><code>stop_routing_in_background</code> reads first and stops only on <code>Ours</code>; <code>Machine.stop</code> takes the address and own addresses; <code>setup::unset_trawler_proxy</code> on macOS turns off only the web / secure-web switches whose proxy names Trawler (none → no prompt), elsewhere is <code>unset_proxy</code>. No notice when the re-read finds another proxy: the redrawn routing line already says so. The window's <code>unset_proxy</code> (setup, quit check) is unchanged: there the user acts on a reading the window shows with its address, and narrowing it changes the front-end's contract, out of this WU's scope</td><td><code>suite/tray.rs</code> <code>stop_reads_the_proxy_again_and_leaves_a_proxy_no_longer_trawlers_alone</code>; <code>setup.rs</code> <code>the_menus_stop_turns_off_only_the_switches_that_name_trawler</code>, <code>…_asks_nothing_when_no_switch_names_trawler</code>, <code>…_is_setups_own_unset_wherever_the_proxy_is_one_setting</code></td></tr>
+        <tr><td>2</td><td>NIT: icon presses stacked reading threads</td><td><code>Shown.reading</code> (AtomicBool) claimed by a press and by the poll, released by a drop guard; a press during a reading starts none</td><td><code>suite/tray.rs</code> <code>a_press_while_a_reading_runs_starts_no_second_one</code></td></tr>
+        <tr><td>3</td><td>NIT: the 15 s poll thread is never stopped</td><td>accepted: it dies with the process and reads nothing while a window is open</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="kd" data-c="round-3-red">Red first: with only the <code>Machine.stop</code> signature changed, both new <code>suite/tray.rs</code> tests failed (stop called on a foreign re-read; a second press read); the <code>setup.rs</code> tests were compile-red. Left open: the window's <code>unset_proxy</code> still turns off every macOS service (router's call whether to scope it in a later WU).</p>
 
     <h2 id="evidence">Evidence</h2>
     <table data-c="evidence" data-item="evidence">
@@ -83,6 +95,7 @@ flowchart LR
       <thead><tr><th>#</th><th>Open</th></tr></thead>
       <tbody>
         <tr><td>1</td><td>independent router review of <code>ui/src-tauri</code> (tray.rs, setup.rs, scenario.rs, lib.rs, icons): outside the cr gate's code paths</td></tr>
+        <tr><td>1b</td><td>scope the window's <code>unset_proxy</code> (setup, quit check) to Trawler's switches on macOS as the menu's now is</td></tr>
         <tr><td>2</td><td>hand check per OS (row 7b): whether macOS dims a disabled item's dot; whether AppIndicator exports the dot; Windows refreshes the open menu only on reopen</td></tr>
         <tr><td>3</td><td>an attached core shows no routing line (its proxy address is unknown to the app)</td></tr>
       </tbody>

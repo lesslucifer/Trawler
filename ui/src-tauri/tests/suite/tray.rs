@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
@@ -72,19 +73,37 @@ fn the_menu_follows_a_killed_core_and_restarts_it_on_its_ports() {
 struct Scripted {
     routing: std::sync::Mutex<Routing>,
     asked: std::sync::Mutex<Vec<std::net::SocketAddr>>,
+    stopped: std::sync::Mutex<Vec<std::net::SocketAddr>>,
+    held: std::sync::atomic::AtomicBool,
 }
 
 fn scripted(app: &App<MockRuntime>, routing: Routing) {
-    app.manage(Scripted { routing: routing.into(), asked: Vec::new().into() });
+    app.manage(Scripted {
+        routing: routing.into(),
+        asked: Vec::new().into(),
+        stopped: Vec::new().into(),
+        held: false.into(),
+    });
     app.manage(Machine::<MockRuntime> {
         read: |app, proxy, _| {
             let scripted = app.state::<Scripted>();
             scripted.asked.lock().unwrap().push(*proxy);
+            while scripted.held.load(Ordering::SeqCst) {
+                std::thread::park_timeout(std::time::Duration::from_millis(5));
+            }
             let routing = *scripted.routing.lock().unwrap();
             routing
         },
-        stop: |app| *app.state::<Scripted>().routing.lock().unwrap() = Routing::Off,
+        stop: |app, proxy, _| {
+            let scripted = app.state::<Scripted>();
+            scripted.stopped.lock().unwrap().push(*proxy);
+            *scripted.routing.lock().unwrap() = Routing::Off;
+        },
     });
+}
+
+fn stops(app: &App<MockRuntime>) -> Vec<std::net::SocketAddr> {
+    app.state::<Scripted>().stopped.lock().unwrap().clone()
 }
 
 fn running_at(proxy: &str) -> CoreState {
@@ -116,12 +135,48 @@ fn the_routing_line_follows_the_reading_and_stop_turns_it_off() {
 
     tray::handle(app.handle(), STOP_ROUTING_ID);
     eventually("the stop reads the proxy again", || shown(&app).routing == Routing::Off);
+    assert_eq!(stops(&app), ["127.0.0.1:7420".parse().unwrap()], "at the service's own address");
     assert!(!shown(&app).stop_routing(), "nothing left to stop");
 
     *app.state::<Scripted>().routing.lock().unwrap() = Routing::Foreign;
     tray::read_routing(app.handle());
     assert_eq!(shown(&app).routing, Routing::Foreign);
     assert!(!shown(&app).stop_routing(), "another proxy is never Trawler's to stop");
+}
+
+#[test]
+fn stop_reads_the_proxy_again_and_leaves_a_proxy_no_longer_trawlers_alone() {
+    let app = app();
+    scripted(&app, Routing::Ours);
+    tray::track(app.handle(), &running_at("127.0.0.1:7420"));
+    tray::read_routing(app.handle());
+    assert!(shown(&app).stop_routing(), "the menu was opened on an ours reading");
+
+    *app.state::<Scripted>().routing.lock().unwrap() = Routing::Foreign;
+    tray::stop_routing_in_background(app.handle()).join().unwrap();
+
+    assert!(stops(&app).is_empty(), "a proxy set elsewhere since the menu opened is never stopped");
+    assert_eq!(shown(&app).routing, Routing::Foreign, "the menu shows what the stop found");
+    assert!(!shown(&app).stop_routing());
+}
+
+#[test]
+fn a_press_while_a_reading_runs_starts_no_second_one() {
+    let app = app();
+    scripted(&app, Routing::Ours);
+    tray::track(app.handle(), &running_at("127.0.0.1:7420"));
+    let scripted = app.state::<Scripted>();
+    scripted.held.store(true, Ordering::SeqCst);
+
+    let first = tray::read_routing_in_background(app.handle()).expect("the first press reads");
+    eventually("the first reading runs", || scripted.asked.lock().unwrap().len() == 1);
+    assert!(tray::read_routing_in_background(app.handle()).is_none(), "a second press waits");
+    scripted.held.store(false, Ordering::SeqCst);
+    first.join().unwrap();
+
+    let next = tray::read_routing_in_background(app.handle()).expect("a press after it reads");
+    next.join().unwrap();
+    assert_eq!(scripted.asked.lock().unwrap().len(), 2);
 }
 
 #[test]
