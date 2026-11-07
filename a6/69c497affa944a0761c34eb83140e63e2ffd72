@@ -21,10 +21,10 @@ fleet:
     verifiers: 0
     total: 64
   by_finder:
-    correctness: { found: 2, verified: 2 }
+    correctness: { found: 2, verified: 0 }
     efficiency: { found: 0, verified: 0 }
     altitude: { found: 0, verified: 0 }
-findings: { found: 2, verified: 2, waived: 2 }
+findings: { found: 2, verified: 0, waived: 0 }
 waivers: []
 nits:
   - finding: "holdRecordingsOnAFrame waits for every video to reach readyState >= 2, so a recording whose sources never load fails S6 on the 15s timeout instead of being skipped"
