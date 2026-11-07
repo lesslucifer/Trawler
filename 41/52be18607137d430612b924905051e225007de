@@ -1,0 +1,65 @@
+schema: cr/v5
+scope: "epic E-PRORELEASE (W1-W22, rc5-rc7 fixes, close, the guide's hand captures) -> main"
+epic: E-PRORELEASE
+branch: epic/prorelease
+base: 6a1ab80d38bc2eb287b48e09aff8b3daa27a5d8f
+head: 4152be18607137d430612b924905051e225007de
+diff_sha256: 42a38f90c8dfd6856d45f8e998e544b9fe19bf0c425ffce401892eb1d0ffc1f3
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 9
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 2
+  candidates:
+    blocker: 0
+    important: 4
+    nit: 18
+  stage_seconds:
+    gate0: 32
+    finders: 171
+    verifiers: 40
+    total: 211
+  by_finder:
+    correctness: { found: 9, verified: 0 }
+    efficiency: { found: 4, verified: 0 }
+    altitude: { found: 9, verified: 0 }
+findings: { found: 20, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "(refuted as important, kept as a nit) xtask/src/release_manifest.rs:170 a second run in a dist dir already holding SHA256SUMS, latest.json or notes.md hashes them into the new SHA256SUMS"
+    waived: "unreachable from the one caller: release.yml builds dist fresh on every runner and re-checks SHA256SUMS before anything is published; code freeze for the final (DEC-86 rule 10)"
+  - finding: "(unverified) xtask/src/release_manifest.rs:140 replace of three newlines is non-overlapping, so two adjacent dropped lines can leave a double blank line in notes.md"
+    waived: "cosmetic; no template has two adjacent dropped lines today; code freeze for the final"
+  - finding: "(unverified) xtask/src/public_text.rs:171 anchors keep an ATX heading's closing hashes and fragments compare case-sensitively"
+    waived: "no published file uses either; lint-only; code freeze for the final"
+  - finding: "(unverified) xtask/src/public_text.rs:48 a line starting with [ and holding ]: is read as a link definition, and ]( inside code fences is scanned"
+    waived: "lint-only, fails loudly rather than passing a broken link; code freeze for the final"
+  - finding: "(unverified) xtask/src/screenshots.rs:51 home_dir reads only HOME, so the screenshot run refuses a Windows host without it"
+    waived: "dev tool, run on macOS; code freeze for the final"
+  - finding: "(unverified) ui/src/App.tsx:866 Settings and About mount per Shell branch and only while the shell dialog is on top, so a quit prompt or a branch change resets their page"
+    waived: "the page resets to its first tab, no data is lost; code freeze for the final"
+  - finding: "(unverified) ui/src/shellDialogs.ts:55 a failed take_dialog_requests is swallowed without a log"
+    waived: "an IPC failure only, not a runtime path; code freeze for the final"
+  - finding: "(unverified) xtask/src/icons.rs:62 generate spawns tauri icon once per source, about 17 spawns"
+    waived: "build-time seconds under cargo xtask icons and its drift test only"
+  - finding: "(unverified) xtask/src/licenses.rs:344 the notice drift test runs cargo metadata and pnpm licenses"
+    waived: "deliberate regeneration test (DEC-88); gate time only"
+  - finding: "(unverified) ui/src/LogTail.tsx:55 the SGR strip reruns over every kept line on each render, at render time rather than where the entry is built"
+    waived: "at most 2000 lines, and the core no longer emits escapes when piped (src/cli.rs); code freeze for the final"
+  - finding: "(unverified) ui/src/General.tsx:85 check now has no in-flight guard"
+    waived: "the shell runs the check and reports it in its own notice; code freeze for the final"
+  - finding: "(unverified) xtask/src/screenshots.rs:1 screenshots imports pnpm and required from walkthrough rather than a shared home"
+    waived: "dev tooling layout; code freeze for the final"
+  - finding: "(unverified) xtask/src/public_text.rs:326 prefilled_fields reads links.rs source text"
+    waived: "the test asserts a non-empty list, so a refactor fails loudly; code freeze for the final"
+  - finding: "(unverified) xtask/src/screenshots.rs:696 the shot list is read off the spec by splitting on shoot(\" and repeated in LAUNCHES"
+    waived: "every shoot call today is a literal; code freeze for the final"
+  - finding: "(unverified) xtask/src/release_manifest.rs:340 notes drops template lines by substring"
+    waived: "pinned by its tests; code freeze for the final"
+  - finding: "(unverified) xtask/src/package.rs:329 LICENCE, HOLDER, HOMEPAGE live in the packaging module and repeat in the manifests"
+    waived: "metadata_drift checks every copy (DEC-87); code freeze for the final"
+  - finding: "(unverified) ui/src/generalPrefs.ts:56 tray copy shares a module with the prefs IPC wrappers"
+    waived: "layout only; code freeze for the final"
+verdict: PASS
+date: 2026-11-07
