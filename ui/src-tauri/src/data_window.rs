@@ -127,8 +127,9 @@ pub async fn open_data_window<R: Runtime>(
         .title(title)
         .inner_size(WIDTH, HEIGHT)
         .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
-        .visible(false)
-        .build()
+        .visible(false);
+    let window = crate::menu::of_its_own(&app, window)
+        .and_then(WebviewWindowBuilder::build)
         .map_err(|err| {
             parked.take(&label);
             err.to_string()

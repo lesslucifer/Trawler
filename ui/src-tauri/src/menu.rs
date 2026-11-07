@@ -15,7 +15,7 @@
 use tauri::menu::{
     Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu, HELP_SUBMENU_ID, WINDOW_SUBMENU_ID,
 };
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Manager, Runtime, WebviewWindowBuilder};
 
 use crate::about::{self, Page, Show};
 use crate::links::{self, Link};
@@ -180,6 +180,23 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         eprintln!("Close Window keeps its native item: {err}");
     }
     Ok(menu)
+}
+
+// muda keys a window's menu bar by the window's address, and tauri drops no key
+// when its window goes: a window built where a closed one lived found the app's
+// menu "already initialized" and showed none, nor answered its shortcuts (the
+// main window reopened from the tray on GNOME). Off macOS, whose menu bar is
+// the app's, each window gets a menu of its own. ponytail: a closed window's
+// menu stays in tauri's stash, a few items per reopen; drop it on Destroyed if
+// that ever matters.
+pub fn of_its_own<'a, R: Runtime, M: Manager<R>>(
+    app: &AppHandle<R>,
+    window: WebviewWindowBuilder<'a, R, M>,
+) -> tauri::Result<WebviewWindowBuilder<'a, R, M>> {
+    if cfg!(target_os = "macos") {
+        return Ok(window);
+    }
+    Ok(window.menu(build(app)?))
 }
 
 // The default menu holds the native item once per OS menu that lists it (File

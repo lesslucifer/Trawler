@@ -206,8 +206,9 @@ pub fn build_main<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<WebviewWindow
         .ok_or(tauri::Error::WindowNotFound)?
         .clone();
     set_dock(app, Dock::Shown);
-    let built =
-        WebviewWindowBuilder::from_config(app, &config).and_then(WebviewWindowBuilder::build);
+    let built = WebviewWindowBuilder::from_config(app, &config)
+        .and_then(|window| crate::menu::of_its_own(app, window))
+        .and_then(WebviewWindowBuilder::build);
     let window = built.inspect_err(|_| on_window_gone(app))?;
     let window_itself = window.as_ref().window();
     window_geometry::restore(&window_itself, window_geometry::min_size_of(&window_itself));

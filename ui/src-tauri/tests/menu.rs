@@ -1,8 +1,10 @@
 // muda builds macOS menu items on the main thread only, which libtest's
 // workers are not: this target runs without the harness, on the main thread.
 
-use tauri::menu::{Menu, MenuItemKind};
+use tauri::menu::{Menu, MenuId, MenuItemKind};
 use tauri::test::{mock_builder, mock_context, noop_assets, MockRuntime};
+use tauri::utils::config::WindowConfig;
+use trawler_ui_lib::lifecycle;
 use trawler_ui_lib::menu::{self, CLOSE_WINDOW_ID};
 
 fn entries(menu: &Menu<MockRuntime>) -> Vec<MenuItemKind<MockRuntime>> {
@@ -33,17 +35,56 @@ fn the_shipped_menu_closes_through_trawler_s_own_item_only() {
     assert!(native.is_empty(), "no native close item remains: {native:?}");
 }
 
+fn menu_id(menu: Option<Menu<MockRuntime>>) -> MenuId {
+    menu.expect("a menu").id().clone()
+}
+
+// GNOME, rc5: the main window reopened from the tray had no menu bar and no
+// Ctrl+, — muda had the app's one menu "already initialized" for the address
+// the new window was built at. A menu built for the window has no such entry.
+fn a_main_window_carries_a_menu_built_for_it() {
+    let config: serde_json::Value =
+        serde_json::from_str(include_str!("../tauri.conf.json")).expect("valid json");
+    let mut context = mock_context(noop_assets());
+    context.config_mut().app.windows =
+        serde_json::from_value::<Vec<WindowConfig>>(config["app"]["windows"].clone())
+            .expect("the shipped windows");
+    let app = mock_builder().menu(menu::build).build(context).expect("a mock app");
+    let app_menu = menu_id(app.menu());
+
+    let main = menu_id(lifecycle::build_main(app.handle()).expect("the main window").menu());
+
+    if cfg!(target_os = "macos") {
+        assert_eq!(main, app_menu, "one menu bar, the app's");
+    } else {
+        assert_ne!(main, app_menu);
+    }
+}
+
 // cargo-nextest lists a test binary with libtest's `--list` before it runs each
 // test by name; a binary that ignores the list runs nothing under the gate.
 #[allow(clippy::print_stdout)]
 fn main() {
-    const NAME: &str = "the_shipped_menu_closes_through_trawler_s_own_item_only";
+    const TESTS: [(&str, fn()); 2] = [
+        (
+            "the_shipped_menu_closes_through_trawler_s_own_item_only",
+            the_shipped_menu_closes_through_trawler_s_own_item_only,
+        ),
+        ("a_main_window_carries_a_menu_built_for_it", a_main_window_carries_a_menu_built_for_it),
+    ];
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|arg| arg == "--list") {
         if !args.iter().any(|arg| arg == "--ignored") {
-            println!("{NAME}: test");
+            for (name, _) in TESTS {
+                println!("{name}: test");
+            }
         }
         return;
     }
-    the_shipped_menu_closes_through_trawler_s_own_item_only();
+    let only = args.iter().find(|arg| !arg.starts_with('-'));
+    for (name, test) in TESTS {
+        if only.map_or(true, |wanted| name.contains(wanted.as_str())) {
+            test();
+        }
+    }
 }
