@@ -601,8 +601,9 @@ interface OsTrust {
 // A Mac's certificate by hand goes into the login keychain, where trusting it
 // asks for the user's password and no administrator's; opening the file asks
 // which keychain and offers iCloud, which holds no trust (W12's build). The
-// command adds to the System keychain, so the way back reaches both, whichever
-// way ran (W13's W6).
+// command adds to the login keychain too: it is the by-hand way after the
+// button's System keychain write was refused (rc5 on macOS 26), and the way
+// back reaches both (W13's W6).
 const MACOS_OS_VERSION = "macOS 26";
 const IN_TERMINAL = "In Terminal, run:";
 const ALWAYS_TRUST = ["Trust", "When using this certificate", "Always Trust"];
@@ -622,7 +623,7 @@ const ALWAYS_TRUST_STEP: GuideStep = [
 const CLOSE_AND_PASSWORD: GuideStep = ["Close the window and enter your password."];
 
 const macTrustCommand = (file: string): CommandPart => ({
-  command: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
+  command: `security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db ${file}`,
   label: "the trust command",
 });
 

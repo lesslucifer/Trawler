@@ -3098,7 +3098,7 @@ describe("a command is a block, not a phrase inside a sentence", () => {
     expect(code).toHaveAttribute("data-wire", "shell command");
     expect(code.className).toContain("font-mono");
     expect(code.textContent).toBe(
-      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem",
+      "security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db ~/Downloads/trawler-ca.pem",
     );
   });
 
@@ -3111,7 +3111,7 @@ describe("a command is a block, not a phrase inside a sentence", () => {
       commandNamed("the trust command").querySelector("[data-wire]")!
         .textContent,
     ).toBe(
-      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain '/Users/me/My Certs/trawler-ca.pem'",
+      "security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db '/Users/me/My Certs/trawler-ca.pem'",
     );
   });
 

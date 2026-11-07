@@ -1322,7 +1322,7 @@ describe("This Mac's by-hand routes", () => {
 
     expect(trust.alternatives?.[0].some(isSave)).toBe(true);
     expect(commands(trust.alternatives!)).toEqual([
-      "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem",
+      "security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db ~/Downloads/trawler-ca.pem",
     ]);
     expect(commands(trust.steps)).toEqual([]);
   });
@@ -1479,7 +1479,7 @@ describe("Another Mac, walked by hand (W13)", () => {
       [
         "In Terminal, run:",
         {
-          command: "sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/Downloads/trawler-ca.pem",
+          command: "security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db ~/Downloads/trawler-ca.pem",
           label: "the trust command",
         },
       ],
