@@ -4,7 +4,7 @@ Every notable change to Trawler, newest first. The format follows [Keep a Change
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-11-06
+## [0.1.0] - 2026-11-07
 
 The first public release.
 
