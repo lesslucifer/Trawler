@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: 89a27096
+tests:
+  unit: { count: 29, covers: "release_manifest::tests::the_notes_carry_the_version_and_every_os_s_first_open_steps now requires the release notes to say 'developer-signed app at login' in place of 'macOS 13', so the shipped notes cannot return to promising open at login on macOS 13. README.md and GUIDE.md carry the same sentence, as copy. cargo test -p xtask release_manifest: 31 green." }
