@@ -330,6 +330,13 @@ mod tests {
         assert!(!text.contains("{version}"));
     }
 
+    #[test]
+    fn the_linux_notes_say_a_close_without_a_tray_icon_quits() {
+        let text = rendered("0.2.0-1");
+        assert!(text.contains("Without one, closing the window quits Trawler."), "{text}");
+        assert!(!text.contains("open Trawler again"), "{text}");
+    }
+
     const CHANGES: &str =
         "# Changelog\n\n## 0.2.0\n\n- Faster filters.\n\n## 0.1.0\n\n- First release.\n";
 
