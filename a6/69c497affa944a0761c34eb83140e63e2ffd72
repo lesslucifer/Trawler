@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W6
+branch: HEAD
+tests:
+  unit: { count: 29, covers: "GUIDE.md is a published file: every link, image and anchor in it resolves (its contents list holds all 13 anchors; README's and SECURITY's GUIDE.md#install, #first-run, #troubleshooting, #uninstall resolve against it) and it names no other tool; a link to a file that does not exist is broken, with no pending-file skip left" }
+  integration: { waived: "a document and its existing checks; no bounded contract changes (the xtask unit tests read the real GUIDE.md from the tree)" }
+  e2e: { count: 8, covers: "cargo xtask ui screenshots drives the scenario build through all 8 shots; S6 waits for each setup recording to load a frame and paints it in the video's place, so the iPhone step shows its recording instead of a black box" }
