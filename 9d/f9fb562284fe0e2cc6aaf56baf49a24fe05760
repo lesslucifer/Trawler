@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W20
+branch: HEAD
+tests:
+  unit: { count: 155, covers: "each tray id maps to its action and every listed item has one; the menu's order and casing per OS (Title Case macOS, sentence case Windows/Linux, no Stop on Linux); view() per core state with no address; the tooltip mirrors the status line; the routing line, dot and Stop per reading; Windows left click opens, presses read; the dots decode and differ and are the sources' coloured discs; a failed Stop's notice and a dismissed approval's silence" }
+  integration: { count: 4, covers: "a scripted reading through tray::Machine drives the routing line ours -> Stop -> off -> foreign, read at the core's own proxy address; a stopped core is read at its last address; an attached core is never read; a reading leaves the status line as it was" }
+  e2e: { waived: "native tray menus are out of WebDriver's reach (UC-BG); hand-check matrix row 7b per OS" }
