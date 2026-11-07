@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aee88ba9f34851f0dfafc99" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W6 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W6: the user guide (GUIDE.md)</h1>
+      <p>The root GUIDE.md, written from the signed guide design (W12) and re-checked against the app as it stands after W4, W16–W20.</p>
+      <div class="meta">v1 · 2026-11-07 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W6</span> · branch <code>wu/prorelease/user-guide</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · design <a href="2026-11-06-prorelease-w12-guide-design.html">W12 (signed)</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">GUIDE.md at the repo root walks a user through every task the app offers, in the W12 outline with its fixed anchors, quoting only labels and claims the current code shows; the public-text checks (links, anchors, deny list) cover it.</p>
+
+    <h2 id="scope">Scope</h2>
+    <table data-c="scope">
+      <thead><tr><th>Piece</th><th>Change</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td><code>GUIDE.md</code></td><td>new: 13 sections, contents list, per-OS steps, screenshots S1–S6, S10, S11</td><td>W12 outline, drafts, facts; W11 voice</td></tr>
+        <tr><td><code>xtask/src/public_text.rs</code></td><td>GUIDE.md joins <code>PUBLISHED</code>; the not-yet-written list and its skip go (nothing is pending)</td><td>W5 mechanism</td></tr>
+        <tr><td><code>ui/e2e/screenshots/screenshots.spec.ts</code></td><td>S6 holds each setup recording on a loaded frame before the shot (the box was black)</td><td>W5 script</td></tr>
+        <tr><td><code>.github/screenshots/*.png</code></td><td>re-shot by <code>cargo xtask ui screenshots</code></td><td>W5 script</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>S8, S9 (OS prompts)</td><td>not linked; listed as the owner's TODO in the result</td><td>W11 Q8: hand-captured on the last rc; no broken image</td></tr>
+        <tr><td>S7 (Capture service log)</td><td>left out; troubleshooting in text</td><td>its owned launch was dropped in W5 and the log names the CA's absolute path</td></tr>
+        <tr><td><code>links.rs</code> guide URL</td><td>unchanged (no anchor)</td><td>the design names the bare guide URL</td></tr>
+        <tr><td>New DEC</td><td>none</td><td>no new rule; DEC-91 already covers the root markdown</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W6 · W12 design (signed) · W11 voice · UC-ABOUT (Help → User Guide opens it).</p>
+
+    <h2 id="expected">Expected result</h2>
+    <p data-item="expected">The README's, SECURITY's and the guide's own links to <code>GUIDE.md#install</code>, <code>#first-run</code>, <code>#troubleshooting</code>, <code>#uninstall</code> and every contents entry resolve; no other tool is named.</p>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit (xtask)</td><td><code>public_text::every_published_link_and_image_resolves</code> and <code>no_published_file_names_another_tool</code> read GUIDE.md as a published file</td><td>yes: GUIDE.md listed before it exists fails the read</td></tr>
+          <tr><td>unit (xtask)</td><td><code>a_missing_file_or_heading_is_broken_and_a_url_or_pending_file_is_not</code> → a link to an unwritten guide is broken</td><td>yes: the pending skip passed it</td></tr>
+          <tr><td>integration</td><td>waived: a document and its checks; no bounded contract changes</td><td>—</td></tr>
+          <tr><td>e2e</td><td><code>cargo xtask ui screenshots</code> re-runs the spec; S6 shows a frame of its recording</td><td>yes: S6 had a black box</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
