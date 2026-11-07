@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 78018638d23fa190ea6ac0ae8514ca08f65be5a8
+base: e515acc17cc046df39a4c5e358ea68e20de29a1d
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w19-settings-modal-result.html
+report_sha256: 7641e88df6790193c3b318e80e59f6f4bc75099c39293474d34fe84a31279bb8
+date: 2026-11-07
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB8MgfVonCdZ2vKRb+P2AuKk0sJIiQOWGIm6wE4iNmNNRtxSfS64a08l+
+  D8t3uWXxAODPNeJ1TeJwYMJ0dLK9UN
+  -----END SSH SIGNATURE-----
