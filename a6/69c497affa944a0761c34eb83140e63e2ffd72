@@ -1,0 +1,13 @@
+schema: doc/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W6
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-91-the-public-text-is-one-voice-checked.html"
+    tier: T2
+    action: updated
+    distills: "rule 2 names GUIDE among the published files; rule 4 drops the NOT_YET_WRITTEN list: a file is linked only once it exists"
+  - path: "docs/work/2026-11-07-prorelease-w6-user-guide-plan.html"
+    tier: T3
+    action: added
+    distills: "the W6 requirement, scope, decisions (S8/S9 owner TODO, S7 left out, links.rs unchanged, no DEC) and test plan"
