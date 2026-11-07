@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 0a43ad82cccc8e199294b0cbf521f185b6ba9e98
+base: 8722dd7bd796a31409168ea6dd69eb7fa5bf34b9
+tier: key
+signer: vuluu
+report: docs/work/2026-11-06-prorelease-w20-tray-menu-result.html
+report_sha256: 1910b363ef377a30f84d1dafb9a5a055484538e1f3fbc2ad22a7b84064ee7b90
+date: 2026-11-07
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEB5SudW8w/rEcnUQal6C/+s1kTd1X9HKbp5QNd2ufogPwX+5N2gNMEzIj
+  ZdncLTzCOODcacWf0x7aQL3o6woCAL
+  -----END SSH SIGNATURE-----
