@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU tray-menu -> epic/prorelease (round 3 tip)"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W20
+branch: wu/prorelease/tray-menu
+base: 8722dd7bd796a31409168ea6dd69eb7fa5bf34b9
+head: 198a15f5420a0f8b3498beecb9ac929ce5075797
+diff_sha256: 1ba04d102774df6f35db5bb3b8a81e0bc6f6daae4480826ffad5dbdebfad5a5a
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 1
+    finders: 17
+    verifiers: 0
+    total: 25
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-07
