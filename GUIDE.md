@@ -47,6 +47,9 @@ Your file must say `OK`, or the two hashes must match. If they don't, the downlo
 1. Open the `.dmg` and drag **Trawler** to **Applications**.
 2. Open Trawler from Applications. macOS says it can't verify the app. Click **Done**.
 3. Open **System Settings → Privacy & Security**. Scroll down to the message about Trawler and click **Open Anyway**.
+
+   ![System Settings → Privacy & Security, the message that Trawler was blocked with Open Anyway beside it](.github/screenshots/s8-macos-open-anyway.png)
+
 4. Click **Open Anyway** again and enter your password.
 
 On macOS 11 and 12, step 3 is in **System Preferences → Security & Privacy → General**. The wording differs slightly on older versions: if the warning has no **Done**, close it without moving Trawler to the Bin (Trash).
@@ -55,6 +58,9 @@ On macOS 11 and 12, step 3 is in **System Preferences → Security & Privacy →
 
 1. Run the `-setup.exe` (or the `.msi`).
 2. If **Windows protected your PC** appears, click **More info**, then **Run anyway**.
+
+   ![Windows protected your PC after More info: the app, an unknown publisher, Run anyway and Don't run](.github/screenshots/s9-windows-smartscreen.png)
+
 3. Finish the installer, then open Trawler from the Start menu.
 
 ### Linux
