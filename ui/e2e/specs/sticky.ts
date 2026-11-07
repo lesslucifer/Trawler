@@ -2,15 +2,13 @@ import { browser, $, $$ } from "@wdio/globals";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { PORTS_FILE } from "../wdio.conf.ts";
-import { CONFIG_DIR, WINDOWS_FILE } from "./layout.ts";
+import { CONFIG_DIR } from "./layout.ts";
 
 export { clearTheCapture, quitTheApp, shellIsUp } from "./layout.ts";
 
 const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as { control: string };
 
 export const VIEW_PREFS_FILE = resolve(CONFIG_DIR, "view-prefs.json");
-export const SETTINGS = "settings";
-export const SETTINGS_RECT = { x: 160, y: 120, width: 600, height: 520 };
 export const ANDROID_EMULATOR = "Android emulator";
 
 type Leg = "request" | "response";
@@ -67,93 +65,6 @@ export async function savedViewPrefsInclude(expected: Record<string, unknown>) {
 
 export function corruptTheSavedViewPrefs() {
   writeFileSync(VIEW_PREFS_FILE, '{"leg":"resp');
-}
-
-const tauriInvoke = (command: string) =>
-  browser.executeAsync((name: string, done: () => void) => {
-    (window as unknown as { __TAURI__: { core: { invoke: (c: string) => Promise<unknown> } } }).__TAURI__.core
-      .invoke(name)
-      .then(done, done);
-  }, command);
-
-export async function openSettings() {
-  await tauriInvoke("open_settings");
-  await browser.waitUntil(async () => (await browser.getWindowHandles()).includes(SETTINGS), {
-    timeout: 15_000,
-    timeoutMsg: "no settings window opened",
-  });
-  await browser.switchToWindow(SETTINGS);
-  await $("h1").waitForDisplayed({ timeout: 15_000 });
-}
-
-export async function closeSettings() {
-  await browser.execute(() => {
-    const tauri = (window as unknown as { __TAURI__: { window: { getCurrentWindow: () => { destroy: () => Promise<void> } } } })
-      .__TAURI__;
-    setTimeout(() => void tauri.window.getCurrentWindow().destroy(), 50);
-  });
-  await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes(SETTINGS), {
-    timeout: 15_000,
-    timeoutMsg: "the settings window never closed",
-  });
-  await browser.switchToWindow("main");
-}
-
-type Rect = typeof SETTINGS_RECT;
-
-// The embedded WebDriver sizes and reads only the main window, so the Settings
-// window is placed and read through its own Tauri window, in logical points.
-export function placeSettings(rect: Rect): Promise<string | null> {
-  return browser.executeAsync((to: Rect, done: (refused: string | null) => void) => {
-    const tauri = (window as unknown as { __TAURI__: TauriWindowGlobals }).__TAURI__;
-    const current = tauri.window.getCurrentWindow();
-    current
-      .setSize(new tauri.dpi.LogicalSize(to.width, to.height))
-      .then(() => current.setPosition(new tauri.dpi.LogicalPosition(to.x, to.y)))
-      .then(
-        () => done(null),
-        (refusal: unknown) => done(String(refusal)),
-      );
-  }, rect);
-}
-
-export function settingsRect(): Promise<Rect> {
-  return browser.executeAsync((done: (rect: Rect) => void) => {
-    const current = (window as unknown as { __TAURI__: TauriWindowGlobals }).__TAURI__.window.getCurrentWindow();
-    void Promise.all([current.scaleFactor(), current.outerPosition(), current.innerSize()]).then(([scale, at, size]) =>
-      done({
-        x: Math.round(at.x / scale),
-        y: Math.round(at.y / scale),
-        width: Math.round(size.width / scale),
-        height: Math.round(size.height / scale),
-      }),
-    );
-  });
-}
-
-type Physical = { x: number; y: number; width: number; height: number };
-type TauriWindowGlobals = {
-  dpi: {
-    LogicalSize: new (width: number, height: number) => unknown;
-    LogicalPosition: new (x: number, y: number) => unknown;
-  };
-  window: {
-    getCurrentWindow: () => {
-      setSize: (size: unknown) => Promise<void>;
-      setPosition: (position: unknown) => Promise<void>;
-      scaleFactor: () => Promise<number>;
-      outerPosition: () => Promise<Pick<Physical, "x" | "y">>;
-      innerSize: () => Promise<Pick<Physical, "width" | "height">>;
-    };
-  };
-};
-
-export function settingsIsSaved() {
-  try {
-    return SETTINGS in (JSON.parse(readFileSync(WINDOWS_FILE, "utf8")) as Record<string, unknown>);
-  } catch {
-    return false;
-  }
 }
 
 const QUESTION = "which device's traffic do you want to see";

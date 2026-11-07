@@ -1,4 +1,4 @@
-import { browser } from "@wdio/globals";
+import { browser, $ } from "@wdio/globals";
 import { execFileSync } from "node:child_process";
 import { request } from "node:http";
 import { createServer as createListener } from "node:net";
@@ -89,6 +89,13 @@ export const askToCloseTheWindow = () =>
 
 export const askToQuitTheApp = () => invoke("e2e_request_quit");
 
+// quit_app exits before it can answer, so it is sent and not awaited.
+export const quitAppUnasked = () =>
+  browser.execute(() => {
+    const tauri = (window as unknown as { __TAURI__: { core: { invoke: (c: string) => Promise<unknown> } } }).__TAURI__;
+    setTimeout(() => void tauri.core.invoke("quit_app"), 50);
+  });
+
 export const switchesRead = () =>
   browser.execute(() =>
     Array.from(document.querySelectorAll('label:has(input[type="checkbox"])')).map((label) => ({
@@ -119,6 +126,22 @@ export function sendThroughProxy(proxy: string, url: string): Promise<number> {
     sent.once("error", failed);
     sent.end();
   });
+}
+
+// Settings and About are dialogs of the main window (W19): every entry raises it
+// and asks it for the dialog, whose three parts carry the dialog's test id.
+export async function dialogShown(testId: "settings" | "about") {
+  await $(`[data-testid="${testId}-dialog"]`).waitForDisplayed({ timeout: 15_000 });
+}
+
+export async function openSettings() {
+  await invoke("open_settings");
+  await dialogShown("settings");
+}
+
+export async function closeTheDialog(testId: "settings" | "about") {
+  await $(`[data-testid="${testId}-panel"] [aria-label="close"]`).click();
+  await $(`[data-testid="${testId}-dialog"]`).waitForExist({ reverse: true, timeout: 15_000 });
 }
 
 export async function onWindow(label: string) {

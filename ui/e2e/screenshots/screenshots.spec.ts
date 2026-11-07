@@ -1,7 +1,7 @@
 import { browser, $, $$ } from "@wdio/globals";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { invoke, onWindow } from "../specs/app.ts";
+import { invoke, openSettings } from "../specs/app.ts";
 import { addChips } from "../specs/query.ts";
 import { LAUNCH_VAR, OUT_VAR, PORTS_FILE, type Ports } from "./screenshots.conf.ts";
 import { FIXTURE, FIXTURE_ROWS } from "./fixture.ts";
@@ -157,8 +157,7 @@ describe("README and guide screenshots, the window on the harness core", functio
   });
 
   it("S11 · Settings → General", async () => {
-    await invoke("open_settings");
-    await onWindow("settings");
+    await openSettings();
     await $("h1=General").waitForDisplayed({ timeout: 15_000 });
     await shoot("s11-settings-general");
   });

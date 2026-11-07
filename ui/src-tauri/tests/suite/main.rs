@@ -3,6 +3,7 @@
 mod about_help;
 mod common;
 mod data_window;
+mod dialogs;
 mod layout_store;
 mod login_item;
 mod outlive_window;

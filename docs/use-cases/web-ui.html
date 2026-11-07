@@ -450,12 +450,11 @@
     </div>
 
     <h2 id="uc-svc">UC-SVC — See and restart the capture service</h2>
-    <p data-c="uc-svc-contract">Settings… (⌘,), or <em>settings…</em> at the foot of the capture menu, opens a Settings window on the Capture service page
+    <p data-c="uc-svc-contract">Settings… (⌘,), or <em>settings…</em> at the foot of the capture menu, opens Settings, a dialog of the main window, on the Capture service page
       (<span class="badge id">E-ONEAPP.W3</span>, <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>
-      rules 13–14). It follows the service live and closes without quitting the app, and reopens where it was left — across a relaunch,
-      placed before it shows so it never jumps, on a monitor that still exists
-      (<a href="../decisions/dec-67-the-user-sizes-the-layout.html">DEC-67</a>, <a href="../decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>; proven by
-      <code>sticky-relaunched.spec.ts</code>). The web shell has no Settings, so its capture menu offers none.</p>
+      rules 13–14). It follows the service live and closes (Esc, ✕, ⌘W / Ctrl+W) without quitting the app. Since
+      <span class="badge id">E-PRORELEASE.W19</span> it is no window of its own, so it keeps no size or place of its own: it sits over
+      the main window, which keeps its own (<a href="../decisions/dec-67-the-user-sizes-the-layout.html">DEC-67</a>). The web shell has no Settings, so its capture menu offers none.</p>
     <table data-c="uc-svc-states">
       <tr><th>The service is</th><th>The page shows</th><th>It offers</th></tr>
       <tr><td>starting</td><td>⟳ starting</td><td>restart, held beside "waiting for the capture service to start…"</td></tr>
@@ -478,12 +477,13 @@
       <tr><td>✕, switch on, icon present</td><td>closes at once; no ask, no proxy read, nothing stopped</td></tr>
       <tr><td>✕, switch off, or no icon</td><td>quits as before DEC-77, through DEC-64's check</td></tr>
       <tr><td>⌘Q, or Quit from the menu-bar icon</td><td>always a quit: the main window is opened if none is, DEC-64's check runs, then the app exits and stops its core. It never asks the keep-capturing question</td></tr>
-      <tr><td>Open Trawler, Settings…, the Dock, a second launch</td><td>rebuilds or focuses the main window; the list reloads from the core</td></tr>
+      <tr><td>Open Trawler, the Dock, a second launch</td><td>rebuilds or focuses the main window; the list reloads from the core</td></tr>
+      <tr><td>Settings… (the icon, ⌘, / Ctrl+,, the capture menu)</td><td>rebuilds or raises the main window, then shows Settings as its modal dialog (<span class="badge id">E-PRORELEASE.W19</span>). A request while the keep-capturing ask or the quit check is up waits until it closes; a quit asked over Settings shows its check in Settings' place, and a cancelled quit finds Settings again. ⌘W / Ctrl+W closes the topmost dialog first, then the window</td></tr>
       <tr><td>Open Trawler at login</td><td>macOS: registers the bundled launch agent with <code>SMAppService</code>, so “Trawler” shows in Login Items; an unbundled build refuses with its reason and the switch stays off. Linux and Windows write their own entry. A login launch starts with <code>--background</code> and opens no window, unless there is no icon to reach it from</td></tr>
     </table>
     <p class="kd" data-c="uc-bg-proof">Proven by <code>background-asked</code>, <code>-off</code>, <code>-keep</code> and <code>-quit</code>
       <code>.spec.ts</code> in the owned e2e suite: the ask and its cancel, the stored answers, ✕ ending the app, capture with no window,
-      <code>quit_app</code> and a quit request, ports freed, all under a temp <code>HOME</code>. The menu-bar menu, the Dock, a real login and the
+      <code>quit_app</code> and a quit request, the icon's Settings… rebuilding the main window with Settings over it, ports freed, all under a temp <code>HOME</code>. The menu-bar menu as drawn, the Dock, a real login and the
       Windows and Linux trays are native and owed on the <a href="../backlog/roadmap.html">roadmap</a>.</p>
 
     <h2 id="uc-install">UC-INSTALL — Install Trawler from a release</h2>
@@ -533,7 +533,7 @@
       <a href="../backlog/roadmap.html">roadmap</a>.</p>
 
     <h2 id="uc-about">UC-ABOUT — See which Trawler runs, and get help</h2>
-    <p data-c="uc-about-contract">On every OS the user opens one About window, Trawler's own
+    <p data-c="uc-about-contract">On every OS the user opens one About dialog over the main window, raised or rebuilt first (<span class="badge id">E-PRORELEASE.W19</span>), Trawler's own
       (<a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a>, design run
       <span class="badge id">E-PRORELEASE.W13</span>): the logo, the version (copyable), <em>MIT licence · © 2026 Vu Luu</em> and three
       buttons, <em>user guide</em> (the root <code>GUIDE.md</code>), <em>report an issue</em> and <em>source code</em>, each opened in the browser.
@@ -545,13 +545,13 @@
       <tr><td>About Trawler</td><td>the app menu</td><td>Help, last</td></tr>
       <tr><td>User guide</td><td>Help → Trawler User Guide</td><td>Help → User Guide · F1</td></tr>
       <tr><td>Report an Issue…</td><td colspan="2">Help; opens the issue form with version, OS + version + CPU and install kind (dmg · setup.exe · msi · deb · rpm · AppImage · from source) — nothing about traffic or the machine's name</td></tr>
-      <tr><td>Third-Party Licences · Privacy</td><td colspan="2">Help; the About window on that page</td></tr>
+      <tr><td>Third-Party Licences · Privacy</td><td colspan="2">Help; the About dialog on that page</td></tr>
       <tr><td>version · check now · check for updates automatically</td><td colspan="2">Settings → General, below its two switches; a copy that is not installed shows the version, no check now, and the switch disabled with <em>updates come with an installed copy of Trawler</em></td></tr>
       <tr><td>a browser that would not open</td><td colspan="2">the About page shows <em>couldn't open your browser — copy the address</em> with the address</td></tr>
     </table>
     <p class="kd" data-c="uc-about-proof">Proven by <code>menu.rs</code> (Help per OS), <code>links.rs</code> (the report's fields), <code>update.rs</code> (the switch),
       <code>about.rs</code>, <code>About.test.tsx</code>, <code>General.test.tsx</code>, <code>Settings.test.tsx</code> and the WebDriver spec
-      <code>ui/e2e/specs/about.spec.ts</code> (Settings reads the running version). The menus as each OS draws them are a hand check.</p>
+      <code>ui/e2e/specs/about.spec.ts</code> (Settings reads the running version; Help → Third-Party Licences opens About on that page in the main window). The menus as each OS draws them are a hand check.</p>
 
     <h2 id="uc-onboard">UC-ONBOARD — Set up capture, for this machine or another device</h2>
     <div data-c="uc-onboard-contract">

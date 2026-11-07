@@ -18,6 +18,7 @@ export function ModalShell({
   testId,
   mode,
   dismissLabel = "cancel",
+  size = "note",
 }: {
   title: string;
   onCancel: () => void;
@@ -29,6 +30,9 @@ export function ModalShell({
   // The ✕'s accessible name. A dialog whose own escape is also called "cancel"
   // would ship two controls under one name doing the same thing.
   dismissLabel?: string;
+  // A note is a question with its answers; pages hold a sidebar of pages
+  // (Settings, About) at one fixed size, so a page change never moves the frame.
+  size?: "note" | "pages";
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const invoker = useRef<Element | null>(null);
@@ -89,7 +93,9 @@ export function ModalShell({
       <div
         ref={panel}
         data-testid={`${testId}-panel`}
-        className="relative w-full max-w-dialog-max rounded-lg border border-hairline bg-canvas p-4 text-ink"
+        className={`relative w-full rounded-lg border border-hairline bg-canvas p-4 text-ink ${
+          size === "pages" ? "flex h-pane max-h-full max-w-pane flex-col" : "max-w-dialog-max"
+        }`}
       >
         <div className="mb-3 flex items-start justify-between gap-2">
           <h2 className="font-serif text-title italic">{title}</h2>

@@ -8,15 +8,13 @@ use tauri::test::{
 use tauri::webview::InvokeRequest;
 use tauri::{App, Listener, Manager, WebviewWindow, WebviewWindowBuilder};
 use trawler_ui_lib::core::{self, Core, STATE_EVENT};
-use trawler_ui_lib::settings::{self, SETTINGS_WINDOW};
 use trawler_ui_lib::supervisor::Supervisor;
-use trawler_ui_lib::window_geometry::{tracked_records, Records};
 
 use crate::common::{launch, LOCAL_URL, PATIENCE};
 
 fn app() -> App<MockRuntime> {
     mock_builder()
-        .invoke_handler(tauri::generate_handler![core::restart_core, settings::open_settings])
+        .invoke_handler(tauri::generate_handler![core::restart_core])
         .build(mock_context(noop_assets()))
         .expect("a mock app")
 }
@@ -83,43 +81,4 @@ fn an_attached_core_refuses_restart_and_spawns_nothing() {
     app.manage(Core::Attached("http://127.0.0.1:9".into()));
     let refused = invoke(&window(&app), "restart_core").expect_err("restart is refused");
     assert!(refused.as_str().is_some_and(|why| why.contains("not managed")), "{refused}");
-}
-
-#[test]
-fn settings_opens_once_and_is_focused_after() {
-    let app = app();
-    settings::open(app.handle()).expect("settings opens");
-    settings::open(app.handle()).expect("settings is focused");
-    let open: Vec<String> =
-        app.webview_windows().into_keys().filter(|label| label == SETTINGS_WINDOW).collect();
-    assert_eq!(open, [SETTINGS_WINDOW]);
-}
-
-#[test]
-fn settings_from_the_menu_is_built_off_the_calling_thread() {
-    let app = app();
-    let opening = settings::open_in_background(app.handle());
-    assert_ne!(opening.thread().id(), std::thread::current().id());
-    opening.join().expect("the opening thread").expect("settings opens");
-    assert!(app.get_webview_window(SETTINGS_WINDOW).is_some());
-}
-
-#[test]
-fn settings_from_the_page_opens_through_its_command() {
-    let app = app();
-    let main = window(&app);
-    invoke(&main, "open_settings").expect("open_settings answers");
-    invoke(&main, "open_settings").expect("a second ask focuses it");
-    let open: Vec<String> =
-        app.webview_windows().into_keys().filter(|label| label == SETTINGS_WINDOW).collect();
-    assert_eq!(open, [SETTINGS_WINDOW]);
-}
-
-#[test]
-fn settings_joins_the_window_records_the_shell_saves() {
-    let app = app();
-    trawler_ui_lib::window_geometry::track_from(app.handle(), Records::new());
-    assert!(!tracked_records(app.handle()).contains_key(SETTINGS_WINDOW));
-    settings::open(app.handle()).expect("settings opens");
-    assert!(tracked_records(app.handle()).contains_key(SETTINGS_WINDOW));
 }

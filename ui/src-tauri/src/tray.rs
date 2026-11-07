@@ -193,11 +193,26 @@ fn apply<R: Runtime>(app: &AppHandle<R>, reported: &CoreState) {
 pub fn handle<R: Runtime>(app: &AppHandle<R>, id: &str) {
     match action_for(id) {
         TrayAction::Open => drop(crate::lifecycle::reopen_main_in_background(app)),
-        TrayAction::Settings => drop(crate::settings::open_in_background(app)),
+        TrayAction::Settings => drop(crate::settings::open(app)),
         TrayAction::Restart => drop(crate::core::restart_in_background(app)),
         TrayAction::Quit => drop(crate::lifecycle::request_quit(app)),
         TrayAction::Ignore => {}
     }
+}
+
+// A menu-bar click `after_ms` into the windowless state, which WebDriver can
+// neither make nor ask for from a page: the windowless app has none.
+#[cfg(feature = "e2e")]
+#[tauri::command]
+#[allow(clippy::disallowed_methods)] // a thread of its own, never a tokio worker
+pub fn e2e_tray_when_windowless<R: Runtime>(app: AppHandle<R>, id: String, after_ms: u64) {
+    std::thread::spawn(move || {
+        while app.get_webview_window(crate::settings::MAIN_WINDOW).is_some() {
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(after_ms));
+        handle(&app, &id);
+    });
 }
 
 #[cfg(test)]
