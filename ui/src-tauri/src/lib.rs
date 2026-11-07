@@ -22,12 +22,12 @@ pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
 pub mod supervisor;
-#[cfg(test)]
-mod test_manifest;
 pub mod tray;
 pub mod update;
 pub mod view_prefs;
 pub mod window_geometry;
+#[cfg(test)]
+mod windows_manifest;
 
 #[cfg(feature = "scenario")]
 mod scenario;

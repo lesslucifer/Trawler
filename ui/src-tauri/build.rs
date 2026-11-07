@@ -1,7 +1,7 @@
 #[path = "src/bundle.rs"]
 mod bundle;
-#[path = "src/test_manifest.rs"]
-mod test_manifest;
+#[path = "src/windows_manifest.rs"]
+mod windows_manifest;
 
 use std::path::Path;
 
@@ -21,15 +21,25 @@ fn main() {
             return;
         }
     }
-    if std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc") {
+    let msvc = std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc");
+    if msvc {
         let out_dir =
             std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR for every build script run");
-        let manifest = Path::new(&out_dir).join("test-executables.manifest");
-        std::fs::write(&manifest, test_manifest::COMMON_CONTROLS_V6)
+        let manifest = Path::new(&out_dir).join("common-controls-v6.manifest");
+        std::fs::write(&manifest, windows_manifest::COMMON_CONTROLS_V6)
             .expect("the build script writes into OUT_DIR");
-        for directive in test_manifest::link_directives(&manifest) {
+        for directive in windows_manifest::link_directives(&manifest) {
             println!("{directive}");
         }
     }
-    tauri_build::build();
+    let windows = if msvc {
+        tauri_build::WindowsAttributes::new_without_app_manifest()
+    } else {
+        tauri_build::WindowsAttributes::new()
+    };
+    if let Err(error) =
+        tauri_build::try_build(tauri_build::Attributes::new().windows_attributes(windows))
+    {
+        println!("cargo::error={error:#}");
+    }
 }

@@ -11,8 +11,8 @@ pub const COMMON_CONTROLS_V6: &str = r#"<assembly xmlns="urn:schemas-microsoft-c
 
 pub fn link_directives(manifest_file: &Path) -> Vec<String> {
     vec![
-        "cargo:rustc-link-arg-tests=/MANIFEST:EMBED".to_string(),
-        format!("cargo:rustc-link-arg-tests=/MANIFESTINPUT:{}", manifest_file.display()),
+        "cargo:rustc-link-arg=/MANIFEST:EMBED".to_string(),
+        format!("cargo:rustc-link-arg=/MANIFESTINPUT:{}", manifest_file.display()),
     ]
 }
 
@@ -21,13 +21,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn directives_embed_the_manifest_file_into_test_executables() {
+    fn directives_embed_the_manifest_into_every_linked_target_so_the_lib_unit_tests_get_it() {
         let got = link_directives(Path::new("out/m.xml"));
         assert_eq!(
             got,
             [
-                "cargo:rustc-link-arg-tests=/MANIFEST:EMBED",
-                "cargo:rustc-link-arg-tests=/MANIFESTINPUT:out/m.xml"
+                "cargo:rustc-link-arg=/MANIFEST:EMBED",
+                "cargo:rustc-link-arg=/MANIFESTINPUT:out/m.xml"
             ]
         );
     }
