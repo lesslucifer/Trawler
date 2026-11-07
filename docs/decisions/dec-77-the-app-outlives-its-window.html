@@ -68,12 +68,21 @@ flowchart LR
         login item while the app runs can start the agent at once, and ticking a switch must not open the window</td></tr>
       <tr><td>7</td><td>Data windows close with the main window in either case</td><td>Q13, DEC-76 rule 6</td></tr>
       <tr><td>8</td><td>The menu-bar icon is built at every launch, after the core and before the launch window is
-        decided; built = the host's tray availability (rule 1). A template glyph (ring + disc running, ring alone
-        stopped) and a first line follow the core's state — Capturing · Capture service starting · Capture service
-        stopped · Attached to &lt;api&gt; — then Open Trawler, Settings…, Restart capture service (enabled only while an
-        owned core is stopped, through the supervisor's restart) and Quit Trawler. No notification</td><td>Q4, Q10: one
-        place that always says whether capture runs and reaches the window. Restart greys out rather than vanishing, so
-        the menu keeps its shape</td></tr>
+        decided; built = the host's tray availability (rule 1). A glyph (ring + disc running, ring alone stopped) and a
+        first line follow the core's state — Capturing · Capture service starting · Capture service stopped · Attached to
+        a capture service, never an address; the tooltip on macOS and Windows reads <em>Trawler — </em> that line. Under it
+        a routing line with a coloured dot (<code>ok</code> This machine routes through Trawler · <code>warn</code> Another
+        proxy is set · <code>ink-mute</code> The system proxy is off; hidden while unread or with no known proxy address),
+        read against the address the core last listened on with the quit check's classifier, when the icon is pressed
+        (macOS, Windows), at install and every 15 s while windowless, one reading at a time (a press during one takes its answer). Then Open Trawler, Settings…, Restart capture service
+        (enabled only while an owned core is stopped) | Stop routing through Trawler (macOS and Windows; enabled only while
+        ours; it reads the proxy again first and stops only while that reading is still ours, turning off on macOS only the
+        services' switches that name Trawler, on Windows the one HKCU switch; setup's approval) | Check for updates… (the app menu's by-user check), About
+        Trawler (DEC-90's dialog) | Quit Trawler. Title Case on macOS, sentence case on Windows and Linux. A Windows left
+        click opens Trawler, its right click shows the menu; macOS shows the menu on any click. No notification, no pause,
+        no clear, no address (E-PRORELEASE.W20)</td><td>Q4, Q10: one place that always says whether capture runs and
+        whether this machine depends on it, reachable windowless. Restart and Stop grey out rather than vanish, so the menu
+        keeps its shape; the routing line hides rather than guess</td></tr>
       <tr><td>9</td><td>Open at login is the OS's own entry, written by Trawler: macOS
         the bundled launch agent <code>Contents/Library/LaunchAgents/dev.trawler.app.plist</code> (<code>BundleProgram</code>,
         <code>--background</code>, <code>RunAtLoad</code>) registered with <code>SMAppService</code> so System Settings shows

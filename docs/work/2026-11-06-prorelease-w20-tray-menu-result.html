@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aee83ee9f34851f0dfafc33" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W20 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W20 result: the tray menu says and stops this machine's routing</h1>
+      <p>What W20 built from the owner's rulings, how each layer proves it, and what stays open.</p>
+      <div class="meta">v2 · 2026-11-07 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W20</span> · <code>wu/prorelease/tray-menu</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w20-tray-menu-plan.html#round-2">W20 plan, round 2</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Group</th><th>macOS</th><th>Windows</th><th>Linux</th></tr></thead>
+        <tbody>
+          <tr><td>state</td><td colspan="3">Capturing · Capture service starting · Capture service stopped · Attached to a capture service (no address) — then the dotted routing line, once read</td></tr>
+          <tr><td>window</td><td>Open Trawler · Settings… · Restart Capture Service</td><td colspan="2">Open Trawler · Settings… · Restart capture service</td></tr>
+          <tr><td>routing</td><td>Stop Routing Through Trawler</td><td>Stop routing through Trawler</td><td>—</td></tr>
+          <tr><td>app</td><td>Check for Updates… · About Trawler</td><td colspan="2">Check for updates… · About Trawler</td></tr>
+          <tr><td>quit</td><td colspan="3">Quit Trawler</td></tr>
+          <tr><td>click</td><td>any click: the menu</td><td>left: Open Trawler · right: the menu</td><td>AppIndicator: the menu</td></tr>
+          <tr><td>tooltip</td><td colspan="2">Trawler — &lt;the status line&gt;</td><td>none (AppIndicator)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="mechanism">How</h2>
+    <div class="diagram" data-c="mechanism">
+      <pre class="mermaid">
+flowchart LR
+  T["install · icon pressed · 15 s windowless (one at a time: Shown.reading)"] --> R["tray::read_routing (background thread)"]
+  R --> A["address the core last listened on + this machine's own addresses"]
+  A --> M["tray::Machine.read: setup::proxy_status (scenario: its script)"]
+  M --> V["Shown.routing"] --> D["draw on the main thread: line text + dot icon, insert / remove, Stop enabled"]
+  S["Stop routing through Trawler"] --> SR["read_routing again"] -->|"still ours"| U["Machine.stop: setup::unset_trawler_proxy (macOS: only switches naming Trawler, approval) · failure → native dialog"] --> R
+  SR -->|"not ours"| N["nothing changed; the line shows the fresh reading"]
+      </pre>
+      <div class="caption">One reader and one stop behind <code>tray::Machine</code>: the real build plugs in setup's, the scenario build its script, the integration test a scripted fake.</div>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-c="deviations" data-item="deviations">
+      <thead><tr><th>Brief said</th><th>Built</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>routing line shown only while ours</td><td>shown for ours / foreign / off, hidden only while unread</td><td>a line shown only while ours has one colour: a state-coloured dot would mean nothing</td></tr>
+        <tr><td>a scenario-build integration test</td><td><code>suite/tray.rs</code> through the <code>Machine</code> seam the scenario build fills</td><td>no gate or CI job runs cargo tests with <code>--features scenario</code>; the seam is the same</td></tr>
+        <tr><td>—</td><td>web-ui.html (UC-BG) edited without a server snapshot</td><td>the htmldoc server refuses its size (413); <code>git diff</code> is the review</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="round-3">Round 3 — independent review</h2>
+    <table data-c="round-3">
+      <thead><tr><th>#</th><th>Finding</th><th>Resolution</th><th>Proof</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>IMPORTANT: Stop acted on the menu's last, possibly stale reading, and <code>unset_proxy</code> turned off every macOS service's proxy</td><td><code>stop_routing_in_background</code> reads first and stops only on <code>Ours</code>; <code>Machine.stop</code> takes the address and own addresses; <code>setup::unset_trawler_proxy</code> on macOS turns off only the web / secure-web switches whose proxy names Trawler (none → no prompt), elsewhere is <code>unset_proxy</code>. No notice when the re-read finds another proxy: the redrawn routing line already says so. The window's <code>unset_proxy</code> (setup, quit check) is unchanged: there the user acts on a reading the window shows with its address, and narrowing it changes the front-end's contract, out of this WU's scope</td><td><code>suite/tray.rs</code> <code>stop_reads_the_proxy_again_and_leaves_a_proxy_no_longer_trawlers_alone</code>; <code>setup.rs</code> <code>the_menus_stop_turns_off_only_the_switches_that_name_trawler</code>, <code>…_asks_nothing_when_no_switch_names_trawler</code>, <code>…_is_setups_own_unset_wherever_the_proxy_is_one_setting</code></td></tr>
+        <tr><td>2</td><td>NIT: icon presses stacked reading threads</td><td><code>Shown.reading</code> (AtomicBool) claimed by a press and by the poll, released by a drop guard; a press during a reading starts none</td><td><code>suite/tray.rs</code> <code>a_press_while_a_reading_runs_starts_no_second_one</code></td></tr>
+        <tr><td>3</td><td>NIT: the 15 s poll thread is never stopped</td><td>accepted: it dies with the process and reads nothing while a window is open</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="kd" data-c="round-3-red">Red first: with only the <code>Machine.stop</code> signature changed, both new <code>suite/tray.rs</code> tests failed (stop called on a foreign re-read; a second press read); the <code>setup.rs</code> tests were compile-red. Left open: the window's <code>unset_proxy</code> still turns off every macOS service (router's call whether to scope it in a later WU).</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-c="evidence" data-item="evidence">
+      <thead><tr><th>Layer</th><th>Proof</th></tr></thead>
+      <tbody>
+        <tr><td>unit</td><td><code>tray.rs</code> 18 tests (ids, order and casing per OS, no address, tooltip, routing line and dot, Stop enablement, clicks per OS, dots decode) · <code>setup.rs</code> the Stop failure notice · <code>xtask icons</code> each dot is its source's coloured disc</td></tr>
+        <tr><td>integration</td><td><code>suite/tray.rs</code>: ours → Stop → off → foreign at the core's address; a stopped core read at its last address; an attached core never read</td></tr>
+        <tr><td>e2e</td><td>waived: native menus are out of WebDriver's reach; hand-check matrix row 7b</td></tr>
+        <tr><td>gate0</td><td>1503 passed, fmt + clippy <code>--all-features</code> green; also clippy default features</td></tr>
+        <tr><td>smoke</td><td>the debug app ran under a temp HOME with the menu built, read and drawn: nothing on stderr</td></tr>
+        <tr><td>red first</td><td>the new tests named <code>Routing</code>, <code>entries</code>, <code>click_action</code>, <code>Machine</code> before they existed (compile-red)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-c="distillation" data-item="distillation">
+      <thead><tr><th>Doc</th><th>Now carries</th></tr></thead>
+      <tbody>
+        <tr><td>DEC-77 rule 8</td><td>the menu's list, groups, routing line and its triggers, Stop, casing, Windows click</td></tr>
+        <tr><td>DEC-89 rule 12</td><td>the three dot sources in UI colours and what each OS draws</td></tr>
+        <tr><td>UC-BG</td><td>the routing line, Stop, Check for updates, About, the Windows click, where each is proven</td></tr>
+        <tr><td>design rules</td><td>lexicon: routes through Trawler / stop routing, tray casing; chromatic meanings: the dot's sightings</td></tr>
+        <tr><td>hand-check matrix</td><td>row 7b</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-c="follow-ups" data-item="follow-ups">
+      <thead><tr><th>#</th><th>Open</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>independent router review of <code>ui/src-tauri</code> (tray.rs, setup.rs, scenario.rs, lib.rs, icons): outside the cr gate's code paths</td></tr>
+        <tr><td>1b</td><td>scope the window's <code>unset_proxy</code> (setup, quit check) to Trawler's switches on macOS as the menu's now is</td></tr>
+        <tr><td>2</td><td>hand check per OS (row 7b): whether macOS dims a disabled item's dot; whether AppIndicator exports the dot; Windows refreshes the open menu only on reopen</td></tr>
+        <tr><td>3</td><td>an attached core shows no routing line (its proxy address is unknown to the app)</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

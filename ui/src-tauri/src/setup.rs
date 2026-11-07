@@ -1142,6 +1142,40 @@ fn unset_proxy_commands(os: &str, services: &[String]) -> Option<Vec<Vec<String>
     }
 }
 
+// The menu's stop, narrower than setup's: on macOS only the switches whose
+// proxy names Trawler go off, so another service's proxy, or this service's
+// other scheme set elsewhere, stays on. Elsewhere the proxy is one setting and
+// the menu's fresh reading before the stop is the guard.
+fn unset_trawler_proxy_commands(
+    os: &str,
+    services: &[String],
+    ours: impl Fn(&str, u16) -> bool,
+    mut read: impl FnMut(&str, &str) -> Option<Ran>,
+) -> Option<Vec<Vec<String>>> {
+    if os != "macos" {
+        return unset_proxy_commands(os, services);
+    }
+    let switches: Vec<String> = services
+        .iter()
+        .flat_map(|svc| {
+            [
+                ("-getwebproxy", "-setwebproxystate"),
+                ("-getsecurewebproxy", "-setsecurewebproxystate"),
+            ]
+            .map(|(get, set)| (svc, get, set))
+        })
+        .filter_map(|(svc, get, set)| {
+            let out = read(get, svc).filter(|out| out.ok)?;
+            let (host, port) = parse_active_proxy(&out.stdout)?;
+            ours(&host, port).then(|| format!("networksetup {set} {} off", shell_quote(svc)))
+        })
+        .collect();
+    if switches.is_empty() {
+        return Some(Vec::new());
+    }
+    Some(vec![elevated_script(&switches.join(" && "))])
+}
+
 fn reg_add(value: &str, kind: &str, data: &str) -> Vec<String> {
     ["reg", "add", WININET_KEY, "/v", value, "/t", kind, "/d", data, "/f"]
         .map(ToString::to_string)
@@ -1235,6 +1269,17 @@ pub fn unset_proxy() -> Result<(), SetupError> {
     let os = std::env::consts::OS;
     let services = services_to_configure(os)?;
     let commands = unset_proxy_commands(os, &services).ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
+    run_all(commands, NO_UNSET_PROXY_DETAIL)
+}
+
+pub(crate) fn unset_trawler_proxy(host: &str, port: u16, own: &[String]) -> Result<(), SetupError> {
+    let os = std::env::consts::OS;
+    let services = services_to_configure(os)?;
+    let ours = |set: &str, at: u16| names_trawler_at(set, at, host, port, own);
+    let commands = unset_trawler_proxy_commands(os, &services, ours, |flag, svc| {
+        ran("networksetup", &[flag, svc])
+    })
+    .ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
     run_all(commands, NO_UNSET_PROXY_DETAIL)
 }
 
@@ -1797,6 +1842,43 @@ pub fn proxy_in_use(host: String, port: u16) -> ProxyReading {
     read_proxy(&proxy_in_use_now(std::env::consts::OS), &host, port)
 }
 
+impl ProxyReading {
+    pub(crate) fn routing(&self) -> crate::tray::Routing {
+        crate::tray::Routing::from_status(self.status)
+    }
+}
+
+/// The menu bar's reader and stop: the quit check's reading, setup's stop.
+pub(crate) fn machine<R: tauri::Runtime>() -> crate::tray::Machine<R> {
+    crate::tray::Machine {
+        read: |_, proxy, own| proxy_status(proxy.ip().to_string(), proxy.port(), own).routing(),
+        stop: |app, proxy, own| {
+            let stopped = unset_trawler_proxy(&proxy.ip().to_string(), proxy.port(), &own);
+            if let Some(text) = stopped.err().as_ref().and_then(unrouted_notice) {
+                use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                app.dialog()
+                    .message(text)
+                    .title(STOP_ROUTING_TITLE)
+                    .kind(MessageDialogKind::Error)
+                    .show(|_| {});
+            }
+        },
+    }
+}
+
+const STOP_ROUTING_TITLE: &str = "Routing not stopped";
+
+// A dismissed approval is the user's own answer, not a failure to report.
+pub(crate) fn unrouted_notice(err: &SetupError) -> Option<String> {
+    let lead =
+        "This machine still routes through Trawler. Open Trawler to turn the proxy off from setup.";
+    match err {
+        SetupError { refused: true, .. } => None,
+        SetupError { detail, .. } if detail == NO_UNSET_PROXY_DETAIL => Some(lead.to_string()),
+        SetupError { detail, .. } => Some(format!("{lead}\n\n{detail}")),
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum NoticeKey {
     RemoteNotice,
@@ -1886,6 +1968,24 @@ pub fn show_notes(app: tauri::AppHandle, shown: bool) -> Result<(), String> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn a_failed_stop_from_the_menu_says_routing_goes_on_and_a_dismissed_approval_says_nothing() {
+        let lead = "This machine still routes through Trawler. Open Trawler to turn the proxy off from setup.";
+        assert_eq!(
+            unrouted_notice(&command_failed("User cancelled. (-128)", NO_UNSET_PROXY_DETAIL)),
+            None
+        );
+        assert_eq!(
+            unrouted_notice(&command_failed("", NO_UNSET_PROXY_DETAIL)).as_deref(),
+            Some(lead),
+            "the setup screen's no-detail sentence points at steps a dialog has none of"
+        );
+        assert_eq!(
+            unrouted_notice(&command_failed("networksetup: error", NO_UNSET_PROXY_DETAIL)),
+            Some(format!("{lead}\n\nnetworksetup: error"))
+        );
+    }
 
     fn cert() -> PathBuf {
         PathBuf::from("/tmp/trawler-ca.pem")
@@ -2450,6 +2550,44 @@ mod tests {
         assert!(script.contains("networksetup -setwebproxystate 'Thunderbolt Bridge' off"));
         assert!(script.contains("networksetup -setsecurewebproxystate 'Thunderbolt Bridge' off"));
         assert!(!script.contains("127.0.0.1"), "off keeps the saved address, never rewrites it");
+    }
+
+    #[test]
+    fn the_menus_stop_turns_off_only_the_switches_that_name_trawler() {
+        let svcs = ["Wi-Fi".into(), "Ethernet".into()];
+        let cmds = unset_trawler_proxy_commands("macos", &svcs, trawler, |flag, svc| {
+            answered(match (svc, flag) {
+                ("Wi-Fi", "-getwebproxy") => MAC_ON,
+                ("Wi-Fi", _) | ("Ethernet", "-getwebproxy") => MAC_WORK,
+                _ => MAC_OFF,
+            })
+        })
+        .unwrap();
+        assert_eq!(cmds.len(), 1);
+        let script = &cmds[0][2];
+        assert!(script.contains("with administrator privileges"));
+        assert!(script.contains("networksetup -setwebproxystate 'Wi-Fi' off"));
+        assert!(!script.contains("-setsecurewebproxystate 'Wi-Fi'"), "Wi-Fi's HTTPS is foreign");
+        assert!(!script.contains("Ethernet"), "a service set elsewhere is never touched");
+    }
+
+    #[test]
+    fn the_menus_stop_asks_nothing_when_no_switch_names_trawler() {
+        let svcs = ["Wi-Fi".into()];
+        let none = unset_trawler_proxy_commands("macos", &svcs, trawler, |_, _| answered(MAC_WORK));
+        assert_eq!(none, Some(Vec::new()));
+        let unread = unset_trawler_proxy_commands("macos", &svcs, trawler, |_, _| None);
+        assert_eq!(unread, Some(Vec::new()), "a switch nothing could read is left as it is");
+    }
+
+    #[test]
+    fn the_menus_stop_is_setups_own_unset_wherever_the_proxy_is_one_setting() {
+        let never = |_: &str, _: &str| -> Option<Ran> { panic!("only macOS reads per service") };
+        assert_eq!(
+            unset_trawler_proxy_commands("windows", &[], trawler, never),
+            unset_proxy_commands("windows", &[])
+        );
+        assert_eq!(unset_trawler_proxy_commands("linux", &[], trawler, never), None);
     }
 
     #[test]
