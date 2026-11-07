@@ -11,7 +11,7 @@
       <h1>DEC-77 — the app outlives its window</h1>
       <p>The background service is the app process with no window: it keeps supervising its core after the main
         window closes, but only while a menu-bar icon can bring the window back.</p>
-      <div class="meta">v5 · 2026-11-06 (rule 9: macOS 13 floor, AppImage file — E-PKG2.W5) · v4 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W1</strong> from the owner's
+      <div class="meta">v6 · 2026-11-07 (rule 9: no agent from an ad-hoc-signed build — E-PRORELEASE rc6) · v5 · 2026-11-06 (rule 9: macOS 13 floor, AppImage file — E-PKG2.W5) · v4 · 2026-11-05 · Trawler · T2 decision · minted by <strong>E-BGSVC.W1</strong> from the owner's
         rulings on the epic plan's Q1–Q4, Q6–Q8, Q10–Q13 · rule 8 by <strong>E-BGSVC.W2</strong>, rule 9 by <strong>E-BGSVC.W4</strong>, rule 10 by <strong>E-BGSVC.W3</strong>, amended by <strong>E-BGSVC.W8</strong> · UC-BG, UC-4 · amends
         <a href="dec-69-the-app-supervises-its-core.html">DEC-69</a> rule 14 · <strong>active</strong></div>
     </div>
@@ -86,7 +86,7 @@ flowchart LR
       <tr><td>9</td><td>Open at login is the OS's own entry, written by Trawler: macOS
         the bundled launch agent <code>Contents/Library/LaunchAgents/dev.trawler.app.plist</code> (<code>BundleProgram</code>,
         <code>--background</code>, <code>RunAtLoad</code>) registered with <code>SMAppService</code> so System Settings shows
-        “Trawler” at once (unavailable from a binary with no bundle and below macOS 13, where the class does not exist; W8, E-PKG2.W5, <a href="dec-84-unsafe-is-confined-to-the-login-service-crate.html">DEC-84</a>), Linux
+        “Trawler” at once (unavailable from a binary with no bundle and below macOS 13, where the class does not exist; W8, E-PKG2.W5, <a href="dec-84-unsafe-is-confined-to-the-login-service-crate.html">DEC-84</a>; unavailable from an ad-hoc-signed bundle, which unregisters any agent left registered: launchd starts the agent at once and at each login, and macOS kills an ad-hoc one at launch with a Launch Constraint Violation — E-PRORELEASE rc6), Linux
         <code>$XDG_CONFIG_HOME/autostart/dev.trawler.app.desktop</code>, Windows the <code>HKCU\…\Run</code> value
         <code>Trawler</code>. It reads on whenever an entry exists, with the program it starts, read back each time and never
         cached; writing on points it at the binary now running, or on Linux at <code>$APPIMAGE</code> when the binary runs inside that image's <code>$APPDIR</code> (both are inherited by children), since an AppImage runs from a mount gone after it quits (E-PKG2.W5; the last write wins). No <code>launchctl</code>: it takes
