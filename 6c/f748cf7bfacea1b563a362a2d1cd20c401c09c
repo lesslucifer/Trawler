@@ -1,0 +1,4 @@
+schema: test/v2
+level: commit
+tests:
+  unit: { count: 407, covers: "setup.test \"This Mac's by-hand routes\" and \"Another Mac, walked by hand (W13)\", and Onboarding.test \"a command is a block, not a phrase inside a sentence\" (default path and a quoted path with spaces) now require the Mac trust command to be 'security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db <file>' with no sudo, so the by-hand step cannot return to the System-keychain write rc5's macOS 26 run refused. vitest on both files green." }
