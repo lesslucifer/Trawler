@@ -26,6 +26,7 @@ interface Shown {
   keepCapturing: KeepCapturing;
   tray: boolean;
   login: LoginItem;
+  loginUnavailable: string | null;
   updates: UpdatePrefs | null;
 }
 
@@ -46,10 +47,13 @@ async function readAll(call: Invoke): Promise<Shown> {
   const [keepCapturing, tray, login, updates] = await Promise.all([
     readKeepCapturing(call).catch((): KeepCapturing => "off"),
     readTrayAvailable(call).catch(() => false),
-    readLoginItem(call).catch(() => LOGIN_OFF),
+    readLoginItem(call).then(
+      (read) => ({ read, why: null }),
+      (why: unknown) => ({ read: LOGIN_OFF, why: String(why) }),
+    ),
     readUpdatePrefs(call).catch(() => null),
   ]);
-  return { keepCapturing, tray, login, updates };
+  return { keepCapturing, tray, login: login.read, loginUnavailable: login.why, updates };
 }
 
 function Updates({ updates, call }: { updates: UpdatePrefs; call: Invoke }) {
@@ -105,6 +109,7 @@ export function General({ call = invoke, os = hostOs() }: { call?: Invoke; os?: 
   const [shown, setShown] = useState<Shown | null>(null);
   const [keepRefused, setKeepRefused] = useState<string | null>(null);
   const [loginRefused, setLoginRefused] = useState<string | null>(null);
+  const [unopened, setUnopened] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -140,6 +145,11 @@ export function General({ call = invoke, os = hostOs() }: { call?: Invoke; os?: 
     );
   };
 
+  const openByHand = () => {
+    setUnopened(null);
+    call<void>("open_link", { link: "login" }).catch((address: unknown) => setUnopened(String(address)));
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="font-serif text-title italic">General</h1>
@@ -164,12 +174,30 @@ export function General({ call = invoke, os = hostOs() }: { call?: Invoke; os?: 
         <Refusal why={keepRefused} />
       </div>
       <div>
-        <span title={shown.login.starts ?? undefined}>
-          <Checkbox checked={shown.login.on} onChange={login}>
-            open Trawler at login
-          </Checkbox>
-        </span>
-        <Line>{shown.tray ? `Opens in ${trayPlace(os)}, with no window.` : "Opens with its window."}</Line>
+        {shown.loginUnavailable === null ? (
+          <>
+            <span title={shown.login.starts ?? undefined}>
+              <Checkbox checked={shown.login.on} onChange={login}>
+                open Trawler at login
+              </Checkbox>
+            </span>
+            <Line>{shown.tray ? `Opens in ${trayPlace(os)}, with no window.` : "Opens with its window."}</Line>
+          </>
+        ) : (
+          <>
+            <Checkbox checked={false} onChange={login} disabled>
+              open Trawler at login
+            </Checkbox>
+            <div className="pt-chrome-tight">
+              <Notice
+                detail={unopened === null ? undefined : <CopyText value={unopened} label="address" />}
+                action={os === "macos" ? <Button onClick={openByHand}>how to do it by hand</Button> : undefined}
+              >
+                {shown.loginUnavailable}
+              </Notice>
+            </div>
+          </>
+        )}
         <Refusal why={loginRefused} />
       </div>
       {shown.updates && <Updates updates={shown.updates} call={call} />}

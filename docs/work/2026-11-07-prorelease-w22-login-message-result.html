@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aef065a9f34851f0dfb064f" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W22 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W22 result: an unavailable open-at-login is a state, with the way by hand</h1>
+      <p>What W22 changed, how it is proven, and what stays for the router and the owner.</p>
+      <div class="meta">v1 · 2026-11-07 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W22</span> · <code>wu/prorelease/login-message</code> → <code>epic/prorelease</code> · plan <a href="2026-11-07-prorelease-w22-login-message-plan.html">W22 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  R[login_item_read] -->|entry| B[box: on/off, writes]
+  R -->|refuses with a reason| D[box disabled + Notice: the reason verbatim]
+  D -->|macOS| H[how to do it by hand]
+  H -->|open_link login| G[GUIDE.md#open-at-login]
+  H -->|browser refused| C[the address to copy]
+      </pre>
+      <div class="caption">Settings → General's open-at-login row after W22</div>
+    </div>
+    <table data-c="outcome" data-item="outcome">
+      <thead><tr><th>Packaged 0.1.0 on…</th><th>Before (0.1.0-6)</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td>macOS 13+</td><td>box clickable; a click: "couldn't save — unavailable — macos starts only …"</td><td>☐ disabled · "unavailable — macOS starts only a developer-signed app at login, and this build is not." · <b>how to do it by hand</b></td></tr>
+        <tr><td>macOS 11–12</td><td>same refusal, worded "open Trawler from the installed app …" (untrue there)</td><td>☐ disabled · "unavailable — Trawler adds itself to the login items only on macOS 13 or later." · <b>how to do it by hand</b></td></tr>
+        <tr><td>Windows, Linux</td><td>box works</td><td>unchanged</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="files">Files</h2>
+    <table data-c="files">
+      <thead><tr><th>File</th><th>Change</th><th>Review</th></tr></thead>
+      <tbody>
+        <tr><td><code>ui/src/General.tsx</code></td><td>a refused <code>login_item_read</code> is the unavailable state: the Updates row's disabled box + Notice; on macOS the action calls <code>open_link {link: "login"}</code>, About's copy-address fallback</td><td>cr gate</td></tr>
+        <tr><td><code>ui/src/General.test.tsx</code></td><td>3 tests</td><td>cr gate</td></tr>
+        <tr><td><code>ui/src-tauri/src/links.rs</code></td><td><code>Link::Login</code> → <code>USER_GUIDE#open-at-login</code>; the anchor is tied to a <code>### </code> heading of GUIDE.md</td><td><b>router</b></td></tr>
+        <tr><td><code>ui/src-tauri/src/login_item.rs</code></td><td><code>OLD_MACOS</code>: the reason below macOS 13 (was <code>UNAVAILABLE</code>)</td><td><b>router</b></td></tr>
+        <tr><td><code>docs/use-cases/web-ui.html</code></td><td>UC-BG's open-at-login row: the unavailable state and the button</td><td>doc/v1</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations from the ready patch</h2>
+    <table data-c="deviations" data-item="deviations">
+      <thead><tr><th>Patch</th><th>W22</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>macOS 11–12 read <code>UNAVAILABLE</code> ("open Trawler from the installed app")</td><td><code>OLD_MACOS</code>, with the button</td><td>the brief's macOS &lt;13 check: the old words were untrue there, and GUIDE's steps name macOS 12's System Preferences list, so the button is truthful</td></tr>
+        <tr><td>two explanatory comments</td><td>dropped</td><td>the names carry them (CLAUDE.md)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-c="evidence" data-item="evidence">
+      <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+      <tbody>
+        <tr><td>Tests red first</td><td>the 3 General tests fail on <code>General.tsx</code> at <code>cf62aea3</code> (3 failed / 17 passed), pass after; <code>the_login_link_lands_on_a_heading_of_the_guide</code> and <code>each_reason_reads_as_a_state_and_names_macos_as_macos</code> do not compile without <code>Link::Login</code> / <code>OLD_MACOS</code></td></tr>
+        <tr><td>Anchor exists</td><td>GUIDE.md <code>### Open at login</code> → <code>#open-at-login</code> (test)</td></tr>
+        <tr><td>Existing specs</td><td><code>General.test.tsx</code> + <code>onboardingMatrix.test.tsx</code>: 58741 passed</td></tr>
+        <tr><td>Suite</td><td><code>cargo xtask gate0</code> green: 1521 tests; eslint and <code>tsc --noEmit</code> clean</td></tr>
+        <tr><td>Rendering</td><td>the app has one warm-dark palette (<code>tailwind.config.js</code>, no light theme); the Notice is <code>tone="mute"</code> (ink-mute on canvas) with a T1 Button, as the Updates row already renders</td></tr>
+        <tr><td>Design</td><td><code>design/v1</code>: <code>General.tsx</code> undesigned — a state of an existing row built from the file's own disabled box + Notice pattern</td></tr>
+        <tr><td>integration / e2e</td><td>waived: the state needs an ad-hoc-signed packaged app on a Mac; the owner's hand check below</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="hand-check">Hand check on the packaged build (owner's Mac)</h2>
+    <table data-c="hand-check">
+      <thead><tr><th>#</th><th>Do</th><th>See</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>cd /Users/nguyenvanluong/Documents/proj/misc/Trawler-pr-w22 &amp;&amp; cargo xtask package</code>, install the .dmg's Trawler.app into /Applications, open it</td><td>—</td></tr>
+        <tr><td>2</td><td>Trawler → Settings… → General</td><td>"open Trawler at login" greyed out, no tick; under it "unavailable — macOS starts only a developer-signed app at login, and this build is not." with no "couldn't save"; a <b>how to do it by hand</b> button</td></tr>
+        <tr><td>3</td><td>click <b>how to do it by hand</b></td><td>the browser opens <code>github.com/lesslucifer/Trawler/blob/main/GUIDE.md#open-at-login</code> at "Open at login" (the section is live once the epic reaches <code>main</code>)</td></tr>
+        <tr><td>4</td><td>(optional) with no default browser able to open</td><td>the address appears under the sentence; a click copies it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">UC-BG's open-at-login row says a build that cannot register shows the switch disabled with the shell's reason and, on macOS, the button to the guide. DEC-77 rule 9 and DEC-90 already hold the rules: no DEC change.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-c="follow-ups" data-item="follow-ups">
+      <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>Independent review of <code>ui/src-tauri/src/links.rs</code> and <code>ui/src-tauri/src/login_item.rs</code> (outside the cr gate)</td><td>router</td></tr>
+        <tr><td>GUIDE's macOS line leads with the signing reason; on macOS 11–12 the reason is the OS version (the steps still hold)</td><td>router</td></tr>
+        <tr><td>The LaunchAgent-plist route (no window at login) stays unproven: the owner's hand-try from the rc7 report</td><td>owner</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

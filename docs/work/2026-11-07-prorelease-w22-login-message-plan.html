@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aef065a9f34851f0dfb064d" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W22 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W22: an unavailable open-at-login is a state, with the way by hand</h1>
+      <p>0.1.0-6 shows a Mac's unavailable login item as a refused save ("couldn't save — unavailable — macos …"); rc7 wrote the by-hand steps into GUIDE.md's Open at login section, and the app does not point at them.</p>
+      <div class="meta">v1 · 2026-11-07 · Trawler · T3 WU plan · <span class="badge id">E-PRORELEASE.W22</span> · branch <code>wu/prorelease/login-message</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">On a Mac whose build cannot register a login item (an ad-hoc-signed build; DEC-77 v6 rule 9), Settings → General shows 'open Trawler at login' as unavailable with the shell's reason verbatim (no 'couldn't save' prefix, 'macOS' capitalised), and a 'how to do it by hand' button that opens the user guide's open-at-login section (copy-address fallback when the browser will not open).</p>
+
+    <h2 id="today">Today vs W22</h2>
+    <table data-c="today">
+      <thead><tr><th>Shell reason (<code>login_item_read</code> refuses)</th><th>Who sees it</th><th>Today</th><th>W22</th></tr></thead>
+      <tbody>
+        <tr><td><code>UNSIGNED</code> "unavailable — macOS starts only a developer-signed app at login, and this build is not."</td><td>every 0.1.0 Mac on 13+</td><td>box enabled; a click reads "couldn't save — unavailable — macos …"</td><td>box disabled, the reason verbatim in a Notice, <b>how to do it by hand</b></td></tr>
+        <tr><td><code>UNAVAILABLE</code> "unavailable — open Trawler from the installed app …"</td><td>macOS 11–12 (no SMAppService), a dev run, Linux with no home</td><td>same refused save; on macOS 11–12 the words are untrue</td><td>macOS 11–12 get their own reason <code>OLD_MACOS</code>; the rest disabled + verbatim</td></tr>
+        <tr><td><code>OLD_MACOS</code> (new) "unavailable — macOS starts Trawler at login by itself only on macOS 13 or later."</td><td>macOS 11–12</td><td>—</td><td>disabled + verbatim + the button (GUIDE's steps name macOS 12's System Preferences list)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Button only for the signing reason?</td><td>on macOS for any unavailable reason; macOS 11–12 worded truthfully instead</td><td>the by-hand list works on 11–12 too (GUIDE names it); the UI never matches the shell's words</td></tr>
+        <tr><td>The link</td><td><code>Link::Login</code> → <code>USER_GUIDE#open-at-login</code> (DEC-90: the webview names a link, never an address)</td><td>the existing <code>open_link</code> and About's copy-address fallback</td></tr>
+        <tr><td>Design</td><td><code>undesigned</code>: the Updates row's disabled box + Notice in the same file, Notice's own action/detail slots</td><td>a state of an existing row, no new surface</td></tr>
+        <tr><td>New DEC</td><td>none</td><td>DEC-77 rule 9 and DEC-90 already hold it</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PRORELEASE W22 · UC-BG (open at login) · DEC-77 v6 rule 9 · DEC-90 · <code>ui/src/General.tsx</code>, <code>ui/src-tauri/src/links.rs</code>, <code>ui/src-tauri/src/login_item.rs</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Host</th><th>Settings → General</th><th>The button</th></tr></thead>
+        <tbody>
+          <tr><td>packaged 0.1.0 on macOS 13+</td><td>☐ open Trawler at login (disabled) · "unavailable — macOS starts only a developer-signed app at login, and this build is not."</td><td>opens <code>…/GUIDE.md#open-at-login</code>; browser refused → the address to copy</td></tr>
+          <tr><td>Windows, Linux</td><td>unchanged: the box works</td><td>none</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th><th>Red on the old code</th></tr></thead>
+        <tbody>
+          <tr><td>unit (vitest, <code>General.test.tsx</code>)</td><td>an unsigned Mac: box disabled, reason verbatim, no "couldn't save", the button calls <code>open_link {link: "login"}</code></td><td>yes</td></tr>
+          <tr><td>unit</td><td>a refused browser leaves the address to copy</td><td>yes</td></tr>
+          <tr><td>unit</td><td>off a Mac an unavailable item is disabled with no button</td><td>yes</td></tr>
+          <tr><td>unit (<code>links.rs</code>)</td><td><code>"login"</code> deserialises to <code>Link::Login</code>; its anchor is a <code>### </code> heading of GUIDE.md</td><td>yes</td></tr>
+          <tr><td>unit (<code>login_item.rs</code>)</td><td>every reason starts "unavailable — " and keeps "macOS" capitalised</td><td>yes (no <code>OLD_MACOS</code>)</td></tr>
+          <tr><td>integration / e2e</td><td>waived: the state needs an ad-hoc-signed packaged app on a Mac; the existing General/onboardingMatrix specs rerun; the owner's hand check on the packaged build</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
