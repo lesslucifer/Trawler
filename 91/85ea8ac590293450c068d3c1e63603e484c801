@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 9185ea8ac590293450c068d3c1e63603e484c801
+base: 8722dd7bd796a31409168ea6dd69eb7fa5bf34b9
+tier: key
+signer: vuluu
+report: docs/work/2026-11-07-prorelease-w21-applescript-escape-result.html
+report_sha256: fca598fdfbff927d752fa1fcbce11cb390ab8f34953b4719413d47fd66433c85
+date: 2026-11-07
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECU9qHNBNWWQWarr9arup1+/IT33RrQ9sfC7Ju/CazR2tEnuOj07eKj3I
+  g/pMK0AGyLDmX7TYOv0EOyToXStsgB
+  -----END SSH SIGNATURE-----
