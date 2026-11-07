@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aee8b1c9f34851f0dfafcda" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W6 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W6 result: the user guide (GUIDE.md)</h1>
+      <p>What W6 wrote, what changed from the signed W12 design and why, how it is proven, and what stays for the owner.</p>
+      <div class="meta">v2 · 2026-11-07 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W6</span> · <code>wu/prorelease/user-guide</code> → <code>epic/prorelease</code> · plan <a href="2026-11-07-prorelease-w6-user-guide-plan.html">W6 plan</a> · design <a href="2026-11-06-prorelease-w12-guide-design.html">W12</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Change</th><th>Where</th><th>Before → after</th></tr></thead>
+        <tbody>
+          <tr><td>The guide</td><td><code>GUIDE.md</code></td><td>none → W12's 13 sections with its fixed anchors (<code>#install</code> … <code>#troubleshooting</code>), a contents list linking each, the three drafts (Install, Trust the certificate, Uninstall) as signed and corrected to today's app, screenshots S1–S6, S10, S11</td></tr>
+          <tr><td>Checks cover it</td><td><code>xtask/src/public_text.rs</code></td><td>GUIDE.md skipped as not yet written → a published file: links, images, anchors and the deny list read it; the pending-file list and its skip are gone</td></tr>
+          <tr><td>S6</td><td><code>ui/e2e/screenshots/screenshots.spec.ts</code> · <code>.github/screenshots/s6-setup-iphone.png</code></td><td>a black box where the iPhone step's recording sits → its frame at 1 s, painted on a canvas in the video's place (the webview's snapshot paints no video layer)</td></tr>
+          <tr><td>Rule text</td><td>DEC-91 rules 2 and 4</td><td>GUIDE named among the published files; "a file is linked only once it exists"</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="round-2">Round 2: the independent review</h2>
+    <div>
+      <table data-c="round-2">
+        <thead><tr><th>#</th><th>Finding</th><th>Resolution</th><th>Verified against</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Install → macOS reads as recent macOS only, the claim is macOS 11+</td><td>a line after the steps: on 11 and 12 step 3 is <b>System Preferences → Security &amp; Privacy → General</b>; older versions word it slightly differently (no <b>Done</b>: close without moving to the Bin); the same in README's first-open note</td><td><code>ui/src-tauri/tauri.conf.json</code> minimumSystemVersion 11.0; the older dialog buttons not seen on a real 11/12: owner T1</td></tr>
+          <tr><td>2</td><td>README "with pictures" before S8/S9</td><td>"Step by step: the guide"</td><td><code>README.md</code></td></tr>
+          <tr><td>3</td><td>Uninstall leaves the webview's folders</td><td>macOS adds <code>~/Library/WebKit/dev.trawler.app</code> and <code>~/Library/Caches/dev.trawler.app</code>; Windows adds <code>%LOCALAPPDATA%\dev.trawler.app</code>; each "the app window's web data: nothing secret". Linux unchanged: no <code>~/.cache</code> folder</td><td>Tauri 2.12.5 <code>manager/webview.rs:559-569</code> forces <code>app_local_data_dir</code> on Windows and Linux (Linux's equals its data folder); wry 0.57.1 <code>webkitgtk/web_context.rs:36-39</code> puts cache and data there; macOS keeps WKWebView's default store, both folders seen on a dev Mac; the UI stores only the API address in sessionStorage (<code>ui/src/api.ts:105,124</code>)</td></tr>
+          <tr><td>4</td><td>macOS fallback turns off Wi-Fi only</td><td>a loop over every enabled service: header and <code>*</code>-disabled lines skipped as setup does</td><td><code>ui/src-tauri/src/setup.rs:1097</code> <code>parse_services</code>; the loop dry-run with <code>echo</code> on a dev Mac lists each service once</td></tr>
+          <tr><td>5</td><td>"stop routing through Trawler" has no button on Linux</td><td>scoped "On macOS and Windows"</td><td>Uninstall step 1 and the quit check already scope it</td></tr>
+          <tr><td>6</td><td>Bin vs Trash</td><td>"the Bin (Trash)", British text with the macOS label</td><td>GUIDE.md uses "licence"</td></tr>
+          <tr><td>7</td><td>The key-risk line omits where the key lives</td><td>"stores the certificate's private key unencrypted in its app data folder", linking <code>SECURITY.md#about-trawlers-certificate</code></td><td><code>SECURITY.md:33</code>, <code>PRIVACY.md:8</code>; the link test resolves the anchor</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations from the W12 design</h2>
+    <div data-item="deviations">
+      <table data-c="deviations">
+        <thead><tr><th>Design said</th><th>Guide says</th><th>Why (code)</th></tr></thead>
+        <tbody>
+          <tr><td>Another computer as one device</td><td>three choices: Another Mac · Another Windows PC · Another Ubuntu machine</td><td><code>ui/src/setup.ts:313,325,337</code></td></tr>
+          <tr><td>Settings… opens a window</td><td>a dialog over the main window; Esc, ⌘W / Ctrl+W close it</td><td>W19 · <code>ui/src-tauri/src/menu.rs:146-160</code></td></tr>
+          <tr><td>Tray: Open Trawler · Settings… · Restart · Quit</td><td>W20's menu per OS: state, coloured routing line, Stop Routing (macOS, Windows), Check for Updates, About; Windows left click opens Trawler</td><td><code>ui/src-tauri/src/tray.rs:115-120,164-202</code></td></tr>
+          <tr><td>Windows remove the certificate: one approval</td><td>one approval per store; click again if it still reads installed and trusted</td><td><code>ui/src-tauri/src/setup.rs:1402-1410</code></td></tr>
+          <tr><td>The update check: launch, once a day</td><td>also: installed copies only; Check for Updates… in Trawler / File / Edit, the tray, Settings → General → check now</td><td><code>ui/src-tauri/src/update.rs:13,81-83,187-196</code> · <code>ui/src/General.tsx</code></td></tr>
+          <tr><td>Help → User Guide</td><td>Help → User Guide (F1) on Windows and Linux; Help → Trawler User Guide on macOS</td><td><code>ui/src-tauri/src/menu.rs:85-100</code></td></tr>
+          <tr><td>S7 in Troubleshooting</td><td>text only</td><td>the screenshot script has no S7 launch since W5, and the log prints the CA's absolute path</td></tr>
+          <tr><td>S8, S9 in Install</td><td>not linked</td><td>hand-captured on the last rc (W11 Q8): owner TODO below</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="screenshots">Screenshots</h2>
+    <p data-c="screenshots">Re-run with <code>cargo xtask ui screenshots</code> (8 of 8 passing). S1–S5, S10, S11 already showed today's UI; the re-run only added a <code>06/11 ·</code> day stamp to the time column (the fixture's day is no longer today), so those committed PNGs were kept. Only S6 changed. Every PNG viewed: reserved hosts (<code>*.example.*</code>), <code>localhost</code> and the scripted <code>192.168.1.23</code> only; no user name, path or real host.</p>
+
+    <h2 id="owner-todo">Owner TODO</h2>
+    <div>
+      <table data-c="owner-todo">
+        <thead><tr><th>#</th><th>What</th><th>Where it goes</th></tr></thead>
+        <tbody>
+          <tr><td>T1</td><td>S8: macOS first open of the last rc: the "can't verify" alert (and, if a macOS 11 or 12 machine is at hand, its button names for the guide's older-versions line), then <b>System Settings → Privacy &amp; Security → Open Anyway</b>; check the guide's wording (Done, a second Open Anyway, password)</td><td><code>.github/screenshots/s8-macos-open-anyway.png</code>, linked under GUIDE.md <code>### macOS</code> in Install</td></tr>
+          <tr><td>T2</td><td>S9: Windows SmartScreen <b>Windows protected your PC → More info → Run anyway</b> on the last rc; whether the installer asks for admin</td><td><code>.github/screenshots/s9-windows-smartscreen.png</code>, under <code>### Windows</code> in Install</td></tr>
+          <tr><td>T3</td><td>Windows: the folders <code>%APPDATA%\dev.trawler.app</code> and <code>%LOCALAPPDATA%\dev.trawler.app</code>; Settings → Apps → Installed apps → Trawler → Uninstall; the native File-menu Quit label</td><td>Uninstall · Keep capturing</td></tr>
+          <tr><td>T4</td><td>Linux: <code>apt remove trawler</code> / <code>dnf remove trawler</code> (package name from the bundler; <code>dpkg -I</code> on the built .deb), <code>~/.local/share/dev.trawler.app</code> and <code>~/.config/dev.trawler.app</code>; the Ubuntu Firefox/Chrome/GNOME labels</td><td>Uninstall · Trust the certificate</td></tr>
+          <tr><td>T5</td><td>Whether removing the app clears the macOS login item and the Windows Run value (the guide says turn it off first either way)</td><td>Uninstall step 3</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Tests red first</td><td>GUIDE.md listed as published before it existed: <code>every_published_link_and_image_resolves</code> and <code>no_published_file_names_another_tool</code> panicked "GUIDE.md: No such file"; green once written (29/29)</td></tr>
+          <tr><td>Anchors</td><td>the contents list links all 13 anchors and README/SECURITY link <code>#install</code>, <code>#first-run</code>, <code>#troubleshooting</code>, <code>#uninstall</code>: all resolve under the link test</td></tr>
+          <tr><td>Labels</td><td>every quoted label re-read from the code at <code>f48ee6e5</code> (setup screen, main window, menus, tray, Settings, About, dialogs, updater)</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green (1507 tests; round 2: 1512, after merging W21)</td></tr>
+          <tr><td>e2e</td><td><code>cargo xtask ui screenshots</code>: 8 passing; S6 viewed with its frame</td></tr>
+          <tr><td>Review</td><td><code>cr/v5</code> on this tip (code: <code>public_text.rs</code>, the screenshot spec), run fresh in round 2; GUIDE.md and the PNG are outside the code review: router review (round 2 above)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">DEC-91 rules 2 and 4 (above). UC-ABOUT already names the root GUIDE.md (<code>docs/use-cases/web-ui.html</code>); no new DEC.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>The release notes' Linux line "where none shows, open Trawler again to bring its window back" reads as if closing keeps Trawler running; with no tray, closing goes through the quit check and quits (<code>ui/src/closeConfirm.ts:41-45</code>)</td><td>W14 / router</td></tr>
+          <tr><td>The Help menu says "Third-Party Licences", the About dialog's page "Third-party licences"</td><td>router (app copy)</td></tr>
+          <tr><td>S7 (Settings → Capture service) for Troubleshooting needs an owned launch in the screenshot script and a log without the absolute CA path</td><td>router</td></tr>
+          <tr><td>The screenshot fixture's dates show a day stamp once the run is not on the fixture's day; a re-shot README set will carry it</td><td>router</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

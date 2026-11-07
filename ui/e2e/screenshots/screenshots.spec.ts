@@ -52,6 +52,42 @@ async function rereadOnFocus() {
   }
 }
 
+const HAVE_CURRENT_DATA = 2;
+const FRAME_AT_S = 1;
+
+async function holdRecordingsOnAFrame() {
+  await browser.execute((at) => {
+    for (const video of document.querySelectorAll("video")) {
+      video.pause();
+      video.preload = "auto";
+      video.currentTime = at;
+    }
+  }, FRAME_AT_S);
+  await browser.waitUntil(
+    () =>
+      browser.execute(
+        (ready) => [...document.querySelectorAll("video")].every((video) => video.readyState >= ready && !video.seeking),
+        HAVE_CURRENT_DATA,
+      ),
+    { timeout: 15_000, timeoutMsg: "a setup recording never showed a frame" },
+  );
+  // The webview's snapshot leaves a video's layer black, so each frame is
+  // painted onto a canvas shown in the video's place; the video stays in the
+  // tree React owns.
+  await browser.execute(() => {
+    for (const video of document.querySelectorAll("video")) {
+      const frame = document.createElement("canvas");
+      frame.width = video.videoWidth;
+      frame.height = video.videoHeight;
+      frame.className = video.className;
+      frame.style.width = `${video.clientWidth}px`;
+      frame.getContext("2d")!.drawImage(video, 0, 0);
+      video.before(frame);
+      video.style.display = "none";
+    }
+  });
+}
+
 async function selectRow(...texts: string[]) {
   await rowWith(...texts).click();
   await detail().waitForDisplayed({ timeout: 15_000 });
@@ -99,6 +135,7 @@ describe("README and guide screenshots, the window on the harness core", functio
     await invoke("scenario_script", { patch: { allow_reach: true } });
     await click("allow devices on");
     await $('[data-testid="device-address"]').waitForExist({ timeout: 15_000 });
+    await holdRecordingsOnAFrame();
     await shoot("s6-setup-iphone");
     await click("stop listening");
     await browser.waitUntil(async () => !(await $("//*[starts-with(normalize-space(.), 'reachable on')]").isExisting()), {
