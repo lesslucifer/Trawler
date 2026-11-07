@@ -27,15 +27,30 @@ fn install_command(os: &str, cert: &Path) -> Option<Vec<String>> {
 }
 
 fn quoted(argv: &[String]) -> String {
-    argv.iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(" ")
+    argv.iter().map(|a| shell_quote(a)).collect::<Vec<_>>().join(" ")
 }
 
 fn elevated_script(script: &str) -> Vec<String> {
+    let literal = script.replace('\\', r"\\").replace('"', r#"\""#);
     vec![
         "osascript".into(),
         "-e".into(),
-        format!("do shell script \"{script}\" with administrator privileges"),
+        format!("do shell script \"{literal}\" with administrator privileges"),
     ]
+}
+
+fn powershell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "''"))
+}
+
+// Start-Process joins -ArgumentList with spaces and quotes nothing, so a path
+// with a space (a Windows user folder) needs its own quotes to stay one argument.
+fn command_line_word(arg: &str) -> String {
+    if arg.contains(char::is_whitespace) {
+        format!("\"{arg}\"")
+    } else {
+        arg.to_string()
+    }
 }
 
 // A UAC prompt the user cancels leaves `$p` unset, and `exit $p.ExitCode` would
@@ -45,15 +60,18 @@ fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     match os {
         "macos" => elevated_script(&quoted(argv)),
         "windows" => {
-            let argument_list =
-                argv[1..].iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(",");
+            let argument_list = argv[1..]
+                .iter()
+                .map(|a| powershell_quote(&command_line_word(a)))
+                .collect::<Vec<_>>()
+                .join(",");
             vec![
                 "powershell".into(),
                 "-NoProfile".into(),
                 "-Command".into(),
                 format!(
-                    "$ErrorActionPreference = 'Stop'; $p = Start-Process -FilePath '{}' -ArgumentList {argument_list} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
-                    argv[0]
+                    "$ErrorActionPreference = 'Stop'; $p = Start-Process -FilePath {} -ArgumentList {argument_list} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
+                    powershell_quote(&argv[0])
                 ),
             ]
         }
@@ -1168,7 +1186,7 @@ fn internet_set_option_refresh() -> Vec<String> {
 
 // Service names come from networksetup output, not IPC, but still get quoted
 // (names contain spaces, e.g. "Wi-Fi", "Thunderbolt Bridge") and single quotes
-// escaped so they splice safely into the osascript shell string.
+// escaped; elevated_script escapes the AppleScript layer around the shell one.
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
@@ -1929,6 +1947,79 @@ mod tests {
         assert_eq!(argv[0], "osascript");
         assert_eq!(argv[1], "-e");
         assert_eq!(argv[2], "do shell script \"'security' '-k'\" with administrator privileges");
+    }
+
+    fn applescript_literal(argv: &[String]) -> &str {
+        argv[2]
+            .strip_prefix("do shell script \"")
+            .and_then(|rest| rest.strip_suffix("\" with administrator privileges"))
+            .unwrap()
+    }
+
+    fn applescript_unescaped(literal: &str) -> String {
+        let mut text = String::new();
+        let mut chars = literal.chars();
+        while let Some(c) = chars.next() {
+            match c {
+                '\\' => match chars.next() {
+                    Some(escaped @ ('\\' | '"')) => text.push(escaped),
+                    other => panic!("not an AppleScript escape: \\{other:?} in {literal}"),
+                },
+                '"' => panic!("an unescaped quote ends the literal early: {literal}"),
+                c => text.push(c),
+            }
+        }
+        text
+    }
+
+    const AWKWARD_SCRIPT: &str = "echo \"a\" 'b' c\\d\nnext";
+    const AWKWARD_SERVICE: &str = "Wi-Fi \"x\" \\ y";
+
+    #[test]
+    fn the_applescript_literal_reads_back_as_the_shell_script() {
+        let argv = elevated_script(AWKWARD_SCRIPT);
+        assert_eq!(applescript_unescaped(applescript_literal(&argv)), AWKWARD_SCRIPT);
+    }
+
+    #[test]
+    fn a_service_name_with_quotes_and_backslashes_reaches_the_shell_whole() {
+        let cmds = unset_proxy_commands("macos", &[AWKWARD_SERVICE.into()]).unwrap();
+        assert_eq!(
+            applescript_unescaped(applescript_literal(&cmds[0])),
+            "networksetup -setwebproxystate 'Wi-Fi \"x\" \\ y' off && networksetup -setsecurewebproxystate 'Wi-Fi \"x\" \\ y' off"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn osascript_parses_the_literal_back_to_the_shell_script() {
+        let argv = elevated_script(AWKWARD_SCRIPT);
+        let unprivileged = format!("return \"{}\"", applescript_literal(&argv));
+        let Ok(out) = Command::new("osascript").args(["-e", &unprivileged]).output() else {
+            return;
+        };
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+        assert_eq!(String::from_utf8_lossy(&out.stdout).strip_suffix('\n'), Some(AWKWARD_SCRIPT));
+    }
+
+    #[test]
+    fn a_quoted_argument_with_a_single_quote_stays_one_shell_word() {
+        assert_eq!(quoted(&["/tmp/O'Brien/ca.pem".into()]), r"'/tmp/O'\''Brien/ca.pem'");
+    }
+
+    #[test]
+    fn windows_elevation_quotes_each_argument_for_powershell_and_the_command_line() {
+        let argv = elevated_argv(
+            "windows",
+            &argv(&["certutil", "-addstore", r"C:\Users\O'Brien Li\Temp\trawler-ca.pem"]),
+        );
+        assert!(
+            argv[3].contains(
+                r#"-ArgumentList '-addstore','"C:\Users\O''Brien Li\Temp\trawler-ca.pem"' -Verb RunAs"#
+            ),
+            "{}",
+            argv[3]
+        );
     }
 
     #[test]
