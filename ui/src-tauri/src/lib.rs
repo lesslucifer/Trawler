@@ -21,6 +21,7 @@ mod route;
 pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
+mod spawn;
 pub mod supervisor;
 pub mod tray;
 pub mod update;

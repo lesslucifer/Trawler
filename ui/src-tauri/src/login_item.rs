@@ -138,19 +138,16 @@ pub fn run_value_program(query_output: &str) -> Option<String> {
 
 #[cfg(windows)]
 mod registry {
-    use std::os::windows::process::CommandExt;
     use std::path::Path;
-    use std::process::{Command, Output};
+    use std::process::Output;
 
     use super::{run_value, run_value_program, utf8, LoginItem};
 
     const RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
     const VALUE: &str = "Trawler";
-    // The app has no console (windows_subsystem), so reg.exe would flash one.
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
     fn reg(args: &[&str]) -> std::io::Result<Output> {
-        Command::new("reg").args(args).creation_flags(CREATE_NO_WINDOW).output()
+        crate::spawn::command("reg").args(args).output()
     }
 
     pub fn read() -> LoginItem {

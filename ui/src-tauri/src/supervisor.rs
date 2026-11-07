@@ -4,7 +4,7 @@ use std::fmt;
 use std::io::{BufRead, BufReader};
 use std::net::{SocketAddr, TcpListener};
 use std::path::PathBuf;
-use std::process::{Child, ChildStdin, Command, ExitStatus, Stdio};
+use std::process::{Child, ChildStdin, ExitStatus, Stdio};
 use std::sync::{mpsc, Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
@@ -259,7 +259,7 @@ impl Supervisor {
         };
         self.inner.publish(generation, CoreState::Starting);
 
-        let mut child = Command::new(&self.launch.program)
+        let mut child = crate::spawn::command(&self.launch.program)
             .args(self.launch.args(proxy_port, api_port))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())

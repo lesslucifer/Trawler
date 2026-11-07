@@ -3,7 +3,8 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::process::Command;
+
+use crate::spawn;
 
 const SYSTEM_KEYCHAIN: &str = "/Library/Keychains/System.keychain";
 pub(crate) const LOGIN_KEYCHAIN: &str = "login.keychain";
@@ -130,8 +131,10 @@ pub(crate) fn setup_error(detail: impl Into<String>) -> SetupError {
 }
 
 fn run_elevated(argv: &[String], no_detail: &str) -> Result<(), SetupError> {
-    let out =
-        Command::new(&argv[0]).args(&argv[1..]).output().map_err(|e| setup_error(e.to_string()))?;
+    let out = spawn::command(&argv[0])
+        .args(&argv[1..])
+        .output()
+        .map_err(|e| setup_error(e.to_string()))?;
     if out.status.success() {
         Ok(())
     } else {
@@ -1230,7 +1233,7 @@ fn valid_host(host: &str) -> bool {
 }
 
 fn macos_services() -> Result<Vec<String>, SetupError> {
-    let out = Command::new("networksetup")
+    let out = spawn::command("networksetup")
         .arg("-listallnetworkservices")
         .output()
         .map_err(|e| setup_error(e.to_string()))?;
@@ -1533,7 +1536,7 @@ fn ran(program: &str, args: &[&str]) -> Option<Ran> {
 }
 
 fn ran_within(program: &str, args: &[&str], patience: std::time::Duration) -> Option<Ran> {
-    let mut child = Command::new(program)
+    let mut child = spawn::command(program)
         .args(args)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
@@ -2095,7 +2098,8 @@ mod tests {
     fn osascript_parses_the_literal_back_to_the_shell_script() {
         let argv = elevated_script(AWKWARD_SCRIPT);
         let unprivileged = format!("return \"{}\"", applescript_literal(&argv));
-        let Ok(out) = Command::new("osascript").args(["-e", &unprivileged]).output() else {
+        let Ok(out) = std::process::Command::new("osascript").args(["-e", &unprivileged]).output()
+        else {
             return;
         };
         assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));

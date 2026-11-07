@@ -3,7 +3,7 @@
 // a route and never hands the shell something to open.
 
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 
 use serde::Deserialize;
 
@@ -227,7 +227,7 @@ pub fn open_route(route: Route) -> Result<(), SetupError> {
 // The emulator runs until the user closes it, so it is started and left, and
 // reaped on a thread of its own when it exits.
 fn started(command: &[String]) -> Result<(), SetupError> {
-    let mut child = Command::new(&command[0])
+    let mut child = crate::spawn::command(&command[0])
         .args(&command[1..])
         .stdin(Stdio::null())
         .stdout(Stdio::null())
@@ -241,7 +241,7 @@ fn started(command: &[String]) -> Result<(), SetupError> {
 // A browser xdg-open starts holds every pipe it inherits until the user quits
 // it, so on Linux the shell waits on the opener's exit alone.
 fn run(command: &[String], os: &str) -> Result<(), SetupError> {
-    let mut cmd = Command::new(&command[0]);
+    let mut cmd = crate::spawn::command(&command[0]);
     cmd.args(&command[1..]);
     if os == "linux" {
         let status = cmd
