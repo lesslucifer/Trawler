@@ -1797,6 +1797,42 @@ pub fn proxy_in_use(host: String, port: u16) -> ProxyReading {
     read_proxy(&proxy_in_use_now(std::env::consts::OS), &host, port)
 }
 
+impl ProxyReading {
+    pub(crate) fn routing(&self) -> crate::tray::Routing {
+        crate::tray::Routing::from_status(self.status)
+    }
+}
+
+/// The menu bar's reader and stop: the quit check's reading, setup's stop.
+pub(crate) fn machine<R: tauri::Runtime>() -> crate::tray::Machine<R> {
+    crate::tray::Machine {
+        read: |_, proxy, own| proxy_status(proxy.ip().to_string(), proxy.port(), own).routing(),
+        stop: |app| {
+            if let Some(text) = unset_proxy().err().as_ref().and_then(unrouted_notice) {
+                use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                app.dialog()
+                    .message(text)
+                    .title(STOP_ROUTING_TITLE)
+                    .kind(MessageDialogKind::Error)
+                    .show(|_| {});
+            }
+        },
+    }
+}
+
+const STOP_ROUTING_TITLE: &str = "Routing not stopped";
+
+// A dismissed approval is the user's own answer, not a failure to report.
+pub(crate) fn unrouted_notice(err: &SetupError) -> Option<String> {
+    let lead =
+        "This machine still routes through Trawler. Open Trawler to turn the proxy off from setup.";
+    match err {
+        SetupError { refused: true, .. } => None,
+        SetupError { detail, .. } if detail == NO_UNSET_PROXY_DETAIL => Some(lead.to_string()),
+        SetupError { detail, .. } => Some(format!("{lead}\n\n{detail}")),
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum NoticeKey {
     RemoteNotice,
@@ -1886,6 +1922,24 @@ pub fn show_notes(app: tauri::AppHandle, shown: bool) -> Result<(), String> {
 mod tests {
     use super::*;
     use std::path::PathBuf;
+
+    #[test]
+    fn a_failed_stop_from_the_menu_says_routing_goes_on_and_a_dismissed_approval_says_nothing() {
+        let lead = "This machine still routes through Trawler. Open Trawler to turn the proxy off from setup.";
+        assert_eq!(
+            unrouted_notice(&command_failed("User cancelled. (-128)", NO_UNSET_PROXY_DETAIL)),
+            None
+        );
+        assert_eq!(
+            unrouted_notice(&command_failed("", NO_UNSET_PROXY_DETAIL)).as_deref(),
+            Some(lead),
+            "the setup screen's no-detail sentence points at steps a dialog has none of"
+        );
+        assert_eq!(
+            unrouted_notice(&command_failed("networksetup: error", NO_UNSET_PROXY_DETAIL)),
+            Some(format!("{lead}\n\nnetworksetup: error"))
+        );
+    }
 
     fn cert() -> PathBuf {
         PathBuf::from("/tmp/trawler-ca.pem")

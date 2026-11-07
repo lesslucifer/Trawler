@@ -32,6 +32,11 @@ pub mod window_geometry;
 #[cfg(feature = "scenario")]
 mod scenario;
 
+#[cfg(feature = "scenario")]
+use scenario::machine;
+#[cfg(not(feature = "scenario"))]
+use setup::machine;
+
 pub const CORE_FLAG: &str = "--core";
 pub const BACKGROUND_FLAG: &str = "--background";
 pub const EPHEMERAL_PORTS: bool = cfg!(feature = "e2e");
@@ -90,6 +95,7 @@ pub fn run() {
             }
         })
         .setup(move |app| {
+            app.manage(machine::<tauri::Wry>());
             lifecycle::install(app.handle(), setup::config_dir(app.handle()).ok());
             login_item::install(app.handle());
             core::setup(app, mode, background)?;

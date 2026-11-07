@@ -425,6 +425,23 @@ pub fn proxy_in_use(state: Shared<'_>, host: String, port: u16) -> ProxyReading 
     with(&state, |s| s.proxy_reading(&host, port))
 }
 
+/// The menu bar reads and stops the scripted proxy, as the window does.
+#[allow(clippy::print_stderr)] // the shell has no logger; stderr is its log
+pub fn machine<R: tauri::Runtime>() -> crate::tray::Machine<R> {
+    use tauri::Manager;
+    crate::tray::Machine {
+        read: |app, proxy, own| {
+            with(&app.state(), |s| s.quit_reading(&proxy.ip().to_string(), proxy.port(), &own))
+                .routing()
+        },
+        stop: |app| {
+            if let Err(err) = with(&app.state(), Scenario::unset_proxy) {
+                eprintln!("the scripted stop failed: {err:?}");
+            }
+        },
+    }
+}
+
 #[tauri::command]
 pub fn set_up_this_machine(state: Shared<'_>, host: String, port: u16) -> Result<(), SetupError> {
     with(&state, |s| s.set_up(host, port))

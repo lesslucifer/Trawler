@@ -64,6 +64,9 @@ pub fn generate(repo: &Path) -> Result<BTreeMap<String, Vec<u8>>, String> {
         ("tray-stopped-template.svg", "tray-stopped.png", 36),
         ("tray-running.svg", "tray-running-color.png", 32),
         ("tray-stopped.svg", "tray-stopped-color.png", 32),
+        ("routing-ours.svg", "routing-ours.png", 36),
+        ("routing-foreign.svg", "routing-foreign.png", 36),
+        ("routing-off.svg", "routing-off.png", 36),
         ("social-preview.svg", "brand/social-preview.png", 1280),
         ("wordmark-light.svg", "brand/wordmark-light.png", 1480),
         ("wordmark-dark.svg", "brand/wordmark-dark.png", 1480),
@@ -409,6 +412,21 @@ mod tests {
             );
         }
         assert_ne!(icon("tray-running.png").rgba, icon("tray-stopped.png").rgba);
+    }
+
+    #[test]
+    fn each_routing_dot_is_a_coloured_disc_at_menu_size() {
+        for (name, rgb) in [
+            ("routing-ours.png", [0x4c, 0xc3, 0x8a]),
+            ("routing-foreign.png", [0xe5, 0x48, 0x4d]),
+            ("routing-off.png", [0xae, 0xa6, 0x9c]),
+        ] {
+            let dot = icon(name);
+            assert_eq!((dot.width, dot.height), (36, 36), "{name}");
+            let centre = (18 * 36 + 18) * 4;
+            assert_eq!(dot.rgba[centre..centre + 4], [rgb[0], rgb[1], rgb[2], 255], "{name}");
+            assert_eq!(dot.rgba[3], 0, "{name} is transparent at its corner");
+        }
     }
 
     #[test]

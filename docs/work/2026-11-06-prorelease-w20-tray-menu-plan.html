@@ -18,7 +18,7 @@
     <div class="inner">
       <h1>E-PRORELEASE.W20: the tray menu's commands</h1>
       <p>Round 1, audit and proposal: what the menu-bar / tray icon offers today on each OS, what a debugging proxy's user expects from it, and the owner questions that decide round 2's build.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T3 WU plan (round 1: the build waits on the owner's answers) · <span class="badge id">E-PRORELEASE.W20</span> · branch <code>wu/prorelease/tray-menu</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · amends DEC-77 rule 8 · UC-BG · DEC-64</div>
+      <div class="meta">v2 · 2026-11-07 · Trawler · T3 WU plan (round 2: built on the owner's rulings) · <span class="badge id">E-PRORELEASE.W20</span> · branch <code>wu/prorelease/tray-menu</code> off <code>epic/prorelease</code> · epic plan <a href="2026-11-06-prorelease-plan.html">E-PRORELEASE</a> · amends DEC-77 rule 8 · UC-BG · DEC-64</div>
     </div>
   </header>
   <main>
@@ -131,6 +131,62 @@
       <li>Whether macOS's stop asks for approval from the tray as it does from setup is assumed from <code>unset_proxy</code> being one code path.</li>
     </ul>
 
+    <h2 id="round-2">Round 2 — the owner's rulings, as built</h2>
+    <table data-c="rulings">
+      <thead><tr><th>Q</th><th>Ruling (terminal, 2026-11-06)</th><th>Built as</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>B: Windows left click opens Trawler, right click the menu</td><td><code>show_menu_on_left_click(host != Windows)</code>; <code>click_action(host, button, state)</code>: Windows Left↑ → Open; macOS any ↓ and Windows Right/Middle ↓ → read routing; Linux reports no clicks</td></tr>
+        <tr><td>Q2</td><td>B + a dotted routing line; Stop on macOS and Windows only, enabled only while ours</td><td><code>Routing</code> = the quit check's classification; Stop = setup's <code>unset_proxy</code>, its macOS approval included; a dismissed approval says nothing, a failure a native dialog (<code>unrouted_notice</code>)</td></tr>
+        <tr><td>Q3</td><td>A: Settings… follows W19</td><td>unchanged <code>settings::open</code>, W19's dialog request</td></tr>
+        <tr><td>Q4</td><td>B: Title Case macOS, sentence case Windows/Linux</td><td><code>entries(host)</code></td></tr>
+        <tr><td>Q5</td><td>B: all of C1–C7</td><td>plus About (<code>about::open</code>, Page::About) and Check for updates… (<code>update::check</code>, ByUser)</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="routing-rule">Routing line: what shows when</h3>
+    <table data-c="routing-rule">
+      <thead><tr><th>Reading</th><th>Line</th><th>Dot</th><th>Stop</th></tr></thead>
+      <tbody>
+        <tr><td>ours</td><td>This machine routes through Trawler</td><td><code>ok</code> #4cc38a</td><td>enabled</td></tr>
+        <tr><td>foreign</td><td>Another proxy is set</td><td><code>warn</code> #e5484d</td><td>greyed</td></tr>
+        <tr><td>none</td><td>The system proxy is off</td><td><code>ink-mute</code> #aea69c</td><td>greyed</td></tr>
+        <tr><td>unknown, not yet read, or no known proxy address (attached)</td><td>hidden</td><td>—</td><td>greyed</td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="routing-rule-why"><strong>Wider than "only while ours", on purpose:</strong> a line shown only while ours has one colour, so a dot coloured by state means nothing; three readable states each show, with setup's own verdict words, and only an unreadable answer hides. The reading uses the address the core last listened on, so a crashed core that still holds the proxy shows <em>ours</em> and Stop works.</div>
+
+    <h3 id="reading-cost">When the proxy is read (cost and risk)</h3>
+    <table data-c="reading-cost">
+      <thead><tr><th>Trigger</th><th>OS</th><th>Cost</th></tr></thead>
+      <tbody>
+        <tr><td>install (once)</td><td>all</td><td>one reading, background thread</td></tr>
+        <tr><td>icon pressed</td><td>macOS, Windows</td><td>one reading off the main thread; the open menu updates in place on macOS, Windows shows it on the next open</td></tr>
+        <tr><td>every 15 s while windowless</td><td>all</td><td>macOS: <code>networksetup</code> once + twice per service; Windows: two <code>reg query</code>; Linux: <code>gsettings</code>. Read-only, no elevation. With the window open the window reads its own and the timer skips</td></tr>
+        <tr><td>after Stop</td><td>macOS, Windows</td><td>one reading</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="dot-evidence">The dot: what a native menu item can draw (muda 0.20, Tauri 2.12.5)</h3>
+    <table data-c="dot-evidence">
+      <thead><tr><th>OS</th><th>Coloured text</th><th>Item icon</th></tr></thead>
+      <tbody>
+        <tr><td>macOS</td><td>no (NSMenuItem title is plain)</td><td><code>IconMenuItem</code>: <code>to_nsimage(Some(18.))</code>, 18 pt from the 36 px PNG</td></tr>
+        <tr><td>Windows</td><td>no</td><td><code>to_hbitmap</code>: drawn into a 16×16 32-bit bitmap (<code>hbmpItem</code>)</td></tr>
+        <tr><td>Linux</td><td>no</td><td>GTK <code>to_pixbuf_scale(16, 16)</code>; whether AppIndicator's exported menu carries it is a hand check</td></tr>
+      </tbody>
+    </table>
+    <p data-c="dot-choice">So the dot is an item icon from three committed sources (<code>routing-*.svg</code> → <code>cargo xtask icons</code>, DEC-89 rule 12); a Unicode ● cannot be coloured. Whether macOS dims a disabled item's image is a hand check.</p>
+
+    <h3 id="hand-check">Hand check per OS (matrix row 7b)</h3>
+    <table data-c="hand-check">
+      <thead><tr><th>OS</th><th>Steps</th></tr></thead>
+      <tbody>
+        <tr><td>macOS</td><td><code>cd /Users/nguyenvanluong/Documents/proj/misc/Trawler-pr-w20 &amp;&amp; cargo xtask ui build &amp;&amp; cargo build -p trawler-ui &amp;&amp; mkdir -p /tmp/trawler-w20-home &amp;&amp; HOME=/tmp/trawler-w20-home ./target/debug/trawler-ui</code>; click the icon: order and Title Case, grey dot <em>The system proxy is off</em>, Stop greyed, hover tooltip <em>Trawler — Capturing</em>; Check for Updates… → <em>not an installed copy</em> dialog; About Trawler → the dialog. Route by hand (System Settings → Network → Proxies, 127.0.0.1:7420 web + secure web), reopen the menu: green dot, Stop enabled; Stop → admin approval → grey line. Close the window with keep capturing on and repeat windowless</td></tr>
+        <tr><td>Windows</td><td>an installed rc or <code>cargo run</code>: left click opens Trawler, right click the menu in sentence case; Stop asks nothing (HKCU) and the line turns grey</td></tr>
+        <tr><td>Linux</td><td>with AppIndicator: any click shows the menu; no Stop; the routing line present (dot may not draw)</td></tr>
+      </tbody>
+    </table>
+
     <h2 id="maps-to">Maps to</h2>
     <p data-item="maps-to">E-PRORELEASE W20 · DEC-77 rule 8 · DEC-64 rules 1, 7 · DEC-90 · UC-BG · lexicon (capture service, restart, attached) · <code>ui/src-tauri/src/tray.rs</code>, <code>menu.rs</code>, <code>lifecycle.rs</code>, <code>update.rs</code>, <code>setup.rs</code>.</p>
 
@@ -139,8 +195,8 @@
       <table data-c="test-plan">
         <thead><tr><th>Level</th><th>Test</th></tr></thead>
         <tbody>
-          <tr><td>unit (cargo)</td><td>tray.rs: each new id → its action; the menu's order per OS; <code>view()</code> per core state with no address; tooltip per state; routing visibility per proxy reading; Windows click → open; labels per OS casing</td></tr>
-          <tr><td>integration</td><td>scenario build: a scripted ours / foreign / unread reading shows and hides the routing items (C3 only; waived if Q2 = A)</td></tr>
+          <tr><td>unit (cargo)</td><td>tray.rs: each new id → its action; every listed item has an action; the three dots decode and differ; setup.rs: the Stop failure notice (refused → none, no-detail → the lead only); the menu's order per OS; <code>view()</code> per core state with no address; tooltip per state; routing visibility per proxy reading; Windows click → open; labels per OS casing</td></tr>
+          <tr><td>integration</td><td><code>suite/tray.rs</code>: a scripted reading through <code>tray::Machine</code> (the seam the scenario build fills from its scripted proxy, <code>scenario::machine</code>) shows ours → Stop → off → foreign, read at the core's own address; a stopped core is read at its last address, an attached one not at all. The scenario build itself runs no cargo test (CI and gate0 test default features; clippy covers <code>--all-features</code>)</td></tr>
           <tr><td>e2e</td><td>waived: native tray menus are out of WebDriver's reach (UC-BG); hand-check matrix row per OS</td></tr>
         </tbody>
       </table>
