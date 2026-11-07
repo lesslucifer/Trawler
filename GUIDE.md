@@ -290,7 +290,7 @@ On Windows, a left click on the tray icon opens Trawler and a right click opens 
 
 Turn on **Settings → General → open Trawler at login**. Trawler then opens in the menu bar or tray when you log in, with no window.
 
-- macOS: needs macOS 13 or later, and Trawler opened from Applications.
+- macOS: unavailable for now. macOS starts only a developer-signed app at login, and Trawler isn't signed yet.
 - Windows: it starts for your account.
 - Linux: it adds `~/.config/autostart/dev.trawler.app.desktop`. From an AppImage, it starts that file, so keep it where it is.
 

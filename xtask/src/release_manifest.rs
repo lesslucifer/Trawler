@@ -318,7 +318,7 @@ mod tests {
         for needle in [
             "## macOS",
             "Open Anyway",
-            "macOS 13",
+            "developer-signed app at login",
             "## Windows",
             "Run anyway",
             "## Linux",

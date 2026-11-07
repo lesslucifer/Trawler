@@ -99,7 +99,7 @@ Details: [PRIVACY.md](PRIVACY.md).
 - Captured requests are cleared when you quit. Export to HAR to keep them.
 - Removing the certificate from the app works on macOS and Windows; on Linux, follow the steps on the setup screen.
 - On GNOME, the tray icon needs the AppIndicator extension.
-- Open at login needs macOS 13 or later.
+- Open at login is unavailable on macOS: macOS starts only a developer-signed app at login, and Trawler isn't signed yet.
 - Updating a `.deb` or `.rpm` install asks for your password.
 - `.rpm` is built for final releases only.
 

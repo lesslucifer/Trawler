@@ -18,7 +18,7 @@ macOS 11 or later, Apple Silicon and Intel.
 2. Open Trawler. macOS says it cannot verify the app.
 3. Open **System Settings** → **Privacy & Security**, scroll to the Trawler message and choose **Open Anyway**.
 
-Open at login needs macOS 13 or later.
+Open at login is unavailable on macOS: macOS starts only a developer-signed app at login, and Trawler isn't signed yet.
 
 ### Windows
 
