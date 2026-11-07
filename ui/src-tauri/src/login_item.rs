@@ -237,6 +237,9 @@ pub const UNAVAILABLE: &str =
 pub const UNSIGNED: &str =
     "unavailable — macOS starts only a developer-signed app at login, and this build is not.";
 
+pub const OLD_MACOS: &str =
+    "unavailable — Trawler adds itself to the login items only on macOS 13 or later.";
+
 pub fn signature_is_ad_hoc(codesign_display: &str) -> bool {
     codesign_display.lines().any(|line| line.trim() == "Signature=adhoc")
 }
@@ -289,7 +292,7 @@ fn this_hosts_place<R: Runtime>(_app: &AppHandle<R>) -> Result<Place, &'static s
     let exe =
         std::env::current_exe().ok().filter(|exe| is_app_bundle_binary(exe)).ok_or(UNAVAILABLE)?;
     let agent =
-        trawler_login_service::AgentService::new(&format!("{LABEL}.plist")).ok_or(UNAVAILABLE)?;
+        trawler_login_service::AgentService::new(&format!("{LABEL}.plist")).ok_or(OLD_MACOS)?;
     let display = crate::spawn::command("codesign").arg("-dv").arg(&exe).output();
     if display.is_ok_and(|out| signature_is_ad_hoc(&String::from_utf8_lossy(&out.stderr))) {
         let _ = agent.unregister();
@@ -359,6 +362,15 @@ pub fn program_at_login(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn each_reason_reads_as_a_state_and_names_macos_as_macos() {
+        for reason in [UNAVAILABLE, UNSIGNED, OLD_MACOS] {
+            assert!(reason.starts_with("unavailable — "), "{reason}");
+            assert!(!reason.contains("macos"), "{reason}");
+        }
+        assert!(OLD_MACOS.contains("macOS 13"));
+    }
 
     // `codesign -dv` on the rc5 bundle, and on a Developer ID one.
     #[test]

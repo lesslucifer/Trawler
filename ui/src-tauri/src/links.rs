@@ -4,6 +4,7 @@ use tauri::{AppHandle, Runtime, Url};
 
 pub const SOURCE_CODE: &str = "https://github.com/lesslucifer/Trawler";
 pub const USER_GUIDE: &str = "https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md";
+const OPEN_AT_LOGIN: &str = "open-at-login";
 const NEW_ISSUE: &str = "https://github.com/lesslucifer/Trawler/issues/new";
 const ISSUE_TEMPLATE: &str = "bug_report.yml";
 
@@ -12,6 +13,7 @@ const ISSUE_TEMPLATE: &str = "bug_report.yml";
 pub enum Link {
     Guide,
     Issue,
+    Login,
     Source,
 }
 
@@ -77,6 +79,7 @@ pub fn issue_url(version: &str, system: &System) -> String {
 pub fn address<R: Runtime>(app: &AppHandle<R>, link: Link) -> String {
     match link {
         Link::Guide => USER_GUIDE.to_string(),
+        Link::Login => format!("{USER_GUIDE}#{OPEN_AT_LOGIN}"),
         Link::Source => SOURCE_CODE.to_string(),
         Link::Issue => issue_url(&app.package_info().version.to_string(), &System::this_one()),
     }
@@ -96,6 +99,8 @@ pub fn open_link<R: Runtime>(app: AppHandle<R>, link: Link) -> Result<(), String
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
 
     fn mac() -> System {
@@ -155,9 +160,12 @@ mod tests {
 
     #[test]
     fn the_webview_names_a_link_and_never_an_address() {
-        for (word, link) in
-            [("guide", Link::Guide), ("issue", Link::Issue), ("source", Link::Source)]
-        {
+        for (word, link) in [
+            ("guide", Link::Guide),
+            ("issue", Link::Issue),
+            ("login", Link::Login),
+            ("source", Link::Source),
+        ] {
             assert_eq!(serde_json::from_str::<Link>(&format!("\"{word}\"")).unwrap(), link);
         }
         assert!(serde_json::from_str::<Link>("\"https://example.com\"").is_err());
@@ -166,5 +174,20 @@ mod tests {
     #[test]
     fn the_guide_is_the_root_guide_on_the_project() {
         assert_eq!(USER_GUIDE, format!("{SOURCE_CODE}/blob/main/GUIDE.md"));
+    }
+
+    // GitHub's anchor for a heading: lower case, spaces to hyphens.
+    #[test]
+    fn the_login_link_lands_on_a_heading_of_the_guide() {
+        let guide =
+            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../GUIDE.md"))
+                .unwrap();
+        assert!(
+            guide
+                .lines()
+                .filter_map(|line| line.strip_prefix("### "))
+                .any(|heading| { heading.to_lowercase().replace(' ', "-") == OPEN_AT_LOGIN }),
+            "no heading for #{OPEN_AT_LOGIN}"
+        );
     }
 }

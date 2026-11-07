@@ -11,6 +11,8 @@ function shell({
   tray = true,
   login = { on: false, starts: null } as LoginItem,
   refuse = null as string | null,
+  unavailable = null as string | null,
+  browser = true,
   updates = { version: "0.1.0-5", installed: true, automatic: true },
 } = {}) {
   const stored = { keepCapturing, login, updates };
@@ -21,7 +23,11 @@ function shell({
       case "tray_available":
         return tray;
       case "login_item_read":
+        if (unavailable) throw unavailable;
         return stored.login;
+      case "open_link":
+        if (!browser) throw `https://example.test/GUIDE.md#${String(args?.link)}`;
+        return null;
       case "keep_capturing_write":
         if (refuse) throw refuse;
         stored.keepCapturing = args?.on ? "on" : "off";
@@ -124,6 +130,36 @@ test("a refused write says why and each box shows what is stored", async () => {
   fireEvent.click(await loginBox());
   await waitFor(() => expect(screen.getAllByText("couldn't save — permission denied")).toHaveLength(2));
   await waitFor(async () => expect(await loginBox()).toBeChecked());
+});
+
+// login_item::UNSIGNED, as the shell hands it over.
+const UNSIGNED = "unavailable — macOS starts only a developer-signed app at login, and this build is not.";
+
+test("an unsigned Mac's login item reads as a state with the way by hand, not as a refused save", async () => {
+  const { call, spy } = shell({ unavailable: UNSIGNED });
+  render(<General call={call} os="macos" />);
+  expect(await loginBox()).toBeDisabled();
+  expect(screen.getByText(UNSIGNED)).toBeInTheDocument();
+  expect(screen.queryByText(/couldn't save/)).not.toBeInTheDocument();
+  expect(screen.queryByText("Opens in the menu bar, with no window.")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "how to do it by hand" }));
+  expect(writes(spy, "open_link")).toEqual([["open_link", { link: "login" }]]);
+});
+
+test("a browser that won't open leaves the way by hand's address to copy", async () => {
+  const { call } = shell({ unavailable: UNSIGNED, browser: false });
+  render(<General call={call} os="macos" />);
+  fireEvent.click(await screen.findByRole("button", { name: "how to do it by hand" }));
+  expect(await screen.findByRole("button", { name: "copy address" })).toHaveTextContent(
+    "https://example.test/GUIDE.md#login",
+  );
+});
+
+test("off a Mac, an unavailable login item has no way by hand to point at", async () => {
+  const { call } = shell({ unavailable: "unavailable — open Trawler from the installed app to start it at login." });
+  render(<General call={call} os="linux" />);
+  expect(await loginBox()).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "how to do it by hand" })).not.toBeInTheDocument();
 });
 
 describe("each OS names its own icon place", () => {
