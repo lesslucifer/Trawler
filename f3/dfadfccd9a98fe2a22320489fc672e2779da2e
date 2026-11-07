@@ -1,0 +1,35 @@
+schema: cr/v5
+scope: "WU login-message -> epic/prorelease"
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W22
+branch: wu/prorelease/login-message
+base: 642bf72887c699f0b10960493aa65ee03dcafade
+head: f3dfadfccd9a98fe2a22320489fc672e2779da2e
+diff_sha256: 51de62653a21de0e89ec6013c62e5832e260910553c686e7675e359b53b063b3
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 2
+  stage_seconds:
+    gate0: 15
+    finders: 28
+    verifiers: 0
+    total: 49
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 2, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "any login_item_read rejection reads as unavailable and its text is shown with String(why), so a non-shell error would show raw text"
+    waived: "login_item_read is Result<LoginItem, String>: its rejection is the shell's reason (DEC-77 rule 9); an IPC failure naming itself is truer than the silent off it replaces"
+  - finding: "openByHand shows any open_link rejection as the address to copy"
+    waived: "open_link rejects only with the link's address by contract (DEC-90; links.rs open_link), the same fallback About.tsx already uses"
+verdict: PASS
+date: 2026-11-07
