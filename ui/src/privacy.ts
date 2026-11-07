@@ -1,4 +1,4 @@
-// The one privacy statement: the About window's Privacy page renders it and
+// The one privacy statement: the About dialog's Privacy page renders it and
 // PRIVACY.md (E-PRORELEASE.W5) carries the same words. Draft voice: W11.
 export const PRIVACY_LEAD =
   "Trawler keeps your traffic on your machine. It has no account, no analytics, no crash reporting and no telemetry.";

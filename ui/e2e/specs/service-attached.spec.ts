@@ -1,6 +1,7 @@
 import { browser, $, expect } from "@wdio/globals";
 import { readFileSync } from "node:fs";
 import { PORTS_FILE } from "../wdio.conf.ts";
+import { closeTheDialog, openSettings } from "./app.ts";
 
 const ports = JSON.parse(readFileSync(PORTS_FILE, "utf8")) as { api: string };
 
@@ -12,29 +13,12 @@ describe("UC-SVC — an attached core is shown as attached", () => {
   });
 
   after(async () => {
-    await browser.execute(() => {
-      const tauri = (window as unknown as { __TAURI__: { window: { getCurrentWindow: () => { destroy: () => Promise<void> } } } })
-        .__TAURI__;
-      setTimeout(() => void tauri.window.getCurrentWindow().destroy(), 50);
-    });
-    await browser.waitUntil(async () => !(await browser.getWindowHandles()).includes("settings"), {
-      timeout: 15_000,
-      timeoutMsg: "the settings window never closed",
-    });
-    await browser.switchToWindow("main");
+    await closeTheDialog("settings");
   });
 
   it("names the harness's address, offers no log, and no restart", async () => {
-    await browser.executeAsync((done: () => void) => {
-      (window as unknown as { __TAURI__: { core: { invoke: (c: string) => Promise<unknown> } } }).__TAURI__.core
-        .invoke("open_settings")
-        .then(done, done);
-    });
-    await browser.waitUntil(async () => (await browser.getWindowHandles()).includes("settings"), {
-      timeout: 15_000,
-      timeoutMsg: "no settings window opened",
-    });
-    await browser.switchToWindow("settings");
+    await openSettings();
+    expect(await browser.getWindowHandles()).toEqual(["main"]);
     await $("button=Capture service").click();
     await $("h1=Capture service").waitForDisplayed({ timeout: 15_000 });
 

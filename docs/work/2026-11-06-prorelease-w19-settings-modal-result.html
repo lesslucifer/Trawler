@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedddd89f34851f0dfaf146" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W19 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PRORELEASE.W19 result: Settings and About are dialogs of the main window</h1>
+      <p>What W19 built from the owner's rulings, how each layer proves it, and what stays open.</p>
+      <div class="meta">v2 · 2026-11-06 · Trawler · T3 WU result · <span class="badge id">E-PRORELEASE.W19</span> · <code>wu/prorelease/settings-modal</code> → <code>epic/prorelease</code> · plan <a href="2026-11-06-prorelease-w19-settings-modal-plan.html">W19 plan</a> · design <a href="2026-11-06-prorelease-w19-settings-modal-design.html#rulings">W19 design (ruled)</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Entry</th><th>Main window open</th><th>No main window</th></tr></thead>
+        <tbody>
+          <tr><td>⌘, / Ctrl+, · capture menu · tray Settings…</td><td>main raised, Settings dialog over it</td><td>main rebuilt, then the dialog</td></tr>
+          <tr><td>About Trawler · Third-Party Licences · Privacy · a link the browser refused</td><td>About dialog on that page</td><td>main rebuilt, then the dialog</td></tr>
+          <tr><td>a second ask</td><td colspan="2">one dialog per kind; About turns to the newly asked page</td></tr>
+          <tr><td>asked while the keep-capturing ask or the quit check is up</td><td colspan="2">waits; shows when that closes</td></tr>
+          <tr><td>quit while Settings is open</td><td colspan="2">the DEC-64 check shows in its place; cancelled, Settings returns (on General); answered, the app ends</td></tr>
+          <tr><td>⌘W / Ctrl+W</td><td colspan="2">quit check → keep ask → Settings/About → the window; a data window closes outright</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="mechanism">How</h2>
+    <div class="diagram" data-c="mechanism">
+      <pre class="mermaid">
+flowchart LR
+  E["menu · Help · tray · open_settings"] --> R["lifecycle::request_dialog: queue the request"]
+  R --> M["reopen_main (raise, or rebuild)"] --> V["emit dialog-requested"]
+  V --> P["page: take_dialog_requests → queue"]
+  P --> S{"quit check or keep ask up?"}
+  S -- yes --> W["wait"]
+  S -- no --> D["ModalShell: SettingsDialog / AboutDialog"]
+  C["Close Window (own menu item)"] --> T["topmost(): close the top dialog, else close_window"]
+      </pre>
+      <div class="caption">The quit request's flag + event pattern, reused: a window still being built takes the request on its first read.</div>
+    </div>
+
+    <h2 id="gone">Removed</h2>
+    <p data-c="gone">The <code>settings</code> and <code>about</code> windows; <code>capabilities/about.json</code>; <code>settings</code> from <code>default.json</code> and from the e2e capability; the page marks (<code>page.ts</code>); Settings' saved size and place (its <code>windows.json</code> record is no longer written; an old one is ignored); the native Close Window item.</p>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">Onboarding is a screen, not a dialog, in this build, so Settings opens over the setup screen rather than waiting for it (the owner's Q5 list named it). A quit over Settings hides it and a cancel brings it back on its first page (the plan said "finds Settings again"; the page is not kept). The epic moved during the build (W5 merged) and was merged in; W5's screenshot spec addressed the settings window and was rewritten, S11 re-shot. Two pre-existing e2e defects surfaced: <code>background-off</code> read General's update switch as a third switch (fixed in the spec), and <code>inspect-window-v2</code>'s JWT decode fails on the unchanged epic tip too (not this WU).</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Layer</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>unit (cargo)</td><td><code>lifecycle.rs</code> queue taken once, request JSON; <code>menu.rs</code> Close Window targets; 309 shell lib tests green; red first (items missing)</td></tr>
+          <tr><td>unit (vitest)</td><td><code>shellDialogs.test.tsx</code>, <code>Settings.test.tsx</code>, <code>About.test.tsx</code>, two App tests (quit over Settings, ⌘W order); full vitest 107 files / 61,810 tests green</td></tr>
+          <tr><td>integration</td><td><code>tests/suite/dialogs.rs</code> (mock runtime: tray Settings… builds main; every entry reaches the one main window; no other window; a failed open drops the request; capabilities name only <code>main</code>, <code>data-*</code>)</td></tr>
+          <tr><td>e2e (temp HOME)</td><td>owned suite 5/5 spec files (one-app, background-asked/-off/-keep/-quit; windowless → tray Settings… rebuilds main with the dialog); attached suite 15/16, the failure <code>inspect-window-v2</code> JWT reproduced on epic <code>0633b230</code>; screenshot run 8/8</td></tr>
+          <tr><td>gates</td><td>gate0 green (1,483 tests) · <code>cr/v5</code> PASS (3 finders, 1 verifier; 1 important refuted, 4 nits waived) · <code>design/v1</code> PASS (no new surface; 6 rendered files declared)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="round-3">Round 3: independent review of ui/src-tauri</h2>
+    <div>
+      <table data-c="round-3">
+        <thead><tr><th>#</th><th>Finding (verified in muda 0.20.0 / tauri 2.12.5)</th><th>Resolution</th><th>Proof (red first)</th></tr></thead>
+        <tbody>
+          <tr><td>1 · important</td><td>macOS: the native Close Window item reads "Close Window" (muda strips the <code>&amp;</code> once the item has a native twin), a fresh item reads "C&amp;lose Window": no match, so ⌘W stayed native and closed main under an open dialog</td><td>labels compared with mnemonics stripped (Tauri gives a predefined item neither a kind nor a stable id; a position would break on any default-menu change); no item found is logged, the native one stays so ⌘W still closes</td><td><code>tests/menu.rs</code> (harness off, main thread: muda builds macOS items there only) builds the shipped menu: one Trawler Close Window, no native close item — red 0 own items before the fix; unit <code>same_label</code> with "Close Window", "C&amp;lose Window", "Close"</td></tr>
+          <tr><td>2 · important</td><td>a tray Settings… met by a main window mid-destroy (keep capturing on) stayed queued and popped up on a later Open</td><td>on main destroyed without ending the app, a pending dialog request rebuilds main and is announced, as a pending quit already was</td><td><code>outlive_window.rs</code>: the request is taken once in the rebuilt window, nothing left after — red (no window) before the fix</td></tr>
+          <tr><td>3 · nit</td><td>Windows/Linux: the Close item shows Ctrl+W, not Alt+F4; Alt+F4 runs the close flow without closing a dialog first</td><td>accepted: Ctrl+W is the owner's ruled key; Alt+F4 is the window manager's close of the whole window, which runs DEC-64's flow (the ✕ path) — a dialog over a window being closed goes with it</td><td>—</td></tr>
+          <tr><td>review · important</td><td>the round's <code>cr</code> rerun: the listen-then-take race handling was copied in <code>closeConfirm.ts</code> and twice in <code>shellDialogs.ts</code></td><td>one rule, <code>shellEvent.ts</code> (<code>subscribe</code>, <code>takeOnEvery</code>), used by all three</td><td><code>shellEvent.test.ts</code>: taken only once the listener stands, then on every announcement; an unmount first takes nothing; a failed listen still takes once; the existing quit, dialog and Close Window tests unchanged and green</td></tr>
+          <tr><td>gates</td><td colspan="3">epic <code>e515acc1</code> (W18) merged in first; gate0 green (the menu test run by nextest through libtest's <code>--list</code>); <code>cr</code> and <code>design</code> notes rebound on this round's tip. No T2 truth moved: the design rules already promise Trawler's own Close Window</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">UC-BG, UC-SVC, UC-ABOUT and the use-case index; DEC-90 amended (rules 1, 5), DEC-77 rule 4's example, DEC-69 and DEC-70 notes, the decisions index; the design rules (open Settings, Close Window, page and scroll rows); the roadmap's stale-switch row is gone.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Independent review of <code>ui/src-tauri</code> (settings.rs, about.rs, menu.rs, tray.rs, lifecycle.rs, lib.rs, scenario.rs, capabilities, <code>tauri.conf.e2e.json</code>, tests/suite) — outside the cr gate</td><td>router</td></tr>
+          <tr><td>Hand check per OS: menus as drawn, ⌘W / Ctrl+W (the native Close Window replaced in File and Window), tray Settings… while windowless, minimised and fullscreen main. macOS: with Settings open ⌘W closes Settings and Trawler stays; with no dialog ⌘W closes the window as before</td><td>owner</td></tr>
+          <tr><td><code>inspect-window-v2</code> JWT decode e2e fails on the epic (pre-existing)</td><td>router</td></tr>
+          <tr><td>htmldoc refused snapshots of <code>web-ui.html</code>, <code>decisions-index.html</code>, <code>use-cases-index.html</code> (413): read their git diff</td><td>router</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

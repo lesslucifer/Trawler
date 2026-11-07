@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedd0b49f34851f0dfaf03c">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PRORELEASE.W19 Settings as a dialog: design</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>Settings as a dialog: today, options, owner questions</h1>
+      <p>Owner request: Settings must be a dialog on top of the main window that blocks it, not a detached window, most of all when the menu-bar / tray icon opens it.</p>
+      <div class="meta">Ruled · round 2 built · 2026-11-06 · Trawler · T3 design · <span class="badge id">E-PRORELEASE.W19</span> · <a href="2026-11-06-prorelease-w19-settings-modal-plan.html">WU plan</a> · Tauri 2.12.5 · tauri-runtime-wry 2.12.3 · tao 0.37.2 (Cargo.lock)</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="today">Today</h2>
+    <div class="diagram" data-c="today-diagram">
+      <pre class="mermaid">
+flowchart LR
+  K["⌘, / Ctrl+, (app menu)"] --> O["settings::open"]
+  G["capture controls → Settings (open_settings)"] --> O
+  T["tray → Settings…"] --> O
+  O --> S["window 'settings' 560×640<br/>top-level, no parent, not modal"]
+  M["window 'main'"] -. "no link" .- S
+  A["Help / app menu → About"] --> AB["window 'about'<br/>top-level, no parent"]
+  F["flow → open in window"] --> D["windows 'data-*'<br/>close with main"]
+      </pre>
+      <div class="caption">Three entries, one free-standing window. Nothing ties Settings to main: no parent, no modality, no reopen of main.</div>
+    </div>
+
+    <table data-c="today-evidence">
+      <thead><tr><th>Fact</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Built as label <code>settings</code>, 560×640, min 440×360, own saved geometry, no <code>.parent</code>, no <code>always_on_top</code></td><td><code>ui/src-tauri/src/settings.rs:7,48-64</code></td></tr>
+        <tr><td>Second open: unminimise + show + focus the same window (never two)</td><td><code>settings.rs:49-53</code></td></tr>
+        <tr><td>Entries: app menu (⌘, / Ctrl+,), capture controls' Settings (<code>open_settings</code> command), tray Settings…</td><td><code>menu.rs:38,101</code> · <code>ui/src/CaptureControls.tsx:143</code> → <code>coreService.ts:43</code> · <code>tray.rs:102,196</code></td></tr>
+        <tr><td>Opening never touches main; it only shows the Dock icon</td><td><code>settings.rs:39-46</code></td></tr>
+        <tr><td>Same page bundle, picked by <code>__TRAWLER_PAGE__</code>; Settings is a 2-page sidebar (General · Capture service)</td><td><code>ui/src/main.tsx:25-33</code> · <code>ui/src/Settings.tsx:17-28</code></td></tr>
+        <tr><td>Shares main's capability set (dialog, fs); About has its own</td><td><code>capabilities/default.json</code> · <code>capabilities/about.json</code></td></tr>
+        <tr><td>Main closed + keep capturing: app stays windowless; Settings closing must not quit (rule 4); tray Settings… then opens Settings <em>alone</em></td><td><code>lifecycle.rs:97-99,139-141</code> · DEC-77 rule 4</td></tr>
+        <tr><td>Main destroyed: data windows close with it, Settings and About do not</td><td><code>data_window.rs:53-54</code> · <code>lifecycle.rs:289</code> (test)</td></tr>
+        <tr><td>No Esc / ⌘W handling in the Settings page; About closes on Esc</td><td><code>ui/src/About.tsx:159</code> (none in <code>Settings.tsx</code>)</td></tr>
+        <tr><td>e2e drives Settings as a window and quits from it while windowless</td><td><code>ui/e2e/specs/background-keep.spec.ts:22,44-60</code> · <code>one-app.spec.ts:77-93</code> · <code>sticky.ts:79-97</code></td></tr>
+        <tr><td>Doc drift: UC-BG says Settings… "rebuilds or focuses the main window"; the code does not</td><td><code>docs/use-cases/web-ui.html#uc-bg</code> vs <code>settings.rs:39-46</code></td></tr>
+      </tbody>
+    </table>
+    <p class="callout warn" data-c="today-os">Minimised, fullscreen and per-OS focus were not run by hand this round. From the code: Settings is an independent top-level window on every OS, so it neither follows main when main minimises nor joins main's fullscreen Space on macOS, and on Windows / Linux it has its own taskbar entry.</p>
+
+    <h2 id="options">What Tauri 2.12.5 offers</h2>
+    <table data-c="tauri-api">
+      <thead><tr><th>API</th><th>macOS</th><th>Windows</th><th>Linux (GTK)</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td><code>WebviewWindowBuilder::parent(&amp;main)</code></td><td><code>addChildWindow:ordered:Above</code>: stays above main and moves with it; <strong>not modal</strong></td><td>owner window: always above owner, hidden when owner minimises, destroyed with owner</td><td><code>set_transient_for</code>: above main, centred on it</td><td><code>tauri-2.12.5/src/webview/webview_window.rs:678-692</code> · <code>tao-0.37.2/src/platform_impl/macos/window.rs:301-303</code></td></tr>
+        <tr><td><code>main.set_enabled(false)</code></td><td>attaches a <em>blank, 50 % alpha</em> dummy sheet to main to block input</td><td><code>EnableWindow(false)</code>: the native modal pattern</td><td><code>set_sensitive(false)</code></td><td><code>tauri-runtime-wry-2.12.3/src/window/{macos,windows,linux}.rs</code></td></tr>
+        <tr><td>a <code>modal</code> builder / real NSWindow sheet</td><td colspan="3">none in 2.12.5; a real sheet needs Objective-C calls, i.e. <code>unsafe</code>, which DEC-84 confines to the login-service crate</td><td><code>grep modal tauri-2.12.5/src/</code> · DEC-84</td></tr>
+        <tr><td><code>always_on_top</code></td><td colspan="3">above <em>every</em> app's windows, not just Trawler's: wrong tool for "on top of main"</td><td><code>webview_window.rs:615</code></td></tr>
+        <tr><td><code>ModalShell</code> (in-page)</td><td colspan="3">already ships: <code>role=dialog</code>, <code>aria-modal</code>, focus trap, Esc, focus returns to the invoker; used by the keep-capturing and quit dialogs</td><td><code>ui/src/ModalShell.tsx:14-80</code></td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="shapes">Two shapes</h2>
+    <div class="cards" data-c="shapes">
+      <div class="card"><h3 id="shape-a">A · in-window dialog (recommended)</h3>
+        <p>Settings renders inside the main webview through <code>ModalShell</code>, over a scrim. The shell's open = reopen main, then tell it to show Settings (the <code>request_quit</code> flag + event pattern, <code>lifecycle.rs:203-212</code>). The <code>settings</code> window and its geometry go.</p>
+        <p><span class="badge auto">same on every OS</span> <span class="badge auto">no unsafe</span> <span class="badge auto">no taskbar entry</span> <span class="badge auto">dark mode for free</span></p>
+        <p>Cost: Settings is bounded by main (min 850×600, so the 640-high panel scrolls); the quit dialog must close it first.</p></div>
+      <div class="card"><h3 id="shape-b">B · native modal window</h3>
+        <p>Keep the <code>settings</code> window, add <code>.parent(&amp;main)</code> and <code>main.set_enabled(false)</code> while it is open (re-enable on its destruction).</p>
+        <p><span class="badge approval">macOS: blank dummy sheet over main</span> <span class="badge approval">per-OS quirks</span></p>
+        <p>Cost: macOS shows a grey empty sheet sliding over main; a disabled main cannot run DEC-64's quit check (the quit lands in main) unless Settings closes first; three OS paths to hand-check.</p></div>
+    </div>
+
+    <h2 id="target">Target behaviour (shape A)</h2>
+    <div class="diagram" data-c="target-diagram">
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> MainOnly
+  Windowless --> MainOnly: tray Open Trawler · Dock · 2nd launch
+  Windowless --> MainWithSettings: tray Settings… (rebuild main, then show)
+  MainOnly --> MainWithSettings: ⌘, · Ctrl+, · controls · tray Settings…
+  MainWithSettings --> MainWithSettings: open again → focus the dialog
+  MainWithSettings --> MainOnly: Esc · ✕ · ⌘W (Q4)
+  MainWithSettings --> QuitCheck: ⌘Q · tray Quit (Settings closes first)
+  MainWithSettings --> Windowless: main ✕, keep capturing on
+  QuitCheck --> [*]
+      </pre>
+      <div class="caption">Settings only ever exists inside main; every path that opens it first makes sure main is up.</div>
+    </div>
+
+    <table data-c="per-os">
+      <thead><tr><th>Case</th><th>macOS</th><th>Windows</th><th>Linux</th></tr></thead>
+      <tbody>
+        <tr><td>From the tray, main open</td><td colspan="3">raise + focus main (unminimise, show), dialog over it</td></tr>
+        <tr><td>From the tray, windowless</td><td>Dock icon back (DEC-77 rule 5), main rebuilt with saved geometry, dialog over it</td><td colspan="2">main rebuilt, dialog over it</td></tr>
+        <tr><td>Main minimised / fullscreen</td><td>unminimised; fullscreen: the dialog is inside the fullscreen Space</td><td colspan="2">restored; dialog inside</td></tr>
+        <tr><td>Taskbar / Dock</td><td>one Dock icon</td><td colspan="2">one taskbar entry (main), none for Settings</td></tr>
+        <tr><td>Keyboard</td><td>Esc closes; ⌘W per Q4; focus trapped; focus returns</td><td colspan="2">Esc closes; Ctrl+W per Q4</td></tr>
+        <tr><td>Multiple displays</td><td colspan="3">on whatever display main is on</td></tr>
+        <tr><td>Dark mode</td><td colspan="3">the app's own tokens, as every other dialog</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="edges">Edge cases</h2>
+    <table data-c="edges">
+      <thead><tr><th>Case</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>Opened twice (menu while open, tray while open)</td><td>focus the open dialog; keep its page</td></tr>
+        <tr><td>Quit request while Settings is open</td><td>Settings closes, then the DEC-64 check shows; a cancelled quit leaves Settings closed</td></tr>
+        <tr><td>Main ✕ while Settings is open</td><td>the ✕ is the window's, runs the usual close flow (UC-BG); the dialog goes with the window</td></tr>
+        <tr><td>Main window still being built (tray, windowless)</td><td>the open request is a flag the new window takes on its first read, plus an event for a window that already listens</td></tr>
+        <tr><td>The keep-capturing ask or onboarding is already up</td><td>one dialog at a time: the Settings request waits until the other dialog closes (Q5)</td></tr>
+        <tr><td>A setting that needs the OS (open at login) fails</td><td>unchanged: the error shows inside the dialog</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="risks">Risks</h2>
+    <table data-c="risks">
+      <thead><tr><th>#</th><th>Risk</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr><td>R1</td><td>⌘W is the default menu's native Close Window: it closes <em>main</em>, not the dialog, and the webview never sees the key</td><td>Q4</td></tr>
+        <tr><td>R2</td><td>Settings at 640 px tall in a 600 px main</td><td>the panel scrolls; size bounded by the window (design-rules check at build)</td></tr>
+        <tr><td>R3</td><td>Three e2e specs and the walkthrough address the <code>settings</code> window</td><td>rewritten in the build round; red first</td></tr>
+        <tr><td>R4</td><td>From the tray, users who wanted only to flip a switch now see the main window too</td><td>that is the owner's request; Q1 confirms</td></tr>
+        <tr><td>R5</td><td>UC-BG already promises "Settings… focuses main"; DEC-77 rule 4's example ("a background app whose Settings window closes") no longer exists</td><td>distil UC-BG and DEC-77 in the build round</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="questions">Owner questions</h2>
+    <table data-c="questions">
+      <thead><tr><th>#</th><th>Question</th><th>Options</th><th>Recommendation</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>Tray Settings… with no main window</td><td>(a) rebuild main, Settings dialog over it · (b) Settings alone, a standalone window on top</td><td><strong>(a)</strong>: the dialog always has a parent; one shape everywhere</td></tr>
+        <tr><td>Q2</td><td>Shape</td><td>(A) in-window dialog (<code>ModalShell</code>) · (B) native child window + disabled main</td><td><strong>(A)</strong>: modal on every OS, no blank macOS sheet, no unsafe, quit check never blocked</td></tr>
+        <tr><td>Q3</td><td>About (DEC-90)</td><td>(a) stays its own window · (b) same dialog as Settings · (c) its own window, but a child of main</td><td><strong>(a)</strong>: About is read-only, non-blocking on every desktop convention, and the macOS app menu shows it with no main window</td></tr>
+        <tr><td>Q4</td><td>⌘W / Ctrl+W while Settings is open</td><td>(a) closes Settings (Trawler's own Close Window item: topmost dialog first, else the window) · (b) closes main as today; Esc closes Settings</td><td><strong>(a)</strong>: what a Mac user expects of a sheet</td></tr>
+        <tr><td>Q5</td><td>Settings asked while another dialog (keep-capturing, quit, onboarding) is up</td><td>(a) wait until it closes · (b) replace it · (c) ignore the request</td><td><strong>(a)</strong>: no answer is lost and no dialog stacks</td></tr>
+        <tr><td>Q6</td><td>Data windows (DEC-76)</td><td>(a) stay free windows · (b) children of main</td><td><strong>(a)</strong>: they exist to sit beside main</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="rulings">Owner rulings (2026-11-06) and what was built</h2>
+    <table data-c="rulings">
+      <thead><tr><th>#</th><th>Ruling</th><th>Built as</th></tr></thead>
+      <tbody>
+        <tr><td>Q1</td><td>(a) rebuild main, dialog over it</td><td><code>lifecycle::request_dialog</code>: flag + <code>dialog-requested</code> event after <code>reopen_main</code> (the quit request's pattern); a failed open drops the request</td></tr>
+        <tr><td>Q2</td><td>(A) in-window <code>ModalShell</code></td><td><code>ModalShell size="pages"</code>; the <code>settings</code> window, its saved size and place, and <code>open_in_background</code> are gone</td></tr>
+        <tr><td>Q3</td><td>(b) About is the same dialog</td><td><code>AboutDialog</code> on the asked page; <code>about</code> window and <code>capabilities/about.json</code> gone; every Help / app-menu entry goes through <code>request_dialog</code></td></tr>
+        <tr><td>Q4</td><td>(a) Trawler's own Close Window</td><td>the native item replaced in every default submenu; main's page closes quit check → keep ask → shell dialog → window (<code>close_window</code> command); other windows close outright</td></tr>
+        <tr><td>Q5</td><td>(a) wait</td><td>a queue, one per kind; hidden behind the keep-capturing ask and the quit check. Onboarding is a screen, not a dialog, in this build: Settings opens over it</td></tr>
+        <tr><td>Q6</td><td>(a) data windows stay free</td><td>unchanged</td></tr>
+        <tr><td>quit</td><td>DEC-64's check runs in main</td><td>a quit over Settings shows the check in its place; cancelled, Settings returns; answered, the app ends</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="unverified">Not verified this round</h2>
+    <ul data-c="unverified">
+      <li>No hand run on any OS: minimised, fullscreen, multi-display and taskbar behaviour of today's window are read from code, not seen.</li>
+      <li>Shape B's macOS dummy sheet look and Windows owned-window taskbar entry are read from source, not run.</li>
+      <li>Whether WebDriver can drive the in-window dialog in every existing spec is assumed from the other <code>ModalShell</code> dialogs.</li>
+    </ul>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -4,6 +4,7 @@ use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, Moc
 use tauri::webview::InvokeRequest;
 use tauri::{App, Manager, WebviewWindow, WebviewWindowBuilder};
 use trawler_ui_lib::lifecycle::Lifecycle;
+use trawler_ui_lib::settings::MAIN_WINDOW;
 use trawler_ui_lib::{about, links, update};
 
 fn ask(
@@ -41,7 +42,7 @@ fn shell(config_dir: &std::path::Path) -> (App<MockRuntime>, WebviewWindow<MockR
         .expect("a mock app");
     app.manage(Lifecycle::new(Some(config_dir.to_path_buf())));
     let window =
-        WebviewWindowBuilder::new(&app, "settings", tauri::WebviewUrl::default()).build().unwrap();
+        WebviewWindowBuilder::new(&app, MAIN_WINDOW, tauri::WebviewUrl::default()).build().unwrap();
     (app, window)
 }
 

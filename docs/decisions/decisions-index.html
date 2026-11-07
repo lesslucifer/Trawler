@@ -876,7 +876,7 @@
             <code>view_prefs_write</code>). Each field reads alone, a bad one as its default; unknown fields are kept
             on write; an early choice beats the launch read. <code>lastPlatform</code> seeds only setup the user opens:
             the launch check and <code>chosen</code> start on This machine, so no adb runs before the user opens setup.
-            The Settings window reopens where it was left. Separate from <code>layout.json</code>, untouched by Reset
+            Settings, a dialog of the main window since E-PRORELEASE.W19, keeps no place of its own. Separate from <code>layout.json</code>, untouched by Reset
             Layout. Amends DEC-31 and DEC-60 rule 6. Rejected: a body mode per leg, fields in
             <code>layout.json</code>, restoring <code>chosen</code>, restoring the selection or draft, a debounced
             write, localStorage</td>
@@ -1098,11 +1098,20 @@
         <tr>
           <td><a href="dec-90-about-is-the-app-s-own-and-names-its-links.html"><code>dec-90-about-is-the-app-s-own-and-names-its-links.html</code></a></td>
           <td><span class="badge id">DEC-90</span></td>
-          <td><strong>About is the app's own, and the shell names its links.</strong> One About window (About · Third-party licences ·
-            Privacy) on every OS replaces the system panel; the webview opens a link only by name (<code>guide</code> · <code>issue</code> ·
+          <td><strong>About is the app's own, and the shell names its links.</strong> One About dialog of the main window (About · Third-party licences ·
+            Privacy; a window of its own until E-PRORELEASE.W19) on every OS replaces the system panel; the webview opens a link only by name (<code>guide</code> · <code>issue</code> ·
             <code>source</code>) through <code>open_link</code>, no window holds an opener permission; a report carries version, OS + version,
             CPU and install kind only; the launch update check obeys <em>check for updates automatically</em> (default on), the user's own
             check always runs</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-91-the-public-text-is-one-voice-checked.html"><code>dec-91-the-public-text-is-one-voice-checked.html</code></a></td>
+          <td><span class="badge id">DEC-91</span></td>
+          <td><strong>The public text is one voice, checked.</strong> Root markdown for users (README, CONTRIBUTING, SECURITY,
+            CODE_OF_CONDUCT, PRIVACY, CHANGELOG, GUIDE), each fact in one file; no other tool named anywhere public; the README's
+            install table follows <code>package.rs</code>; every link and anchor resolves; issues only at 0.1.0; screenshots from
+            <code>cargo xtask ui screenshots</code>, OS prompts by hand; held by <code>public_text</code>'s unit tests</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

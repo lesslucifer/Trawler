@@ -22,7 +22,7 @@ impl Os {
         }
     }
 
-    fn bundles(self, version: &str) -> &'static str {
+    pub(crate) fn bundles(self, version: &str) -> &'static str {
         match self {
             Self::MacOs => "app,dmg",
             Self::Windows => "msi,nsis",

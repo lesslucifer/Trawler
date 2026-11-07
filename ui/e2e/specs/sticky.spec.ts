@@ -1,23 +1,17 @@
-import { browser, expect } from "@wdio/globals";
+import { expect } from "@wdio/globals";
 import {
   ANDROID_EMULATOR,
-  SETTINGS_RECT,
   backToTraffic,
   bodyModeIs,
   choosePlatform,
-  closeSettings,
   legIs,
   openRow,
-  openSettings,
   openSetupFromTheMenu,
   pickBodyMode,
   pickLeg,
-  placeSettings,
   quitTheApp,
   responseBody,
   savedViewPrefsInclude,
-  settingsIsSaved,
-  settingsRect,
   shellIsUp,
   twoJsonFlows,
 } from "./sticky.ts";
@@ -49,16 +43,7 @@ describe("UC-5 / UC-ONBOARD / UC-SVC — what the user chose stays chosen", () =
     await savedViewPrefsInclude({ leg: "response", bodyMode: "raw", lastPlatform: "android-sim" });
   });
 
-  it("records where the Settings window was left, then quits", async () => {
-    await openSettings();
-    expect(await placeSettings(SETTINGS_RECT)).toBeNull();
-    expect(await settingsRect()).toEqual(SETTINGS_RECT);
-    await closeSettings();
-    await browser.waitUntil(async () => settingsIsSaved(), {
-      timeout: 5_000,
-      timeoutMsg: "windows.json never recorded the settings window",
-    });
-
+  it("quits with every choice saved", async () => {
     await quitTheApp();
   });
 });

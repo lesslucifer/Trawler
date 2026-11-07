@@ -10,7 +10,7 @@ export interface SidebarPage {
  * @tier T1 — selection display + click/keyboard handling only; which pages exist and which shows is the screen's
  * @anatomy a column of page names at body size, a hairline on its right · the current page in ink, the rest ink-mute
  *   · a vertical tablist, roving tabindex
- * @use a window with two or more pages of its own: the Settings window's General · Capture service (E-BGSVC.W5)
+ * @use a window or dialog with two or more pages of its own: Settings' General · Capture service (E-BGSVC.W5)
  * @avoid a view or mode switch inside one page (that is SegmentedControl) · a choice of value (Select) · actions
  *   (Button) · nesting: a page holds no sidebar of its own · wrapping past the first or last page
  * @states current (ink) · other (ink-mute, ink on hover) · focus (the shared 1px mute outline). ↑/↓ moves to a page and
