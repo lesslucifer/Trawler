@@ -1,0 +1,11 @@
+schema: design/v1
+epic: E-PRORELEASE
+wu: E-PRORELEASE.W22
+base: 642bf72887c699f0b10960493aa65ee03dcafade
+design_sha256: 8fdb00495184eff0b2c8efce6cb23ab7166995cb59c59b38cc9741b1779baa85
+verdict: PASS
+artifacts: []
+undesigned:
+  - path: ui/src/General.tsx
+    why: "a state of the existing open-at-login row (E-BGSVC.W5's design run): when the shell reports it unavailable the row renders as the same file's Updates row already does for its unavailable state (E-PRORELEASE.W13's design run), a disabled Checkbox over a mute Notice, with the Notice's own action slot (a T1 Button) and detail slot (CopyText, About's copy-address fallback); no layout, token or component is added"
+date: 2026-11-07
