@@ -1,0 +1,54 @@
+schema: cr/v5
+scope: "epic E-PRORELEASE (W1-W22, rc5-rc7 fixes, close) -> main"
+epic: E-PRORELEASE
+branch: epic/prorelease
+base: 6a1ab80d38bc2eb287b48e09aff8b3daa27a5d8f
+head: 627e0ee45b1cbdacd1392f7cafecb9c83fce840f
+diff_sha256: 42a38f90c8dfd6856d45f8e998e544b9fe19bf0c425ffce401892eb1d0ffc1f3
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 10
+    nit: 7
+  stage_seconds:
+    finders: 325
+    verifiers: 204
+    total: 562
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency: { found: 5, verified: 0 }
+    altitude: { found: 9, verified: 5 }
+findings: { found: 16, verified: 6, waived: 5 }
+waivers:
+  - finding: "ui/src/setup.ts:676 WINDOWS_CERT_UNDO is also Another Windows PC's undo, whose installs write only the user's store; since W16 it leads with the machine store (certlm, an administrator's certutil -delstore ROOT), which finds nothing there, and the working user-store command comes third; setup.test.ts:1564 pins that order for both"
+    reason: "code freeze for the final: v0.1.0-7 is the rc whose matrix passed and the owner ruled ready; any shipped change now needs rc 0.1.0-8 first (DEC-86 rule 10, docs/release-process.html). The working step is listed and correctly conditioned, nothing is lost; reported to the router for the owner's ruling (ship 0.1.0 with it as a roadmap follow-up, or cut 0.1.0-8)"
+  - finding: "ui/src/privacy.ts:19,25 the CA folder (dev.trawler.app) and 'at most once a day' copy tauri.conf identifier and update.rs CHECK_EVERY with no test tying them; true today"
+    reason: "no behaviour wrong today; a test tying them is post-0.1.0 work under the final's code freeze (DEC-86 rule 10); reported for the roadmap"
+  - finding: "ui/src/About.tsx:58 'MIT licence · © 2026 Vu Luu' is outside package::metadata_drift's sources (DEC-87)"
+    reason: "true today; adding About to metadata_drift is post-0.1.0 under the final's code freeze (DEC-86 rule 10); reported for the roadmap"
+  - finding: "ui/src/About.tsx:27 the Link type leaves out login, General.tsx sends it untyped, open_link has no typed wrapper and its rejection-is-the-address handling is written in two views"
+    reason: "already a roadmap row (Open at login on macOS: ... the Link type); behaviour correct; post-0.1.0 under the final's code freeze (DEC-86 rule 10)"
+  - finding: "ui/e2e/screenshots/screenshots.conf.ts:33 startCore is a third copy of the harness start (walkthrough.conf.ts byte-identical, wdio.conf.ts near), already drifted: only the screenshots copy kills the harness when the start fails"
+    reason: "e2e tooling, not shipped; extracting one helper is post-0.1.0 under the final's code freeze (DEC-86 rule 10); reported for the roadmap"
+nits:
+  - finding: "xtask/src/licenses.rs:9 const APP = trawler-ui restates package::SHIPPED"
+    waived: "a rename fails loudly (the workspace has no trawler-ui crate) and the notice drift test fails at once; code freeze for the final"
+  - finding: "(unverified) xtask/src/licenses.rs:437 the notice drift test rebuilds the notice on every gate run"
+    waived: "deliberate regeneration test (DEC-88); gate time only"
+  - finding: "(unverified) ui/src/About.tsx:160 about_read carries the whole 920 KB notice even for the About or Privacy page"
+    waived: "one IPC per About open; code freeze for the final"
+  - finding: "(unverified) ui/src/LogTail.tsx:55 the SGR strip reruns over every kept line on each render"
+    waived: "at most 2000 lines, and the core no longer emits escapes when piped (src/cli.rs); code freeze for the final"
+  - finding: "(unverified) xtask/src/release_manifest.rs:146 checksums reads each installer whole into memory"
+    waived: "release runner only, installers well under runner memory"
+  - finding: "(unverified) ui/e2e/screenshots/screenshots.conf.ts:81,97 the !attached branches cannot run while LAUNCHES has only attached"
+    waived: "kept for the owned launch S7 needs (roadmap: The README screenshots)"
+  - finding: "(unverified) xtask/src/screenshots.rs:81 a failed launch leaves the cleared shots deleted from the working tree"
+    waived: "git restores them; the run's error is reported"
+verdict: PASS
+date: 2026-11-07
