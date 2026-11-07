@@ -1,19 +1,15 @@
 import { $, expect } from "@wdio/globals";
 import {
   ANDROID_EMULATOR,
-  SETTINGS_RECT,
   backToTraffic,
   bodyModeIs,
-  closeSettings,
   corruptTheSavedViewPrefs,
   legIs,
   openRow,
-  openSettings,
   openSetupFromTheMenu,
   platformPicker,
   quitTheApp,
   responseBody,
-  settingsRect,
   shellIsUp,
 } from "./sticky.ts";
 
@@ -39,12 +35,6 @@ describe("UC-5 / UC-ONBOARD / UC-SVC — the choices survive a relaunch", () => 
     await openSetupFromTheMenu();
     await expect(platformPicker()).toHaveText(expect.stringContaining(ANDROID_EMULATOR));
     await backToTraffic();
-  });
-
-  it("reopens the Settings window where it was left", async () => {
-    await openSettings();
-    expect(await settingsRect()).toEqual(SETTINGS_RECT);
-    await closeSettings();
   });
 
   it("quits with a corrupt view-prefs.json left for the next launch", async () => {

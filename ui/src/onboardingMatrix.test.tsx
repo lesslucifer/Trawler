@@ -77,7 +77,10 @@ const drainingToggles = () =>
   afterEach(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
 const HOSTS: HostOs[] = ["macos", "windows", "linux", "other"];
-const TRUST: TrustProbe[] = ["trusted", "installed", "absent", "unknown"];
+// An older CA reads as not done in words of its own (verdicts.test): the sweep
+// keeps the four readings each screen branches on.
+type SweptTrust = Exclude<TrustProbe, "stale">;
+const TRUST: SweptTrust[] = ["trusted", "installed", "absent", "unknown"];
 const PROXY: ProxyProbe[] = ["ours", "foreign", "none", "unknown"];
 
 // Traffic is a history, not a moment: the nine shapes the evidence can take.
@@ -167,7 +170,7 @@ const OFF_MACHINE = new Set<PlatformId>([
 // The sweep's trust probe, as the Simulator probe reads it: a running
 // Simulator's store holding the certificate or not, one whose store did not
 // answer, or none running.
-const RUNNING: Record<TrustProbe, SimulatorTrust[]> = {
+const RUNNING: Record<SweptTrust, SimulatorTrust[]> = {
   trusted: [{ name: "iPhone 17 Pro", trust: "trusted" }],
   absent: [{ name: "iPhone 17 Pro", trust: "absent" }],
   installed: [{ name: "iPhone 17 Pro", trust: "unknown" }],
@@ -178,7 +181,7 @@ const RUNNING: Record<TrustProbe, SimulatorTrust[]> = {
 // certificate and its proxy at Trawler, neither and its proxy on a network it
 // does not send over, a store and a proxy adb could not read, or none running.
 const EMULATOR = "Pixel 7 API 35";
-const EMULATORS: Record<TrustProbe, EmulatorReading[]> = {
+const EMULATORS: Record<SweptTrust, EmulatorReading[]> = {
   trusted: [{ name: EMULATOR, trust: "trusted", proxy: "ours" }],
   absent: [{ name: EMULATOR, trust: "absent", proxy: "wifi-only" }],
   installed: [{ name: EMULATOR, trust: "unknown", proxy: "none" }],
@@ -245,7 +248,7 @@ interface State {
   os: HostOs;
   platform: PlatformId;
   armed: boolean;
-  trust: TrustProbe;
+  trust: SweptTrust;
   proxy: ProxyProbe;
   history: History;
   // This machine's own request came through, decrypted, in this session.

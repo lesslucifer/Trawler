@@ -450,12 +450,11 @@
     </div>
 
     <h2 id="uc-svc">UC-SVC — See and restart the capture service</h2>
-    <p data-c="uc-svc-contract">Settings… (⌘,), or <em>settings…</em> at the foot of the capture menu, opens a Settings window on the Capture service page
+    <p data-c="uc-svc-contract">Settings… (⌘,), or <em>settings…</em> at the foot of the capture menu, opens Settings, a dialog of the main window, on the Capture service page
       (<span class="badge id">E-ONEAPP.W3</span>, <a href="../decisions/dec-69-the-app-supervises-its-core.html">DEC-69</a>
-      rules 13–14). It follows the service live and closes without quitting the app, and reopens where it was left — across a relaunch,
-      placed before it shows so it never jumps, on a monitor that still exists
-      (<a href="../decisions/dec-67-the-user-sizes-the-layout.html">DEC-67</a>, <a href="../decisions/dec-70-a-choice-belongs-to-the-user-not-the-flow.html">DEC-70</a>; proven by
-      <code>sticky-relaunched.spec.ts</code>). The web shell has no Settings, so its capture menu offers none.</p>
+      rules 13–14). It follows the service live and closes (Esc, ✕, ⌘W / Ctrl+W) without quitting the app. Since
+      <span class="badge id">E-PRORELEASE.W19</span> it is no window of its own, so it keeps no size or place of its own: it sits over
+      the main window, which keeps its own (<a href="../decisions/dec-67-the-user-sizes-the-layout.html">DEC-67</a>). The web shell has no Settings, so its capture menu offers none.</p>
     <table data-c="uc-svc-states">
       <tr><th>The service is</th><th>The page shows</th><th>It offers</th></tr>
       <tr><td>starting</td><td>⟳ starting</td><td>restart, held beside "waiting for the capture service to start…"</td></tr>
@@ -463,7 +462,7 @@
       <tr><td>exited</td><td>⚠ stopped — exit code <em>n</em> or killed (signal <em>n</em>) · the last addresses</td><td>restart, at once: nothing is left to clear. Never restarted on its own (Q12)</td></tr>
       <tr><td>attached</td><td>◐ attached — started outside this app · its address</td><td>nothing: the app neither restarts it nor has its log</td></tr>
     </table>
-    <p class="kd" data-c="uc-svc-log">The log shows up to 2000 of the service's own lines, newest last, marking where each
+    <p class="kd" data-c="uc-svc-log">The log shows up to 2000 of the service's own lines as plain text (no colour codes, E-PRORELEASE.W18), newest last, marking where each
       core started, so a crash's last lines outlive the restart after it. It follows new lines while scrolled to the bottom,
       and offers <em>show newest</em> otherwise. A failed restart is said with its reason and a <em>try again</em>. There is
       no stop: quitting stops the service (Q14).</p>
@@ -471,25 +470,37 @@
     <h2 id="uc-bg">UC-BG — Keep capturing after the window closes</h2>
     <p data-c="uc-bg-contract">The first ✕ that would quit asks once, <em>keep capturing after the window closes?</em>, and the answer is the
       switch (<span class="badge id">E-BGSVC</span>, <a href="../decisions/dec-77-the-app-outlives-its-window.html">DEC-77</a> rule 10).
-      Settings → General holds it and <em>open Trawler at login</em>; nothing else does.</p>
+      Settings → General holds it and <em>open Trawler at login</em>; nothing else does. The icon is the menu-bar icon on macOS and the tray icon on Windows (system tray, notification area) and Linux (system tray; GNOME needs the AppIndicator extension), and every text names it that way (<span class="badge id">E-PRORELEASE.W17</span>).</p>
     <table data-c="uc-bg-states">
       <tr><th>The user</th><th>Happens</th></tr>
       <tr><td>✕, switch unanswered, menu-bar icon present</td><td>asks; <em>keep capturing</em> stores on and closes the window with no proxy read, the app and its core keep capturing; <em>quit</em> stores off and then runs <a href="../decisions/dec-64-a-quit-asks-only-about-what-it-leaves-without-internet.html">DEC-64</a>'s check; ✕ or Esc cancels, stores nothing, the next ✕ asks again</td></tr>
       <tr><td>✕, switch on, icon present</td><td>closes at once; no ask, no proxy read, nothing stopped</td></tr>
       <tr><td>✕, switch off, or no icon</td><td>quits as before DEC-77, through DEC-64's check</td></tr>
       <tr><td>⌘Q, or Quit from the menu-bar icon</td><td>always a quit: the main window is opened if none is, DEC-64's check runs, then the app exits and stops its core. It never asks the keep-capturing question</td></tr>
-      <tr><td>Open Trawler, Settings…, the Dock, a second launch</td><td>rebuilds or focuses the main window; the list reloads from the core</td></tr>
-      <tr><td>Open Trawler at login</td><td>macOS: registers the bundled launch agent with <code>SMAppService</code>, so “Trawler” shows in Login Items; an unbundled build refuses with its reason and the switch stays off. Linux and Windows write their own entry. A login launch starts with <code>--background</code> and opens no window</td></tr>
+      <tr><td>Open Trawler, the Dock, a second launch, a Windows left click on the tray icon</td><td>rebuilds or focuses the main window; the list reloads from the core</td></tr>
+      <tr><td>opens the icon's menu</td><td>sees the capture line and, once read, a dotted routing line (this machine routes through Trawler · another proxy is set · the system proxy is off); no address anywhere, the tooltip says the same on macOS and Windows (DEC-77 rule 8, <span class="badge id">E-PRORELEASE.W20</span>)</td></tr>
+      <tr><td>Stop routing through Trawler (macOS, Windows; only while ours)</td><td>reads the proxy again first: no longer Trawler's → nothing changes and the line shows what is set now; still ours → setup's stop with its admin approval on macOS, turning off only the switches that name Trawler (another service's proxy stays on), then the line re-reads. A dismissed approval says nothing; a failure says routing goes on and to stop it from setup. Linux shows the line only</td></tr>
+      <tr><td>Check for updates… · About Trawler (the icon)</td><td>the app menu's by-user check, whose answer is a native dialog, windowless too · the About dialog over the main window (DEC-90)</td></tr>
+      <tr><td>Settings… (the icon, ⌘, / Ctrl+,, the capture menu)</td><td>rebuilds or raises the main window, then shows Settings as its modal dialog (<span class="badge id">E-PRORELEASE.W19</span>). A request while the keep-capturing ask or the quit check is up waits until it closes; a quit asked over Settings shows its check in Settings' place, and a cancelled quit finds Settings again. ⌘W / Ctrl+W closes the topmost dialog first, then the window</td></tr>
+      <tr><td>Open Trawler at login</td><td>macOS: registers the bundled launch agent with <code>SMAppService</code>, so “Trawler” shows in Login Items. A build that cannot (unbundled, below macOS 13, ad-hoc signed: DEC-77 rule 9) shows the switch disabled with the shell's reason, and on macOS a <strong>how to do it by hand</strong> button opens the guide's Open at login section (the address to copy when no browser opens). Linux and Windows write their own entry. A login launch starts with <code>--background</code> and opens no window, unless there is no icon to reach it from</td></tr>
     </table>
     <p class="kd" data-c="uc-bg-proof">Proven by <code>background-asked</code>, <code>-off</code>, <code>-keep</code> and <code>-quit</code>
       <code>.spec.ts</code> in the owned e2e suite: the ask and its cancel, the stored answers, ✕ ending the app, capture with no window,
-      <code>quit_app</code> and a quit request, ports freed, all under a temp <code>HOME</code>. The menu-bar menu, the Dock, a real login and the
-      Windows and Linux trays are native and owed on the <a href="../backlog/roadmap.html">roadmap</a>.</p>
+      <code>quit_app</code> and a quit request, the icon's Settings… rebuilding the main window with Settings over it, ports freed, all under a temp <code>HOME</code>. The menu's items, order, casing, routing line, Stop and its re-read are unit and integration tests (<code>tray.rs</code>, <code>suite/tray.rs</code>); the menu as drawn, the dot, the clicks, the Dock, a real login and the
+      Windows and Linux trays are native, a hand-check matrix row each (<a href="../backlog/hand-check-matrix.html">matrix</a>), and owed on the <a href="../backlog/roadmap.html">roadmap</a>.</p>
 
     <h2 id="uc-install">UC-INSTALL — Install Trawler from a release</h2>
     <p data-c="uc-install-contract">A user downloads their OS's own artifact from the published GitHub release
       (<span class="badge id">E-PKG2</span>, <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a>).
+      Each package names Vu Luu as publisher and copyright holder and carries the MIT licence
+      (<a href="../decisions/dec-87-one-licence-one-holder-no-crate-published.html">DEC-87</a>).
+      Every installer carries <code>THIRD-PARTY-NOTICES.txt</code>, Trawler's licence and every bundled dependency's
+      (<a href="../decisions/dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a>).
+      The app icon, the tray glyphs (a template on macOS, coloured on Windows and Linux), the DMG window background and the NSIS/WiX
+      installer bitmaps all come from the signed brand sources (<a href="../decisions/dec-89-one-signed-mark-one-source-folder.html">DEC-89</a>).
       The installers carry no paid signature, so the first open shows the OS's prompt, and the release notes name the one way past it.
+      The notes open with what is new in that version (<code>CHANGELOG.md</code>) and end with how to check the download against the release's <code>SHA256SUMS</code> (<span class="badge id">E-PRORELEASE.W7</span>).
+      The repo's <code>README.md</code> carries the same install table, checked against <code>package.rs</code>, the first-open steps and the checksum check, and <code>PRIVACY.md</code> says what leaves the machine (<a href="../decisions/dec-91-the-public-text-is-one-voice-checked.html">DEC-91</a>).
       From then on the app is UC-4: one launch, an owned core, single instance, the CA in the platform's app data directory
       (<code>dev.trawler.app</code>).</p>
     <table data-c="uc-install-matrix">
@@ -499,26 +510,51 @@
       <tr><td>Linux x64 · arm64 (glibc, WebKitGTK 4.1)</td><td><code>.AppImage</code> · <code>.deb</code> · <code>.rpm</code> (finals only: rpm refuses a pre-release version, DEC-86 rule 7)</td><td>no prompt; GNOME needs the AppIndicator extension for the tray</td></tr>
     </table>
     <p class="kd" data-c="uc-install-proof">Proven by <code>xtask/tests/package_bundle.rs</code> (macOS, <code>--features package-tests</code>):
-      the packaged <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
+      the packaged app's <code>Info.plist</code> carries the copyright and its <code>Resources</code> the committed third-party notice, the <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
       under a temp <code>HOME</code>, and frees both ports when the app ends. Each release job smokes its own installer headless
       (<code>cargo xtask smoke</code>). The OS prompts and the installs in the Windows and Ubuntu VMs are hand checks of the first rc.</p>
 
     <h2 id="uc-update">UC-UPDATE — Take a new version from inside the app</h2>
     <p data-c="uc-update-contract">An installed app checks <code>releases/latest/download/latest.json</code> at launch (at most once a day) and on
-      <em>Check for Updates…</em> (<a href="../decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a>).
+      <em>Check for Updates…</em> or Settings → General's <em>check now</em> (<a href="../decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a>).
+      The launch check runs only while <em>check for updates automatically</em> is on (default on, stored in <code>update-check.json</code>;
+      <a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a>); the user's own check always runs.
       It never installs silently.</p>
     <table data-c="uc-update-states">
       <tr><th>The check finds</th><th>Happens</th></tr>
       <tr><td>a newer version</td><td>a native dialog names both versions and says the captured list is cleared; <em>Install</em> verifies the signature (which must name that version), then quits as ⌘Q does: the window opens if none is, DEC-64's check runs, the core stops, the app is replaced and relaunches with the same arguments. The CA, settings and login item stay</td></tr>
       <tr><td>a newer version, quit cancelled</td><td>the update is dropped; the next check offers it again</td></tr>
       <tr><td>nothing newer</td><td>silent at launch; asked: “Trawler &lt;version&gt; is up to date.”</td></tr>
-      <tr><td>an unreachable channel or a bad signature</td><td>nothing changes; the user is told why only when they asked, or when an install they chose failed</td></tr>
+      <tr><td>an unreachable channel or a bad signature</td><td>nothing changes, the once-a-day clock included, so the next launch checks again; the user is told why only when they asked, or when an install they chose failed</td></tr>
+      <tr><td>an http manifest, download or redirect</td><td>refused before anything is sent: the updater speaks https only</td></tr>
       <tr><td>a deb or rpm install</td><td>updates in place through the desktop's password prompt (<code>pkexec</code>)</td></tr>
     </table>
     <p class="kd" data-c="uc-update-proof">Proven by <code>ui/src-tauri/tests/suite/updater.rs</code> against a loopback channel with keys made in the
-      test (no update, an update installed with the CA's bytes unchanged, a forged signature, a signature for another version) and by
+      test (no update, an update installed with the CA's bytes unchanged, a forged signature, a signature for another version, an http
+      channel, download or redirect refused) and by
       <code>update.rs</code>'s unit tests. A real update from one published rc to the next is a hand check on each OS, owed on the
       <a href="../backlog/roadmap.html">roadmap</a>.</p>
+
+    <h2 id="uc-about">UC-ABOUT — See which Trawler runs, and get help</h2>
+    <p data-c="uc-about-contract">On every OS the user opens one About dialog over the main window, raised or rebuilt first (<span class="badge id">E-PRORELEASE.W19</span>), Trawler's own
+      (<a href="../decisions/dec-90-about-is-the-app-s-own-and-names-its-links.html">DEC-90</a>, design run
+      <span class="badge id">E-PRORELEASE.W13</span>): the logo, the version (copyable), <em>MIT licence · © 2026 Vu Luu</em> and three
+      buttons, <em>user guide</em> (the root <code>GUIDE.md</code>), <em>report an issue</em> and <em>source code</em>, each opened in the browser.
+      Its other pages are <em>Third-party licences</em>, the bundled <code>THIRD-PARTY-NOTICES.txt</code> verbatim in one scrolling region
+      (<a href="../decisions/dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a>), and <em>Privacy</em>, the one statement in
+      <code>ui/src/privacy.ts</code>. Esc, ⌘W or Ctrl+W close it; the app keeps running.</p>
+    <table data-c="uc-about-entries">
+      <tr><th>Entry</th><th>macOS</th><th>Windows · Linux</th></tr>
+      <tr><td>About Trawler</td><td>the app menu</td><td>Help, last</td></tr>
+      <tr><td>User guide</td><td>Help → Trawler User Guide</td><td>Help → User Guide · F1</td></tr>
+      <tr><td>Report an Issue…</td><td colspan="2">Help; opens the issue form with version, OS + version + CPU and install kind (dmg · setup.exe · msi · deb · rpm · AppImage · from source) — nothing about traffic or the machine's name</td></tr>
+      <tr><td>Third-Party Licences · Privacy</td><td colspan="2">Help; the About dialog on that page</td></tr>
+      <tr><td>version · check now · check for updates automatically</td><td colspan="2">Settings → General, below its two switches; a copy that is not installed shows the version, no check now, and the switch disabled with <em>updates come with an installed copy of Trawler</em></td></tr>
+      <tr><td>a browser that would not open</td><td colspan="2">the About page shows <em>couldn't open your browser — copy the address</em> with the address</td></tr>
+    </table>
+    <p class="kd" data-c="uc-about-proof">Proven by <code>menu.rs</code> (Help per OS), <code>links.rs</code> (the report's fields), <code>update.rs</code> (the switch),
+      <code>about.rs</code>, <code>About.test.tsx</code>, <code>General.test.tsx</code>, <code>Settings.test.tsx</code> and the WebDriver spec
+      <code>ui/e2e/specs/about.spec.ts</code> (Settings reads the running version; Help → Third-Party Licences opens About on that page in the main window). The menus as each OS draws them are a hand check.</p>
 
     <h2 id="uc-onboard">UC-ONBOARD — Set up capture, for this machine or another device</h2>
     <div data-c="uc-onboard-contract">
@@ -935,11 +971,15 @@
           <td>it names the half it performs: the proxy goes off. Only when the certificate is trusted does it
             say <em>the certificate stays trusted</em>. Its own steps are under <em>do it by hand</em></td></tr>
         <tr><td>Remove the certificate — inside the certificate task once it reads trusted, macOS
-          (E-ONBRVP.W12, the owner's review)</td><td>none of its own; a System keychain copy or an admin trust
-          asks for an administrator's password, the login copy's trust for the user's</td>
+          (E-ONBRVP.W12, the owner's review) and Windows (E-PRORELEASE.W16)</td><td>none of its own; a System
+          keychain copy or an admin trust asks for an administrator's password, the login copy's trust for the
+          user's; on Windows the machine ROOT copy asks for the one UAC approval set-up uses, the user's ROOT copy
+          for none</td>
           <td>it names the half it performs: the live certificate leaves every keychain that holds it, with the
-            trust written for it, so the same bytes added back are not trusted unasked. Only when the proxy is
-            set does it say <em>the proxy stays set</em>. Its own steps are under <em>do it by hand</em></td></tr>
+            trust written for it, so the same bytes added back are not trusted unasked. On Windows one click
+            removes one store's copy, the machine's first, and the re-read keeps the button while a copy is
+            left. Only when the proxy is set does it say <em>the proxy stays set</em>. Its own steps are under
+            <em>do it by hand</em>; Windows' lead with the machine store</td></tr>
         <tr><td>Open a by-hand step's screen — macOS: <em>open in Keychain Access</em>, <em>open Proxy
           settings</em>, <em>open example.com in your browser</em>; Windows: <em>open the certificate</em>,
           <em>open Proxy settings</em>, <em>open example.com in your browser</em>; Linux (GNOME): <em>open Network

@@ -201,9 +201,9 @@ function autoThis(host: Host): Chapter[] {
     linux: `"save…"`,
   }[host];
   const trustBack =
-    host === "macos"
-      ? `"remove the certificate", bare, and "do it by hand"`
-      : `only "to remove it later"`;
+    host === "linux"
+      ? `only "to remove it later"`
+      : `"remove the certificate", bare, and "do it by hand"`;
   const reread = (patch: Patch) => async (w: Walk) => {
     await w.script(patch);
     await w.recheck();
@@ -246,7 +246,7 @@ function autoThis(host: Host): Chapter[] {
       findings: ["R13", "W12.E2", "W12.E3"],
       anchor: [task(2)],
     },
-    ...(host === "macos"
+    ...(host !== "linux"
       ? [
           {
             id: "ca-removed",

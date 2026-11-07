@@ -601,8 +601,9 @@ interface OsTrust {
 // A Mac's certificate by hand goes into the login keychain, where trusting it
 // asks for the user's password and no administrator's; opening the file asks
 // which keychain and offers iCloud, which holds no trust (W12's build). The
-// command adds to the System keychain, so the way back reaches both, whichever
-// way ran (W13's W6).
+// command adds to the login keychain too: it is the by-hand way after the
+// button's System keychain write was refused (rc5 on macOS 26), and the way
+// back reaches both (W13's W6).
 const MACOS_OS_VERSION = "macOS 26";
 const IN_TERMINAL = "In Terminal, run:";
 const ALWAYS_TRUST = ["Trust", "When using this certificate", "Always Trust"];
@@ -622,7 +623,7 @@ const ALWAYS_TRUST_STEP: GuideStep = [
 const CLOSE_AND_PASSWORD: GuideStep = ["Close the window and enter your password."];
 
 const macTrustCommand = (file: string): CommandPart => ({
-  command: `sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${file}`,
+  command: `security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db ${file}`,
   label: "the trust command",
 });
 
@@ -650,8 +651,8 @@ const TRUSTED_ROOT_STORE = [
 
 // Windows' certificate dialog imports into the user's Trusted Root store,
 // which asks for no administrator; the command writes the same store (W14's
-// Q3). "Set up this PC" and older commands wrote every user's, so the way back
-// reaches both.
+// Q3). "Set up this PC" writes every user's, so the way back leads with that
+// one and reaches the user's too (W16).
 const WINDOWS_IMPORT: GuideStep[] = [
   [
     "Click",
@@ -675,13 +676,13 @@ const windowsTrustCommand = (file: string): GuideStep => [
 const WINDOWS_CERT_UNDO: GuideStep[] = [
   [
     "Start, search",
-    { path: ["Manage user certificates", "Trusted Root Certification Authorities", "Certificates", CA_NAME] },
+    { path: ["Manage computer certificates", "Trusted Root Certification Authorities", "Certificates", CA_NAME] },
     "and delete it",
   ],
-  [`Or ${lowered(IN_POWERSHELL)}`, { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
+  [`Or ${lowered(POWERSHELL_ADMIN)}`, { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the removal command" }],
   [
-    `If it was trusted for every user, ${lowered(POWERSHELL_ADMIN)}`,
-    { command: `certutil -delstore ROOT "${CA_NAME}"`, label: "the administrator's removal command" },
+    `If you added it by hand, ${lowered(IN_POWERSHELL)}`,
+    { command: `certutil -user -delstore ROOT "${CA_NAME}"`, label: "the user store's removal command" },
   ],
 ];
 

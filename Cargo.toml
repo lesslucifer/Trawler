@@ -3,7 +3,7 @@ members = ["xtask", "ui/src-tauri", "login-service"]
 default-members = [".", "ui/src-tauri"]
 
 [workspace.package]
-version = "0.1.0-4"
+version = "0.1.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
@@ -26,9 +26,12 @@ print_stderr = "warn"
 name = "trawler"
 version.workspace = true
 edition = "2021"
-description = "A native HTTP(S) debugging proxy that intercepts and inspects network traffic, à la Charles / Proxyman"
+description = "A native HTTP(S) debugging proxy that intercepts and inspects network traffic"
 license = "MIT"
 repository = "https://github.com/lesslucifer/Trawler"
+authors = ["Vu Luu"]
+homepage = "https://github.com/lesslucifer/Trawler"
+publish = false
 
 [lib]
 name = "trawler"

@@ -2,6 +2,7 @@
 // keeps the signature of the real command it stands in for.
 #![allow(clippy::needless_pass_by_value, clippy::unnecessary_wraps)]
 
+pub mod about;
 #[cfg(test)]
 mod bundle;
 pub mod core;
@@ -10,8 +11,9 @@ pub mod data_window;
 pub mod keep_capturing;
 pub mod layout;
 pub mod lifecycle;
+pub mod links;
 pub mod login_item;
-mod menu;
+pub mod menu;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod reach;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
@@ -19,16 +21,22 @@ mod route;
 pub mod settings;
 #[cfg_attr(feature = "scenario", allow(dead_code))]
 mod setup;
+mod spawn;
 pub mod supervisor;
-#[cfg(test)]
-mod test_manifest;
 pub mod tray;
 pub mod update;
 pub mod view_prefs;
 pub mod window_geometry;
+#[cfg(test)]
+mod windows_manifest;
 
 #[cfg(feature = "scenario")]
 mod scenario;
+
+#[cfg(feature = "scenario")]
+use scenario::machine;
+#[cfg(not(feature = "scenario"))]
+use setup::machine;
 
 pub const CORE_FLAG: &str = "--core";
 pub const BACKGROUND_FLAG: &str = "--background";
@@ -56,6 +64,7 @@ fn second_launch_opens_window(argv: Vec<String>) -> bool {
     !background_launch(argv.into_iter().map(std::ffi::OsString::from))
 }
 
+#[allow(clippy::too_many_lines)] // the command registry is one flat list
 pub fn run() {
     let background = background_launch(std::env::args_os().skip(1));
     let mode = core::mode(std::env::var(core::ATTACH_VAR).ok().as_deref());
@@ -87,6 +96,7 @@ pub fn run() {
             }
         })
         .setup(move |app| {
+            app.manage(machine::<tauri::Wry>());
             lifecycle::install(app.handle(), setup::config_dir(app.handle()).ok());
             login_item::install(app.handle());
             core::setup(app, mode, background)?;
@@ -132,12 +142,23 @@ pub fn run() {
         login_item::login_item_write,
         lifecycle::tray_available,
         lifecycle::take_quit_request,
+        lifecycle::take_dialog_requests,
+        lifecycle::close_window,
         lifecycle::quit_app,
         #[cfg(feature = "e2e")]
         lifecycle::e2e_request_quit,
+        #[cfg(feature = "e2e")]
+        tray::e2e_tray_when_windowless,
+        #[cfg(feature = "e2e")]
+        menu::e2e_menu,
         data_window::open_data_window,
         data_window::take_data_payload,
-        update::quit_cancelled
+        update::quit_cancelled,
+        update::update_prefs_read,
+        update::update_automatic_write,
+        update::check_for_updates,
+        about::about_read,
+        links::open_link
     ]);
     #[cfg(feature = "scenario")]
     let builder = scenario::install(builder);

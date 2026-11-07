@@ -26,6 +26,17 @@ cd $WT && git push origin <branch> && gh workflow run ci.yml --ref <branch>
 # Router: watch (one background command; filter by sha)
 until id=$(gh run list --workflow ci.yml --branch <br> --limit 1 --json databaseId,status,headSha -q '.[0] | select(.status=="completed" and (.headSha|startswith("<sha8>"))) | .databaseId') && [ -n "$id" ]; do sleep 45; done; echo "RUN $id"; gh run view $id --json conclusion,jobs -q '.jobs[]|"\(.name): \(.conclusion)"'
 gh run list --workflow release.yml -L 3 --json databaseId,headBranch,status,conclusion -q '.[]|"\(.databaseId) \(.headBranch) \(.status) \(.conclusion)"'
+# Router: watch each staged owner action (run_in_background; say "Watching: …"); T = full tip
+until git -C $WT notes --ref=mr show $T >/dev/null 2>&1; do sleep 20; done; echo "SIGNED $T"   # mr confirm
+until [ "$(git -C $WT rev-parse HEAD)" != $T ]; do sleep 20; done; echo "COMMITTED"           # mr commit
+until git -C $M/Trawler merge-base --is-ancestor $T <target branch>; do sleep 20; done; echo MERGED
+until [ "$(git -C $M/Trawler ls-remote origin refs/heads/main | cut -f1)" = "$(git -C $M/Trawler rev-parse main)" ]; do sleep 30; done; echo PUSHED
+until [ -n "$(git -C $M/Trawler ls-remote --tags origin v<version>)" ]; do sleep 30; done; echo TAGGED   # then the release run watch below
+cd $M/Trawler && until [ "$(gh release view v<version> --json isDraft -q .isDraft)" = false ]; do sleep 120; done; echo PUBLISHED
+id=$(grep -o 'data-htmldoc-id="[^"]*"' <doc> | cut -d'"' -f2); n0=<open count>; until [ "$(curl -sS https://htmldoc.wfomobile.com/api/docs/$id/comments | jq '[.[]|select(.status=="open")]|length')" != $n0 ]; do sleep 60; done; echo COMMENTS
+# Router: heartbeat = CronCreate cron "*/10 * * * *", recurring, prompt = router-agent worker-ops heartbeat + Trawler refs:
+#   workers `ps -axo pid,command | grep -E 'claude.* -p ' | grep -o -E '\-n trawler-[a-z0-9-]+ .*--model [a-z0-9-]+'`; worktrees `git worktree list`
+#   + per row branch/tip/status/notes; runs `gh run list -L 5`; drafts `gh release list -L 3`; briefs in <router dir>/briefs
 # Worker: a parallel WU worktree
 git -C $M/Trawler worktree add ../Trawler-<short> -b wu/<epic-slug>/<slug> epic/<slug>
 # Router: retire a closed worktree (merged, clean, no process; keep the branch: notes live on it)

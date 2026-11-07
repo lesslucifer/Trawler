@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aed9eff9f34851f0dfaec94">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-88: the app ships every licence it links</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-88 — the app ships every licence it links</h1>
+      <p>One generated notice carries Trawler's licence and the licence text of every crate and npm package inside an installer.</p>
+      <div class="meta">v1 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W2</strong> · UC-INSTALL · relates to
+        <a href="dec-87-one-licence-one-holder-no-crate-published.html">DEC-87</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="flow">The notice</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  M["cargo metadata: normal deps of trawler-ui, every platform"] --> G["cargo xtask licenses"]
+  P["pnpm licenses list --prod"] --> G
+  L["LICENSE (MIT, Vu Luu)"] --> G
+  S["xtask/licenses/: MIT · Apache-2.0 · BSD-3-Clause · MPL-2.0"] --> G
+  G --> N["THIRD-PARTY-NOTICES.txt (committed)"]
+  N --> R["bundle.resources → every installer"]
+      </pre>
+      <div class="caption">Generated, committed, bundled. A unit test regenerates it and fails when it is stale.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>The scope is what an installer carries: the normal-dependency closure of <code>trawler-ui</code> on every target platform, plus the UI's production npm packages (fonts included); build-dependencies and dev-dependencies are out</td><td>a licence binds the copies distributed; one file serves every OS's installer, so it lists every platform's crates</td></tr>
+      <tr><td>2</td><td>Trawler's own <code>LICENSE</code> comes first, then each distinct licence text once (whitespace-insensitive) followed by every package it covers</td><td>MIT asks its notice to travel with every copy, Trawler's included; ~600 packages share ~300 texts</td></tr>
+      <tr><td>3</td><td>Texts come from each package's own <code>LICENSE*</code> / <code>LICENCE*</code> / <code>COPYING*</code> / <code>NOTICE*</code> files (never <code>*.spdx</code> tags) and the manifest's <code>license-file</code>; a package with none is listed under the standard text of a licence its expression offers (MIT, then Apache-2.0, BSD-3-Clause, MPL-2.0) with its authors as holders; an <code>AND</code> expression or no offered standard text refuses by name</td><td>~45 crates (objc2, webview2-com, selectors…) publish no file; a refusal beats a silently incomplete notice</td></tr>
+      <tr><td>4</td><td><code>THIRD-PARTY-NOTICES.txt</code> is committed at the root and regenerated with <code>cargo xtask licenses</code> whenever <code>Cargo.lock</code> or <code>pnpm-lock.yaml</code> moves; the drift test names the command</td><td>a reviewer sees licence changes in the diff; the release never ships a stale list</td></tr>
+      <tr><td>5</td><td>The notice ships as a Tauri resource (<code>bundle.resources</code>: <code>Contents/Resources/</code> on macOS, beside the binary elsewhere), never as <code>bundle.licenseFile</code></td><td><code>licenseFile</code> turns into a <code>.dmg</code> agreement prompt (DEC-87 rule 1); W4's About opens this file</td></tr>
+    </table>
+
+    <h2 id="compatibility">Compatibility with MIT</h2>
+    <table data-c="compatibility">
+      <tr><th>Licence</th><th>Who</th><th>Duty</th></tr>
+      <tr><td>MIT · Apache-2.0 · BSD · ISC · Zlib · BSL-1.0 · Unlicense · 0BSD · BlueOak-1.0.0</td><td>almost every crate and npm package</td><td>keep the notice (Apache: its NOTICE too) — the file does</td></tr>
+      <tr><td>MPL-2.0</td><td>cssparser, cssparser-macros, selectors, dtoa-short, option-ext</td><td>file-level copyleft: unmodified, so only the notice and a pointer to the source (crates.io) — no effect on Trawler's MIT</td></tr>
+      <tr><td>CDLA-Permissive-2.0</td><td>webpki-roots (root certificate data)</td><td>keep the licence text</td></tr>
+      <tr><td>Unicode-3.0</td><td>unicode-ident and the ICU crates</td><td>keep the notice</td></tr>
+      <tr><td>OFL-1.1</td><td>Inter, DM Mono, Instrument Serif</td><td>bundled with software is allowed; keep the licence; never sell the fonts alone</td></tr>
+      <tr><td>LGPL-2.1-or-later</td><td>r-efi (offered as <code>MIT OR Apache-2.0 OR LGPL</code>)</td><td>none: taken under MIT</td></tr>
+    </table>
+
+    <h2 id="limits">Known limits</h2>
+    <table data-c="limits">
+      <tr><th>Limit</th><th>Why accepted</th></tr>
+      <tr><td>The drift test runs a full <code>cargo metadata</code>, which fetches other platforms' crate sources once</td><td>the same fetch a build does from the lockfile; no test server or public endpoint is called by the test itself</td></tr>
+      <tr><td>The file is ~0.9 MB of plain text</td><td>it is the complete set of texts the licences require; dedup already halves it</td></tr>
+      <tr><td>A licence change inside an unchanged crate version is not detected</td><td>a published crate version is immutable</td></tr>
+    </table>
+
+    <h2 id="held">Held by</h2>
+    <p data-c="held"><code>licenses</code>' unit tests (render dedups and orders, falls back, refuses; files read, tags skipped; the committed notice is the generated one; MPL, CDLA, Unicode and OFL texts present; the conf bundles it) and <code>xtask/tests/package_bundle.rs</code> (the packaged <code>Trawler.app</code> carries the committed file).</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

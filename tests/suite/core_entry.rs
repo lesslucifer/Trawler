@@ -62,5 +62,6 @@ async fn an_unknown_flag_exits_with_usage_before_binding_anything() {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("unknown argument --no-such-flag"), "stderr: {stderr}");
     assert!(stderr.contains("usage: trawler"), "stderr: {stderr}");
+    assert!(!stderr.contains('\u{1b}'), "a piped stderr carries no ANSI codes: {stderr:?}");
     assert!(out.stdout.is_empty(), "nothing on stdout without a bound core");
 }

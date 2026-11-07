@@ -47,19 +47,25 @@
         <tr>
           <td><a href="web-ui.html#uc-bg"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-BG</span></td>
-          <td>Keep capturing after the window closes: the first ✕ asks once and the answer is a switch in Settings → General; with it on the app and its core run windowless behind the menu-bar icon, ⌘Q and the icon's Quit always quit through DEC-64's check, and Open Trawler at login starts it with no window (DEC-77)</td>
+          <td>Keep capturing after the window closes: the first ✕ asks once and the answer is a switch in Settings → General; with it on the app and its core run windowless behind the menu-bar icon, ⌘Q and the icon's Quit always quit through DEC-64's check, and Open Trawler at login starts it with no window; the icon's Settings… rebuilds the main window with Settings as its dialog (DEC-77, E-PRORELEASE.W19)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
           <td><a href="web-ui.html#uc-install"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-INSTALL</span></td>
-          <td>Install Trawler from the published release with the OS's own artifact (dmg · NSIS and msi · AppImage, deb and rpm (rpm in finals only), x64 and arm64); the first open shows the OS's prompt for an unsigned app and the release notes name the way past it; then the app is UC-4 on every desktop (DEC-86)</td>
+          <td>Install Trawler from the published release with the OS's own artifact (dmg · NSIS and msi · AppImage, deb and rpm (rpm in finals only), x64 and arm64); the first open shows the OS's prompt for an unsigned app and the release notes name the way past it, say what is new and how to check the download against SHA256SUMS; then the app is UC-4 on every desktop (DEC-86); every package carries the MIT licence and Vu Luu as publisher (DEC-87) and the third-party notice (DEC-88)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
           <td><a href="web-ui.html#uc-update"><code>web-ui.html</code></a></td>
           <td><span class="badge id">UC-UPDATE</span></td>
-          <td>Take a new version from inside the app: a check at launch (once a day) and on Check for Updates…, a dialog that names both versions and asks, a signature that must name the version, the quit through DEC-64's check, a relaunch with the CA and settings kept; never silent, deb and rpm in place (DEC-82)</td>
+          <td>Take a new version from inside the app: a check at launch (once a day, unless check for updates automatically is off, DEC-90) and on Check for Updates… or check now, a dialog that names both versions and asks, a signature that must name the version, the quit through DEC-64's check, a relaunch with the CA and settings kept; never silent, deb and rpm in place (DEC-82)</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="web-ui.html#uc-about"><code>web-ui.html</code></a></td>
+          <td><span class="badge id">UC-ABOUT</span></td>
+          <td>See which Trawler runs and get help: one About dialog of the main window on every OS (version, MIT licence and copyright, logo, user guide, report an issue, source code; Third-party licences and Privacy pages); Help per OS (F1 opens the guide off macOS); a report prefilled with version, OS, CPU and install kind only; the version, check now and the launch-check switch in Settings → General (DEC-90)</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>

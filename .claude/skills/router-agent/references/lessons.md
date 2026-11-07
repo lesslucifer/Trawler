@@ -4,10 +4,10 @@ Source: Trawler router session `55b6f381-a069-4829-95ef-a1256099dbac` (renamed t
 
 ## Top 10 (ranked by cost of the failures they prevent)
 1. Send the push in the same turn as the ask and say "Sent (id N)"; never promise a future message. (A7)
-2. Read the real state (git, origin, tags, runs) before every instruction; the owner may already have acted. (A10, B5, B6)
+2. Read the real state (git, origin, tags, runs) before every instruction and watch it after: the owner may already have acted; never wait to be told. (A10, B5, B6, C10)
 3. Verify third-party behaviour a design depends on in source at the pinned version; PLAUSIBLE is a lead. (B3, B4)
 4. Pass the model explicitly on every worker and review; check yours and theirs at start. (B7)
-5. Every message ends with "What you need to do now:"; every ask self-contained; never point back. (A1–A5, A8)
+5. One current task per message, ending "What you need to do now:"; self-contained; never point back, even on a re-ask. (A1–A5, A8, A13, A14)
 6. Headless workers: fresh per phase, `ls`-checked durable brief, one non-stop run, no mid-run questions, current router name. (C1–C4, C6)
 7. Never do the work, never launder a denial: the owner runs `mr`, merges, pushes, tags. (C5, D1, D2)
 8. Independent read-only Opus review of everything outside the gate before the owner signs. (B7, G2)
@@ -27,6 +27,8 @@ Source: Trawler router session `55b6f381-a069-4829-95ef-a1256099dbac` (renamed t
 - A10 Staged "merge, push, tag" the owner had already done; assumed merge-before-tag (release.yml builds the tagged commit) → read state; check what the workflow requires.
 - A11 Same unanswered gate question for hours → ask twice, state the default, record a follow-up *(inference)*.
 - A12 Kept: stating readings ("pic" = packaging epic, "1990" = 1.99.0) and structured questions for mixed replies.
+- A13 Several WUs' full command sets in one message; asks sent mid-task were missed ("my attention is limited, one task at a time") → owner queue, one current task in full, `Up next` one line each, next task sent when the watcher fires.
+- A14 Re-asks and reminders pointed back, statuses carried other WUs and forwarded worker reports; the owner lost the thread ("give me the detailed information of that task again … I can't remember things from the past, you sent me a ton of messages") → attention is the first principle: every message self-contained for its one task (read-first, cd command, what they will see, how done is detected); re-asks re-send it in full; digest reports, never forward.
 
 ## B. Accuracy
 - B1 "Don't sign W6" for a bug in W4's code, withdrawn → find the commit/WU holding the defect first.
@@ -48,6 +50,8 @@ Source: Trawler router session `55b6f381-a069-4829-95ef-a1256099dbac` (renamed t
 - C7 Workers' try helpers broken (syntax error, HTML for a JSON test, helper in another scratchpad) → run once; stable path.
 - C8 Router's temp review worktree held the epic branch; back-merge blocked → remove temp worktrees.
 - C9 Hotfix landed as a one-epic collapse straight to main; owner wanted an epic with parallel WUs, main only after green → ask or default to that.
+- C10 The owner had to say "done" after every sign/merge/push/tag; the router idled until told → watcher per staged action, same turn; 10-minute heartbeat.
+- C11 A worker was announced as spawned but never started (`command -v claude` empty) → absolute claude path; announce only after `ps` shows it.
 
 ## D. Permissions
 - D1 Router merged twice, then "Merge Without Review" was denied → the owner merges; check capability before promising automation.

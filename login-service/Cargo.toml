@@ -4,6 +4,8 @@ version.workspace = true
 edition = "2021"
 description = "Trawler — safe wrapper over macOS SMAppService, the one crate allowed unsafe (DEC-84)"
 license = "MIT"
+authors = ["Vu Luu"]
+homepage = "https://github.com/lesslucifer/Trawler"
 publish = false
 
 [lib]

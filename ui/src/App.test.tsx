@@ -1,6 +1,7 @@
 import { cleanup, render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import App, { CA_READ_PATIENCE_MS, LAUNCH_PATIENCE_MS, WATCH_MS } from "./App";
 import { ApiError, UNREACHABLE } from "./api";
 import type { Filter, FlowSummary, FlowView, ReachState, StreamHandlers, TrawlerApi } from "./api";
@@ -62,6 +63,13 @@ function onMacHost() {
   Object.defineProperty(window.navigator, "userAgent", {
     configurable: true,
     value: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15",
+  });
+}
+
+function onWindowsHost() {
+  Object.defineProperty(window.navigator, "userAgent", {
+    configurable: true,
+    value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
   });
 }
 
@@ -707,8 +715,11 @@ test("Stop routing invokes unset_proxy after the proxy was set", async () => {
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("unset_proxy"));
 });
 
-test("remove the certificate hands the shell the certificate the core serves, then reads this machine again", async () => {
-  onMacHost();
+test.each([
+  ["Mac", onMacHost],
+  ["PC", onWindowsHost],
+])("remove the certificate on a %s hands the shell the certificate the core serves, then reads this machine again", async (_, onHost) => {
+  onHost();
   watchPaused();
   let trust = "trusted";
   vi.mocked(invoke).mockImplementation(async (name: string) => {
@@ -3689,6 +3700,86 @@ describe("what the user chose stays chosen", () => {
       expect(invoke).toHaveBeenCalledWith("view_prefs_write", {
         prefs: { leg: "request", bodyMode: "pretty", lastPlatform: "android-sim", chips: [] },
       }),
+    );
+  });
+});
+
+// W19: Settings and About are the main window's dialogs. A quit asked over
+// Settings shows DEC-64's check in its place; cancelling the quit finds
+// Settings again; Close Window closes the topmost dialog before the window.
+describe("the shell's dialogs in the main window", () => {
+  const handlers = new Map<string, () => void>();
+  let pendingDialogs: unknown[][] = [];
+  let quitPending = false;
+
+  beforeEach(() => {
+    handlers.clear();
+    pendingDialogs = [];
+    quitPending = false;
+    vi.mocked(listen).mockImplementation(async (event, handler) => {
+      handlers.set(String(event), () => handler({ event: String(event), id: 0, payload: undefined as never }));
+      return () => {};
+    });
+    vi.mocked(invoke).mockImplementation(async (name: string) => {
+      if (name === "take_dialog_requests") return pendingDialogs.shift() ?? [];
+      if (name === "take_quit_request") {
+        const taken = quitPending;
+        quitPending = false;
+        return taken;
+      }
+      if (name === "proxy_status") return { status: "ours" };
+      if (name === "keep_capturing_read") return "off";
+      if (name === "tray_available") return true;
+      if (name === "login_item_read") return { on: false, starts: null };
+      if (name === "update_prefs_read") return { version: "0.1.0-5", installed: true, automatic: true };
+      if (name === "about_read") return { version: "0.1.0-5", notice: null };
+      return undefined;
+    });
+  });
+
+  const announce = (event: string) => act(() => handlers.get(event)?.());
+  const ask = async (...dialogs: unknown[]) => {
+    await waitFor(() => expect(handlers.has("dialog-requested")).toBe(true));
+    pendingDialogs.push(dialogs);
+    announce("dialog-requested");
+  };
+
+  test("a quit over Settings shows its check instead, and a cancelled quit finds Settings again", async () => {
+    const { api } = mockApi(() => [flow()]);
+    render(<App api={api} initialState={PROVEN} />);
+    await screen.findByTestId("flow-row");
+    await ask({ dialog: "settings" });
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+
+    quitPending = true;
+    announce("quit-requested");
+    expect(await screen.findByTestId("proxy-close-dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Settings" })).toBeNull();
+
+    announce("close-window-requested");
+    await waitFor(() => expect(screen.queryByTestId("proxy-close-dialog")).toBeNull());
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "quit_cancelled")).toHaveLength(1);
+  });
+
+  test("About waits behind Settings, and Close Window closes each dialog before the window", async () => {
+    const { api } = mockApi(() => [flow()]);
+    render(<App api={api} initialState={PROVEN} />);
+    await screen.findByTestId("flow-row");
+    await ask({ dialog: "settings" }, { dialog: "about", page: "privacy", unopened: null });
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "About Trawler" })).toBeNull();
+
+    announce("close-window-requested");
+    expect(await screen.findByRole("dialog", { name: "About Trawler" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Privacy" })).toBeInTheDocument();
+
+    announce("close-window-requested");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "close_window")).toHaveLength(0);
+    announce("close-window-requested");
+    await waitFor(() =>
+      expect(vi.mocked(invoke).mock.calls.filter(([n]) => n === "close_window")).toHaveLength(1),
     );
   });
 });

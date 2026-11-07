@@ -11,11 +11,11 @@ use tauri::webview::InvokeRequest;
 use tauri::{App, Listener, Manager, WebviewWindow};
 use trawler_ui_lib::core::Core;
 use trawler_ui_lib::keep_capturing::{self, write_keep_capturing};
-use trawler_ui_lib::lifecycle::{self, Lifecycle};
+use trawler_ui_lib::lifecycle::{self, DialogRequest, Lifecycle};
 use trawler_ui_lib::settings::MAIN_WINDOW;
 use trawler_ui_lib::supervisor::{CoreState, Supervisor};
 
-use crate::common::{alive, bindable, eventually, flows_status, launch};
+use crate::common::{alive, bindable, eventually, flows_status, launch, LOCAL_URL};
 
 const SHIPPED_CONFIG: &str = include_str!("../../tauri.conf.json");
 const ROLE_VAR: &str = "TRAWLER_WINDOWLESS_ROLE_DIR";
@@ -78,7 +78,7 @@ fn invoke(window: &WebviewWindow<MockRuntime>, cmd: &str, body: serde_json::Valu
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::Json(body),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),
@@ -183,9 +183,9 @@ fn the_page_reads_whether_this_host_has_a_menu_bar_icon() {
     }
 }
 
-fn announced_quits(app: &App<MockRuntime>) -> std::sync::mpsc::Receiver<()> {
+fn announced(app: &App<MockRuntime>, event: &str) -> std::sync::mpsc::Receiver<()> {
     let (sender, receiver) = std::sync::mpsc::channel();
-    app.listen(lifecycle::QUIT_REQUEST_EVENT, move |_| {
+    app.listen(event, move |_| {
         let _ = sender.send(());
     });
     receiver
@@ -197,7 +197,7 @@ fn a_quit_request_with_no_window_builds_the_main_window_and_announces_to_it() {
     let app = app(dir.path(), true);
     lifecycle::open_at_launch(app.handle(), true).unwrap();
     assert!(app.webview_windows().is_empty());
-    let announced = announced_quits(&app);
+    let announced = announced(&app, lifecycle::QUIT_REQUEST_EVENT);
 
     lifecycle::request_quit(app.handle()).join().unwrap();
 
@@ -210,7 +210,7 @@ fn a_quit_request_with_the_window_open_reuses_it() {
     let dir = tempfile::tempdir().unwrap();
     let app = app(dir.path(), true);
     let main = lifecycle::build_main(app.handle()).unwrap();
-    let announced = announced_quits(&app);
+    let announced = announced(&app, lifecycle::QUIT_REQUEST_EVENT);
 
     lifecycle::request_quit(app.handle()).join().unwrap();
 
@@ -241,6 +241,22 @@ fn a_main_window_destroyed_under_a_pending_quit_request_is_rebuilt_to_ask() {
 
     eventually("the window opens to ask", || app.get_webview_window(MAIN_WINDOW).is_some());
     assert!(app.state::<Lifecycle>().take_quit_request(), "and the new window finds the request");
+}
+
+#[test]
+fn a_main_window_destroyed_under_a_pending_dialog_request_is_rebuilt_to_show_it_once() {
+    let dir = tempfile::tempdir().unwrap();
+    write_keep_capturing(dir.path(), true).unwrap();
+    let app = app(dir.path(), true);
+    let told = announced(&app, lifecycle::DIALOG_REQUEST_EVENT);
+    app.state::<Lifecycle>().request_dialog(DialogRequest::Settings);
+
+    assert!(!lifecycle::on_window_destroyed(app.handle(), MAIN_WINDOW), "the app stays");
+
+    eventually("the window opens to show it", || app.get_webview_window(MAIN_WINDOW).is_some());
+    eventually("and is told", || told.try_recv().is_ok());
+    assert_eq!(app.state::<Lifecycle>().take_dialog_requests(), [DialogRequest::Settings]);
+    assert_eq!(app.state::<Lifecycle>().take_dialog_requests(), [], "shown once, never later");
 }
 
 #[test]

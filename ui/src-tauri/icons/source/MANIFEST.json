@@ -1,0 +1,196 @@
+{
+  "signed": "7b2 Sonar, ink + amber, wordmark DM Mono — owner, 2026-11-06 (E-PRORELEASE.W9)",
+  "palette": {
+    "tile": "#2b2622",
+    "ink": "#f7f5f0",
+    "amber": "#e0a43a",
+    "stopped-tile": "#6f6a64",
+    "wordmark-on-light": "#1f1c19",
+    "wordmark-on-dark": "#f2efe8",
+    "social-canvas": "#1b1916",
+    "tagline": "#aea69c",
+    "tile-edge": "#ffffff at 10-14% opacity",
+    "paper": "#f4f1ea",
+    "deep-amber": "#a8741a",
+    "label-chip": "#7a756f"
+  },
+  "files": [
+    {
+      "file": "icon.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 651,
+      "purpose": "Master app icon: 824 body, 185 corner on the macOS 1024 grid, transparent outside",
+      "consumer": "W3: cargo xtask icons → icon.icns/.ico/PNG set (bundle.icon) above 32 px; W10: DMG/NSIS/WiX art"
+    },
+    {
+      "file": "icon-small.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 601,
+      "purpose": "Small-size variant, whole-pixel strokes on a 16 grid",
+      "consumer": "W3: the 16/24/32 layers of .icns/.ico"
+    },
+    {
+      "file": "tray-running-template.svg",
+      "viewBox": "0 0 18 18",
+      "size": "18x18",
+      "bytes": 466,
+      "purpose": "macOS menu-bar template, running: ring + lit sweep + blip, black + alpha",
+      "consumer": "W3: tray-running.png 18/36, icon_as_template(true) on macOS only"
+    },
+    {
+      "file": "tray-stopped-template.svg",
+      "viewBox": "0 0 18 18",
+      "size": "18x18",
+      "bytes": 262,
+      "purpose": "macOS menu-bar template, stopped: empty ring + centre dot (shape differs, not colour)",
+      "consumer": "W3: tray-stopped.png 18/36, macOS only"
+    },
+    {
+      "file": "tray-running.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 601,
+      "purpose": "Windows/Linux tray, running: dark tile, amber sweep and blip",
+      "consumer": "W3: coloured tray PNG 16/20/24/32 (Windows), 22/24/32 (Linux)"
+    },
+    {
+      "file": "tray-stopped.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 442,
+      "purpose": "Windows/Linux tray, stopped: muted tile, ring + centre dot",
+      "consumer": "W3: coloured tray PNG 16/20/24/32 (Windows), 22/24/32 (Linux)"
+    },
+    {
+      "file": "wordmark-light.svg",
+      "viewBox": "0 0 740 168",
+      "size": "740x168",
+      "bytes": 4037,
+      "purpose": "Lockup for light backgrounds: tile + 'trawler' in DM Mono as outlines, text #1f1c19",
+      "consumer": "W3: README <picture> light, About, onboarding header (W4)"
+    },
+    {
+      "file": "wordmark-dark.svg",
+      "viewBox": "0 0 740 168",
+      "size": "740x168",
+      "bytes": 4037,
+      "purpose": "Lockup for dark backgrounds: tile + 'trawler' in DM Mono as outlines, text #f2efe8",
+      "consumer": "W3: README <picture> dark, About, onboarding header (W4)"
+    },
+    {
+      "file": "favicon.svg",
+      "viewBox": "0 0 16 16",
+      "size": "16x16",
+      "bytes": 601,
+      "purpose": "Favicon: the small variant",
+      "consumer": "W3: ui/index.html favicon + 32 px PNG"
+    },
+    {
+      "file": "mark-mono-black.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 518,
+      "purpose": "One-colour mark, black, no tile",
+      "consumer": "print and one-colour uses; W10 if art needs a mono mark"
+    },
+    {
+      "file": "mark-mono-white.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 518,
+      "purpose": "One-colour mark, white, no tile",
+      "consumer": "print and one-colour uses on dark"
+    },
+    {
+      "file": "icon-ink.svg",
+      "viewBox": "0 0 1024 1024",
+      "size": "1024x1024",
+      "bytes": 651,
+      "purpose": "Ink-only fallback of the master icon (no amber)",
+      "consumer": "any place colour is not allowed (DEC-19 UI surfaces)"
+    },
+    {
+      "file": "dmg-background.svg",
+      "viewBox": "0 0 660 400",
+      "size": "660x400",
+      "bytes": 4781,
+      "purpose": "DMG window background (option B): canvas, sonar rings centred on the app icon at (180,170), amber arrow to Applications at (480,170), #7a756f label chips under both icons, lockup at the foot",
+      "consumer": "W3: cargo xtask icons → dmg-background.png 660x400 → bundle.macOS.dmg.background (positions stay at the defaults)"
+    },
+    {
+      "file": "dmg-background@2x.svg",
+      "viewBox": "0 0 660 400",
+      "size": "1320x800",
+      "bytes": 4782,
+      "purpose": "The DMG background at 2x: same drawing, 1320x800 render size",
+      "consumer": "W3: the Retina form of the DMG background (PNG at 144 dpi or a two-resolution TIFF; W3 proves which Finder shows sharp)"
+    },
+    {
+      "file": "nsis-header.svg",
+      "viewBox": "0 0 150 57",
+      "size": "150x57",
+      "bytes": 3670,
+      "purpose": "NSIS page header (option C): dark tile band, sonar mark, wordmark",
+      "consumer": "W3: nsis-header.bmp 150x57, 24-bit, no alpha → bundle.windows.nsis.headerImage"
+    },
+    {
+      "file": "nsis-sidebar.svg",
+      "viewBox": "0 0 164 314",
+      "size": "164x314",
+      "bytes": 4452,
+      "purpose": "NSIS welcome/finish sidebar (option C): canvas, tile + wordmark top, big lit sweep from the bottom-left corner",
+      "consumer": "W3: nsis-sidebar.bmp 164x314, 24-bit, no alpha → bundle.windows.nsis.sidebarImage"
+    },
+    {
+      "file": "wix-banner.svg",
+      "viewBox": "0 0 493 58",
+      "size": "493x58",
+      "bytes": 569,
+      "purpose": "WiX banner (option C): white text area, amber 3 px rule at the foot, sonar mark at the right",
+      "consumer": "W3: wix-banner.bmp 493x58, 24-bit, no alpha → bundle.windows.wix.bannerPath"
+    },
+    {
+      "file": "wix-dialog.svg",
+      "viewBox": "0 0 493 312",
+      "size": "493x312",
+      "bytes": 4618,
+      "purpose": "WiX welcome/completion dialog (option C): white, the NSIS sidebar art in the left 164 px",
+      "consumer": "W3: wix-dialog.bmp 493x312, 24-bit, no alpha → bundle.windows.wix.dialogImagePath"
+    },
+    {
+      "file": "social-preview.svg",
+      "viewBox": "0 0 1280 640",
+      "size": "1280x640",
+      "bytes": 31391,
+      "purpose": "GitHub social preview 1280x640 (option C, replaces the W9 layout): tile, wordmark and tagline left, big lit sweep right",
+      "consumer": "W3: social-preview.png the owner uploads (Q11)"
+    },
+    {
+      "file": "routing-ours.svg",
+      "viewBox": "0 0 18 18",
+      "size": "18x18",
+      "bytes": 136,
+      "purpose": "Tray menu routing-line dot, ours: a #4cc38a disc (the UI's ok token)",
+      "consumer": "E-PRORELEASE.W20: routing-ours.png 36, the tray menu's routing line icon"
+    },
+    {
+      "file": "routing-foreign.svg",
+      "viewBox": "0 0 18 18",
+      "size": "18x18",
+      "bytes": 136,
+      "purpose": "Tray menu routing-line dot, foreign: a #e5484d disc (the UI's warn token)",
+      "consumer": "E-PRORELEASE.W20: routing-foreign.png 36, the tray menu's routing line icon"
+    },
+    {
+      "file": "routing-off.svg",
+      "viewBox": "0 0 18 18",
+      "size": "18x18",
+      "bytes": 136,
+      "purpose": "Tray menu routing-line dot, off: a #aea69c disc (the UI's ink-mute token)",
+      "consumer": "E-PRORELEASE.W20: routing-off.png 36, the tray menu's routing line icon"
+    }
+  ],
+  "installer-art-signed": "dmg=B nsis=C wix=C social=C — owner, 2026-11-06 (E-PRORELEASE.W10)"
+}

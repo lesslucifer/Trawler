@@ -138,19 +138,16 @@ pub fn run_value_program(query_output: &str) -> Option<String> {
 
 #[cfg(windows)]
 mod registry {
-    use std::os::windows::process::CommandExt;
     use std::path::Path;
-    use std::process::{Command, Output};
+    use std::process::Output;
 
     use super::{run_value, run_value_program, utf8, LoginItem};
 
     const RUN_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
     const VALUE: &str = "Trawler";
-    // The app has no console (windows_subsystem), so reg.exe would flash one.
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
     fn reg(args: &[&str]) -> std::io::Result<Output> {
-        Command::new("reg").args(args).creation_flags(CREATE_NO_WINDOW).output()
+        crate::spawn::command("reg").args(args).output()
     }
 
     pub fn read() -> LoginItem {
@@ -237,6 +234,16 @@ pub fn is_app_bundle_binary(exe: &Path) -> bool {
 pub const UNAVAILABLE: &str =
     "unavailable — open Trawler from the installed app to start it at login.";
 
+pub const UNSIGNED: &str =
+    "unavailable — macOS starts only a developer-signed app at login, and this build is not.";
+
+pub const OLD_MACOS: &str =
+    "unavailable — Trawler adds itself to the login items only on macOS 13 or later.";
+
+pub fn signature_is_ad_hoc(codesign_display: &str) -> bool {
+    codesign_display.lines().any(|line| line.trim() == "Signature=adhoc")
+}
+
 #[derive(Clone, Debug)]
 pub enum Place {
     Service(Arc<dyn LoginRegistry>),
@@ -273,27 +280,40 @@ impl Place {
     }
 }
 
-pub struct LoginItemPlace(pub Option<Place>);
+pub struct LoginItemPlace(pub Result<Place, &'static str>);
 
+// launchd starts a registered agent at once (RunAtLoad) and at each login, and
+// macOS kills an ad-hoc-signed one before its first instruction (CODESIGNING,
+// "Launch Constraint Violation"; rc5 on macOS 26) with a crash dialog each
+// time. So an ad-hoc build registers nothing, and takes back an agent 0.1.0-5
+// registered.
 #[cfg(target_os = "macos")]
-fn this_hosts_place<R: Runtime>(_app: &AppHandle<R>) -> Option<Place> {
-    std::env::current_exe().ok().filter(|exe| is_app_bundle_binary(exe))?;
-    let agent = trawler_login_service::AgentService::new(&format!("{LABEL}.plist"))?;
-    Some(Place::Service(Arc::new(BundledAgent(agent))))
+fn this_hosts_place<R: Runtime>(_app: &AppHandle<R>) -> Result<Place, &'static str> {
+    let exe =
+        std::env::current_exe().ok().filter(|exe| is_app_bundle_binary(exe)).ok_or(UNAVAILABLE)?;
+    let agent =
+        trawler_login_service::AgentService::new(&format!("{LABEL}.plist")).ok_or(OLD_MACOS)?;
+    let display = crate::spawn::command("codesign").arg("-dv").arg(&exe).output();
+    if display.is_ok_and(|out| signature_is_ad_hoc(&String::from_utf8_lossy(&out.stderr))) {
+        let _ = agent.unregister();
+        return Err(UNSIGNED);
+    }
+    Ok(Place::Service(Arc::new(BundledAgent(agent))))
 }
 
 #[cfg(windows)]
-fn this_hosts_place<R: Runtime>(_app: &AppHandle<R>) -> Option<Place> {
-    Some(Place::Registry)
+fn this_hosts_place<R: Runtime>(_app: &AppHandle<R>) -> Result<Place, &'static str> {
+    Ok(Place::Registry)
 }
 
 #[cfg(not(any(target_os = "macos", windows)))]
-fn this_hosts_place<R: Runtime>(app: &AppHandle<R>) -> Option<Place> {
+fn this_hosts_place<R: Runtime>(app: &AppHandle<R>) -> Result<Place, &'static str> {
     let root = std::env::var_os("XDG_CONFIG_HOME")
         .map(PathBuf::from)
         .filter(|dir| dir.is_absolute())
-        .or_else(|| app.path().home_dir().ok().map(|home| home.join(".config")))?;
-    Some(Place::File { format: Format::Autostart, root })
+        .or_else(|| app.path().home_dir().ok().map(|home| home.join(".config")))
+        .ok_or(UNAVAILABLE)?;
+    Ok(Place::File { format: Format::Autostart, root })
 }
 
 pub fn install<R: Runtime>(app: &AppHandle<R>) {
@@ -301,7 +321,7 @@ pub fn install<R: Runtime>(app: &AppHandle<R>) {
 }
 
 fn place<'a>(place: &'a State<'_, LoginItemPlace>) -> Result<&'a Place, String> {
-    place.0.as_ref().ok_or_else(|| UNAVAILABLE.into())
+    place.0.as_ref().map_err(|why| (*why).to_string())
 }
 
 #[tauri::command]
@@ -344,6 +364,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn each_reason_reads_as_a_state_and_names_macos_as_macos() {
+        for reason in [UNAVAILABLE, UNSIGNED, OLD_MACOS] {
+            assert!(reason.starts_with("unavailable — "), "{reason}");
+            assert!(!reason.contains("macos"), "{reason}");
+        }
+        assert!(OLD_MACOS.contains("macOS 13"));
+    }
+
+    // `codesign -dv` on the rc5 bundle, and on a Developer ID one.
+    #[test]
+    fn only_an_ad_hoc_signature_reads_ad_hoc() {
+        let rc5 = "Executable=/Applications/Trawler.app/Contents/MacOS/trawler-ui\nCodeDirectory v=20500 size=46832 flags=0x10002(adhoc,runtime) hashes=1457+3 location=embedded\nSignature=adhoc\nTeamIdentifier=not set\n";
+        let developer_id = "CodeDirectory v=20500 size=9000 flags=0x10000(runtime) hashes=270+7 location=embedded\nSignature size=9045\nAuthority=Developer ID Application: Example (ABCDE12345)\nTeamIdentifier=ABCDE12345\n";
+        assert!(signature_is_ad_hoc(rc5));
+        assert!(!signature_is_ad_hoc(developer_id));
+        assert!(!signature_is_ad_hoc(""));
+    }
+
+    #[test]
     fn the_bundled_agent_is_named_by_the_label_and_starts_with_the_background_flag() {
         let shell = Path::new(env!("CARGO_MANIFEST_DIR"));
         let plist =
@@ -360,6 +399,8 @@ mod tests {
         );
     }
 
+    // A rooted path with no drive is not absolute on Windows, which has no AppImage.
+    #[cfg(unix)]
     #[test]
     fn an_appimage_is_started_at_login_from_its_file_not_its_mount() {
         let exe = PathBuf::from("/tmp/.mount_TrawlXYZ/usr/bin/trawler-ui");

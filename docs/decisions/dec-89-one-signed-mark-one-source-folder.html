@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aedb6099f34851f0dfaee06">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-89: one signed mark, one source folder</title>
+  <style>
+    .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: middle; border: 1px solid #8884; }
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-89 — one signed mark, one source folder</h1>
+      <p>The owner signed 7b2 Sonar, ink + amber, DM Mono wordmark; its hand-authored SVGs in one folder are the only source every icon, tray glyph and brand image is made from.</p>
+      <div class="meta">v3 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W9</strong>, amended by <strong>E-PRORELEASE.W10</strong> (installer art) and <strong>E-PRORELEASE.W3</strong> (the generated set) · UC-INSTALL · relates to
+        <a href="dec-19-chromatic-accent-closed.html">DEC-19</a> · <a href="dec-88-the-app-ships-every-licence-it-links.html">DEC-88</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="mark">The mark</h2>
+    <div class="cards" data-c="mark">
+      <div class="card"><img src="../../ui/src-tauri/icons/source/icon.svg" width="128" height="128" alt="7b2 Sonar app icon"><br>app icon</div>
+      <div class="card"><img src="../../ui/src-tauri/icons/source/tray-running-template.svg" width="36" height="36" alt="tray running"> <img src="../../ui/src-tauri/icons/source/tray-stopped-template.svg" width="36" height="36" alt="tray stopped"><br>macOS tray running · stopped</div>
+      <div class="card"><img src="../../ui/src-tauri/icons/source/wordmark-light.svg" width="296" height="67" alt="wordmark"><br>wordmark</div>
+    </div>
+    <p class="caption">A fish-finder ring, its sweep lit, one blip found: Trawler reading the traffic it catches.</p>
+
+    <h2 id="flow">One source</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart LR
+  S["ui/src-tauri/icons/source/*.svg + MANIFEST.json (signed, hand-authored)"] --> X["cargo xtask icons"]
+  X --> I["icon set: .icns · .ico · PNGs (bundle.icon)"]
+  X --> T["tray PNGs: macOS template pair · coloured pair"]
+  X --> F["favicon · README / About lockups"]
+  S --> W["W10 installer art + social preview"]
+  W --> X
+      </pre>
+      <div class="caption">Nothing downstream is drawn by hand; a change to the mark is a design WU that edits the source folder.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td><code>ui/src-tauri/icons/source/</code> is the single source of truth; <code>MANIFEST.json</code> names each file, its viewBox, purpose and consumer. Every generated asset comes from it; an edit goes back through a design WU and the owner</td><td>the old icon set had no source and could not be reproduced</td></tr>
+      <tr><td>2</td><td>Sources are plain SVG: literal fills, no CSS <code>var()</code>, no <code>&lt;text&gt;</code> (the wordmark is outlines), no external references</td><td>librsvg and <code>tauri icon</code> ignore <code>var()</code>; an outlined wordmark ships no font</td></tr>
+      <tr><td>3</td><td>The viewBoxes are the manifest's: master 1024 (824 body, 185 corner), <code>icon-small</code> on a 16 grid, macOS templates on an 18 grid, coloured tray on 16. <code>icon.svg</code> feeds sizes above 32 px, <code>icon-small.svg</code> the 16–32 layers</td><td>each glyph snaps to the pixel grid it is shown at; the master's thin ring blurs at 16</td></tr>
+      <tr><td>4</td><td>Tray states differ by shape only: running = ring + lit sweep + blip, stopped = empty ring + centre dot</td><td>macOS tints a template, so colour cannot carry state</td></tr>
+      <tr><td>5</td><td>Template images (black + alpha) on macOS only; Windows and Linux get the coloured pair (running: dark tile, amber sweep; stopped: muted tile)</td><td>a black glyph disappears on a dark taskbar</td></tr>
+      <tr><td>6</td><td>Amber is a brand colour (icon, tray, lockups, installer art, social preview), never a UI colour; <code>icon-ink.svg</code> is the fallback where colour is not allowed</td><td>DEC-19 keeps the app UI free of a chromatic accent; the owner's signature overrides plan Q3's “ink-only mark”</td></tr>
+      <tr><td>7</td><td>The wordmark is lowercase <code>trawler</code> in DM Mono; <code>wordmark-light</code> / <code>-dark</code> name the theme it sits on</td><td>the face the owner signed; DM Mono is OFL-1.1, already in the notice (DEC-88)</td></tr>
+      <tr><td>8</td><td>Installer art and the social card are sources in the same folder (signed dmg=B · nsis=C · wix=C · social=C): <code>dmg-background.svg</code> + <code>@2x</code>, <code>nsis-header</code> / <code>nsis-sidebar</code>, <code>wix-banner</code> / <code>wix-dialog</code>, <code>social-preview.svg</code> (the W10 layout replaced W9's). Each is drawn at its consumer's exact size; Windows text areas stay white; the DMG keeps a <code>#7a756f</code> chip under each Finder label; DMG positions stay at the bundler defaults (app 180,170 · Applications 480,170 · window 660×400)</td><td>Finder draws labels black or white by appearance, only a mid tone passes 4.5:1 for both; NSIS/WiX draw black page text over the bitmaps</td></tr>
+      <tr><td>9</td><td>The Windows installer bitmaps ship as BMP: 24-bit, uncompressed, no alpha, exact size (NSIS 150×57, 164×314; WiX 493×58, 493×312); the DMG background as png/jpg/gif (tauri-utils 2.10.2 <code>bundle.macOS.dmg</code>, <code>windows.nsis</code>, <code>windows.wix</code>; bundles built by @tauri-apps/cli 2.12.4 = tauri-bundler 2.10.4)</td><td>what the pinned schema and installers accept; a wrong size is stretched (NSIS sets no <code>_NOSTRETCH</code>)</td></tr>
+      <tr><td>10</td><td><code>cargo xtask icons</code> writes the whole generated set, committed: the icon set in <code>icons/</code> (<code>icon-small.svg</code> → the 16/24/32 layers and <code>32x32.png</code>, <code>icon.svg</code> → the rest; icns/ico assembled by xtask), <code>tray-*.png</code> (template, 36 px) and <code>tray-*-color.png</code> (32 px), <code>installer/</code> (DMG PNG, four BMPs), <code>brand/</code> (social card, README wordmarks @2x), <code>ui/public/favicon.svg</code> and <code>SOURCES.sha256</code>. The rasteriser is the lockfile-pinned <code>tauri icon</code>; nothing is fetched</td><td>byte-for-byte reproducible from the sources and the lockfile, so a drift test can regenerate and compare (as DEC-88 does)</td></tr>
+      <tr><td>11</td><td>The DMG background ships as one 1320×800 PNG at 144 dpi from <code>dmg-background@2x.svg</code></td><td>the bundler refuses any extension but png/jpg/gif, so a two-resolution TIFF cannot be named; Finder sizes a PNG by its dpi</td></tr>
+      <tr><td>12</td><td>The tray menu's routing dots are sources too: <code>routing-ours</code> / <code>-foreign</code> / <code>-off.svg</code>, an 18-grid disc in the UI's <code>ok</code> / <code>warn</code> / <code>ink-mute</code> value, rendered to <code>routing-*.png</code> at 36 px (E-PRORELEASE.W20)</td><td>a native menu item cannot colour its text, but every OS draws an item's icon (muda: 18 pt on macOS, a 16 px bitmap on Windows, a 16 px pixbuf on GTK); they mean a state, so UI colours, never amber (rule 6)</td></tr>
+    </table>
+
+    <h2 id="palette">Palette</h2>
+    <table data-c="palette">
+      <tr><th>Role</th><th>Value</th></tr>
+      <tr><td>tile (warm dark, the UI canvas)</td><td><span class="sw" style="background:#2b2622"></span> <code>#2b2622</code></td></tr>
+      <tr><td>ink strokes</td><td><span class="sw" style="background:#f7f5f0"></span> <code>#f7f5f0</code></td></tr>
+      <tr><td>amber: sweep (45–55 % opacity) and blip</td><td><span class="sw" style="background:#e0a43a"></span> <code>#e0a43a</code></td></tr>
+      <tr><td>stopped tray tile</td><td><span class="sw" style="background:#6f6a64"></span> <code>#6f6a64</code></td></tr>
+      <tr><td>wordmark on light · on dark</td><td><span class="sw" style="background:#1f1c19"></span> <code>#1f1c19</code> · <span class="sw" style="background:#f2efe8"></span> <code>#f2efe8</code></td></tr>
+      <tr><td>social canvas · tagline</td><td><span class="sw" style="background:#1b1916"></span> <code>#1b1916</code> · <span class="sw" style="background:#aea69c"></span> <code>#aea69c</code></td></tr>
+      <tr><td>installer art: paper (light canvas) · deep amber (arrows on light, 3.6:1) · label chip (Finder labels)</td><td><span class="sw" style="background:#f4f1ea"></span> <code>#f4f1ea</code> · <span class="sw" style="background:#a8741a"></span> <code>#a8741a</code> · <span class="sw" style="background:#7a756f"></span> <code>#7a756f</code></td></tr>
+      <tr><td>tile edge</td><td><code>#ffffff</code> at 10–14 % opacity</td></tr>
+    </table>
+
+    <h2 id="rejected">Rejected</h2>
+    <p data-c="rejected">Drafts A/B/C (net, serif T, hook and packet); the terminal fish <code>&gt;&lt;&gt;</code> family and every hybrid (R2); finalists 5b4 Aperture (recommended) and 1b2 Wake; the ink-only treatment; sans and serif wordmarks — rounds archived in <code>docs/.archive/2026-11-06-prorelease-w9-logo-round-{1,2,3}.html</code>.</p>
+
+    <h2 id="held">Held by</h2>
+    <p data-c="held"><code>xtask/src/icons.rs</code> unit tests: every manifest file exists with its viewBox and no <code>var()</code>/<code>&lt;text&gt;</code>/external reference; <code>SOURCES.sha256</code> equals the sources; a regeneration equals the committed set; each output has its consumer's size and format; <code>tauri.conf.json</code> names the installer art. <code>tray.rs</code>: template on macOS only. <code>xtask/tests/package_bundle.rs</code>: the packaged icon, both glyphs and the DMG background are the generated ones.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

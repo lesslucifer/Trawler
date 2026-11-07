@@ -1,3 +1,4 @@
+use crate::common::LOCAL_URL;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -72,7 +73,7 @@ fn invoke(
             cmd: cmd.into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::Json(body),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),
@@ -92,7 +93,7 @@ fn the_commands_turn_the_entry_on_for_this_binary_and_off_again() {
         ])
         .build(mock_context(noop_assets()))
         .expect("a mock app");
-    app.manage(LoginItemPlace(Some(Place::Service(Arc::new(Registered::default())))));
+    app.manage(LoginItemPlace(Ok(Place::Service(Arc::new(Registered::default())))));
     let main =
         WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default()).build().unwrap();
     let this = std::env::current_exe().unwrap();
@@ -121,7 +122,7 @@ fn from_a_binary_with_no_bundle_the_commands_say_the_item_is_unavailable() {
         .invoke_handler(tauri::generate_handler![login_item::login_item_read])
         .build(mock_context(noop_assets()))
         .expect("a mock app");
-    app.manage(LoginItemPlace(None));
+    app.manage(LoginItemPlace(Err(login_item::UNAVAILABLE)));
     let main =
         WebviewWindowBuilder::new(&app, "main", tauri::WebviewUrl::default()).build().unwrap();
     let refused = get_ipc_response(
@@ -130,7 +131,7 @@ fn from_a_binary_with_no_bundle_the_commands_say_the_item_is_unavailable() {
             cmd: "login_item_read".into(),
             callback: CallbackFn(0),
             error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a url"),
+            url: LOCAL_URL.parse().expect("a url"),
             body: InvokeBody::Json(serde_json::json!({})),
             headers: tauri::http::HeaderMap::default(),
             invoke_key: tauri::test::INVOKE_KEY.into(),

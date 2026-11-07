@@ -24,7 +24,6 @@
           "identifier": "wdio",
           "windows": [
             "main",
-            "settings",
             "data-*"
           ],
           "permissions": [

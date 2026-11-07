@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { hostOs, type HostOs } from "../setup";
 
 export interface MenuAction {
   label: string;
@@ -26,6 +27,19 @@ export interface MenuPoint {
 }
 
 const isChoice = (item: MenuItem): item is MenuChoice => "choices" in item;
+
+const PC_MODIFIERS: [string, string][] = [
+  ["⌘", "Ctrl"],
+  ["⌥", "Alt"],
+  ["⇧", "Shift"],
+];
+
+export function keysFor(keys: string, os: HostOs): string {
+  if (os !== "windows" && os !== "linux") return keys;
+  const key = [...keys].filter((glyph) => !PC_MODIFIERS.some(([mac]) => mac === glyph)).join("");
+  const held = PC_MODIFIERS.filter(([mac]) => keys.includes(mac)).map(([, pc]) => pc);
+  return [...held, key === "⌫" ? "Backspace" : key].join("+");
+}
 const EDGE = 8;
 
 function placement(menu: DOMRect, anchor: DOMRect | null, at: MenuPoint | undefined): MenuPoint {
@@ -58,12 +72,14 @@ export function Menu({
   anchor,
   at,
   onClose,
+  os = hostOs(),
 }: {
   label: string;
   sections: MenuItem[][];
   anchor?: RefObject<HTMLElement | null>;
   at?: MenuPoint;
   onClose: () => void;
+  os?: HostOs;
 }) {
   const live = sections.flat().filter((item) => !item.disabled);
   const [active, setActive] = useState(0);
@@ -210,7 +226,7 @@ export function Menu({
           {item.checked ? "✓" : ""}
         </span>
         <span className="flex-1">{item.label}</span>
-        <span className="text-ink-mute">{item.disabled && item.why ? item.why : (item.keys ?? "")}</span>
+        <span className="text-ink-mute">{item.disabled && item.why ? item.why : (item.keys === undefined ? "" : keysFor(item.keys, os))}</span>
       </div>
     );
   };

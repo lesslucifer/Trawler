@@ -3,7 +3,8 @@
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::process::Command;
+
+use crate::spawn;
 
 const SYSTEM_KEYCHAIN: &str = "/Library/Keychains/System.keychain";
 pub(crate) const LOGIN_KEYCHAIN: &str = "login.keychain";
@@ -27,30 +28,51 @@ fn install_command(os: &str, cert: &Path) -> Option<Vec<String>> {
 }
 
 fn quoted(argv: &[String]) -> String {
-    argv.iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(" ")
+    argv.iter().map(|a| shell_quote(a)).collect::<Vec<_>>().join(" ")
 }
 
 fn elevated_script(script: &str) -> Vec<String> {
+    let literal = script.replace('\\', r"\\").replace('"', r#"\""#);
     vec![
         "osascript".into(),
         "-e".into(),
-        format!("do shell script \"{script}\" with administrator privileges"),
+        format!("do shell script \"{literal}\" with administrator privileges"),
     ]
 }
 
+fn powershell_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "''"))
+}
+
+// Start-Process joins -ArgumentList with spaces and quotes nothing, so a path
+// with a space (a Windows user folder) needs its own quotes to stay one argument.
+fn command_line_word(arg: &str) -> String {
+    if arg.contains(char::is_whitespace) {
+        format!("\"{arg}\"")
+    } else {
+        arg.to_string()
+    }
+}
+
+// A UAC prompt the user cancels leaves `$p` unset, and `exit $p.ExitCode` would
+// then exit 0: the refusal must stop the script so it reaches stderr and a
+// non-zero exit.
 fn elevated_argv(os: &str, argv: &[String]) -> Vec<String> {
     match os {
         "macos" => elevated_script(&quoted(argv)),
         "windows" => {
-            let argument_list =
-                argv[1..].iter().map(|a| format!("'{a}'")).collect::<Vec<_>>().join(",");
+            let argument_list = argv[1..]
+                .iter()
+                .map(|a| powershell_quote(&command_line_word(a)))
+                .collect::<Vec<_>>()
+                .join(",");
             vec![
                 "powershell".into(),
                 "-NoProfile".into(),
                 "-Command".into(),
                 format!(
-                    "$p = Start-Process -FilePath '{}' -ArgumentList {argument_list} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
-                    argv[0]
+                    "$ErrorActionPreference = 'Stop'; $p = Start-Process -FilePath {} -ArgumentList {argument_list} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
+                    powershell_quote(&argv[0])
                 ),
             ]
         }
@@ -109,8 +131,10 @@ pub(crate) fn setup_error(detail: impl Into<String>) -> SetupError {
 }
 
 fn run_elevated(argv: &[String], no_detail: &str) -> Result<(), SetupError> {
-    let out =
-        Command::new(&argv[0]).args(&argv[1..]).output().map_err(|e| setup_error(e.to_string()))?;
+    let out = spawn::command(&argv[0])
+        .args(&argv[1..])
+        .output()
+        .map_err(|e| setup_error(e.to_string()))?;
     if out.status.success() {
         Ok(())
     } else {
@@ -181,6 +205,7 @@ fn holds(store: &str, live: &str) -> bool {
 pub(crate) enum Trust {
     Trusted,
     Installed,
+    Stale,
     Absent,
 }
 
@@ -189,7 +214,8 @@ pub(crate) enum Trust {
 // certificate: deleted from the keychain, the bytes handed to `verify-cert`
 // still pass. So the keychain answers first, and only a certificate it holds is
 // verified, which tells installed-and-untrusted (a -60007, a double-click that
-// never chose Always Trust) apart from trusted (D2).
+// never chose Always Trust) apart from trusted (D2). The search is by name, so
+// any copy it finds that is not the live one is an older CA's.
 fn macos_trust(
     live: &str,
     keychain: impl FnOnce() -> Option<Ran>,
@@ -197,7 +223,8 @@ fn macos_trust(
 ) -> Option<Trust> {
     let keychain = keychain().filter(|out| out.ok)?;
     if !holds(&keychain.stdout, live) {
-        return Some(Trust::Absent);
+        let older = !pem_blocks(&keychain.stdout).is_empty();
+        return Some(if older { Trust::Stale } else { Trust::Absent });
     }
     Some(if verifies()? { Trust::Trusted } else { Trust::Installed })
 }
@@ -231,15 +258,19 @@ fn lists_thumbprint(listing: &str, thumbprint: &str) -> bool {
 }
 
 // A browser trusts a root from the machine's store or the user's (D4). Absent
-// needs both read; a store that did not answer cannot vouch for itself.
+// needs both read; a store that did not answer cannot vouch for itself. A
+// listing names each subject in plain text, so Trawler's CA under another
+// thumbprint is an older one (a reinstall mints a new CA; D1).
 fn windows_trust(thumbprint: &str, machine: Option<&Ran>, user: Option<&Ran>) -> Option<Trust> {
     let read: Vec<&Ran> = [machine, user].into_iter().flatten().filter(|out| out.ok).collect();
     if read.iter().any(|out| lists_thumbprint(&out.stdout, thumbprint)) {
         Some(Trust::Trusted)
-    } else if read.len() == 2 {
-        Some(Trust::Absent)
-    } else {
+    } else if read.len() < 2 {
         None
+    } else if read.iter().any(|out| out.stdout.contains(CA_COMMON_NAME)) {
+        Some(Trust::Stale)
+    } else {
+        Some(Trust::Absent)
     }
 }
 
@@ -268,11 +299,10 @@ fn ca_trust(os: &str, pem: &str) -> Option<Trust> {
             || ran("security", &["find-certificate", "-a", "-c", CA_COMMON_NAME, "-p"]),
             || macos_live_verifies(pem),
         ),
-        "windows" => windows_trust(
-            &thumbprint(&live)?,
-            ran("certutil", &["-store", "ROOT"]).as_ref(),
-            ran("certutil", &["-user", "-store", "ROOT"]).as_ref(),
-        ),
+        "windows" => {
+            let [machine, user] = windows_root_stores();
+            windows_trust(&thumbprint(&live)?, machine.as_ref(), user.as_ref())
+        }
         "linux" => bundle_trust(&live, first_readable(&CA_BUNDLES).as_deref()),
         _ => None,
     }
@@ -292,6 +322,7 @@ pub(crate) fn trust_word(reading: Option<Trust>) -> &'static str {
     match reading {
         Some(Trust::Trusted) => "trusted",
         Some(Trust::Installed) => "installed",
+        Some(Trust::Stale) => "stale",
         Some(Trust::Absent) => "absent",
         None => "unknown",
     }
@@ -1140,6 +1171,40 @@ fn unset_proxy_commands(os: &str, services: &[String]) -> Option<Vec<Vec<String>
     }
 }
 
+// The menu's stop, narrower than setup's: on macOS only the switches whose
+// proxy names Trawler go off, so another service's proxy, or this service's
+// other scheme set elsewhere, stays on. Elsewhere the proxy is one setting and
+// the menu's fresh reading before the stop is the guard.
+fn unset_trawler_proxy_commands(
+    os: &str,
+    services: &[String],
+    ours: impl Fn(&str, u16) -> bool,
+    mut read: impl FnMut(&str, &str) -> Option<Ran>,
+) -> Option<Vec<Vec<String>>> {
+    if os != "macos" {
+        return unset_proxy_commands(os, services);
+    }
+    let switches: Vec<String> = services
+        .iter()
+        .flat_map(|svc| {
+            [
+                ("-getwebproxy", "-setwebproxystate"),
+                ("-getsecurewebproxy", "-setsecurewebproxystate"),
+            ]
+            .map(|(get, set)| (svc, get, set))
+        })
+        .filter_map(|(svc, get, set)| {
+            let out = read(get, svc).filter(|out| out.ok)?;
+            let (host, port) = parse_active_proxy(&out.stdout)?;
+            ours(&host, port).then(|| format!("networksetup {set} {} off", shell_quote(svc)))
+        })
+        .collect();
+    if switches.is_empty() {
+        return Some(Vec::new());
+    }
+    Some(vec![elevated_script(&switches.join(" && "))])
+}
+
 fn reg_add(value: &str, kind: &str, data: &str) -> Vec<String> {
     ["reg", "add", WININET_KEY, "/v", value, "/t", kind, "/d", data, "/f"]
         .map(ToString::to_string)
@@ -1166,7 +1231,7 @@ fn internet_set_option_refresh() -> Vec<String> {
 
 // Service names come from networksetup output, not IPC, but still get quoted
 // (names contain spaces, e.g. "Wi-Fi", "Thunderbolt Bridge") and single quotes
-// escaped so they splice safely into the osascript shell string.
+// escaped; elevated_script escapes the AppleScript layer around the shell one.
 fn shell_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
@@ -1176,7 +1241,7 @@ fn valid_host(host: &str) -> bool {
 }
 
 fn macos_services() -> Result<Vec<String>, SetupError> {
-    let out = Command::new("networksetup")
+    let out = spawn::command("networksetup")
         .arg("-listallnetworkservices")
         .output()
         .map_err(|e| setup_error(e.to_string()))?;
@@ -1236,6 +1301,17 @@ pub fn unset_proxy() -> Result<(), SetupError> {
     run_all(commands, NO_UNSET_PROXY_DETAIL)
 }
 
+pub(crate) fn unset_trawler_proxy(host: &str, port: u16, own: &[String]) -> Result<(), SetupError> {
+    let os = std::env::consts::OS;
+    let services = services_to_configure(os)?;
+    let ours = |set: &str, at: u16| names_trawler_at(set, at, host, port, own);
+    let commands = unset_trawler_proxy_commands(os, &services, ours, |flag, svc| {
+        ran("networksetup", &[flag, svc])
+    })
+    .ok_or_else(|| setup_error(NO_PROXY_AUTO))?;
+    run_all(commands, NO_UNSET_PROXY_DETAIL)
+}
+
 // The one thing most users want, and the one prompt it is worth: on macOS the
 // trust write and the proxy write go inside a single `do shell script … with
 // administrator privileges`, joined so that a certificate left untrusted never
@@ -1284,6 +1360,8 @@ pub fn set_up_this_machine(pem: String, host: String, port: u16) -> Result<(), S
     run_all(commands, NO_INSTALL_DETAIL)
 }
 
+const NOT_TRAWLERS_CA: &str = "not Trawler's certificate";
+
 pub(crate) const NO_REMOVE_DETAIL: &str =
     "couldn't remove the certificate — no detail; use the steps below";
 
@@ -1297,18 +1375,19 @@ struct Held {
 // A keychain that did not answer cannot vouch for holding nothing. The admin
 // trust list names certificates, not bytes, so a name in it only asks for the
 // removal that is harmless where it finds nothing.
+fn store_holds(store: Option<&Ran>, thumbprint: &str) -> Option<bool> {
+    store.filter(|out| out.ok).map(|out| lists_thumbprint(&out.stdout, thumbprint))
+}
+
 fn macos_held(
     thumbprint: &str,
     login: Option<&Ran>,
     system: Option<&Ran>,
     admin_trust: Option<&Ran>,
 ) -> Option<Held> {
-    let holds = |out: Option<&Ran>| {
-        out.filter(|out| out.ok).map(|out| lists_thumbprint(&out.stdout, thumbprint))
-    };
     Some(Held {
-        login: holds(login)?,
-        system: holds(system)?,
+        login: store_holds(login, thumbprint)?,
+        system: store_holds(system, thumbprint)?,
         admin_trust: admin_trust.is_some_and(|out| out.stdout.contains(CA_COMMON_NAME)),
     })
 }
@@ -1333,14 +1412,72 @@ fn remove_ca_commands(cert: &Path, thumbprint: &str, held: &Held) -> Vec<Vec<Str
     commands
 }
 
+#[derive(Debug, Default, PartialEq, Eq)]
+struct RootStores {
+    machine: bool,
+    user: bool,
+}
+
+fn windows_held(thumbprint: &str, machine: Option<&Ran>, user: Option<&Ran>) -> Option<RootStores> {
+    Some(RootStores {
+        machine: store_holds(machine, thumbprint)?,
+        user: store_holds(user, thumbprint)?,
+    })
+}
+
+// The user's ROOT view can list the machine's roots too, so a user delete
+// planned beside the machine one may find nothing left and fail a removal that
+// worked. One store per click; the re-read keeps the button while a copy is left.
+fn windows_remove_commands(thumbprint: &str, held: &RootStores) -> Vec<Vec<String>> {
+    if held.machine {
+        vec![elevated_argv("windows", &argv(&["certutil", "-delstore", "ROOT", thumbprint]))]
+    } else if held.user {
+        vec![argv(&["certutil", "-user", "-delstore", "ROOT", thumbprint])]
+    } else {
+        Vec::new()
+    }
+}
+
+fn windows_root_stores() -> [Option<Ran>; 2] {
+    [ran("certutil", &["-store", "ROOT"]), ran("certutil", &["-user", "-store", "ROOT"])]
+}
+
+fn names_trawlers_ca(der: &[u8]) -> bool {
+    let name = CA_COMMON_NAME.as_bytes();
+    let Some(len) = u8::try_from(name.len()).ok() else { return false };
+    der_subject(der).is_some_and(|subject| {
+        [0x0c, 0x13].into_iter().any(|string_tag| {
+            let common_name = [&[0x06, 0x03, 0x55, 0x04, 0x03, string_tag, len], name].concat();
+            subject.windows(common_name.len()).any(|field| field == common_name)
+        })
+    })
+}
+
+// The PEM comes from the webview, and a delete keyed on its thumbprint would
+// take any root the stores hold: only a certificate whose subject names
+// Trawler's CA may be removed.
+fn removal_thumbprint(pem: &str) -> Result<String, SetupError> {
+    let live = live_body(pem).ok_or_else(|| setup_error("not a PEM certificate"))?;
+    let der = der_bytes(&live).ok_or_else(|| setup_error("not a PEM certificate"))?;
+    if !names_trawlers_ca(&der) {
+        return Err(setup_error(NOT_TRAWLERS_CA));
+    }
+    Ok(sha1_smol::Sha1::from(der).digest().to_string())
+}
+
 #[cfg_attr(not(feature = "scenario"), tauri::command)]
 pub fn remove_ca(pem: String) -> Result<(), SetupError> {
-    if std::env::consts::OS != "macos" {
+    let os = std::env::consts::OS;
+    if os != "macos" && os != "windows" {
         return Err(setup_error("no automatic removal on this system — follow the steps"));
     }
-    let thumbprint = live_body(&pem)
-        .and_then(|live| thumbprint(&live))
-        .ok_or_else(|| setup_error("not a PEM certificate"))?;
+    let thumbprint = removal_thumbprint(&pem)?;
+    if os == "windows" {
+        let [machine, user] = windows_root_stores();
+        let held = windows_held(&thumbprint, machine.as_ref(), user.as_ref())
+            .ok_or_else(|| setup_error("couldn't read the certificate stores"))?;
+        return run_all(windows_remove_commands(&thumbprint, &held), NO_REMOVE_DETAIL);
+    }
     let cert = staged_cert(&pem)?;
     let search = |keychain: &str| {
         ran("security", &["find-certificate", "-a", "-c", CA_COMMON_NAME, "-Z", keychain])
@@ -1407,7 +1544,7 @@ fn ran(program: &str, args: &[&str]) -> Option<Ran> {
 }
 
 fn ran_within(program: &str, args: &[&str], patience: std::time::Duration) -> Option<Ran> {
-    let mut child = Command::new(program)
+    let mut child = spawn::command(program)
         .args(args)
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::piped())
@@ -1734,6 +1871,43 @@ pub fn proxy_in_use(host: String, port: u16) -> ProxyReading {
     read_proxy(&proxy_in_use_now(std::env::consts::OS), &host, port)
 }
 
+impl ProxyReading {
+    pub(crate) fn routing(&self) -> crate::tray::Routing {
+        crate::tray::Routing::from_status(self.status)
+    }
+}
+
+/// The menu bar's reader and stop: the quit check's reading, setup's stop.
+pub(crate) fn machine<R: tauri::Runtime>() -> crate::tray::Machine<R> {
+    crate::tray::Machine {
+        read: |_, proxy, own| proxy_status(proxy.ip().to_string(), proxy.port(), own).routing(),
+        stop: |app, proxy, own| {
+            let stopped = unset_trawler_proxy(&proxy.ip().to_string(), proxy.port(), &own);
+            if let Some(text) = stopped.err().as_ref().and_then(unrouted_notice) {
+                use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+                app.dialog()
+                    .message(text)
+                    .title(STOP_ROUTING_TITLE)
+                    .kind(MessageDialogKind::Error)
+                    .show(|_| {});
+            }
+        },
+    }
+}
+
+const STOP_ROUTING_TITLE: &str = "Routing not stopped";
+
+// A dismissed approval is the user's own answer, not a failure to report.
+pub(crate) fn unrouted_notice(err: &SetupError) -> Option<String> {
+    let lead =
+        "This machine still routes through Trawler. Open Trawler to turn the proxy off from setup.";
+    match err {
+        SetupError { refused: true, .. } => None,
+        SetupError { detail, .. } if detail == NO_UNSET_PROXY_DETAIL => Some(lead.to_string()),
+        SetupError { detail, .. } => Some(format!("{lead}\n\n{detail}")),
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum NoticeKey {
     RemoteNotice,
@@ -1824,6 +1998,24 @@ mod tests {
     use super::*;
     use std::path::PathBuf;
 
+    #[test]
+    fn a_failed_stop_from_the_menu_says_routing_goes_on_and_a_dismissed_approval_says_nothing() {
+        let lead = "This machine still routes through Trawler. Open Trawler to turn the proxy off from setup.";
+        assert_eq!(
+            unrouted_notice(&command_failed("User cancelled. (-128)", NO_UNSET_PROXY_DETAIL)),
+            None
+        );
+        assert_eq!(
+            unrouted_notice(&command_failed("", NO_UNSET_PROXY_DETAIL)).as_deref(),
+            Some(lead),
+            "the setup screen's no-detail sentence points at steps a dialog has none of"
+        );
+        assert_eq!(
+            unrouted_notice(&command_failed("networksetup: error", NO_UNSET_PROXY_DETAIL)),
+            Some(format!("{lead}\n\nnetworksetup: error"))
+        );
+    }
+
     fn cert() -> PathBuf {
         PathBuf::from("/tmp/trawler-ca.pem")
     }
@@ -1868,12 +2060,92 @@ mod tests {
         assert_eq!(argv[2], "do shell script \"'security' '-k'\" with administrator privileges");
     }
 
+    fn applescript_literal(argv: &[String]) -> &str {
+        argv[2]
+            .strip_prefix("do shell script \"")
+            .and_then(|rest| rest.strip_suffix("\" with administrator privileges"))
+            .unwrap()
+    }
+
+    fn applescript_unescaped(literal: &str) -> String {
+        let mut text = String::new();
+        let mut chars = literal.chars();
+        while let Some(c) = chars.next() {
+            match c {
+                '\\' => match chars.next() {
+                    Some(escaped @ ('\\' | '"')) => text.push(escaped),
+                    other => panic!("not an AppleScript escape: \\{other:?} in {literal}"),
+                },
+                '"' => panic!("an unescaped quote ends the literal early: {literal}"),
+                c => text.push(c),
+            }
+        }
+        text
+    }
+
+    const AWKWARD_SCRIPT: &str = "echo \"a\" 'b' c\\d\nnext";
+    const AWKWARD_SERVICE: &str = "Wi-Fi \"x\" \\ y";
+
+    #[test]
+    fn the_applescript_literal_reads_back_as_the_shell_script() {
+        let argv = elevated_script(AWKWARD_SCRIPT);
+        assert_eq!(applescript_unescaped(applescript_literal(&argv)), AWKWARD_SCRIPT);
+    }
+
+    #[test]
+    fn a_service_name_with_quotes_and_backslashes_reaches_the_shell_whole() {
+        let cmds = unset_proxy_commands("macos", &[AWKWARD_SERVICE.into()]).unwrap();
+        assert_eq!(
+            applescript_unescaped(applescript_literal(&cmds[0])),
+            "networksetup -setwebproxystate 'Wi-Fi \"x\" \\ y' off && networksetup -setsecurewebproxystate 'Wi-Fi \"x\" \\ y' off"
+        );
+    }
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn osascript_parses_the_literal_back_to_the_shell_script() {
+        let argv = elevated_script(AWKWARD_SCRIPT);
+        let unprivileged = format!("return \"{}\"", applescript_literal(&argv));
+        let Ok(out) = std::process::Command::new("osascript").args(["-e", &unprivileged]).output()
+        else {
+            return;
+        };
+        assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+        assert_eq!(String::from_utf8_lossy(&out.stdout).strip_suffix('\n'), Some(AWKWARD_SCRIPT));
+    }
+
+    #[test]
+    fn a_quoted_argument_with_a_single_quote_stays_one_shell_word() {
+        assert_eq!(quoted(&["/tmp/O'Brien/ca.pem".into()]), r"'/tmp/O'\''Brien/ca.pem'");
+    }
+
+    #[test]
+    fn windows_elevation_quotes_each_argument_for_powershell_and_the_command_line() {
+        let argv = elevated_argv(
+            "windows",
+            &argv(&["certutil", "-addstore", r"C:\Users\O'Brien Li\Temp\trawler-ca.pem"]),
+        );
+        assert!(
+            argv[3].contains(
+                r#"-ArgumentList '-addstore','"C:\Users\O''Brien Li\Temp\trawler-ca.pem"' -Verb RunAs"#
+            ),
+            "{}",
+            argv[3]
+        );
+    }
+
     #[test]
     fn windows_elevation_wraps_the_command_in_a_uac_start_process() {
         let argv = elevated_argv("windows", &["certutil".into(), "-f".into(), "ROOT".into()]);
         assert_eq!(argv[0], "powershell");
         assert!(argv[3]
             .contains("Start-Process -FilePath 'certutil' -ArgumentList '-f','ROOT' -Verb RunAs"));
+    }
+
+    #[test]
+    fn a_cancelled_uac_prompt_exits_non_zero_rather_than_with_the_missing_process_exit() {
+        let argv = elevated_argv("windows", &["certutil".into(), "-f".into(), "ROOT".into()]);
+        assert!(argv[3].starts_with("$ErrorActionPreference = 'Stop'; "), "{}", argv[3]);
     }
 
     #[test]
@@ -2384,6 +2656,44 @@ mod tests {
     }
 
     #[test]
+    fn the_menus_stop_turns_off_only_the_switches_that_name_trawler() {
+        let svcs = ["Wi-Fi".into(), "Ethernet".into()];
+        let cmds = unset_trawler_proxy_commands("macos", &svcs, trawler, |flag, svc| {
+            answered(match (svc, flag) {
+                ("Wi-Fi", "-getwebproxy") => MAC_ON,
+                ("Wi-Fi", _) | ("Ethernet", "-getwebproxy") => MAC_WORK,
+                _ => MAC_OFF,
+            })
+        })
+        .unwrap();
+        assert_eq!(cmds.len(), 1);
+        let script = &cmds[0][2];
+        assert!(script.contains("with administrator privileges"));
+        assert!(script.contains("networksetup -setwebproxystate 'Wi-Fi' off"));
+        assert!(!script.contains("-setsecurewebproxystate 'Wi-Fi'"), "Wi-Fi's HTTPS is foreign");
+        assert!(!script.contains("Ethernet"), "a service set elsewhere is never touched");
+    }
+
+    #[test]
+    fn the_menus_stop_asks_nothing_when_no_switch_names_trawler() {
+        let svcs = ["Wi-Fi".into()];
+        let none = unset_trawler_proxy_commands("macos", &svcs, trawler, |_, _| answered(MAC_WORK));
+        assert_eq!(none, Some(Vec::new()));
+        let unread = unset_trawler_proxy_commands("macos", &svcs, trawler, |_, _| None);
+        assert_eq!(unread, Some(Vec::new()), "a switch nothing could read is left as it is");
+    }
+
+    #[test]
+    fn the_menus_stop_is_setups_own_unset_wherever_the_proxy_is_one_setting() {
+        let never = |_: &str, _: &str| -> Option<Ran> { panic!("only macOS reads per service") };
+        assert_eq!(
+            unset_trawler_proxy_commands("windows", &[], trawler, never),
+            unset_proxy_commands("windows", &[])
+        );
+        assert_eq!(unset_trawler_proxy_commands("linux", &[], trawler, never), None);
+    }
+
+    #[test]
     fn windows_unset_disables_proxyenable_and_refreshes_without_elevation() {
         let cmds = unset_proxy_commands("windows", &[]).unwrap();
         assert_eq!(cmds.len(), 2);
@@ -2524,8 +2834,8 @@ mod tests {
 
     // D1: the old same-name certificate verifies, and the live one is nowhere.
     #[test]
-    fn a_same_name_certificate_never_answers_for_the_live_one() {
-        assert_eq!(macos_trust(&live(), || answered(STALE), never_verified), Some(Trust::Absent));
+    fn a_same_name_certificate_never_answers_for_the_live_one_and_reads_as_older() {
+        assert_eq!(macos_trust(&live(), || answered(STALE), never_verified), Some(Trust::Stale));
     }
 
     #[test]
@@ -2614,6 +2924,57 @@ mod tests {
     }
 
     #[test]
+    fn windows_removal_reads_which_root_store_holds_the_live_certificate_by_its_thumbprint() {
+        let listed = answered(&format!("Cert Hash(sha1): {}", HASH.to_ascii_uppercase()));
+        let other = answered("Cert Hash(sha1): 0000000000000000000000000000000000000000");
+        assert_eq!(
+            windows_held(HASH, listed.as_ref(), other.as_ref()),
+            Some(RootStores { machine: true, user: false })
+        );
+        assert_eq!(
+            windows_held(HASH, other.as_ref(), listed.as_ref()),
+            Some(RootStores { machine: false, user: true })
+        );
+    }
+
+    #[test]
+    fn windows_removal_that_could_not_read_a_store_cannot_say_what_to_remove() {
+        let other = answered("");
+        assert_eq!(windows_held(HASH, None, other.as_ref()), None);
+        assert_eq!(windows_held(HASH, other.as_ref(), exited_non_zero("").as_ref()), None);
+    }
+
+    #[test]
+    fn removing_the_machine_copy_asks_for_the_uac_approval_set_up_used() {
+        let commands = windows_remove_commands(HASH, &RootStores { machine: true, user: false });
+        assert_eq!(commands.len(), 1);
+        assert_eq!(
+            commands[0],
+            elevated_argv("windows", &argv(&["certutil", "-delstore", "ROOT", HASH]))
+        );
+        assert!(commands[0][3].contains(&format!(
+            "Start-Process -FilePath 'certutil' -ArgumentList '-delstore','ROOT','{HASH}' -Verb RunAs"
+        )));
+    }
+
+    #[test]
+    fn removing_the_users_own_copy_asks_no_administrator() {
+        assert_eq!(
+            windows_remove_commands(HASH, &RootStores { machine: false, user: true }),
+            vec![argv(&["certutil", "-user", "-delstore", "ROOT", HASH])]
+        );
+    }
+
+    #[test]
+    fn a_copy_in_both_stores_leaves_the_machine_first_and_the_users_for_the_next_reading() {
+        assert_eq!(
+            windows_remove_commands(HASH, &RootStores { machine: true, user: true }),
+            windows_remove_commands(HASH, &RootStores { machine: true, user: false })
+        );
+        assert_eq!(windows_remove_commands(HASH, &RootStores::default()).len(), 0);
+    }
+
+    #[test]
     fn the_thumbprint_is_the_sha1_of_the_certificates_der() {
         assert_eq!(thumbprint("YWJj").as_deref(), Some("a9993e364706816aba3e25717850c26c9cd0d89d"));
         assert_eq!(thumbprint("not base64!"), None);
@@ -2643,6 +3004,19 @@ mod tests {
         assert_eq!(windows_trust(THUMB, listing.as_ref(), other.as_ref()), Some(Trust::Trusted));
         assert_eq!(windows_trust(THUMB, other.as_ref(), listing.as_ref()), Some(Trust::Trusted));
         assert_eq!(windows_trust(THUMB, None, listing.as_ref()), Some(Trust::Trusted));
+    }
+
+    // Recorded on the rc5 Windows VM: ROOT held an older Trawler CA, and the
+    // screen read it as never installed.
+    #[test]
+    fn windows_tells_an_older_trawler_ca_apart_from_none() {
+        let older = answered(&format!(
+            "Subject: CN={CA_COMMON_NAME}, O=Trawler\nCert Hash(sha1): 66cf84f1ffea3c63aeadcb477d37f2dcdf512d3f"
+        ));
+        let other = answered("Cert Hash(sha1): 0000000000000000000000000000000000000000");
+        assert_eq!(windows_trust(THUMB, older.as_ref(), other.as_ref()), Some(Trust::Stale));
+        assert_eq!(windows_trust(THUMB, other.as_ref(), older.as_ref()), Some(Trust::Stale));
+        assert_eq!(windows_trust(THUMB, older.as_ref(), None), None);
     }
 
     #[test]
@@ -2692,6 +3066,7 @@ mod tests {
     fn each_reading_has_its_own_word() {
         assert_eq!(trust_word(Some(Trust::Trusted)), "trusted");
         assert_eq!(trust_word(Some(Trust::Installed)), "installed");
+        assert_eq!(trust_word(Some(Trust::Stale)), "stale");
         assert_eq!(trust_word(Some(Trust::Absent)), "absent");
         assert_eq!(trust_word(None), "unknown");
     }
@@ -3121,6 +3496,29 @@ AG886uAwCrn33L+l2vQyCCnJrUIyCQGJozIwMDAdBgNVHQ4EFgQUijMZ8kLjBgTM
 bcHkeIM1PHjeaiIwDwYDVR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAs
 k+Jq39rckTYg7cUtzO/mFYYtpuuo+0MW+mC0/NjqZQIgBvaqdde8xAjOw9nqsBrB
 NecwLoyuObd5tf9Qwxdkolo=
+-----END CERTIFICATE-----";
+
+    #[test]
+    fn removal_takes_only_a_certificate_issued_under_trawlers_name() {
+        let ours = removal_thumbprint(ANDROID_CA).unwrap();
+        assert_eq!(ours, thumbprint(&live_body(ANDROID_CA).unwrap()).unwrap());
+        assert_eq!(removal_thumbprint(FOREIGN_ROOT), Err(setup_error(NOT_TRAWLERS_CA)));
+        assert_eq!(
+            removal_thumbprint("not a certificate"),
+            Err(setup_error("not a PEM certificate"))
+        );
+    }
+
+    const FOREIGN_ROOT: &str = "-----BEGIN CERTIFICATE-----
+MIIBpzCCAUygAwIBAgIUFvElQK2ssdKW+JSzCySWZEuMZA4wCgYIKoZIzj0EAwIw
+OTEcMBoGA1UEAwwTRXhhbXBsZSBQdWJsaWMgUm9vdDEZMBcGA1UECgwQVHJhd2xl
+ciBQcm94eSBDQTAeFw0yNjExMDYxMTE3MDlaFw0zNjExMDMxMTE3MDlaMDkxHDAa
+BgNVBAMME0V4YW1wbGUgUHVibGljIFJvb3QxGTAXBgNVBAoMEFRyYXdsZXIgUHJv
+eHkgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQV/9dIHvoK9COGFDLmVP34
+VdZ/g9ztLIUE6hTfru0PG7blQ6TQ+E6ZWb6EqqVKKJn/HDi7rOZcaXJYov/SVc4Z
+ozIwMDAdBgNVHQ4EFgQUDPnFUxxL/dUxrwOZbljGAeQvz7kwDwYDVR0TAQH/BAUw
+AwEB/zAKBggqhkjOPQQDAgNJADBGAiEApE61rLlAqm/LgZIkUswS4GSFBz4usd5N
+gBnoij0/0IQCIQD4QX+078Dg8FwuNiEpnY8AxbzTrAaccrf5tMfKfP2mtg==
 -----END CERTIFICATE-----";
 
     #[test]

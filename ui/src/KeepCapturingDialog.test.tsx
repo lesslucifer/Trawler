@@ -4,7 +4,7 @@ import { KeepCapturingDialog } from "./KeepCapturingDialog";
 
 function shown() {
   const answers = { onKeep: vi.fn(), onQuit: vi.fn(), onCancel: vi.fn() };
-  render(<KeepCapturingDialog {...answers} />);
+  render(<KeepCapturingDialog {...answers} os="macos" />);
   return answers;
 }
 
@@ -47,5 +47,19 @@ describe("the once-question when its answer could not be stored", () => {
     expect(screen.queryByText(/couldn't save/)).toBeNull();
     rerender(<KeepCapturingDialog onKeep={vi.fn()} onQuit={vi.fn()} onCancel={vi.fn()} refused="permission denied" />);
     expect(screen.getByText("couldn't save — permission denied")).toBeInTheDocument();
+  });
+});
+
+describe("the once-question names where Trawler stays on each OS", () => {
+  test.each([
+    ["macos", "Trawler stays in the menu bar and keeps capturing. You can change this in Settings → General."],
+    ["windows", "Trawler stays in the system tray (notification area) and keeps capturing. You can change this in Settings → General."],
+    [
+      "linux",
+      "Trawler stays in the system tray and keeps capturing — on GNOME, the AppIndicator extension shows it. You can change this in Settings → General.",
+    ],
+  ] as const)("%s", (os, stays) => {
+    render(<KeepCapturingDialog onKeep={vi.fn()} onQuit={vi.fn()} onCancel={vi.fn()} os={os} />);
+    expect(screen.getByText(stays)).toBeInTheDocument();
   });
 });
