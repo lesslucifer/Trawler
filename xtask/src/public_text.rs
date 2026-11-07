@@ -3,8 +3,9 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::package::Os;
 
-pub const PUBLISHED: [&str; 9] = [
+pub const PUBLISHED: [&str; 10] = [
     "README.md",
+    "GUIDE.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
     "CODE_OF_CONDUCT.md",
@@ -32,10 +33,6 @@ pub const DENIED_NAMES: [&str; 9] = [
     "wireshark",
     "requestly",
 ];
-
-// Linked before the work unit that writes them lands; each entry must leave this
-// list the moment its file exists, so its anchors are checked from then on.
-pub const NOT_YET_WRITTEN: [&str; 1] = ["GUIDE.md"];
 
 pub fn targets(text: &str) -> Vec<String> {
     let mut found = Vec::new();
@@ -195,9 +192,6 @@ pub fn broken_targets(repo: &Path, file: &str, text: &str) -> Vec<String> {
             broken.push(format!("{file}: {target} (outside the repo)"));
             continue;
         };
-        if NOT_YET_WRITTEN.iter().any(|pending| resolved == Path::new(pending)) {
-            continue;
-        }
         if !exists_as_named(repo, &resolved) {
             broken.push(format!("{file}: {target} (no {name})"));
             continue;
@@ -473,7 +467,7 @@ mod tests {
         std::fs::create_dir_all(dir.path().join(".github/x")).unwrap();
         std::fs::write(dir.path().join("A.md"), "# Top\n").unwrap();
         std::fs::write(dir.path().join("b.png"), "").unwrap();
-        let text = "[t](../A.md \"title\") [d](x/) [p](../GUIDE.md#install) \
+        let text = "[t](../A.md \"title\") [d](x/) [p](../A.md#top) \
                     <source srcset=\"../b.png 1x, ../b.png 2x\">";
         assert_eq!(broken_targets(dir.path(), ".github/n.md", text), Vec::<String>::new());
     }
@@ -501,14 +495,18 @@ mod tests {
     }
 
     #[test]
-    fn a_missing_file_or_heading_is_broken_and_a_url_or_pending_file_is_not() {
+    fn a_missing_file_or_heading_is_broken_and_a_url_is_not() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("A.md"), "# Top\n## First run\n").unwrap();
         let text = "[ok](A.md#first-run) [self](#top) [gone](B.md) [bad](A.md#nope) \
                     [web](https://x.test/B.md) [guide](GUIDE.md#install)";
         assert_eq!(
             broken_targets(dir.path(), "A.md", text),
-            ["A.md: B.md (no B.md)", "A.md: A.md#nope (no heading #nope in A.md)"]
+            [
+                "A.md: B.md (no B.md)",
+                "A.md: A.md#nope (no heading #nope in A.md)",
+                "A.md: GUIDE.md#install (no GUIDE.md)"
+            ]
         );
     }
 
@@ -575,13 +573,6 @@ mod tests {
             .flat_map(|file| broken_targets(&repo, file, &read(file)))
             .collect();
         assert!(broken.is_empty(), "{broken:#?}");
-    }
-
-    #[test]
-    fn a_file_still_listed_as_not_yet_written_does_not_exist() {
-        for file in NOT_YET_WRITTEN {
-            assert!(!repo().join(file).exists(), "{file} exists: drop it from NOT_YET_WRITTEN");
-        }
     }
 
     #[test]
