@@ -55,7 +55,7 @@ flowchart LR
     </table>
 
     <h2 id="round-3">Round 3 — independent review</h2>
-    <table data-c="round-3" data-item="round-3">
+    <table data-c="round-3">
       <thead><tr><th>#</th><th>Finding</th><th>Resolution</th><th>Proof</th></tr></thead>
       <tbody>
         <tr><td>1</td><td>IMPORTANT: Stop acted on the menu's last, possibly stale reading, and <code>unset_proxy</code> turned off every macOS service's proxy</td><td><code>stop_routing_in_background</code> reads first and stops only on <code>Ours</code>; <code>Machine.stop</code> takes the address and own addresses; <code>setup::unset_trawler_proxy</code> on macOS turns off only the web / secure-web switches whose proxy names Trawler (none → no prompt), elsewhere is <code>unset_proxy</code>. No notice when the re-read finds another proxy: the redrawn routing line already says so. The window's <code>unset_proxy</code> (setup, quit check) is unchanged: there the user acts on a reading the window shows with its address, and narrowing it changes the front-end's contract, out of this WU's scope</td><td><code>suite/tray.rs</code> <code>stop_reads_the_proxy_again_and_leaves_a_proxy_no_longer_trawlers_alone</code>; <code>setup.rs</code> <code>the_menus_stop_turns_off_only_the_switches_that_name_trawler</code>, <code>…_asks_nothing_when_no_switch_names_trawler</code>, <code>…_is_setups_own_unset_wherever_the_proxy_is_one_setting</code></td></tr>
