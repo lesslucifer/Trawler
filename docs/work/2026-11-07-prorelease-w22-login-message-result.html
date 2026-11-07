@@ -26,7 +26,7 @@ flowchart LR
       </pre>
       <div class="caption">Settings → General's open-at-login row after W22</div>
     </div>
-    <table data-c="outcome">
+    <table data-c="outcome" data-item="outcome">
       <thead><tr><th>Packaged 0.1.0 on…</th><th>Before (0.1.0-6)</th><th>After</th></tr></thead>
       <tbody>
         <tr><td>macOS 13+</td><td>box clickable; a click: "couldn't save — unavailable — macos starts only …"</td><td>☐ disabled · "unavailable — macOS starts only a developer-signed app at login, and this build is not." · <b>how to do it by hand</b></td></tr>
@@ -48,7 +48,7 @@ flowchart LR
     </table>
 
     <h2 id="deviations">Deviations from the ready patch</h2>
-    <table data-c="deviations">
+    <table data-c="deviations" data-item="deviations">
       <thead><tr><th>Patch</th><th>W22</th><th>Why</th></tr></thead>
       <tbody>
         <tr><td>macOS 11–12 read <code>UNAVAILABLE</code> ("open Trawler from the installed app")</td><td><code>OLD_MACOS</code>, with the button</td><td>the brief's macOS &lt;13 check: the old words were untrue there, and GUIDE's steps name macOS 12's System Preferences list, so the button is truthful</td></tr>
@@ -57,7 +57,7 @@ flowchart LR
     </table>
 
     <h2 id="evidence">Evidence</h2>
-    <table data-c="evidence">
+    <table data-c="evidence" data-item="evidence">
       <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
       <tbody>
         <tr><td>Tests red first</td><td>the 3 General tests fail on <code>General.tsx</code> at <code>cf62aea3</code> (3 failed / 17 passed), pass after; <code>the_login_link_lands_on_a_heading_of_the_guide</code> and <code>each_reason_reads_as_a_state_and_names_macos_as_macos</code> do not compile without <code>Link::Login</code> / <code>OLD_MACOS</code></td></tr>
@@ -81,8 +81,11 @@ flowchart LR
       </tbody>
     </table>
 
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">UC-BG's open-at-login row says a build that cannot register shows the switch disabled with the shell's reason and, on macOS, the button to the guide. DEC-77 rule 9 and DEC-90 already hold the rules: no DEC change.</p>
+
     <h2 id="follow-ups">Follow-ups</h2>
-    <table data-c="follow-ups">
+    <table data-c="follow-ups" data-item="follow-ups">
       <thead><tr><th>Item</th><th>Owner</th></tr></thead>
       <tbody>
         <tr><td>Independent review of <code>ui/src-tauri/src/links.rs</code> and <code>ui/src-tauri/src/login_item.rs</code> (outside the cr gate)</td><td>router</td></tr>
