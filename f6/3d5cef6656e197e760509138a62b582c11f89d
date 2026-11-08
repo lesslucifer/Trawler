@@ -8,10 +8,8 @@ artifacts: [docs/work/2026-11-08-apidoc-w2-settings-api-design-run.html]
 implements:
   - path: docs/work/2026-11-08-apidoc-w2-settings-api-design-run.html
     blob: c7701961564650fc27e794b6d20f919529415f5d
-    built: [ui/src/ApiPage.tsx]
+    built: [ui/src/ApiPage.tsx, ui/src/Settings.tsx]
 undesigned:
-  - path: ui/src/Settings.tsx
-    why: "mounts the new API page as the sidebar's third entry in the existing PageSidebar pattern; the page itself is the cited design, and the sidebar's shape is unchanged"
   - path: ui/src/CaptureService.tsx
     why: "exports its Fact row for the API page to reuse; nothing it renders changes"
 date: 2026-11-08
