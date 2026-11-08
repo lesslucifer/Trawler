@@ -1,0 +1,44 @@
+schema: doc/v1
+epic: E-PAGES
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-45-the-review-binds-the-code-it-judged.html"
+    tier: T2
+    action: updated
+    distills: "the code-path list gains site/"
+  - path: "docs/decisions/dec-87-one-licence-one-holder-no-crate-published.html"
+    tier: T2
+    action: updated
+    distills: "v2: rule 4, the homepage is the site through one constant; repository stays the repo (Q12)"
+  - path: "docs/decisions/dec-89-one-signed-mark-one-source-folder.html"
+    tier: T2
+    action: updated
+    distills: "v4: rule 6, the site is a brand surface where amber glows as decoration only; rule 10, the site copies the favicon, dark wordmark and social card with the same pixels"
+  - path: "docs/decisions/dec-91-the-public-text-is-one-voice-checked.html"
+    tier: T2
+    action: updated
+    distills: "v2: rule 8, the site is published text: the deny-list over the built output, facts filled at build, never retyped"
+  - path: "docs/decisions/dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html"
+    tier: T2
+    action: added
+    distills: "the project site: its address, the frame plus build-time facts, downloads from releases/latest, no request outside its origin (exact CSP), one same-origin script, assets, one voice, the look, the deploy workflow, what does not redeploy, site/ a code path; held-by table"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "v24: the DEC-92 row; DEC-87, DEC-89, DEC-91 summaries"
+  - path: "docs/release-process.html"
+    tier: T1
+    action: updated
+    distills: "v3: no tag before the site answers 200; a published final redeploys the site; The project site table (the once-only settings, which events redeploy and which do not, the catch-up); rollback re-runs pages.yml (owner mr commit)"
+  - path: "docs/use-cases/use-cases-index.html"
+    tier: T2
+    action: updated
+    distills: "v6: UC-INSTALL names the project site as an entry point"
+  - path: "docs/use-cases/web-ui.html"
+    tier: T2
+    action: updated
+    distills: "UC-INSTALL: the site as an entry point (a visitor table and its proof) and the installed package's homepage is the site"
+  - path: "docs/workflow.html"
+    tier: T1
+    action: updated
+    distills: "v20: site/ is a code path the cr gate judges (DEC-92; owner mr commit)"
