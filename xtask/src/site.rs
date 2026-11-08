@@ -14,17 +14,25 @@ pub const CSP: &str = "<meta http-equiv=\"Content-Security-Policy\" content=\"de
 pub const SCRIPT: &str = "site.js";
 pub const SCRIPT_BUDGET: usize = 4096;
 pub const FRAME: &str = "site";
-pub const ASSETS: [(&str, &str); 5] = [
+pub const ASSETS: [(&str, &str); 9] = [
     ("ui/public/favicon.svg", "favicon.svg"),
-    ("ui/src-tauri/icons/brand/wordmark-light.png", "wordmark-light.png"),
     ("ui/src-tauri/icons/brand/wordmark-dark.png", "wordmark-dark.png"),
     ("ui/src-tauri/icons/brand/social-preview.png", "social-preview.png"),
     (".github/screenshots/s1-main-window.png", "s1-main-window.png"),
+    (".github/screenshots/s3-filter-chips.png", "s3-filter-chips.png"),
+    (".github/screenshots/s4-inspector-headers.png", "s4-inspector-headers.png"),
+    (".github/screenshots/s5-send-again.png", "s5-send-again.png"),
+    (".github/screenshots/s6-setup-iphone.png", "s6-setup-iphone.png"),
+    (".github/screenshots/s10-capture-menu.png", "s10-capture-menu.png"),
 ];
+const SHOTS: &str = ".github/screenshots/";
+const FEATURES: &str = "## What you can do";
 const LINKS: &str = "ui/src-tauri/src/links.rs";
 const SYSTEMS: [Os; 3] = [Os::MacOs, Os::Windows, Os::Linux];
 const MIN_CONTRAST: f64 = 4.5;
 const DARK: &str = "@media (prefers-color-scheme: dark)";
+const CALM: &str = "@media (prefers-reduced-motion: no-preference)";
+const MOTION_SECONDS: f64 = 5.0;
 const REFUSED_TAGS: [&str; 11] = [
     "iframe",
     "form",
@@ -92,6 +100,7 @@ pub fn base_path() -> &'static str {
 #[derive(Debug, Deserialize)]
 pub struct Release {
     pub tag_name: String,
+    pub published_at: Option<String>,
     pub draft: bool,
     pub prerelease: bool,
     pub assets: Vec<Asset>,
@@ -139,6 +148,7 @@ pub fn installer_id(file: &str) -> Result<Option<String>, String> {
 pub struct Downloads {
     pub tag: String,
     pub version: String,
+    pub published: String,
     pub files: BTreeMap<String, String>,
 }
 
@@ -174,7 +184,17 @@ pub fn downloads(release: &Release, workspace: &str) -> Result<Downloads, String
     if !release.assets.iter().any(|asset| asset.name == CHECKSUMS) {
         return Err(format!("{tag} lacks {CHECKSUMS}"));
     }
-    Ok(Downloads { tag: tag.clone(), version: version.to_string(), files })
+    let published = release
+        .published_at
+        .as_deref()
+        .and_then(|at| at.get(..10))
+        .ok_or(format!("{tag} has no published_at date"))?;
+    Ok(Downloads {
+        tag: tag.clone(),
+        version: version.to_string(),
+        published: published.to_string(),
+        files,
+    })
 }
 
 fn names_version(file: &str, version: &str) -> bool {
@@ -332,6 +352,19 @@ fn inline(text: &str, blob: &str) -> Result<String, String> {
     Ok(html)
 }
 
+/// The alt text of the first `![alt](.github/screenshots/<shot>)` in `markdown`.
+pub fn alt_of(markdown: &str, shot: &str) -> Option<String> {
+    let (before, _) = markdown.split_once(&format!("]({SHOTS}{shot})"))?;
+    before.rsplit_once("![").map(|(_, alt)| alt.to_string())
+}
+
+/// A paragraph's first sentence and the rest, rendered inline.
+pub fn first_sentence(lines: &[&str], blob: &str) -> Result<(String, String), String> {
+    let html = inline(&lines.join(" "), blob)?;
+    let (lead, rest) = html.split_once(". ").ok_or(format!("no second sentence in {html:?}"))?;
+    Ok((format!("{lead}."), rest.trim().to_string()))
+}
+
 pub fn fill(file: &str, text: &str, values: &BTreeMap<String, String>) -> Result<String, String> {
     let mut filled = String::new();
     let mut rest = text;
@@ -376,22 +409,23 @@ fn values(facts: &Facts<'_>) -> Result<BTreeMap<String, String>, String> {
     let downloads = &facts.release;
     let readme = read(facts.repo, "README.md")?;
     let privacy = read(facts.repo, "PRIVACY.md")?;
+    let guide = read(facts.repo, "GUIDE.md")?;
     let (pitch, sub) = pitch_and_sub(&readme)?;
     let source = &facts.source;
     let blob = &facts.blob();
+    let privacy_lead = first_block(&section("PRIVACY.md", &privacy, "# Privacy")?);
+    let (privacy_first, privacy_rest) = first_sentence(&privacy_lead, blob)?;
     let tag = &downloads.tag;
     let mut values = BTreeMap::from([
         ("pitch".to_string(), escape(&pitch)),
         ("sub".to_string(), escape(&sub)),
-        (
-            "features".to_string(),
-            render(&section("README.md", &readme, "## What you can do")?, blob)?,
-        ),
-        (
-            "privacy".to_string(),
-            render(&first_block(&section("PRIVACY.md", &privacy, "# Privacy")?), blob)?,
-        ),
+        ("features".to_string(), render(&section("README.md", &readme, FEATURES)?, blob)?),
+        ("features-heading".to_string(), escape(FEATURES.trim_start_matches("## "))),
+        ("privacy".to_string(), render(&privacy_lead, blob)?),
+        ("privacy-lead".to_string(), privacy_first),
+        ("privacy-rest".to_string(), privacy_rest),
         ("version".to_string(), escape(&downloads.version)),
+        ("published".to_string(), escape(&downloads.published)),
         ("release".to_string(), escape(&format!("{source}/releases/tag/{tag}"))),
         ("latest".to_string(), escape(&format!("{source}/releases/latest"))),
         (
@@ -403,6 +437,12 @@ fn values(facts: &Facts<'_>) -> Result<BTreeMap<String, String>, String> {
         ("base".to_string(), escape(BASE_URL)),
         ("path".to_string(), escape(base_path())),
     ]);
+    for shot in ASSETS.iter().filter_map(|(from, _)| from.strip_prefix(SHOTS)) {
+        let alt = alt_of(&readme, shot)
+            .or_else(|| alt_of(&guide, shot))
+            .ok_or(format!("neither README.md nor GUIDE.md shows {shot}"))?;
+        values.insert(format!("alt:{shot}"), escape(&alt));
+    }
     for (id, file) in &downloads.files {
         let href = format!("{source}/releases/download/{tag}/{file}");
         values.insert(format!("href:{id}"), escape(&href));
@@ -419,6 +459,45 @@ fn is_text(file: &str) -> bool {
     ["html", "css", "js", "svg"].into_iter().any(|extension| has_extension(file, extension))
 }
 
+/// Whether a file of the frame ships: dotfiles and the script's tests stay behind.
+pub fn ships(name: &str) -> bool {
+    !name.starts_with('.') && !name.ends_with(".test.mjs")
+}
+
+/// The same pixels in fewer bytes: 8-bit RGB(A) re-encoded at high compression,
+/// alpha dropped when every pixel is opaque; anything else, or no gain, is kept.
+pub fn smaller_png(bytes: Vec<u8>) -> Result<Vec<u8>, String> {
+    let mut decoder = png::Decoder::new(std::io::Cursor::new(&bytes));
+    decoder.set_transformations(png::Transformations::EXPAND);
+    let mut reader = decoder.read_info().map_err(|e| e.to_string())?;
+    if reader.info().icc_profile.is_some() {
+        return Ok(bytes);
+    }
+    let mut buf = vec![0; reader.output_buffer_size().ok_or("png too large")?];
+    let frame = reader.next_frame(&mut buf).map_err(|e| e.to_string())?;
+    buf.truncate(frame.buffer_size());
+    if frame.bit_depth != png::BitDepth::Eight {
+        return Ok(bytes);
+    }
+    let (colour, pixels) = match frame.color_type {
+        png::ColorType::Rgba if buf.as_chunks::<4>().0.iter().all(|[.., a]| *a == u8::MAX) => (
+            png::ColorType::Rgb,
+            buf.as_chunks::<4>().0.iter().flat_map(|[r, g, b, _]| [*r, *g, *b]).collect(),
+        ),
+        png::ColorType::Rgba | png::ColorType::Rgb => (frame.color_type, buf),
+        _ => return Ok(bytes),
+    };
+    let mut smaller = Vec::new();
+    let mut encoder = png::Encoder::new(&mut smaller, frame.width, frame.height);
+    encoder.set_color(colour);
+    encoder.set_depth(png::BitDepth::Eight);
+    encoder.set_compression(png::Compression::High);
+    let mut writer = encoder.write_header().map_err(|e| e.to_string())?;
+    writer.write_image_data(&pixels).map_err(|e| e.to_string())?;
+    writer.finish().map_err(|e| e.to_string())?;
+    Ok(if smaller.len() < bytes.len() { smaller } else { bytes })
+}
+
 /// The site's files by name, filled and checked; nothing is written.
 pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>>, String> {
     let release: Release =
@@ -431,7 +510,7 @@ pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         let name = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
-        if name.starts_with('.') {
+        if !ships(&name) {
             continue;
         }
         if !entry.file_type().is_ok_and(|kind| kind.is_file()) {
@@ -448,6 +527,7 @@ pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>
     }
     for (from, to) in ASSETS {
         let bytes = std::fs::read(repo.join(from)).map_err(|e| format!("read {from}: {e}"))?;
+        let bytes = if has_extension(to, "png") { smaller_png(bytes)? } else { bytes };
         if files.insert(to.to_string(), bytes).is_some() {
             return Err(format!("{FRAME}/{to} and the asset {from} share a name"));
         }
@@ -973,57 +1053,77 @@ pub fn contrast(a: [u8; 3], b: [u8; 3]) -> f64 {
 
 type Tokens = BTreeMap<String, String>;
 
-/// The custom properties each scheme ends with, in cascade order: a top-level
-/// `:root` sets both, the dark scheme's `:root` only dark; `None` without one.
-pub fn themes(css: &str) -> (Tokens, Option<Tokens>) {
-    let mut light = Tokens::new();
-    let mut dark = Tokens::new();
-    let mut dark_seen = false;
+fn squash(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn same_rule(a: &str, b: &str) -> bool {
+    a.replace(' ', "") == b.replace(' ', "")
+}
+
+/// Each declaration with the at-rules and selectors around it, outermost first.
+fn declarations(css: &str) -> Vec<(Vec<String>, String)> {
+    let mut found = Vec::new();
     let mut stack: Vec<String> = Vec::new();
     let mut text = String::new();
-    let mut declare = |stack: &[String], text: &str| {
-        let Some((":root", outer)) = stack.split_last().map(|(last, outer)| (last.as_str(), outer))
-        else {
-            return;
-        };
-        let Some((name, value)) = text.split_once(':') else { return };
-        let value = value.split('!').next().unwrap_or(value);
-        let (name, value) = (name.trim().to_string(), value.trim().to_string());
-        if !name.starts_with("--") {
-            return;
-        }
-        match outer {
-            [] => {
-                light.insert(name.clone(), value.clone());
-                dark.insert(name, value);
-            }
-            [media] if media.replace(' ', "") == DARK.replace(' ', "") => {
-                dark_seen = true;
-                dark.insert(name, value);
-            }
-            _ => {}
-        }
-    };
-    let css = strip_comments(css);
-    for c in css.chars() {
+    for c in strip_comments(css).chars() {
         match c {
             '{' => {
-                stack.push(text.split_whitespace().collect::<Vec<_>>().join(" "));
+                stack.push(squash(&text));
                 text.clear();
             }
-            '}' => {
-                declare(&stack, &text);
-                stack.pop();
-                text.clear();
-            }
-            ';' => {
-                declare(&stack, &text);
+            '}' | ';' => {
+                if !text.trim().is_empty() {
+                    found.push((stack.clone(), squash(&text)));
+                }
+                if c == '}' {
+                    stack.pop();
+                }
                 text.clear();
             }
             _ => text.push(c),
         }
     }
-    (light, dark_seen.then_some(dark))
+    found
+}
+
+/// The colour tokens each scope ends with, in cascade order: `light` and `dark`
+/// from `:root` (a top-level `:root` sets both, the dark scheme's only dark;
+/// `dark` is absent without one), then every other top-level selector that
+/// declares tokens, as its own scope.
+pub fn themes(css: &str) -> Vec<(String, Tokens)> {
+    let mut light = Tokens::new();
+    let mut dark = Tokens::new();
+    let mut dark_seen = false;
+    let mut others: BTreeMap<String, Tokens> = BTreeMap::new();
+    for (stack, declaration) in declarations(css) {
+        let Some((name, value)) = declaration.split_once(':') else { continue };
+        let value = value.split('!').next().unwrap_or(value);
+        let (name, value) = (name.trim().to_string(), value.trim().to_string());
+        if !name.starts_with("--") {
+            continue;
+        }
+        match stack.iter().map(String::as_str).collect::<Vec<_>>()[..] {
+            [":root"] => {
+                light.insert(name.clone(), value.clone());
+                dark.insert(name, value);
+            }
+            [media, ":root"] if same_rule(media, DARK) => {
+                dark_seen = true;
+                dark.insert(name, value);
+            }
+            [selector] if !selector.starts_with('@') => {
+                others.entry(selector.to_string()).or_default().insert(name, value);
+            }
+            _ => {}
+        }
+    }
+    let mut scopes = vec![("light".to_string(), light)];
+    if dark_seen {
+        scopes.push(("dark".to_string(), dark));
+    }
+    scopes.extend(others);
+    scopes
 }
 
 fn strip_comments(css: &str) -> String {
@@ -1037,19 +1137,24 @@ fn strip_comments(css: &str) -> String {
 }
 
 pub fn contrast_problems(file: &str, css: &str) -> Vec<String> {
-    let (light, dark) = themes(css);
+    let mut scopes = themes(css);
     let mut problems = Vec::new();
-    if dark.is_none() {
+    if !scopes.iter().any(|(scope, _)| scope == "dark") {
         problems.push(format!("{file}: no {DARK} :root theme"));
+        let light = scopes[0].1.clone();
+        scopes.insert(1, ("dark".to_string(), light));
     }
-    let dark = dark.unwrap_or_else(|| light.clone());
-    for (theme, tokens) in [("light", &light), ("dark", &dark)] {
+    for (scope, tokens) in &scopes {
         let colours = |prefix: &str| -> Vec<(&String, &String)> {
             tokens.iter().filter(|(name, _)| name.starts_with(prefix)).collect()
         };
         let (texts, backgrounds) = (colours("--text"), colours("--bg"));
+        let root = scope == "light" || scope == "dark";
+        if texts.is_empty() && backgrounds.is_empty() && !root {
+            continue;
+        }
         if texts.is_empty() || backgrounds.is_empty() {
-            problems.push(format!("{file} {theme}: needs --text* and --bg* tokens"));
+            problems.push(format!("{file} {scope}: needs --text* and --bg* tokens"));
             continue;
         }
         for (text, text_value) in &texts {
@@ -1057,18 +1162,65 @@ pub fn contrast_problems(file: &str, css: &str) -> Vec<String> {
                 let (Some(fg), Some(bg)) = (hex_colour(text_value), hex_colour(background_value))
                 else {
                     problems.push(format!(
-                        "{file} {theme}: {text} {text_value} or {background} {background_value} is no #hex colour"
+                        "{file} {scope}: {text} {text_value} or {background} {background_value} is no #hex colour"
                     ));
                     continue;
                 };
                 let ratio = contrast(fg, bg);
                 if ratio < MIN_CONTRAST {
                     problems.push(format!(
-                        "{file} {theme}: {text} {text_value} on {background} {background_value} is {ratio:.2}:1, under {MIN_CONTRAST}:1"
+                        "{file} {scope}: {text} {text_value} on {background} {background_value} is {ratio:.2}:1, under {MIN_CONTRAST}:1"
                     ));
                 }
             }
         }
+    }
+    problems
+}
+
+fn seconds(word: &str) -> Option<f64> {
+    if let Some(ms) = word.strip_suffix("ms") {
+        return ms.parse::<f64>().ok().map(|ms| ms / 1000.0);
+    }
+    word.strip_suffix('s').and_then(|s| s.parse().ok())
+}
+
+/// Motion only for a reader who has not asked for less, never looping, and the
+/// page's load motion settled within five seconds (no pause control owed).
+pub fn motion_problems(file: &str, css: &str) -> Vec<String> {
+    let mut problems = Vec::new();
+    let (mut delay, mut duration) = (0.0_f64, 0.0_f64);
+    for (stack, declaration) in declarations(css) {
+        let Some((property, value)) = declaration.split_once(':') else { continue };
+        let (property, value) = (property.trim().to_ascii_lowercase(), value.to_ascii_lowercase());
+        if property == "scroll-behavior" && value.contains("smooth") {
+            problems.push(format!("{file}: scroll-behavior: smooth"));
+        }
+        if value.contains("infinite") {
+            problems.push(format!("{file}: {declaration} loops"));
+        }
+        if !property.starts_with("animation") && !property.starts_with("transition") {
+            continue;
+        }
+        if !stack.iter().any(|rule| same_rule(rule, CALM)) {
+            problems.push(format!("{file}: {declaration} outside {CALM}"));
+        }
+        let times: Vec<f64> = value.split([' ', ',']).filter_map(seconds).collect();
+        match property.as_str() {
+            "animation" => {
+                duration = duration.max(times.first().copied().unwrap_or(0.0));
+                delay = delay.max(times.get(1).copied().unwrap_or(0.0));
+            }
+            "animation-duration" => duration = times.iter().copied().fold(duration, f64::max),
+            "animation-delay" => delay = times.iter().copied().fold(delay, f64::max),
+            _ => {}
+        }
+    }
+    if delay + duration > MOTION_SECONDS {
+        problems.push(format!(
+            "{file}: load motion may run {:.2} s, over {MOTION_SECONDS} s",
+            delay + duration
+        ));
     }
     problems
 }
@@ -1118,6 +1270,7 @@ pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<Str
                 }
             }
             problems.extend(contrast_problems(name, text));
+            problems.extend(motion_problems(name, text));
         }
     }
     let guide = &facts.guide;
@@ -1169,6 +1322,7 @@ mod tests {
     fn release(tag: &str, names: &[&str]) -> Release {
         Release {
             tag_name: tag.to_string(),
+            published_at: Some("2026-11-07T15:41:21Z".to_string()),
             draft: false,
             prerelease: false,
             assets: names.iter().map(|name| Asset { name: (*name).to_string() }).collect(),
@@ -1870,6 +2024,122 @@ mod tests {
         assert!(contrast_problems("s.css", ":root { --bg: white; --text: #000; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --text: #fff; } }")
             .iter()
             .any(|p| p.contains("no #hex")));
+    }
+
+    #[test]
+    fn a_band_or_the_log_is_its_own_contrast_scope() {
+        let base = format!(
+            "{CSS}.night {{ --bg: #000000; --text: #ffffff; --glow: rgb(0 0 0 / 0.3); }}\n"
+        );
+        assert_eq!(contrast_problems("s.css", &base), Vec::<String>::new());
+        let log = format!("{base}.log {{ --bg: #2b2622; --text-warn: #e5484d; }}");
+        let found = contrast_problems("s.css", &log);
+        assert!(
+            found.len() == 1 && found[0].starts_with("s.css .log: --text-warn #e5484d"),
+            "{found:?}"
+        );
+        let half = format!("{base}.window-bar {{ --text: #ffffff; }}");
+        assert!(
+            contrast_problems("s.css", &half)[0].contains(".window-bar: needs --text* and --bg*")
+        );
+        let nested = format!(
+            "{base}@media (min-width: 720px) {{ .x {{ --bg: #ffffff; --text: #ffffff; }} }}"
+        );
+        assert_eq!(contrast_problems("s.css", &nested), Vec::<String>::new());
+    }
+
+    const CALM_CSS: &str = "@media (prefers-reduced-motion: no-preference) {\n\
+        @keyframes rise { from { opacity: 0; } to { opacity: 1; } }\n\
+        .row { animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }\n\
+        .row:nth-child(6) { animation-delay: 3.25s; }\n\
+        .btn { transition: transform 150ms ease; }\n\
+        @supports (animation-timeline: view()) { .card { animation: rise linear both; animation-timeline: view(); } }\n}";
+
+    #[test]
+    fn motion_only_for_readers_who_have_not_asked_for_less_and_settled_in_five_seconds() {
+        assert_eq!(motion_problems("s.css", CALM_CSS), Vec::<String>::new());
+        for (css, needle) in [
+            (".row { animation: rise 1s; }", "outside @media (prefers-reduced-motion"),
+            (".btn { transition: color 1s; }", "outside"),
+            ("@media (prefers-reduced-motion: reduce) { .x { animation-name: rise; } }", "outside"),
+            ("@media (prefers-reduced-motion:no-preference) { .x { animation: spin 1s infinite; } }", "loops"),
+            ("html { scroll-behavior: smooth; }", "scroll-behavior"),
+            ("@media (prefers-reduced-motion: no-preference) { .x { animation: rise 0.7s 4.5s; } }", "5.20 s"),
+            (
+                "@media (prefers-reduced-motion: no-preference) { .x { animation-duration: 2s; } .y { animation-delay: 3500ms; } }",
+                "5.50 s",
+            ),
+        ] {
+            let found = motion_problems("s.css", css);
+            assert!(found.iter().any(|p| p.contains(needle)), "{css}: {found:?}");
+        }
+    }
+
+    fn encoded(colour: png::ColorType, pixels: &[u8], width: u32) -> Vec<u8> {
+        let mut bytes = Vec::new();
+        let channels = if colour == png::ColorType::Rgba { 4 } else { 3 };
+        let height = u32::try_from(pixels.len() / channels).unwrap() / width;
+        let mut encoder = png::Encoder::new(&mut bytes, width, height);
+        encoder.set_color(colour);
+        encoder.set_depth(png::BitDepth::Eight);
+        encoder.set_compression(png::Compression::NoCompression);
+        let mut writer = encoder.write_header().unwrap();
+        writer.write_image_data(pixels).unwrap();
+        writer.finish().unwrap();
+        bytes
+    }
+
+    #[test]
+    fn a_png_is_re_encoded_smaller_with_the_same_pixels() {
+        let opaque: Vec<u8> = (0..64 * 64_u32)
+            .flat_map(|i| [u8::try_from(i % 7).unwrap() * 30, 40, 90, 255])
+            .collect();
+        let source = encoded(png::ColorType::Rgba, &opaque, 64);
+        let smaller = smaller_png(source.clone()).unwrap();
+        assert!(smaller.len() < source.len(), "{} >= {}", smaller.len(), source.len());
+        let reader = png::Decoder::new(std::io::Cursor::new(&smaller)).read_info().unwrap();
+        assert_eq!(reader.info().color_type, png::ColorType::Rgb, "opaque alpha is dropped");
+        let decoded = |bytes: &[u8]| crate::icons::decode_png(bytes).unwrap().rgba;
+        assert_eq!(decoded(&smaller), decoded(&source));
+        let mut clear = opaque;
+        clear[3] = 0;
+        let source = encoded(png::ColorType::Rgba, &clear, 64);
+        let smaller = smaller_png(source.clone()).unwrap();
+        assert_eq!(decoded(&smaller), decoded(&source), "a real alpha channel is kept");
+        let tiny = encoded(png::ColorType::Rgb, &[1, 2, 3], 1);
+        assert!(smaller_png(tiny.clone()).unwrap().len() <= tiny.len());
+    }
+
+    #[test]
+    fn a_shot_s_alt_and_the_privacy_lead_come_from_the_markdown() {
+        let readme =
+            "![Main](.github/screenshots/s1.png)\n| ![Filter chips](.github/screenshots/s3.png) |";
+        assert_eq!(alt_of(readme, "s1.png").as_deref(), Some("Main"));
+        assert_eq!(alt_of(readme, "s3.png").as_deref(), Some("Filter chips"));
+        assert_eq!(alt_of(readme, "s9.png"), None);
+        let lead = ["Trawler keeps **it** here. It has no", "account."];
+        assert_eq!(
+            first_sentence(&lead, BLOB).unwrap(),
+            (
+                "Trawler keeps <strong>it</strong> here.".to_string(),
+                "It has no account.".to_string()
+            )
+        );
+        assert!(first_sentence(&["One sentence."], BLOB).is_err());
+    }
+
+    #[test]
+    fn the_download_date_is_the_release_s_published_day() {
+        assert_eq!(downloads(&release("v0.1.0", &FULL), "0.1.0").unwrap().published, "2026-11-07");
+        let mut unpublished = release("v0.1.0", &FULL);
+        unpublished.published_at = None;
+        assert!(downloads(&unpublished, "0.1.0").unwrap_err().contains("published_at"));
+    }
+
+    #[test]
+    fn the_script_s_tests_and_dotfiles_stay_out_of_the_site() {
+        assert!(ships("site.js") && ships("index.html"));
+        assert!(!ships("site.test.mjs") && !ships(".DS_Store"));
     }
 
     #[test]

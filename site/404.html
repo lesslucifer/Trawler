@@ -5,20 +5,19 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-  <title>Trawler — page not found</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex">
+  <title>Page not found — Trawler</title>
   <link rel="icon" href="{{path}}favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="{{path}}site.css">
 </head>
 <body>
-  <main id="main">
-    <h1>
-      <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="{{path}}wordmark-dark.png">
-        <img alt="Trawler" src="{{path}}wordmark-light.png" width="370" height="96">
-      </picture>
-    </h1>
-    <p>This page doesn't exist.</p>
-    <p><a href="{{path}}">Trawler's home page</a></p>
+  <main class="nf night">
+    <div class="wrap">
+      <p><a class="brand" href="{{base}}"><img alt="Trawler" src="{{path}}wordmark-dark.png" width="240" height="54"></a></p>
+      <h1>This page doesn't exist.</h1>
+      <p class="cta"><a class="btn primary" href="{{base}}">Go to the Trawler home page</a></p>
+    </div>
   </main>
 </body>
 </html>
