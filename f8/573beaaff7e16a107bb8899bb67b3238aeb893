@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: f8573beaaff7e16a107bb8899bb67b3238aeb893
+base: 2eea91a0c702f8c95db995113a5e30670e45eea1
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-router-kanban-change-detect-result.html
+report_sha256: 708dd5b9c7f646e283d1f6d9c41a83ee9920e7320165ef506e0cdc3f9317f387
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAW336YHD2HsZI5Lan09+YuuTb3wvTjnLkAuXn/lyR4ykIVgX9vbhUve2
+  1aWEuX5wsqK0XlkYyeAXQAeXYI6Q0B
+  -----END SSH SIGNATURE-----
