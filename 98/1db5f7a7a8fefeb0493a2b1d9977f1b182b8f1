@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PAGES
+wu: E-PAGES.W6
+branch: HEAD
+tests:
+  unit: { count: 32, covers: "package::HOMEPAGE is site::BASE_URL; metadata_drift_of names a member and the tauri bundle left on the repo URL (a_member_or_the_bundle_still_naming_the_repo_is_drift); the no-drift and every-gap fixtures name the site; the_tree_carries_one_licence_and_full_metadata is green on the tree with all five homepage fields switched (red first, naming all five)" }
+  integration: { count: 9, covers: "every_installer_homepage_is_the_page_the_built_site_calls_canonical: the site built from the v0.1.0 release fixture declares package::HOMEPAGE as its canonical address and the tree's metadata drift is empty, so the address every installer names is the page the site serves" }
+  e2e: { waived: "the deb/rpm/Windows bundles that carry the homepage build only on their hosts at a tag; the epic's e2e is the live site after the owner's Pages settings; the first rc's installers are hand-checked then" }
