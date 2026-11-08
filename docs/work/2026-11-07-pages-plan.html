@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PAGES — plan: a GitHub Pages landing site for Trawler</h1>
       <p>Audit and plan only. One page that explains Trawler in ten seconds, hands each visitor the right installer for the latest release, and sends them to the guide. It makes no request outside its own origin and repeats no fact it does not take from the root markdown.</p>
-      <div class="meta">v1 · 2026-11-07 · Trawler · T3 epic plan · <span class="badge id">E-PAGES</span> · branch <code>epic/pages</code> off <code>main</code> c782af92 · interim homepage: the releases page</div>
+      <div class="meta">v2 · 2026-11-08 · Trawler · T3 epic plan · <span class="badge id">E-PAGES</span> · branch <code>epic/pages</code> off <code>main</code> c782af92 · owner rulings Q1–Q13 recorded (<a href="#questions">Rulings</a>) · six WUs</div>
     </div>
   </header>
   <main>
@@ -22,6 +22,7 @@
         <tr><td>The repo's <em>website</em> field points at <code>github.com/lesslucifer/Trawler/releases</code>: an asset list of 26 files where the visitor must work out which one is theirs</td><td><code>https://lesslucifer.github.io/Trawler/</code> (Q1): the pitch, one screenshot, a download block per OS naming the exact file, the first-open warning per OS, links to the guide, privacy and changelog</td></tr>
         <tr><td>No Pages site (<code>gh api repos/lesslucifer/Trawler/pages</code> → 404)</td><td>A Pages site deployed by a pinned GitHub Actions workflow from a build of <code>site/</code>; <code>docs/</code> can never be in the artifact</td></tr>
         <tr><td>The product promise is local-only (<code>PRIVACY.md</code>, DEC-91 rule 7)</td><td>The site keeps the same promise: no analytics, no cookies, no third-party script, font or image, enforced by a CSP meta tag and a test</td></tr>
+        <tr><td>Installers name the repo as their homepage (deb, rpm, Windows uninstall entry)</td><td>From the first release tagged after the site is live, they name the site (Q12, W6)</td></tr>
       </table>
       <p>Why now: v0.1.0 is published as the latest release and the repo is public; the releases page is the interim homepage the brief names.</p>
     </div>
@@ -42,7 +43,7 @@ flowchart LR
   F --> G["Guide · Changelog · Source · Report an issue (GitHub links)"]
   P --> G
 </pre><div class="caption">One page. Every arrow leaving the page is a plain navigation to github.com; the page itself loads only its own files.</div></div>
-    <div class="callout" data-c="no-os-sniff"><strong>No OS detection.</strong> Picking the visitor's OS needs JavaScript reading <code>navigator.userAgentData</code> or the UA string, which cannot tell Windows arm64 from x64 nor Apple Silicon from Intel reliably. The download block shows every OS row; the macOS dmg is universal, so only Windows and Linux carry an arch choice. Recommendation: no script at all (<code>script-src 'none'</code>).</div>
+    <div class="callout" data-c="no-os-sniff"><strong>No OS detection.</strong> Picking the visitor's OS needs JavaScript reading <code>navigator.userAgentData</code> or the UA string, which cannot tell Windows arm64 from x64 nor Apple Silicon from Intel reliably. The download block shows every OS row; the macOS dmg is universal, so only Windows and Linux carry an arch choice. No script at all (<code>script-src 'none'</code>; Q3, Q13).</div>
 
     <h2 id="audit">Audit — what exists at c782af92</h2>
     <p>✅ ready · ⚠️ partial · ❌ missing.</p>
@@ -56,10 +57,11 @@ flowchart LR
       <tr><td>Brand assets</td><td>✅</td><td><code>ui/src-tauri/icons/source/</code> + <code>MANIFEST.json</code> (DEC-89); generated <code>ui/public/favicon.svg</code> (601 B), <code>icons/brand/wordmark-{light,dark}.png</code> (~23 KB), <code>social-preview.png</code> 1280×640 (48 KB)</td><td>Copied at build, never redrawn → W3</td></tr>
       <tr><td>Screenshots</td><td>✅</td><td><code>.github/screenshots/</code> s1 1440×800 (263 KB) … s11; reproducible via <code>cargo xtask ui screenshots</code></td><td>s1 above the fold; others lazy → W3</td></tr>
       <tr><td>Release data</td><td>✅</td><td>v0.1.0 latest: 25 assets + <code>latest.json</code> (18 platform keys, no dmg key: the macOS updater entry is <code>.app.tar.gz</code>)</td><td>The site must read the release's asset list, not <code>latest.json</code>, to name the dmg → W2</td></tr>
+      <tr><td><code>homepage</code> metadata</td><td>⚠️</td><td>The repo URL in five places: <code>Cargo.toml:33</code>, <code>ui/src-tauri/Cargo.toml:10</code>, <code>ui/src-tauri/tauri.conf.json:44</code>, <code>login-service/Cargo.toml:8</code>, <code>xtask/Cargo.toml:8</code>; one constant <code>xtask/src/package.rs:332</code> <code>HOMEPAGE</code> and <code>metadata_drift_of</code> hold all five (test <code>the_tree_carries_one_licence_and_full_metadata</code>; fixtures at <code>:923</code>, <code>:962</code>); DEC-87 rule 4 says “the GitHub repository”. Readers: the Tauri bundler only (deb <code>Homepage</code>, rpm <code>URL</code>, NSIS/MSI uninstall entry <code>URLInfoAbout</code>, <code>URLUpdateInfo</code>, <code>HelpLink</code>; not macOS). About shows version + notices only; its Source/Guide links are <code>links.rs</code>; the updater reads <code>latest.json</code>; DEC-90 does not name it</td><td>Q12 switches it → W6</td></tr>
       <tr><td>Pages</td><td>❌</td><td>API 404; repo homepage = releases page</td><td>Workflow + owner settings → W4, <a href="#settings">Settings</a></td></tr>
-      <tr><td>Repo description</td><td>⚠️</td><td><code>gh repo view</code>: “… a hackable Charles/Proxyman alternative”</td><td>Names two other tools, against DEC-91 rule 2's intent (the rule lists files, not repo settings) → Q10</td></tr>
+      <tr><td>Repo description</td><td>⚠️</td><td><code>gh repo view</code>: “… a hackable Charles/Proxyman alternative”</td><td>Names two other tools, against DEC-91 rule 2's intent (the rule lists files, not repo settings) → Q10: owner replaces it (setting #4)</td></tr>
       <tr><td>Workflow conventions</td><td>⚠️</td><td><code>release.yml</code> pins every action by SHA + version comment, <code>persist-credentials: false</code>, top-level <code>contents: read</code>, write only on the job that needs it; <code>ci.yml</code> still uses tags (<code>actions/checkout@v4</code>)</td><td>New workflow follows <code>release.yml</code> → W4</td></tr>
-      <tr><td>Code-path classifier</td><td>⚠️</td><td><code>xtask/src/notes.rs:511</code> <code>is_code</code> = <code>src/ xtask/ tests/ ui/src/ ui/e2e/</code></td><td><code>site/</code> is not a code path; with no JS on the site, keep it that way (Q13)</td></tr>
+      <tr><td>Code-path classifier</td><td>⚠️</td><td><code>xtask/src/notes.rs:511</code> <code>is_code</code> = <code>src/ xtask/ tests/ ui/src/ ui/e2e/</code></td><td><code>site/</code> is not a code path; ruled: stays so while the site has no script (Q13)</td></tr>
       <tr><td>Design review</td><td>⚠️</td><td><code>.claude/skills/design-review</code> scopes design runs and <code>.tsx</code> under <code>ui/src/</code></td><td>The site is neither; it gets an owner-reviewed design doc like E-PRORELEASE W11/W12 → W1</td></tr>
       <tr><td>Browser tooling</td><td>⚠️</td><td><code>ui/e2e/wdio.conf.ts</code> drives the Tauri app, not a browser; no Playwright in the repo; Chrome is installed on this Mac</td><td>Shots via headless Chrome CLI, a machine refusal (exit 2) where absent → W3</td></tr>
       <tr><td>Next free DEC</td><td>—</td><td>Highest on every local/remote branch and worktree (<code>epic/prorelease</code>, <code>epic/rc4</code>, <code>origin/*</code>): DEC-91</td><td>E-PAGES mints <strong>DEC-92</strong> → W5</td></tr>
@@ -88,13 +90,13 @@ flowchart LR
       <tr><td>Result</td><td>a second rendering of the guide that looks unlike GitHub's and must be styled page by page</td><td>simplest code, two copies of the pitch and features</td><td>one page; the guide stays where the app already opens it</td></tr>
       <tr><td>Cost of being wrong</td><td>most code; every GUIDE edit can break the site build</td><td>a stale feature list on the front page</td><td>a section that grows beyond the subset turns the build red until the renderer or the section changes</td></tr>
     </table>
-    <div class="callout" data-c="single-source-rec"><strong>Recommendation C (Q2).</strong> The site renders the README pitch, sub line and “What you can do”, and PRIVACY.md's lead paragraph; downloads come from the release; GUIDE, PRIVACY (full), CHANGELOG, CONTRIBUTING, SECURITY are links to <code>github.com/lesslucifer/Trawler/blob/main/…</code>, the same base the app's Help menu uses.</div>
+    <div class="callout" data-c="single-source-rec"><strong>Ruled C (Q2).</strong> The site renders the README pitch, sub line and “What you can do”, and PRIVACY.md's lead paragraph; downloads come from the release; GUIDE, PRIVACY (full), CHANGELOG, CONTRIBUTING, SECURITY are links to <code>github.com/lesslucifer/Trawler/blob/main/…</code>, the same base the app's Help menu uses.</div>
 
     <h2 id="download">Download section</h2>
     <h3 id="version-source">How it learns the version</h3>
     <table data-c="version-source">
       <tr><th>Option</th><th>Third-party request from the visitor</th><th>Rate limit</th><th>Staleness</th><th>Verdict</th></tr>
-      <tr><td><strong>1 · build-time read of the latest release</strong> (the workflow runs <code>gh api repos/lesslucifer/Trawler/releases/latest</code> with its read token, passes the JSON to <code>cargo xtask site build --release &lt;file&gt;</code>)</td><td>none</td><td>1 authenticated call per deploy (1,000/h per repo for <code>GITHUB_TOKEN</code>)</td><td>until the next deploy; the workflow redeploys on <code>release: published</code> (Q11)</td><td>✔ recommended</td></tr>
+      <tr><td><strong>1 · build-time read of the latest release</strong> (the workflow runs <code>gh api repos/lesslucifer/Trawler/releases/latest</code> with its read token, passes the JSON to <code>cargo xtask site build --release &lt;file&gt;</code>)</td><td>none</td><td>1 authenticated call per deploy (1,000/h per repo for <code>GITHUB_TOKEN</code>)</td><td>until the next deploy; the workflow redeploys on <code>release: published</code> (Q11)</td><td>✔ ruled (Q3)</td></tr>
       <tr><td>2 · static link to <code>releases/latest</code> only</td><td>none</td><td>none</td><td>never stale</td><td>the fallback link under every row; alone it keeps today's “which file is mine” problem</td></tr>
       <tr><td>3 · client-side fetch of <code>api.github.com</code></td><td><strong>yes</strong>: every visit tells GitHub the visitor's IP and the page they read</td><td>60/h per visitor IP unauthenticated, then an empty block</td><td>live</td><td>✘ breaks the local-only promise and needs a script</td></tr>
     </table>
@@ -153,13 +155,13 @@ jobs:
       <tr><th>Topic</th><th>Plan</th></tr>
       <tr><td>Look</td><td>The app's warm dark: canvas <code>#2b2622</code>, ink <code>#f7f5f0</code>, mute <code>#aea69c</code> (6.2:1); amber <code>#e0a43a</code> as brand colour only (DEC-89 rule 6: never a UI colour in the app; on the site it is the mark and at most one accent rule). Light theme on <code>paper #f4f1ea</code> / <code>#1f1c19</code> (15:1). <code>deep-amber #a8741a</code> on paper is 3.6:1: decoration only, never text</td></tr>
       <tr><td>Theme switch</td><td><code>prefers-color-scheme</code> only, tokens on <code>:root</code>; no toggle (a toggle needs script and storage). Wordmark via <code>&lt;picture&gt;</code> exactly as the README does</td></tr>
-      <tr><td>Fonts</td><td>System stacks (<code>system-ui</code>, <code>ui-monospace</code>): zero font bytes, no OFL notice on the site; the wordmark is an outlined image (DEC-89 rule 2). Alternative: self-host DM Mono / Inter woff2 from <code>@fontsource</code> (Q9)</td></tr>
+      <tr><td>Fonts</td><td>System stacks (<code>system-ui</code>, <code>ui-monospace</code>): zero font bytes, no OFL notice on the site; the wordmark is an outlined image (DEC-89 rule 2). Ruled (Q9)</td></tr>
       <tr><td>Responsive</td><td>One column under 720 px; download table becomes one card per OS; no horizontal scroll at 320 px</td></tr>
       <tr><td>Accessible</td><td><code>lang="en"</code>, a skip link, one <code>h1</code>, visible <code>:focus-visible</code> ring, every image's alt from the README's alt text, ≥ 4.5:1 text contrast (test-computed from the CSS tokens), no motion at all (so <code>prefers-reduced-motion</code> has nothing to stop)</td></tr>
       <tr><td>Budget</td><td>HTML + CSS ≤ 30 KB; first view ≤ 350 KB (s1 263 KB is the bulk); other images <code>loading="lazy"</code> with <code>width</code>/<code>height</code>; zero requests outside the origin; zero script</td></tr>
       <tr><td>Head</td><td><code>&lt;meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"&gt;</code>; <code>referrer no-referrer</code>; description = pitch; OG/Twitter card with absolute <code>og:image</code> = <code>‹base›/social-preview.png</code> (1280×640, the repo's own card); canonical URL; favicon = <code>ui/public/favicon.svg</code></td></tr>
       <tr><td>404</td><td><code>404.html</code>: wordmark, “This page doesn't exist.”, link home; absolute asset paths under <code>/Trawler/</code> because Pages serves it at any depth</td></tr>
-      <tr><td>Sitemap / robots</td><td>Skipped on github.io: crawlers read <code>robots.txt</code> only at the host root (<code>lesslucifer.github.io/robots.txt</code>, not ours) and a one-page site needs no sitemap. Add both with a custom domain (Q1)</td></tr>
+      <tr><td>Sitemap / robots</td><td>Skipped on github.io: crawlers read <code>robots.txt</code> only at the host root (<code>lesslucifer.github.io/robots.txt</code>, not ours) and a one-page site needs no sitemap. Revisit only if a custom domain comes (Q1 ruled github.io)</td></tr>
     </table>
 
     <h2 id="gates">Quality gates</h2>
@@ -172,12 +174,13 @@ jobs:
       <tr><td>Version and kinds</td><td>same</td><td>every download row names the kinds <code>Os::bundles</code> builds for a final at the release's version; the release version ≤ the workspace version in <code>Cargo.toml</code>; a fixture missing one asset is red</td></tr>
       <tr><td>Contrast</td><td>same</td><td>each text/background token pair in <code>site.css</code>, both themes, ≥ 4.5:1</td></tr>
       <tr><td>Workflow pin</td><td><code>xtask/tests/suite/pages_workflow.rs</code> (like <code>ci_workflow.rs</code>)</td><td>triggers, permissions per job, SHA-pinned actions, <code>persist-credentials: false</code>, artifact path <code>target/site</code>, no <code>continue-on-error</code>, timeouts</td></tr>
+      <tr><td>Homepage = site</td><td><code>xtask/src/package.rs</code> unit (W6)</td><td><code>HOMEPAGE</code> is the site's base-URL constant from W2 (one fact, no second literal); <code>metadata_drift</code> on the tree is empty with all five fields switched; the fixtures name the site; a member still on the repo URL is red</td></tr>
       <tr><td>Visual</td><td><code>cargo xtask site shots</code> (manual step of W3, not a gate)</td><td>headless Chrome <code>--screenshot</code> at 390×844 and 1440×900, light and dark (<code>--force-dark-mode</code>) into the W3 result for the owner; exit 2 when no Chrome is found</td></tr>
-      <tr><td>Code review</td><td><code>code-review</code> skill</td><td>every WU touching <code>xtask/</code> (W2, W3's test additions, W4's test)</td></tr>
+      <tr><td>Code review</td><td><code>code-review</code> skill</td><td>every WU touching <code>xtask/</code> (W2, W3's test additions, W4's test, W6)</td></tr>
       <tr><td>Design review</td><td>owner, on the W1 design doc</td><td>the design-review skill does not scope <code>site/</code>; the owner's rulings on W1 are the gate, like E-PRORELEASE W11–W13</td></tr>
       <tr><td>Independent review of <code>.github/</code></td><td>router <code>trawler-05</code></td><td>W4 checklist below</td></tr>
     </table>
-    <div class="callout" data-c="router-checklist"><strong>What the router checks on W4's <code>pages.yml</code>:</strong> (1) triggers are push to <code>main</code>, <code>release: published</code> (pre-release skipped) and <code>workflow_dispatch</code>, nothing on pull requests or other branches; (2) top-level <code>contents: read</code>, and <code>pages: write</code> + <code>id-token: write</code> on the deploy job only; (3) every <code>uses:</code> is a full SHA with a version comment, checkout and toolchain SHAs identical to <code>release.yml</code>; (4) <code>persist-credentials: false</code>; (5) the upload path is the build output dir, never <code>.</code>, <code>docs</code> or <code>site</code> raw; (6) no secret is referenced, the token only reads the release; (7) the release read is <code>releases/latest</code>, not the event payload; (8) <code>environment: github-pages</code> on the deploy job; (9) concurrency <code>pages</code>, no cancel-in-progress (a half-cancelled deploy); (10) timeouts set, no <code>continue-on-error</code>; (11) <code>release.yml</code> and <code>ci.yml</code> unchanged.</div>
+    <div class="callout" data-c="router-checklist"><strong>What the router checks on W4's <code>pages.yml</code>:</strong> (1) triggers are push to <code>main</code>, <code>release: published</code> (pre-release skipped) and <code>workflow_dispatch</code>, nothing on pull requests or other branches; (2) top-level <code>contents: read</code>, and <code>pages: write</code> + <code>id-token: write</code> on the deploy job only; (3) every <code>uses:</code> is a full SHA with a version comment, checkout and toolchain SHAs identical to <code>release.yml</code>; (4) <code>persist-credentials: false</code>; (5) the upload path is the build output dir, never <code>.</code>, <code>docs</code> or <code>site</code> raw; (6) no secret is referenced, the token only reads the release; (7) the release read is <code>releases/latest</code>, not the event payload; (8) <code>environment: github-pages</code> on the deploy job; (9) concurrency <code>pages</code>, no cancel-in-progress (a half-cancelled deploy); (10) timeouts set, no <code>continue-on-error</code>; (11) <code>release.yml</code> and <code>ci.yml</code> unchanged. The rulings leave this list as it was: Q11 confirms item 1's two triggers; W6 touches no file under <code>.github/</code>.</div>
 
     <h2 id="release">Release process integration</h2>
     <div class="diagram" data-c="release-flow"><pre class="mermaid">
@@ -189,43 +192,51 @@ flowchart LR
   PUB -- "pre-release" --> SKIP["skipped: site keeps the latest final"]
   PW --> LIVE["site names v‹x› files"]
 </pre><div class="caption">Publishing a final redeploys the site; a merge redeploys it with the same release. <code>release.yml</code> is not touched.</div></div>
-    <p><code>docs/release-process.html</code> (T1, rule-bearing: needs the owner's <code>cargo xtask mr commit</code>) gains one row after step 8 “publish”: <em>the site redeploys by itself; check <code>gh run list --workflow pages.yml -L 1</code> is green and the site's download block names ‹version›</em>; and one Rollback row: <em>a release pulled back to draft: run <code>gh workflow run pages.yml</code> so the site follows <code>releases/latest</code></em>.</p>
+    <p><code>docs/release-process.html</code> (T1, rule-bearing: needs the owner's <code>cargo xtask mr commit</code>) gains three rows:</p>
+    <table data-c="release-rows">
+      <tr><th>Where</th><th>Row</th></tr>
+      <tr><td>before “tag” (rc and final)</td><td><em>the installers name <code>HOMEPAGE</code>: <code>curl -sI https://lesslucifer.github.io/Trawler/</code> answers 200 before any tag</em> (W6's metadata reaches users only here)</td></tr>
+      <tr><td>after step 8 “publish”</td><td><em>the site redeploys by itself; <code>gh run list --workflow pages.yml -L 1</code> is green and the download block names ‹version›</em></td></tr>
+      <tr><td>Rollback</td><td><em>a release pulled back to draft: <code>gh workflow run pages.yml</code> so the site follows <code>releases/latest</code></em></td></tr>
+    </table>
 
     <h2 id="settings">Repo settings the owner switches on (agents never set them)</h2>
     <table data-c="settings">
       <tr><th>#</th><th>Where</th><th>Value</th><th>When</th></tr>
       <tr><td>1</td><td>Settings → Pages → Build and deployment → Source</td><td><strong>GitHub Actions</strong></td><td>before the first <code>pages.yml</code> run (after the epic merges)</td></tr>
-      <tr><td>2</td><td>Settings → Environments → <code>github-pages</code> → Deployment branches and tags</td><td>keep <code>main</code>; add a <strong>tag</strong> rule <code>v*</code> (a <code>release</code> event runs on the tag ref, which the default <code>main</code>-only rule refuses)</td><td>with #1, only if Q11 = auto on release</td></tr>
+      <tr><td>2</td><td>Settings → Environments → <code>github-pages</code> → Deployment branches and tags</td><td>keep <code>main</code>; add a <strong>tag</strong> rule <code>v*</code> (a <code>release</code> event runs on the tag ref, which the default <code>main</code>-only rule refuses)</td><td>with #1 (required: Q11 = release + merge)</td></tr>
       <tr><td>3</td><td>Settings → Actions → General</td><td>Actions allowed (already: CI runs); workflow permissions may stay read-only, the deploy job requests its own</td><td>check only</td></tr>
-      <tr><td>4</td><td>Repo home → About (⚙)</td><td>Website = <code>https://lesslucifer.github.io/Trawler/</code>; Description per Q10</td><td>after the first green deploy</td></tr>
-      <tr><td>5</td><td>Settings → Pages → Custom domain + Enforce HTTPS; account Settings → Pages → verify the domain</td><td>only if Q1 = custom domain (plus DNS at the registrar)</td><td>later epic</td></tr>
+      <tr><td>4</td><td>Repo home → About (⚙)</td><td>Website = <code>https://lesslucifer.github.io/Trawler/</code>; Description, exactly (Q10): <code>See every HTTP and HTTPS request your apps make. Free, open source, local-only, for macOS, Windows and Linux.</code></td><td>after the first green deploy</td></tr>
+      <tr><td>5</td><td>—</td><td>before the next tag (rc or final): the site answers 200 (release-process row; W6's installers name it)</td><td>check only</td></tr>
+      <tr><td>—</td><td>Custom domain</td><td>not needed: Q1 = github.io</td><td>nothing</td></tr>
       <tr><td>—</td><td>Social preview</td><td>already custom (<code>usesCustomOpenGraphImage: true</code>)</td><td>nothing</td></tr>
     </table>
 
-    <h2 id="questions">Owner decisions</h2>
+    <h2 id="questions">Owner rulings — Q1–Q13 closed</h2>
     <div data-item="open-questions">
+      <p><strong>Record:</strong> the owner (lesslucifer) answered all thirteen on 2026-11-08, relayed by router <code>trawler-05</code>. Twelve equal the v1 recommendation; <strong>Q12 differs</strong>. Open questions: none.</p>
       <table data-c="owner-qs">
-        <tr><th>Q</th><th>Decision</th><th>Options</th><th>Recommendation</th><th>Cost of being wrong</th></tr>
-        <tr><td>Q1</td><td>Hosting and domain</td><td>a) <code>lesslucifer.github.io/Trawler/</code> · b) a custom domain (e.g. <code>trawler.app</code>-style, if owned) · c) a separate user-site repo</td><td><strong>a</strong>: free, HTTPS automatic, no DNS; a later custom domain is a Settings change plus the base-URL constant and a GitHub redirect from the old URL</td><td>low: moving to a domain later keeps old links working through Pages' redirect; choosing b now without verifying the domain risks a takeover</td></tr>
-        <tr><td>Q2</td><td>Single source</td><td>A generate all · B hand-written + equality test · C frame + filled facts</td><td><strong>C</strong> (<a href="#single-source">table</a>)</td><td>medium: A costs the most code; B lets the front page drift</td></tr>
-        <tr><td>Q3</td><td>How the download block learns the version</td><td>1 build-time latest release · 2 static releases link · 3 client-side API</td><td><strong>1</strong>, with 2 as the always-present fallback link; never 3</td><td>3 breaks the privacy promise; 2 alone keeps the problem this epic exists to fix</td></tr>
-        <tr><td>Q4</td><td>Analytics</td><td>none · a self-hosted counter · a hosted analytics script</td><td><strong>none</strong>. Release download counts already exist per asset (<code>gh api …/releases</code> <code>download_count</code>) and repo Insights → Traffic counts README views</td><td>adding one later contradicts PRIVACY.md's spirit in public; none costs only visit numbers</td></tr>
-        <tr><td>Q5</td><td>Site name and tagline</td><td>title “Trawler”, pitch “See every HTTP and HTTPS request your apps make.”, sub = README's second line · or new copy</td><td><strong>reuse</strong> README's exactly (DEC-91: one voice); <code>&lt;title&gt;</code> = “Trawler — See every HTTP and HTTPS request your apps make.”</td><td>new copy means two pitches to keep in step</td></tr>
-        <tr><td>Q6</td><td>Full guide on the site or link out</td><td>link to <code>blob/main/GUIDE.md</code> · render it on the site</td><td><strong>link out</strong>, to the same URL the app's Help opens (<code>links.rs</code>)</td><td>rendering it is option A's cost; linking main can show a step for a feature merged but not yet released (the app has the same trade)</td></tr>
-        <tr><td>Q7</td><td>Language</td><td>English only · more</td><td><strong>English only</strong>, <code>lang="en"</code></td><td>low; translation is a later epic</td></tr>
-        <tr><td>Q8</td><td>Who can edit</td><td>owner via epics only · outside PRs</td><td><strong>owner via the normal epic/gates</strong>; no outside PRs at 0.1.0 (DEC-91 rule 5); no CODEOWNERS needed</td><td>low</td></tr>
-        <tr><td>Q9</td><td>Fonts</td><td>system stacks · self-host DM Mono + Inter woff2 from <code>@fontsource</code></td><td><strong>system stacks</strong>; the brand is carried by the outlined wordmark</td><td>low: self-hosting later adds ~2 woff2 files and the OFL text to the site</td></tr>
-        <tr><td>Q10</td><td>Repo description</td><td>keep · replace with the pitch</td><td><strong>replace</strong> with “See every HTTP and HTTPS request your apps make. Free, open source, local-only, for macOS, Windows and Linux.” (owner sets it; the site's meta description never names another tool)</td><td>the repo card and search snippets keep naming two other tools</td></tr>
-        <tr><td>Q11</td><td>Redeploy trigger</td><td>auto on <code>release: published</code> + merge to <code>main</code> · merge to <code>main</code> only + manual dispatch</td><td><strong>auto</strong>, needing setting #2</td><td>main-only: the site advertises the previous version until someone remembers a dispatch</td></tr>
-        <tr><td>Q12</td><td>Metadata <code>homepage</code> (<code>Cargo.toml:33</code>, <code>ui/src-tauri/Cargo.toml:10</code>, <code>tauri.conf.json:44</code>)</td><td>keep the repo URL · switch to the site</td><td><strong>keep</strong>: it reaches users only through a release, and About already links the repo; revisit with a custom domain</td><td>low</td></tr>
-        <tr><td>Q13</td><td>Is <code>site/</code> a code path?</td><td>no · add to <code>is_code</code> (+ <code>docs/workflow.html</code> T1 line)</td><td><strong>no</strong> while the site has no script: its rules are mechanical tests in <code>xtask/</code> (which is a code path); a WU that adds JS adds <code>site/</code> to <code>is_code</code></td><td>low; a later script lands without a code review until the classifier changes</td></tr>
+        <tr><th>Q</th><th>Decision</th><th>Ruling</th><th>Lands in</th></tr>
+        <tr><td>Q1</td><td>Hosting and domain</td><td><code>https://lesslucifer.github.io/Trawler/</code>; no custom domain, no CNAME, no sitemap/robots</td><td>W2 base-URL constant, W4</td></tr>
+        <tr><td>Q2</td><td>Single source</td><td>C: hand-written frame, repeated facts filled at build</td><td>W2, W3</td></tr>
+        <tr><td>Q3</td><td>Version source</td><td>latest release read at build time, plus an always-present <code>releases/latest</code> fallback link; never client-side</td><td>W2, W4</td></tr>
+        <tr><td>Q4</td><td>Analytics</td><td>none</td><td>CSP + no-external test (W2)</td></tr>
+        <tr><td>Q5</td><td>Name and tagline</td><td>README pitch exactly; <code>&lt;title&gt;</code> “Trawler — See every HTTP and HTTPS request your apps make.”</td><td>W1 copy, W2 fill</td></tr>
+        <tr><td>Q6</td><td>Guide</td><td>link out to <code>blob/main/GUIDE.md</code> (= <code>links.rs</code> <code>USER_GUIDE</code>)</td><td>W2 link test</td></tr>
+        <tr><td>Q7</td><td>Language</td><td>English only, <code>lang="en"</code></td><td>W3</td></tr>
+        <tr><td>Q8</td><td>Who edits</td><td>owner via epics only; no CODEOWNERS</td><td>—</td></tr>
+        <tr><td>Q9</td><td>Fonts</td><td>system stacks + outlined wordmark</td><td>W1, W3</td></tr>
+        <tr><td>Q10</td><td>Repo description</td><td>replaced by the owner with the exact text in setting #4</td><td>owner, setting #4</td></tr>
+        <tr><td>Q11</td><td>Redeploy</td><td>on <code>release: published</code> (pre-releases skipped) and on merge to <code>main</code>; needs setting #2 (<code>v*</code> tag rule)</td><td>W4, settings #1–#2</td></tr>
+        <tr><td>Q12</td><td>Metadata <code>homepage</code></td><td><strong>switch to the site</strong> (v1 recommended keep) — all five fields, not only the three named, because one constant holds them (<a href="#audit">audit</a>)</td><td><strong>W6</strong> (new), DEC-87 rule 4 amended</td></tr>
+        <tr><td>Q13</td><td><code>site/</code> a code path?</td><td>no, while the site has no script; a WU that adds JS adds <code>site/</code> to <code>is_code</code></td><td>—</td></tr>
       </table>
-      <p>Defaults if unanswered: every recommendation above. W1 and W2 can start on the defaults; W4 needs Q1, Q3, Q11 settled.</p>
+      <div class="callout warn" data-c="q12-order"><strong>Q12 and the closing order.</strong> Pages deploys only from <code>main</code> (or a <code>v*</code> tag), so the address cannot resolve before the epic merges. The metadata's only reader is the bundler at a tag, so “resolves before it points” is kept where it reaches users: (1) W1–W6 land on <code>epic/pages</code>, W6 last; (2) epic merge; (3) owner settings #1–#2 → first <code>pages.yml</code> run green → the address answers 200; (4) setting #4; (5) only then the next rc tag — the first installers that carry the site as homepage. W5's release-process row makes step 5 a rule. Between (2) and (3) the tree names an address no shipped file carries.</div>
     </div>
 
     <h2 id="use-cases">Use-case requirements</h2>
     <div data-item="use-cases">
-      <p>Extends <a href="../use-cases/web-ui.html#uc-install">UC-INSTALL</a>: a new entry point before the installer. Contract added: <em>a visitor of the project site finds, per OS and arch, a direct link to the installer of the latest published final, the first-open step for that OS, and the guide; the site makes no request outside its own origin.</em> No other UC changes; UC-UPDATE is untouched (the updater keeps reading <code>latest.json</code>).</p>
+      <p>Extends <a href="../use-cases/web-ui.html#uc-install">UC-INSTALL</a>: a new entry point before the installer. Contract added: <em>a visitor of the project site finds, per OS and arch, a direct link to the installer of the latest published final, the first-open step for that OS, and the guide; the site makes no request outside its own origin.</em> Second contract (Q12): <em>an installed package's homepage (deb, rpm, Windows uninstall entry) is the project site</em>. No other UC changes; UC-UPDATE is untouched (the updater keeps reading <code>latest.json</code>).</p>
     </div>
 
     <h2 id="expected">Expected result</h2>
@@ -236,6 +247,7 @@ flowchart LR
         <li>DevTools Network on the live page shows requests to <code>lesslucifer.github.io</code> only; the page has no script.</li>
         <li>Publishing the next final redeploys the site with its files, with no manual step.</li>
         <li>The deny-list, link and contrast tests hold the site text like the root markdown.</li>
+        <li>Every <code>homepage</code> field in the tree names the site, held by one constant; the first rc tagged after the site answers ships deb/rpm/Windows entries that link it. Nothing already released changes.</li>
       </ul>
     </div>
 
@@ -243,7 +255,7 @@ flowchart LR
     <div data-item="non-goals">
       <ul>
         <li>A custom domain, analytics, a blog, docs search, translations, a rendered copy of the guide.</li>
-        <li>Any change to <code>release.yml</code>, <code>ci.yml</code>, the updater channel or the app's links.</li>
+        <li>Any change to <code>release.yml</code>, <code>ci.yml</code>, the updater channel or the app's links (About/Help keep <code>links.rs</code>; <code>repository</code> stays the repo).</li>
         <li>OS auto-detection or any JavaScript.</li>
         <li>New screenshots or brand art: the site uses what DEC-89/DEC-91 already generate.</li>
         <li>Setting repo settings, pushing, tagging or dispatching (owner only).</li>
@@ -258,7 +270,13 @@ flowchart LR
   W2 --> W4["W4 · pages.yml + its test · router review"]
   W3 --> W5["W5 · DEC-92 · UC-INSTALL · release-process (owner mr commit)"]
   W4 --> W5
-</pre><div class="caption">W1 ∥ W2 in separate worktrees; then W3 ∥ W4; W5 closes. Owner decisions gate W1 (Q5, Q9), W2 (Q2, Q3), W4 (Q1, Q11).</div></div>
+  W2 --> W6["W6 · homepage = site (Q12)"]
+  W4 --> W6
+  W6 --> M(["epic merge"])
+  W5 --> M
+  M --> L(["owner settings → first deploy → site answers"])
+  L --> T(["next rc tag: installers link the site"])
+</pre><div class="caption">W1 ∥ W2 now (all rulings in); then W3 ∥ W4; W5 ∥ W6 close. The site being live gates the next tag, not the merge (<a href="#questions">closing order</a>).</div></div>
     <div data-item="wu-summaries">
       <div data-wu="E-PAGES.W1">
         <h3 id="w1">E-PAGES.W1 · site design <span class="badge approval">needs owner</span></h3>
@@ -269,7 +287,7 @@ flowchart LR
       </div>
       <div data-wu="E-PAGES.W2">
         <h3 id="w2">E-PAGES.W2 · <code>cargo xtask site build</code> and its checks <span class="badge">code · cr</span></h3>
-        <p data-item="wu-summary">An xtask command that copies a stub <code>site/</code> frame into <code>--out</code>, fills the markers from README/PRIVACY (subset renderer that refuses unknown markdown), the release JSON (versioned links per <code>Os::bundles</code> kind, refusing a draft, pre-release or missing kind) and <code>links.rs</code>, copies the listed assets; plus the link, CSP/no-external, deny-list, version and contrast checks as unit tests in <code>xtask</code>.</p>
+        <p data-item="wu-summary">An xtask command that copies a stub <code>site/</code> frame into <code>--out</code>, fills the markers from README/PRIVACY (subset renderer that refuses unknown markdown), the release JSON (versioned links per <code>Os::bundles</code> kind, refusing a draft, pre-release or missing kind) and <code>links.rs</code>, copies the listed assets; owns the site base-URL constant <code>https://lesslucifer.github.io/Trawler/</code> (Q1) that OG/canonical tags and W6 read; plus the link, CSP/no-external, deny-list, version and contrast checks as unit tests in <code>xtask</code>.</p>
         <p data-item="wu-maps-to">UC-INSTALL; Q2, Q3; DEC-91 rules 2–4.</p>
         <p data-item="wu-expected">Building from a committed v0.1.0 release fixture yields a page whose links resolve and whose download rows equal the README install table's kinds; a fixture missing the arm64 msi is red.</p>
         <p data-item="wu-deps">none (parallel with W1)</p>
@@ -290,10 +308,17 @@ flowchart LR
       </div>
       <div data-wu="E-PAGES.W5">
         <h3 id="w5">E-PAGES.W5 · distillation and the release-process rows <span class="badge approval">owner mr commit</span></h3>
-        <p data-item="wu-summary">Mint DEC-92 “the site is a build of the tree and the latest release, published by Actions, with no request outside its origin”; amend DEC-91 (the site joins the held text) and DEC-89 rule 10 (the site consumes favicon and wordmarks); UC-INSTALL entry point; the two <code>docs/release-process.html</code> rows, staged as <code>cargo xtask mr commit</code> for the owner.</p>
+        <p data-item="wu-summary">Mint DEC-92 “the site is a build of the tree and the latest release, published by Actions, with no request outside its origin”; amend DEC-91 (the site joins the held text) and DEC-89 rule 10 (the site consumes favicon and wordmarks); UC-INSTALL entry point; the three <code>docs/release-process.html</code> rows (incl. the pre-tag “site answers” check), staged as <code>cargo xtask mr commit</code> for the owner.</p>
         <p data-item="wu-maps-to">Distillation of the whole epic.</p>
         <p data-item="wu-expected">T2 carries the truth; the T1 edit is staged with its Reviewed-By path; the epic result report written.</p>
-        <p data-item="wu-deps">W3, W4</p>
+        <p data-item="wu-deps">W3, W4; parallel with W6</p>
+      </div>
+      <div data-wu="E-PAGES.W6">
+        <h3 id="w6">E-PAGES.W6 · the installers' homepage is the site <span class="badge">code · cr</span></h3>
+        <p data-item="wu-summary"><code>package::HOMEPAGE</code> becomes W2's site base-URL constant (no second literal); the five <code>homepage</code> fields (<code>Cargo.toml</code>, <code>ui/src-tauri/Cargo.toml</code>, <code>ui/src-tauri/tauri.conf.json</code> bundle, <code>login-service/Cargo.toml</code>, <code>xtask/Cargo.toml</code>) and the <code>package.rs</code> fixtures switch to <code>https://lesslucifer.github.io/Trawler/</code>; <code>repository</code> and <code>links.rs</code> stay the repo; DEC-87 rule 4 amended in the same WU.</p>
+        <p data-item="wu-maps-to">UC-INSTALL (second contract); Q12; DEC-87 rule 4.</p>
+        <p data-item="wu-expected"><code>metadata_drift</code> on the tree is empty; a member left on the repo URL is red; <code>cargo xtask package</code> on the host writes the site into the bundle's homepage (deb control <code>Homepage</code> / rpm <code>URL</code> on Linux, uninstall-entry links on Windows; the macOS dmg has no such field). Reaches users only through the next tag, after the site answers.</p>
+        <p data-item="wu-deps">W2 (the constant), W4 (the deploy that makes it resolve); merges into the epic last; the next tag waits for the live site</p>
       </div>
     </div>
 
@@ -302,6 +327,7 @@ flowchart LR
       <table>
         <tr><th>Flow</th><th>Test</th></tr>
         <tr><td>tree + release fixture → built site → every page and asset resolvable offline, no external subresource, CSP exact, download rows = <code>Os::bundles</code> × release version, guide link = <code>USER_GUIDE</code></td><td><code>xtask/tests/suite/site.rs</code>, hermetic (fixture JSON committed; temp out dir; no network)</td></tr>
+        <tr><td>every <code>homepage</code> the bundler reads names the site</td><td><code>package.rs</code> <code>the_tree_carries_one_licence_and_full_metadata</code> (W6)</td></tr>
         <tr><td>the workflow builds and deploys that output and nothing else</td><td><code>pages_workflow.rs</code> + router review</td></tr>
         <tr><td>live deploy</td><td>waived from the gate: it needs the owner's settings and the public network; checked by the owner after merge (<code>gh run list --workflow pages.yml -L 1</code>, open the URL, DevTools Network shows one origin)</td></tr>
       </table>
@@ -313,6 +339,7 @@ flowchart LR
         <tr><th>Target</th><th>Tier</th><th>Change</th></tr>
         <tr><td><code>docs/decisions/dec-92-…</code> + <code>decisions-index.html</code></td><td>T2</td><td>new: the site's source, build, deploy, privacy rules (next free number verified across all branches and worktrees today)</td></tr>
         <tr><td>DEC-91, DEC-89</td><td>T2</td><td>amend as in W5</td></tr>
+        <tr><td>DEC-87 rule 4 + <code>decisions-index.html</code> summary</td><td>T2</td><td>homepage = the site; amended in W6</td></tr>
         <tr><td><code>docs/use-cases/web-ui.html#uc-install</code></td><td>T2</td><td>the site as an entry point</td></tr>
         <tr><td><code>docs/release-process.html</code></td><td>T1</td><td>two rows; owner's <code>mr commit</code></td></tr>
         <tr><td><code>CLAUDE.md</code> commands line (<code>cargo xtask site build</code>)</td><td>T0</td><td>proposed to the owner only; T0 is edited on explicit request</td></tr>
