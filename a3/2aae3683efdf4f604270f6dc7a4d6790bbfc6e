@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: a32aae3683efdf4f604270f6dc7a4d6790bbfc6e
+base: 13405b154d13114998f6bbfe13199deff19dc632
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-router-vikunja-cli-client-result.html
+report_sha256: 5bf2f23da5908d021bf52ad1088e6334103d04dfabc03b342776bb37797519d5
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDIK7tvu2+PeH+WGHDmCKpwnmwiMTcTc0hKnPpY9Kjvap4WdRnflawgWH
+  ZxoVx9sFrSyeGgigJ3FWxf84awJKUL
+  -----END SSH SIGNATURE-----
