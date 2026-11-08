@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-KANBAN
+wu: E-KANBAN.W2
+branch: HEAD
+tests:
+  unit: { count: 25, covers: "board diff names each added/removed/moved/retitled card and ignores free-text cards, order, checks, the archive and a duplicate id's copy; UTC stamp format/parse (proptest round-trip, malformed stamps refused); newest log stamp; assess: stale at 10 min in a worker column once, a commit or worktree edit restarts it, Backlog/Done never watched, escalate at 1 h in Needs Owner once, a router log line is no restart, an Owner edit or a column move restarts it, a first sight without a stamp starts now, a future stamp never underflows; git worktree list and porcelain -z parsing; the Branch section refuses option and range text; event JSON shape and exit code; wait/watchdog flag parsing; plus W1's board client units in board.rs" }
+  integration: { count: 23, covers: "board wait against the fake Local REST API scripted to edit the board on its k-th GET with interval 0: a missing baseline is recorded and one drag yields one moved event; retitle + add + remove in one change; a free-text card and a whitespace-only edit stay silent; a closed port yields unreachable after N polls and writes no baseline; a wrong key is refused at once; the CLI exits 3 with one JSON line for wait and watchdog, prints nothing on a healthy board and stamps put --log in UTC; board watchdog over a tempdir repo with a linked worktree and dated commits: stale once at tip + 10 min, an uncommitted file's mtime restarts it; escalate once at 1 h of owner silence and again only after an Owner line; plus W1's board client contract" }
+  e2e: { waived: "WU level: the epic e2e (xtask/tests/suite/e2e_kanban.rs) drives the built binary through init, put, wait and watchdog at epic close" }
