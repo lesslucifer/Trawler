@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 994fc7f8dc159148ad064fb6cc8f7ac43df15df2
+base: 26aa49c7cb60593240c0818d52b1abe7a9b344ad
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-router-vikunja-orphan-check-and-wiring-result.html
+report_sha256: 59bde7b5882e100c8548052eb2286b6af8765a4150bc81a404858112a1546225
+date: 2026-11-09
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAOBooNRyHLlxJ2K6L1iL+ppZs7QTT2fH1SWJGhAKMIXvsV8H5EfYRdf+
+  rXP9mmP76wkblCrt5ptuT8344q5+8P
+  -----END SSH SIGNATURE-----
