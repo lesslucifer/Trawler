@@ -34,7 +34,7 @@ nits:
   - finding: "board/http.rs is a second raw TcpStream HTTP client beside smoke.rs"
     waived: "smoke.rs's helper is a status probe with no auth, preconditions, ETag or chunked body; merging would widen both, and reuse is a retired dimension (DEC-50)"
   - finding: "a line starting with three backticks that is an inline code span reads as an opening fence"
-    waived: "rare in router/owner notes; the effect is loud - writes to that file are refused with a fix line - never a silent write; listed as a follow-up in the WU result"
+    waived: "rare in router/owner notes; the effect is loud - writes to that file are refused with a fix line - never a silent write; handed to the router as a follow-up"
   - finding: "take_flag consumes a --title/--log value that is literally --api or --key-file"
     waived: "the router never passes those literals as text; the command fails loudly on the bad --api value instead of writing"
 verdict: PASS
