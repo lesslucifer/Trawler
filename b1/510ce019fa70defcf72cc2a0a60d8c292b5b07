@@ -1,0 +1,51 @@
+schema: cr/v5
+scope: "WU router-vikunja/webhook-listener -> epic/router-vikunja"
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W3
+branch: wu/router-vikunja/webhook-listener
+base: b331c71d4125198a75f00c10ed75c79bd5976a2a
+head: b1510ce019fa70defcf72cc2a0a60d8c292b5b07
+diff_sha256: f5537059535a51c31ab8b73afbf249657040327ec04042ce02311075f4445368
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 4
+    nit: 10
+  stage_seconds:
+    gate0: 25
+    finders: 60
+    verifiers: 43
+    total: 103
+  by_finder:
+    correctness: { found: 6, verified: 0 }
+    efficiency:  { found: 4, verified: 0 }
+    altitude:    { found: 4, verified: 0 }
+findings: { found: 12, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "every 60 s reconcile reads each open task's comments even when unchanged"
+    waived: "a handful of open tasks on a loopback instance; the per-poll comment read is what catches a lost comment delivery, and comments do not bump the task's updated stamp"
+  - finding: "per-connection threads are uncapped and a trickling loopback client can hold one for long"
+    waived: "only a hostile same-user local process can trickle; deliveries and the liveness check run on their own threads and never wait on it"
+  - finding: "the seen map keeps done tasks until a 404 prunes them"
+    waived: "one small entry per task the router ever raised or the owner commented on; dropping done tasks would replay their comment history if the owner comments later"
+  - finding: "asking() restates the open rule beside vikunja.rs's state() and the done filter"
+    waived: "one boolean read of done; a shared helper would wrap a single field access"
+  - finding: "const ROUTER duplicates the router username in vikunja.rs USERS"
+    waived: "USERS is an id table private to name resolution; the listener needs the name, and both are fixed by vikunja-protocol.md"
+  - finding: "load_secret's create-600 handling sits in the listener module"
+    waived: "the listener is its only caller; init reads the token and never writes a key file"
+  - finding: "a failed save_state after emit leaves seen stale, so the next sync repeats the lines"
+    waived: "at-least-once is the chosen direction (emit before save); a state-file write failure is also logged via the error path"
+  - finding: "any reconcile error, including a state write or non-JSON reply, is reported as unreachable"
+    waived: "the line carries the error text, and every such failure means the poll cannot see Vikunja's truth; the router reads the text"
+  - finding: "a startup reconcile failure exits after the webhook was registered"
+    waived: "the next start deletes and replaces the hook with the same target_url; deliveries to a dead port are covered by that start's reconcile"
+  - finding: "the Watch mutex is held across blocking API calls"
+    waived: "verified false-positive as an important: the serialization keeps the read-modify-write of seen and the printed lines ordered; calls are bounded by http.rs's 10 s timeout"
+verdict: PASS
+date: 2026-11-08
