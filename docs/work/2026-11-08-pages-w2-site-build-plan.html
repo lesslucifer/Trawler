@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aefd1d59f34851f0dfb1472" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W2 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W2: <code>cargo xtask site build</code> and the checks that hold its output</h1>
+      <p>The build W3's pages and W4's workflow run: a frame from <code>site/</code>, its markers filled from the files that own each fact, refused when any check is red.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU plan · <span class="badge id">E-PAGES.W2</span> · branch <code>wu/pages/site-build</code> off <code>epic/pages</code> · epic plan <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement"><code>cargo xtask site build --release &lt;json&gt; --out &lt;dir&gt;</code> copies the <code>site/</code> frame into <code>--out</code>, fills its markers from README/PRIVACY (a subset markdown renderer that refuses unknown markdown), the release JSON (versioned <code>releases/download/v&lt;x&gt;/…</code> links for every <code>Os::bundles</code> kind, refusing a draft, a pre-release or a missing kind) and <code>links.rs</code> (guide and source URLs), copies the listed assets, and owns the site base-URL constant <code>https://lesslucifer.github.io/Trawler/</code>; the same checks the tests run refuse the build before anything is written.</p>
+
+    <h2 id="flow">Flow</h2>
+<pre class="mermaid">flowchart LR
+  F["site/*.html · *.css (frame)"] --> FILL["fill markers"]
+  R["README.md: h3 pitch · sub line · What you can do"] --> FILL
+  P["PRIVACY.md: lead paragraph"] --> FILL
+  J["release JSON (gh api …/releases/latest)"] --> FILL
+  L["links.rs: SOURCE_CODE · USER_GUIDE"] --> FILL
+  FILL --> MEM["files in memory + ASSETS"]
+  MEM --> CHK{"checks"}
+  CHK -- "red" --> X["refused, nothing written"]
+  CHK -- "green" --> OUT["--out (must be empty or absent)"]</pre>
+
+    <h2 id="markers">Markers the frame may use (W3 builds on these)</h2>
+    <table data-c="markers">
+      <thead><tr><th>Marker</th><th>Filled with</th><th>From</th></tr></thead>
+      <tbody>
+        <tr><td><code>{{pitch}}</code></td><td>the README <code>&lt;h3&gt;</code> text, HTML-escaped (title, description, h1)</td><td>README.md</td></tr>
+        <tr><td><code>{{sub}}</code></td><td>the first <code>&lt;p align="center"&gt;</code> after the h3, plain text only</td><td>README.md</td></tr>
+        <tr><td><code>{{features}}</code></td><td>“## What you can do” rendered: <code>&lt;ul&gt;&lt;li&gt;</code> / <code>&lt;p&gt;</code>, inline <code>`code`</code>, <code>**bold**</code>, <code>[text](url)</code></td><td>README.md</td></tr>
+        <tr><td><code>{{privacy}}</code></td><td>the first paragraph under <code># Privacy</code>, same renderer</td><td>PRIVACY.md</td></tr>
+        <tr><td><code>{{version}}</code> · <code>{{release}}</code> · <code>{{latest}}</code> · <code>{{sha256sums}}</code></td><td><code>0.1.0</code> · <code>…/releases/tag/v0.1.0</code> · <code>…/releases/latest</code> · <code>…/releases/download/v0.1.0/SHA256SUMS</code></td><td>release JSON + <code>SOURCE_CODE</code></td></tr>
+        <tr><td><code>{{href:&lt;id&gt;}}</code> · <code>{{file:&lt;id&gt;}}</code></td><td>per installer: <code>…/releases/download/v0.1.0/&lt;name&gt;</code> · <code>&lt;name&gt;</code>; id = <code>&lt;kind&gt;-&lt;arch&gt;</code>: <code>dmg-universal</code>, <code>nsis|msi-x64|arm64</code>, <code>appimage|deb|rpm-x64|arm64</code></td><td>release JSON × <code>Os::bundles</code></td></tr>
+        <tr><td><code>{{guide}}</code> · <code>{{source}}</code></td><td><code>USER_GUIDE</code> · <code>SOURCE_CODE</code></td><td><code>ui/src-tauri/src/links.rs</code></td></tr>
+        <tr><td><code>{{base}}</code> · <code>{{path}}</code></td><td><code>https://lesslucifer.github.io/Trawler/</code> · <code>/Trawler/</code> (canonical, og:image, the 404's absolute paths)</td><td><code>site::BASE_URL</code> (W6 reads it)</td></tr>
+      </tbody>
+    </table>
+    <p>An unknown marker, or one left unclosed, refuses the build. Files that are not <code>.html</code>/<code>.css</code> are copied as bytes.</p>
+
+    <h2 id="refusals">What the build refuses</h2>
+    <table data-c="refusals">
+      <thead><tr><th>Input</th><th>Refused when</th></tr></thead>
+      <tbody>
+        <tr><td>release JSON</td><td><code>draft</code> or <code>prerelease</code> true, a tag without <code>v</code> or with a pre-release <code>-n</code>, an <code>Os::bundles</code> kind × arch with no asset, two assets for one id, an installer whose name lacks the version, no <code>SHA256SUMS</code></td></tr>
+        <tr><td>versions</td><td>the release is newer than the workspace version (<code>package::version_of</code>)</td></tr>
+        <tr><td>markdown</td><td>anything outside the subset: raw HTML, <code>![</code>, headings, tables, quotes, numbered or nested lists, single <code>*</code>/<code>_</code>, <code>\</code>, <code>~</code>, an unclosed <code>`</code>/<code>**</code>/link</td></tr>
+        <tr><td><code>--out</code></td><td>exists and is not empty (a stale file would ship)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="checks">Checks over the built files (build and tests share them)</h2>
+    <table data-c="checks">
+      <thead><tr><th>Check</th><th>Red when</th></tr></thead>
+      <tbody>
+        <tr><td>links</td><td>a relative or <code>{{path}}</code>-rooted <code>href</code>/<code>src</code>/<code>srcset</code>/CSS <code>url()</code> does not resolve to an output file (or its <code>#id</code>); an absolute <code>href</code> is neither <code>SOURCE_CODE[/…]</code> nor <code>BASE_URL…</code>; a <code>blob/main/&lt;file&gt;#anchor</code> names a file or heading the tree lacks; the guide link is absent</td></tr>
+        <tr><td>no external request</td><td>the CSP meta is missing, altered or doubled; an absolute <code>src</code>/<code>srcset</code>/<code>url()</code>; an absolute <code>&lt;link href&gt;</code> other than <code>rel="canonical"</code>; any <code>@import</code>, <code>&lt;script</code>, <code>&lt;iframe</code>, <code>&lt;form</code>, <code>&lt;object</code>, <code>&lt;embed</code>, <code>&lt;style</code>, <code>style=</code> (the CSP would block the last two)</td></tr>
+        <tr><td>deny-list</td><td><code>public_text::denied_names</code> finds a name in any built text file</td></tr>
+        <tr><td>downloads</td><td>the set of <code>releases/download/</code> links ≠ <code>Os::bundles</code> kinds × arch at <code>v&lt;version&gt;</code>, or one points at another tag</td></tr>
+        <tr><td>contrast</td><td>a <code>--text*</code> token on a <code>--bg*</code> token below 4.5:1 in the light <code>:root</code> or the <code>prefers-color-scheme: dark</code> <code>:root</code> (dark inherits what it does not override); a non-hex value for either</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="decisions">Decisions taken here</h2>
+    <table data-c="decisions">
+      <thead><tr><th>Question</th><th>Choice</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Where the download block's HTML lives</td><td>in the frame, per-installer markers</td><td>W1/W3 own the layout; the build owns only the facts</td></tr>
+        <tr><td>Who runs the checks</td><td>the build itself, then the tests</td><td>W4's deploy cannot ship a red site</td></tr>
+        <tr><td>Contrast pairs</td><td>naming convention <code>--text*</code> × <code>--bg*</code></td><td>no CSS engine; amber stays decoration under another name (DEC-89 rule 6)</td></tr>
+        <tr><td>Links from <code>links.rs</code></td><td>read as text, like <code>public_text::prefilled_fields</code></td><td>one literal per URL; xtask does not link the app crate</td></tr>
+        <tr><td><code>site/</code> a code path</td><td>no (Q13)</td><td>the frame has no script</td></tr>
+        <tr><td>New DEC</td><td>none here</td><td>W5 mints DEC-92 for the epic</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="maps-to">Maps to</h2>
+    <p data-item="maps-to">E-PAGES W2 · UC-INSTALL (the site as an entry point) · Q1, Q2, Q3, Q4, Q13 · DEC-91 rules 2–4 · <code>xtask/src/site.rs</code>, <code>site/</code> (stub), <code>xtask/tests/fixtures/site/</code>.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Run</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td><code>cargo xtask site build --release xtask/tests/fixtures/site/release-v0.1.0.json --out target/site</code></td><td><code>index.html</code>, <code>404.html</code>, <code>site.css</code> + the listed assets; eleven download links under <code>releases/download/v0.1.0/</code>; every link resolves</td></tr>
+          <tr><td>the same fixture without <code>Trawler_0.1.0_arm64_en-US.msi</code></td><td>refused: <code>lacks msi-arm64</code>; <code>--out</code> untouched</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Test</th></tr></thead>
+        <tbody>
+          <tr><td>unit (<code>site.rs</code>)</td><td>renderer: the subset renders, each refused construct is refused by name; README pitch/sub extraction; markers: unknown or unclosed refused</td></tr>
+          <tr><td>unit</td><td>release: draft, pre-release, missing kind, duplicate id, versionless name, no SHA256SUMS each refused; version order (<code>0.1.0 ≤ 0.2.0-1</code>, <code>0.2.0 &gt; 0.2.0-1</code>)</td></tr>
+          <tr><td>unit</td><td>each check red on a crafted file set: an unresolved link, a foreign absolute href, a missing guide anchor, a changed CSP, an external <code>src</code>/<code>url()</code>, a <code>&lt;script&gt;</code>, a denied name, a download row off by one kind or tag, a 4.4:1 token pair in either theme</td></tr>
+          <tr><td>unit</td><td>the <code>site/</code> sources name no denied tool; <code>BASE_URL</code> is the github.io project URL; USAGE documents the command</td></tr>
+          <tr><td>integration (<code>xtask/tests/suite/site.rs</code>)</td><td>build from the committed v0.1.0 fixture into a temp dir: exactly the frame + listed assets, no <code>docs/</code> path, checks green on the written dir, eleven versioned download links; the fixture minus the arm64 msi is refused and writes nothing; a non-empty <code>--out</code> is refused</td></tr>
+          <tr><td>e2e</td><td>waived: the epic's e2e is the live deploy after the owner's settings (plan “E2E test plan”)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
