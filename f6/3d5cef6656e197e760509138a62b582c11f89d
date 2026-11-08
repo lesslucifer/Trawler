@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-APIDOC
+wu: E-APIDOC.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-apidoc-w2-settings-api-design-run.html"
+    tier: T3
+    action: added
+    distills: "the closed design run for Settings → API: the mounted mockup, Given list, keyboard paths, the lexicon proposal and the review rows from the owner's epic rulings"
+  - path: "docs/work/2026-11-08-apidoc-w2-settings-api-page-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's requirement, mapping, expected result and test plan"
+  - path: "docs/work/2026-11-08-apidoc-w2-settings-api-page-result.html"
+    tier: T3
+    action: added
+    distills: "W2's outcome, deviations, evidence, the distillation lines handed to epic close and follow-ups"
+t2_waived: "the epic plan's distillation step writes UC-SVC's API page and UC-API at epic close (web-ui.html moved on main since the epic branched); the lexicon exception is the design run's proposal, landing on the owner's confirmation; the exact lines are in the W2 result"
