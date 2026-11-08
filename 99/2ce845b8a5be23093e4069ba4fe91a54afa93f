@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-APIDOC
+wu: E-APIDOC.W1
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-apidoc-w1-spec-and-docs-plan.html"
+    tier: T3
+    action: added
+    distills: "W1's requirement, mapping, expected result and test plan"
+  - path: "docs/work/2026-11-08-apidoc-w1-spec-and-docs-result.html"
+    tier: T3
+    action: added
+    distills: "W1's outcome, deviations, evidence, the distillation lines and the full-surface deferral handed to epic close"
+t2_waived: "the epic plan's distillation step writes UC-API, the decision record and DEC-88's line at epic close (UC-SVC's extension waits on W2); the exact lines are in the W1 result"
