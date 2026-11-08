@@ -12,6 +12,7 @@ mod hooks_install;
 mod lint_spawn;
 mod mr;
 mod notes_write;
+mod pages_workflow;
 mod preflight;
 mod release_workflow;
 mod site;
