@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PAGES.W2 result: <code>cargo xtask site build</code> and the checks that hold its output</h1>
       <p>What W2 built, the contract W3 and W4 build on, how it is proven, and what stays open.</p>
-      <div class="meta">v2 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W2</span> · <code>wu/pages/site-build</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w2-site-build-plan.html">W2 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+      <div class="meta">v3 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W2</span> · <code>wu/pages/site-build</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w2-site-build-plan.html">W2 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
     </div>
   </header>
   <main>
@@ -35,7 +35,9 @@
           <tr><td>markdown</td><td><code>render</code>, <code>inline</code></td><td>bullets, paragraphs, <code>`code`</code>, <code>**bold**</code>, <code>[text](url)</code> (relative → <code>blob/main/</code>); everything else refused by name</td></tr>
           <tr><td>base URL</td><td><code>site::BASE_URL</code>, <code>base_path()</code></td><td><code>https://lesslucifer.github.io/Trawler/</code>, held equal to the github.io address of <code>links.rs SOURCE_CODE</code> by a test</td></tr>
           <tr><td>checks</td><td><code>problems</code></td><td>run by every build and by the tests over the written dir</td></tr>
-          <tr><td>stub frame</td><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code></td><td>every marker used once or more, CSP exact, system fonts, two themes; W3 replaces the markup</td></tr>
+          <tr><td>script (owner ruling)</td><td><code>script_tag_problems</code>, <code>event_handlers</code>, <code>script_problems</code>, <code>SCRIPT_BUDGET</code></td><td>one same-origin <code>site.js</code> by <code>src</code>, no inline code or handler, a static scan by name plus a 4096-byte budget; the CSP gains <code>script-src 'self'</code></td></tr>
+          <tr><td>code path</td><td><code>notes::is_code</code>, <code>.claude/skills/code-review/SKILL.md</code></td><td><code>site/</code> is reviewed code (Q13 flipped)</td></tr>
+          <tr><td>stub frame</td><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code></td><td>every marker used once or more, CSP exact, system fonts, two themes, a one-line script that passes the scan; W3 replaces the markup and the script</td></tr>
           <tr><td>fixture</td><td><code>xtask/tests/fixtures/site/release-v0.1.0.json</code></td><td>the published v0.1.0 release (<code>gh api …/releases/latest</code>, trimmed to tag, flags and asset names/URLs/sizes)</td></tr>
         </tbody>
       </table>
@@ -47,8 +49,10 @@
       <tbody>
         <tr><td>Markers only from the set: <code>{{pitch}} {{sub}} {{features}} {{privacy}} {{version}} {{release}} {{latest}} {{sha256sums}} {{guide}} {{source}} {{base}} {{path}} {{href:&lt;id&gt;}} {{file:&lt;id&gt;}}</code></td><td><code>no marker {{x}}</code></td></tr>
         <tr><td>Each page carries the exact <code>site::CSP</code> meta once</td><td>CSP problem</td></tr>
-        <tr><td><code>href</code>/<code>src</code>/<code>srcset</code> written <code>attr="…"</code>; no <code>&lt;script&gt; &lt;iframe&gt; &lt;form&gt; &lt;object&gt; &lt;embed&gt; &lt;style&gt;</code>, no <code>style=</code></td><td>quoting / markup problem</td></tr>
-        <tr><td>Every <code>//</code> in a page sits in an <code>href</code> value or in a <code>content</code> value starting with <code>BASE_URL</code> (og:image, og:url); a stylesheet carries no <code>//</code> at all</td><td>“an address outside an href”</td></tr>
+        <tr><td><code>href</code>/<code>src</code>/<code>srcset</code> written <code>attr="…"</code>; no <code>&lt;iframe&gt; &lt;form&gt; &lt;object&gt; &lt;embed&gt; &lt;style&gt;</code>, no <code>style=</code>, no meta refresh</td><td>quoting / markup problem</td></tr>
+        <tr><td>Scripts: only <code>&lt;script src="site.js" …&gt;&lt;/script&gt;</code> (or <code>{{path}}site.js</code>), no inline body, no <code>on*=</code>; <code>site.js</code> ≤ 4096 bytes and free of the refused names (plan, Checks)</td><td>script problem</td></tr>
+        <tr><td>Every address (<code>//</code>, <code>http:</code>, <code>https:</code>) in a page sits in an <code>href</code> value or in a <code>content</code> value starting with <code>BASE_URL</code> (og:image, og:url), and that content resolves to a site file; a stylesheet carries no <code>//</code> at all</td><td>“an address outside an href”</td></tr>
+        <tr><td>Download links name files the release ships (or its <code>SHA256SUMS</code>)</td><td>“names no file of v…”</td></tr>
         <tr><td>Absolute hrefs only to <code>SOURCE_CODE[/…]</code> or <code>BASE_URL…</code>; <code>blob/main/&lt;file&gt;#anchor</code> must exist in the tree</td><td>link problem</td></tr>
         <tr><td>All 11 download ids linked (any layout, any number of times)</td><td>download-row problem</td></tr>
         <tr><td>Colour tokens: text as <code>--text*</code>, backgrounds as <code>--bg*</code> on the top-level <code>:root</code> and on <code>@media (prefers-color-scheme: dark) { :root { … } }</code>, <code>#hex</code> values; amber under any other name (e.g. <code>--brand</code>)</td><td>contrast problem</td></tr>
@@ -64,6 +68,7 @@
         <tbody>
           <tr><td>Added: a <code>href</code>/<code>src</code>/<code>srcset</code> written other than <code>attr="…"</code> (single-quoted, unquoted, spaced) is red, and every attribute, <code>&lt;link</code>, <code>url(</code> and <code>@import</code> match ignores case</td><td>found in self-review: <code>&lt;img src='https://…'&gt;</code> or <code>SRC=</code> would have passed the no-external check; red test first</td></tr>
           <tr><td>Round 2 (the review's verified blockers): an attribute glued to the one before it (<code>alt="x"src=</code>, <code>&lt;img/src=</code>) is read; the stray-<code>//</code> rule above (covers <code>poster</code>, <code>ping</code>, text, protocol-relative values); a stylesheet's <code>image-set("…")</code> string is caught by the no-<code>//</code> rule. Nits taken: an installer must carry the version as a whole number (<code>Trawler_10.1.0</code> is no 0.1.0 file), a README pitch with an entity is refused rather than double-escaped, <code>walkthrough::escape</code> is reused</td><td>review round 1 FAIL; regression tests red first</td></tr>
+          <tr><td>Round 3, the owner's ruling relayed by the router mid-review: one same-origin <code>site.js</code> (CSP <code>script-src 'self'</code>; <code>base-uri</code>/<code>form-action</code> kept since they do not fall back to <code>default-src</code>), the script scan, <code>site/</code> in <code>is_code</code>. Folded in from review round 2 (voided before verification: the ruling changed the tree): a scheme-only address (<code>https:host</code>) and a meta refresh are red, a download link must name a shipped file, a <code>content</code> under <code>BASE_URL</code> must resolve, <code>/blob/main/</code> built once (<code>Facts::blob</code>)</td><td>owner ruling; round 2's candidates</td></tr>
           <tr><td><code>public_text::installer_kinds</code> takes the version; <code>kind_of</code> added; <code>exists_as_named</code> and <code>release_manifest::arch_of</code> made <code>pub(crate)</code></td><td>reuse, not a second kinds table or arch parser</td></tr>
         </tbody>
       </table>
@@ -74,12 +79,12 @@
       <table data-c="evidence">
         <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
         <tbody>
-          <tr><td>Unit</td><td>24 <code>site::tests</code>: subset render and every refused construct, pitch/sub, sections, markers, release refusals (draft, pre-release, missing kind, duplicate id, versionless or <code>10.1.0</code> file, no SHA256SUMS, newer than the tree), each check red on a crafted file set (link, foreign href, tree file/anchor, CSP, external <code>src</code>/<code>srcset</code>/<code>data:</code>/<code>&lt;link&gt;</code>, a glued attribute, an address in <code>poster</code>/<code>ping</code>/text/a foreign <code>content</code>, markup, quoting/case, CSS <code>image-set</code> strings, CSS <code>url()</code>/<code>@import</code>, deny-list, guide link, download kind and tag, contrast in each theme), <code>BASE_URL</code> = github.io of <code>SOURCE_CODE</code>, the frame names no denied tool, USAGE, argument count; <code>public_text</code> 29 green (pre-release kinds added)</td></tr>
+          <tr><td>Unit</td><td>27 <code>site::tests</code> (+ <code>notes::tests</code> for <code>is_code</code>): subset render and every refused construct, pitch/sub, sections, markers, release refusals (draft, pre-release, missing kind, duplicate id, versionless or <code>10.1.0</code> file, no SHA256SUMS, newer than the tree), each check red on a crafted file set (link, foreign href, tree file/anchor, CSP, external <code>src</code>/<code>srcset</code>/<code>data:</code>/<code>&lt;link&gt;</code>, a glued attribute, an address in <code>poster</code>/<code>ping</code>/text/a foreign <code>content</code>, markup, quoting/case, CSS <code>image-set</code> strings, a scheme-only address, a download the release lacks, a missing og file, the script rules and the <code>site.js</code> scan, CSS <code>url()</code>/<code>@import</code>, deny-list, guide link, download kind and tag, contrast in each theme), <code>BASE_URL</code> = github.io of <code>SOURCE_CODE</code>, the frame names no denied tool, USAGE, argument count; <code>public_text</code> 29 green (pre-release kinds added)</td></tr>
           <tr><td>Integration</td><td>5 in <code>xtask/tests/suite/site.rs</code>: the v0.1.0 fixture builds exactly frame + <code>ASSETS</code>, no <code>docs</code> path, <code>problems</code> empty on the written dir; 11 versioned rows = <code>installer_ids("0.1.0")</code>, title = README pitch, CSP present, no marker left; minus the arm64 msi → <code>v0.1.0 lacks msi-arm64</code> and no <code>--out</code>; draft and pre-release refused; a non-empty <code>--out</code> refused and kept</td></tr>
-          <tr><td>Red first</td><td>the quoting/case test failed before its fix; round 2's three tests (glued attribute and stray address, <code>10.1.0</code> file, entity in the pitch) failed on <code>70aca4d6</code>; the rest are new code (module absent before)</td></tr>
-          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green: 1550 tests, fmt, clippy pedantic</td></tr>
-          <tr><td>Real render</td><td>the fixture build served from <code>target/pages/Trawler/</code> over <code>python3 -m http.server</code>, headless Chrome at 1440 and 390 px: the CSP lets the page's own CSS and images load, the wordmark follows the scheme, every row names its v0.1.0 file</td></tr>
-          <tr><td>Review</td><td>round 1 on <code>70aca4d6</code>: FAIL (3 finders, 3 verifiers; 2 blockers verified: the glued attribute and the CSS <code>image-set</code> string; the contrast-context claim and both altitude claims refuted), its <code>cr/v5</code> note kept there; round 2: the <code>cr/v5</code> note on this tip</td></tr>
+          <tr><td>Red first</td><td>round 3's three tests did not compile before the script code; the quoting/case test failed before its fix; round 2's three tests (glued attribute and stray address, <code>10.1.0</code> file, entity in the pitch) failed on <code>70aca4d6</code>; the rest are new code (module absent before)</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green: 1553 tests, fmt, clippy pedantic</td></tr>
+          <tr><td>Real render</td><td>the fixture build served from <code>target/pages/Trawler/</code> over <code>python3 -m http.server</code>, headless Chrome at 1440 and 390 px: the CSP lets the page's own CSS, images and <code>site.js</code> load (<code>--dump-dom</code> shows the script's <code>class="js"</code> on <code>&lt;html&gt;</code>), the wordmark follows the scheme, every row names its v0.1.0 file</td></tr>
+          <tr><td>Review</td><td>round 1 on <code>70aca4d6</code>: FAIL (3 finders, 3 verifiers; 2 blockers verified: the glued attribute and the CSS <code>image-set</code> string; the contrast-context claim and both altitude claims refuted), its <code>cr/v5</code> note kept there; round 2 on <code>a3fa108f</code>: voided before verification by the owner's ruling (its candidates folded into round 3, no note); round 3: the <code>cr/v5</code> note on this tip</td></tr>
           <tr><td>e2e</td><td>waived: the epic's e2e is the live deploy after the owner's settings (epic plan “E2E test plan”)</td></tr>
         </tbody>
       </table>
@@ -98,7 +103,7 @@
     <p>Opening <code>index.html</code> over <code>file://</code> is not the served behaviour: the CSP's <code>'self'</code> and the 404's <code>/Trawler/</code> paths need the HTTP layout above.</p>
 
     <h2 id="distillation">Distillation</h2>
-    <p data-item="distillation">No T2 change in W2: DEC-92 (the site is a build of the tree and the latest release, no request outside its origin) and the UC-INSTALL entry point are W5's, which distills the epic. The command line for CLAUDE.md (T0) is proposed to the owner at W5, never edited here.</p>
+    <p data-item="distillation"><code>docs/workflow.html</code> (T1, rule-bearing) lists the code paths <code>is_code</code> names; its <code>site/</code> line is not edited here and rides W5's owner <code>mr commit</code>. No T2 change in W2: DEC-92 (the site is a build of the tree and the latest release, no request outside its origin) and the UC-INSTALL entry point are W5's, which distills the epic. The command line for CLAUDE.md (T0) is proposed to the owner at W5, never edited here.</p>
 
     <h2 id="follow-ups">Follow-ups</h2>
     <div data-item="follow-ups">
@@ -110,7 +115,9 @@
           <tr><td>W4's pages.yml passes <code>gh api …/releases/latest</code> output as <code>--release</code>; the build refuses a pre-release itself</td><td>W4</td></tr>
           <tr><td>W6: <code>package::HOMEPAGE</code> reads <code>site::BASE_URL</code> (trailing slash; the repo URL today has none)</td><td>W6</td></tr>
           <tr><td>The OG/twitter <code>content=</code> URLs are not link-checked (meta, not a request); W3 may add <code>og:image</code> to the checks if it wants</td><td>W3</td></tr>
-          <tr><td>Independent review: none needed outside the cr gate (<code>site/</code> is no code path by Q13; the fixture is test data); no <code>.github/</code> change</td><td>router</td></tr>
+          <tr><td>W3: the real <code>site.js</code> from W1's amended design must pass the scan and the budget; the page works without it (not checkable statically: W3's shots with JS off)</td><td>W3</td></tr>
+          <tr><td>W5: the <code>docs/workflow.html</code> code-path line gains <code>site/</code> in the owner's <code>mr commit</code>; <code>.claude/skills/trawler-router/SKILL.md</code>'s cr row still lists five prefixes</td><td>W5 / router</td></tr>
+          <tr><td>Independent review: none needed outside the cr gate (<code>site/</code> is now inside it; the fixture is test data; the code-review skill edit is three words); no <code>.github/</code> change</td><td>router</td></tr>
         </tbody>
       </table>
     </div>
