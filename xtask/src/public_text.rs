@@ -92,7 +92,7 @@ fn normalized(path: &Path) -> Option<PathBuf> {
 }
 
 // macOS and Windows find "readme.md" for README.md; GitHub does not.
-fn exists_as_named(repo: &Path, path: &Path) -> bool {
+pub(crate) fn exists_as_named(repo: &Path, path: &Path) -> bool {
     let mut dir = repo.to_path_buf();
     for part in path.components() {
         let listed = std::fs::read_dir(&dir).into_iter().flatten().flatten();
@@ -233,8 +233,12 @@ const KINDS: [(&str, &str); 6] = [
     (".rpm", "rpm"),
 ];
 
-pub fn installer_kinds(os: Os) -> BTreeSet<&'static str> {
-    os.bundles("0.1.0").split(',').filter(|kind| *kind != "app").collect()
+pub fn installer_kinds(os: Os, version: &str) -> BTreeSet<&'static str> {
+    os.bundles(version).split(',').filter(|kind| *kind != "app").collect()
+}
+
+pub fn kind_of(file: &str) -> Option<&'static str> {
+    KINDS.iter().find(|(suffix, _)| file.ends_with(suffix)).map(|(_, kind)| *kind)
 }
 
 fn os_of(row: &str) -> Option<Os> {
@@ -262,7 +266,7 @@ pub fn install_table_drift(readme: &str) -> Vec<String> {
             .filter(|(suffix, _)| row.contains(suffix))
             .map(|(_, kind)| *kind)
             .collect();
-        let built = installer_kinds(os);
+        let built = installer_kinds(os, "0.1.0");
         if named != built {
             drift.push(format!("{os:?} row names {named:?}, package.rs builds {built:?}: {row}"));
         }
@@ -521,9 +525,10 @@ mod tests {
 
     #[test]
     fn each_host_s_installers_are_what_package_rs_bundles_for_a_final() {
-        assert_eq!(installer_kinds(Os::MacOs), BTreeSet::from(["dmg"]));
-        assert_eq!(installer_kinds(Os::Windows), BTreeSet::from(["msi", "nsis"]));
-        assert_eq!(installer_kinds(Os::Linux), BTreeSet::from(["appimage", "deb", "rpm"]));
+        assert_eq!(installer_kinds(Os::MacOs, "0.1.0"), BTreeSet::from(["dmg"]));
+        assert_eq!(installer_kinds(Os::Windows, "0.1.0"), BTreeSet::from(["msi", "nsis"]));
+        assert_eq!(installer_kinds(Os::Linux, "0.1.0"), BTreeSet::from(["appimage", "deb", "rpm"]));
+        assert_eq!(installer_kinds(Os::Linux, "0.1.0-2"), BTreeSet::from(["appimage", "deb"]));
     }
 
     #[test]

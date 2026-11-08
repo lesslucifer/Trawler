@@ -1,0 +1,135 @@
+{
+  "html_url": "https://github.com/lesslucifer/Trawler/releases/tag/v0.1.0",
+  "tag_name": "v0.1.0",
+  "name": "Trawler 0.1.0",
+  "draft": false,
+  "prerelease": false,
+  "published_at": "2026-11-07T15:41:21Z",
+  "assets": [
+    {
+      "name": "latest.json",
+      "size": 13199,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/latest.json"
+    },
+    {
+      "name": "SHA256SUMS",
+      "size": 1118,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/SHA256SUMS"
+    },
+    {
+      "name": "Trawler-0.1.0-1.aarch64.rpm",
+      "size": 15872326,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.aarch64.rpm"
+    },
+    {
+      "name": "Trawler-0.1.0-1.aarch64.rpm.sig",
+      "size": 436,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.aarch64.rpm.sig"
+    },
+    {
+      "name": "Trawler-0.1.0-1.x86_64.rpm",
+      "size": 16322608,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.x86_64.rpm"
+    },
+    {
+      "name": "Trawler-0.1.0-1.x86_64.rpm.sig",
+      "size": 436,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.x86_64.rpm.sig"
+    },
+    {
+      "name": "Trawler.app.tar.gz",
+      "size": 30271502,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler.app.tar.gz"
+    },
+    {
+      "name": "Trawler.app.tar.gz.sig",
+      "size": 424,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler.app.tar.gz.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_aarch64.AppImage",
+      "size": 91863560,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_aarch64.AppImage"
+    },
+    {
+      "name": "Trawler_0.1.0_aarch64.AppImage.sig",
+      "size": 440,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_aarch64.AppImage.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_amd64.AppImage",
+      "size": 94206456,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.AppImage"
+    },
+    {
+      "name": "Trawler_0.1.0_amd64.AppImage.sig",
+      "size": 436,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.AppImage.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_amd64.deb",
+      "size": 16318142,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.deb"
+    },
+    {
+      "name": "Trawler_0.1.0_amd64.deb.sig",
+      "size": 432,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.deb.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_arm64-setup.exe",
+      "size": 12390329,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64-setup.exe"
+    },
+    {
+      "name": "Trawler_0.1.0_arm64-setup.exe.sig",
+      "size": 440,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64-setup.exe.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_arm64.deb",
+      "size": 15866306,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64.deb"
+    },
+    {
+      "name": "Trawler_0.1.0_arm64.deb.sig",
+      "size": 432,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64.deb.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_arm64_en-US.msi",
+      "size": 16306176,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64_en-US.msi"
+    },
+    {
+      "name": "Trawler_0.1.0_arm64_en-US.msi.sig",
+      "size": 440,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64_en-US.msi.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_universal.dmg",
+      "size": 30374524,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_universal.dmg"
+    },
+    {
+      "name": "Trawler_0.1.0_x64-setup.exe",
+      "size": 13101096,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64-setup.exe"
+    },
+    {
+      "name": "Trawler_0.1.0_x64-setup.exe.sig",
+      "size": 436,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64-setup.exe.sig"
+    },
+    {
+      "name": "Trawler_0.1.0_x64_en-US.msi",
+      "size": 16777216,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64_en-US.msi"
+    },
+    {
+      "name": "Trawler_0.1.0_x64_en-US.msi.sig",
+      "size": 436,
+      "browser_download_url": "https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64_en-US.msi.sig"
+    }
+  ]
+}

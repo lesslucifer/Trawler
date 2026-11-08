@@ -11,7 +11,7 @@ fn has(name: &str, suffix: &str) -> bool {
     name.ends_with(suffix)
 }
 
-fn arch_of(name: &str) -> Result<&'static str, String> {
+pub(crate) fn arch_of(name: &str) -> Result<&'static str, String> {
     if name.contains("aarch64") || name.contains("arm64") {
         Ok("aarch64")
     } else if name.contains("x86_64") || name.contains("x64") || name.contains("amd64") {
