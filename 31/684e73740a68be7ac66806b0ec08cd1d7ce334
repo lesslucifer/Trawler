@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W3
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-router-vikunja-webhook-listener-plan.html"
+    tier: T3
+    action: added
+    distills: "E-VIKUNJA.W3's requirement, startup flow, transition table, expected result and test plan"
+  - path: "docs/work/2026-11-08-router-vikunja-webhook-listener-result.html"
+    tier: T3
+    action: added
+    distills: "what webhook-listen shipped, its startup order and lines, deviations (API re-read per delivery, extra lines, flags), test and live evidence, follow-ups"
+t2_waived: "router tooling inside an epic in flight: the listener's run commands, lines and relaunch duty live in vikunja-protocol.md (skill infrastructure) and its flags in cargo xtask vikunja's usage; the epic's decision record is minted at epic close"
