@@ -8,76 +8,77 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-PAGES.W1 result — the landing site design, round 2</h1>
-      <p>The one-page site and its 404, designed for W3 to build, now on the owner's rulings: D1 A (centred hero), D3 B (bullets + More screens), and D2 changed to a card per OS with OS auto-detection by one tiny same-origin script. The losing variants are gone; the detection rules, every detected state, the script and its test plan are in.</p>
-      <div class="meta">v2 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+      <h1>E-PAGES.W1 result — the landing site design, round 3</h1>
+      <p>The owner found round 2 boring and technical. Round 3 rebuilds the page on his four picks (bold product-forward, a moving request log as the hero, subtle motion, benefit stories) and turns the design doc around: it opens with the live page, the spec folds below.</p>
+      <div class="meta">v3 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
     </div>
   </header>
   <main>
     <h2 id="outcome">Outcome</h2>
     <div class="diagram" data-c="page-shape">
       <pre class="mermaid">flowchart TB
-  H["Hero · D1 A: wordmark · pitch h1 · sub · Download for ‹system› / Read the guide · picked file + first-open line · s1"] --> D["Download · D2: macOS | Windows x64, arm64 | Linux x64, arm64 · the visitor's card first and marked 'Your system'"]
-  D --> S["SHA256SUMS · Other downloads: every file of the latest release (releases/latest), every state"]
-  S --> F["What you can do · D3 B: README bullets + Setup / Filters / Send again"]
-  F --> P["Privacy: PRIVACY.md lead · the site's promise, the script, GitHub as host · link"]
-  P --> FT["Footer: Guide · Privacy · Changelog · Contributing · Security · Licence · Report an issue · Source code"]
-  JS["site.js (defer, same origin): reads navigator, reorders and marks; no request, no storage"] -.-> H
+  T["Top bar (dark): wordmark · Features · Privacy · Guide · Download"] --> H["Hero (dark, amber glow): eyebrow · README pitch h1 · sub · Download for ‹system› / Read the guide · version, MIT, no account"]
+  H --> L["Request log: six example.* rows arrive one by one, under 4 s, still under reduced motion"]
+  L --> S1["Every request your apps make, in one list: s1 framed as a window"]
+  S1 --> ST["What you can do: five benefit stories, alternating sides, each with its screenshot · three tiles"]
+  ST --> P["Privacy (dark): PRIVACY lead as the headline · three facts · the CA-key limit · the site's promise"]
+  P --> D["Download: the honest unsigned line · a card per OS · SHA256SUMS · Other downloads"]
+  D --> F["Footer (dark): pitch · project files · MIT © 2026 Vu Luu"]
+  JS["site.js (unchanged, defer, same origin)"] -.-> H
   JS -.-> D</pre>
-      <div class="caption">The page as designed, top to bottom. With the script off the page is the same minus the dotted edges: all three cards in order, the hero button jumps to them.</div>
+      <div class="caption">The page top to bottom. With the script off it is the same minus the dotted edges.</div>
     </div>
     <div data-item="outcome">
       <table data-c="outcome">
-        <thead><tr><th>Round 2 requirement (router's brief)</th><th>Where in the design doc</th></tr></thead>
+        <thead><tr><th>Round 3 requirement (router's brief and the owner's four picks)</th><th>Where in the design doc</th></tr></thead>
         <tbody>
-          <tr><td>Drop the losing variants (D1 B, C; D2 A, C; D3 A, C)</td><td><code>#t-variants-css</code> and its elements removed; the alternative frames removed; <code>#ruled</code> records what each ruling cut</td></tr>
-          <tr><td>D2 = the one-card-per-OS block as a no-script base + detection</td><td><code>#mockup</code> (the page with the script off, both themes, 390 and 1440 px); <code>#detect</code></td></tr>
-          <tr><td>Exact rules per OS and arch</td><td><code>#detect-rules</code>: macOS universal dmg (no arch step); Windows x64 <code>-setup.exe</code> primary, promoted to arm64 only on the Chromium hint <code>"arm"</code>, the other arch right below; Linux AppImage primary (any distribution, no password to install or update), <code>.deb</code>/<code>.rpm</code> on its “or” line; phones, tablets, ChromeOS and the unrecognised = unknown</td></tr>
-          <tr><td>Unknown default, no-script frames, a frame per detected state</td><td><code>#detect-states</code>: table + 10 frames (5 states × 1440 dark, 390 light) that run the real <code>site.js</code>; the no-script frames in <code>#mockup</code></td></tr>
-          <tr><td>The script</td><td><code>#site-js</code>: the reference, 1,649 bytes, classic <code>defer</code> (modules never run on <code>file://</code>), no visible string of its own, and the page contract (<code>dl-*</code> ids)</td></tr>
-          <tr><td>CSP and Q13</td><td><code>#head</code>: index <code>… script-src 'self' …</code>, 404 keeps no script; <code>#rulings</code>: Q13 flips to yes, W2 edits <code>is_code</code>, the <code>docs/workflow.html</code> T1 line is W5's owner <code>mr commit</code></td></tr>
-          <tr><td>Copy and privacy sentence that say what is true</td><td><code>#copy</code> C8, C10, C11, C16, C26 (“Other downloads”), C31 with its reasoning; C32–C34 of round 1 (losing variants) gone</td></tr>
-          <tr><td>Test plan</td><td><code>#js-scan</code> (W2, static: network, code-from-strings, storage, request-by-side-effect tokens, 3,072-byte cap, page checks); <code>#js-behaviour</code> + <code>#js-fixtures</code> (W3: <code>site/site.test.mjs</code>, <code>node:test</code> + <code>node:vm</code>, 14 cases, no new dependency)</td></tr>
-          <tr><td>Asset list</td><td><code>#assets</code>: <code>site.js</code> ≤ 3,072 bytes, index only, <code>defer</code>; first view ≈ 319 KB of the 350 KB budget</td></tr>
+          <tr><td>The doc opens with the page, before any table; spec below, collapsible</td><td><code>#page</code>: 1440 dark full width, 390 dark and light, 1440 light; <code>#spec</code>: ten <code>&lt;details&gt;</code> blocks</td></tr>
+          <tr><td>R1 bold product-forward: dark, big headline, the app framed as a window, amber glow</td><td>hero up to 92 px, weight 700, on <code>#1b1916</code>; every screenshot in a window frame; amber only as glow (<code>#rulings</code>, DEC-89 row)</td></tr>
+          <tr><td>R2 a moving request log in CSS, still under reduced motion; the framed screenshot as the first benefit</td><td><code>.log</code>; <code>#log-variants</code>: V1 six rows with status colours (recommended), V2 four rows ink only, and the still strip; s1 in <code>#features</code></td></tr>
+          <tr><td>R3 subtle motion, off under reduced motion</td><td><code>#motion</code>: on-load rise, scroll-tied reveals, hover lift; every rule inside <code>prefers-reduced-motion: no-preference</code>; the log ends at 3.95 s</td></tr>
+          <tr><td>R4 benefit stories, every line traceable, the pitch unchanged</td><td><code>#copy</code> C1–C48 with sources; C16–C29 cite README/GUIDE/PRIVACY/CHANGELOG lines</td></tr>
+          <tr><td>D1, D2, D3 kept or said</td><td><code>#rulings</code>: D1 kept, D2 unchanged (same <code>site.js</code> and contract), D3 retold as R4</td></tr>
+          <tr><td>Constraints: CSP, no external request, no web font, script-off complete, contrast, focus, phone-first, weight</td><td><code>#head</code>, <code>#tokens</code> (log on <code>#141210</code> so <code>warn</code> passes), <code>#a11y</code>, <code>#assets</code> (first view ≈ 66 KB; shot re-encode −14 % recommended, WebP −81 % as an owner call)</td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="deviations">Deviations</h2>
-    <p data-item="deviations">Two calls the brief left to W1, both stated in the design: the hero gets a line under the buttons in a detected state (the picked file name, <em>Other systems</em>, <em>Other downloads</em>, and a copy of that card's first-open line). That is where the ruling's “sets the first-open line” lands. And the privacy sentence names GitHub as the host that sees each visit, so “no tracking” cannot be read as “nobody sees the request”. The plan's “No OS detection” line (Design) and its non-goal line are superseded by the D2 ruling; the plan itself is not edited here. The <code>design-review</code> skill's scope is unchanged from round 1: <code>cargo xtask design-scope</code> finds no design artifact in the range, so no <code>design/v1</code> note is owed. Docs-only WU: the test layers are waived, and W2 and W3 carry the tests this design specifies.</p>
+    <p data-item="deviations">The router's message replaced the brief's three directions with one direction on the owner's picks; the doc carries that one plus two log variations. Three calls made here: the privacy headline is PRIVACY.md's “Trawler keeps your traffic on your machine.”, not “Nothing leaves your machine” (false: the update check and the forwarded traffic leave); the router's sample “in seconds” is dropped (no measured speed); amber is used as glow only, which needs a DEC-89 rule 6 amendment W5 writes (owner <code>mr commit</code>). The hero, privacy band, footer and 404 are dark in both themes, so <code>wordmark-light.png</code> is no longer used. Headings are weight 700: the app's one-weight rule binds <code>ui/</code>, not the site. <code>cargo xtask design-scope</code> finds no design artifact, so no <code>design/v1</code> note is owed. Docs-only WU: the test layers are waived; W2 and W3 carry the tests this design specifies.</p>
 
     <h2 id="evidence">Evidence</h2>
     <div data-item="evidence">
       <table data-c="evidence">
         <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
         <tbody>
-          <tr><td>The frames render, the detected states included</td><td>headless Chrome screenshot of the design doc at 1280 px, 2× (local, not committed): the no-script page in both themes at both widths; in each state frame the picked card is first with its 2 px border and “Your system”; the arm64 block leads in <code>windows-arm64</code> (async hint) and <code>linux-arm64</code>; the hero says “Download for ‹system›” with the file name and the first-open line under it</td></tr>
-          <tr><td>The script behaves per the fixture table</td><td>a prototype of W3's <code>site.test.mjs</code> (scratch, not committed) ran the listed <code>site.js</code> in <code>node:vm</code> with Node 24.18: 14 of 14 cases pass, the async arm promotion and the refused hint included</td></tr>
-          <tr><td>The script passes its own scan and cap</td><td>none of the <code>#js-scan</code> tokens occurs in the listing; 1,649 bytes against the 3,072 cap</td></tr>
-          <tr><td>File names and links match the live release</td><td>unchanged from round 1: <code>gh api repos/lesslucifer/Trawler/releases/latest</code>, v0.1.0, the 13 installer names and SHA256SUMS used verbatim</td></tr>
-          <tr><td>Linux primary is right for the reason given</td><td>README.md Known limits: “Updating a <code>.deb</code> or <code>.rpm</code> install asks for your password”; GUIDE.md#linux: AppImage is <code>chmod +x</code> and run, <code>.deb</code>/<code>.rpm</code> need <code>sudo</code></td></tr>
-          <tr><td>Privacy wording is consistent</td><td>PRIVACY.md's update-check row: “GitHub sees your IP address”; C31 uses the same fact for the host</td></tr>
-          <tr><td>No denied name</td><td>the new copy (C8, C10, C16, C26, C31) names none of <code>public_text.rs</code> <code>DENIED_NAMES</code></td></tr>
-          <tr><td>Doc layer</td><td>snapshots before this round: design <code>2026-11-08T01-57-54-822Z</code>, result <code>2026-11-08T01-57-56-067Z</code>; no open comments</td></tr>
+          <tr><td>The page works under its real CSP with the real script</td><td>a standalone build from the doc's templates (scratch, not committed): <code>index.html</code> with the exact CSP meta, <code>site.css</code>, <code>site.js</code>, served on an ephemeral local port, driven by headless Chrome over CDP: zero CSP violations, zero script errors (one 404: the favicon the scratch build does not copy)</td></tr>
+          <tr><td>Detection still works</td><td>on this Mac the script picked <code>macos</code>: hero “Download for macOS”, the dmg line and first-open line shown; with scripts disabled the base page shows all three systems</td></tr>
+          <tr><td>The log animates, then stops; still under reduced motion</td><td>a shot at 1.3 s shows two rows in and the amber edge on the arriving one; at 4.5 s all six; with <code>prefers-reduced-motion: reduce</code> emulated, all six at once with no edge</td></tr>
+          <tr><td>No sideways scroll</td><td><code>scrollWidth ≤ innerWidth</code> at 1440, 390 and 320 px, light and dark</td></tr>
+          <tr><td>Contrast</td><td>every text pair computed with the WCAG 2 formula (<code>#tokens</code>); lowest: the app's <code>warn</code> on the log's <code>#141210</code>, 4.77:1</td></tr>
+          <tr><td>Weights</td><td>the built <code>index.html</code> 15,992 B, <code>site.css</code> 10,086 B, <code>site.js</code> 1,648 B; shot re-encode measured with the <code>png</code> crate (944,663 B vs 1,094,511 B); WebP with <code>cwebp</code> (203,148 B)</td></tr>
+          <tr><td>The doc renders the page first</td><td>headless Chrome screenshot of the design doc at 1280 px: the 1440 dark frame directly under the doc header</td></tr>
+          <tr><td>No denied name, no invented claim</td><td>new copy names no tool from <code>public_text.rs</code> <code>DENIED_NAMES</code>; each string's source in <code>#copy</code>; log rows are the screenshot fixture's reserved <code>example.*</code> hosts</td></tr>
+          <tr><td>Doc layer</td><td>snapshots before this round: design <code>2026-11-08T06-46-15-965Z</code>, result <code>2026-11-08T06-46-17-802Z</code>; no open comments</td></tr>
           <tr><td>e2e / integration / unit</td><td>waived: no code changes</td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="distillation">Distillation</h2>
-    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. The ruled design becomes truth through W2 (<code>is_code</code> += <code>site/</code>, the scan), W3 (<code>site/</code>, <code>site.js</code>, its test) and W5 (DEC-92, the DEC-89/DEC-91 amendments, UC-INSTALL, and the <code>docs/workflow.html</code> T1 line by owner <code>mr commit</code>). The design doc archives at the epic's close (DEC-3).</p>
+    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. It becomes truth through W2 (<code>is_code</code>, the scans incl. the new motion and no-inline-style checks, the shot re-encode), W3 (<code>site/</code> with the picked log variation) and W5 (DEC-92, the DEC-89 rule 6 amendment for the site's amber glow, the DEC-91 amendment, the <code>docs/workflow.html</code> T1 line by owner <code>mr commit</code>).</p>
 
     <h2 id="follow-ups">Follow-ups</h2>
     <div data-item="follow-ups">
       <table data-c="follow-ups">
         <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
         <tbody>
-          <tr><td>The plan still says “No OS detection” and Q13 “no”: a plan revision records the D2 ruling and points W2 at <code>is_code</code> and the scan</td><td>router (plan doc on <code>epic/pages</code>)</td></tr>
-          <tr><td><code>is_code</code> += <code>site/</code>; the <code>site.js</code> scan and page checks; running <code>node --test site/</code> in the site check</td><td>W2</td></tr>
-          <tr><td><code>site/site.js</code> from the listing, <code>site/site.test.mjs</code> from the fixture table; shots with the script off and on</td><td>W3</td></tr>
-          <tr><td><code>docs/workflow.html</code> T1 line for <code>site/</code> as a code path</td><td>W5, owner <code>mr commit</code></td></tr>
-          <tr><td>Marker syntax for the <code>data-fill</code> points</td><td>W2 (owns it), W3 applies it</td></tr>
-          <tr><td>Real-browser detection (Windows on Arm, Linux arm64, iPadOS, ChromeOS), Safari/Firefox rendering, a real phone; GitHub Pages sets no cookie; the Windows 10 wording of <b>System type</b></td><td>W3 shots, W4 live check, the owner's look</td></tr>
+          <tr><td>Pick the log variation: V1 six rows with status colours (recommended) or V2 four rows ink only</td><td>owner, via the router</td></tr>
+          <tr><td>Shots: re-encoded PNG now (recommended, no new dependency) or lossless WebP (one new crate)</td><td>owner, via the router</td></tr>
+          <tr><td>DEC-89 rule 6: the site as a brand surface where amber may glow (never text, state or control)</td><td>W5, owner <code>mr commit</code></td></tr>
+          <tr><td>The plan still says “No OS detection”, Q13 “no” and a script-free page</td><td>router (plan doc on <code>epic/pages</code>)</td></tr>
+          <tr><td>Motion, no-inline-style, contrast and story-drift checks; <code>is_code</code> += <code>site/</code>; the <code>site.js</code> scan</td><td>W2</td></tr>
+          <tr><td>Safari and Firefox rendering, a real phone, scroll reveals in Safari; story screenshots are small on a phone (a 1440 px app shot at 358 px wide)</td><td>W3 shots, the owner's look</td></tr>
         </tbody>
       </table>
     </div>
