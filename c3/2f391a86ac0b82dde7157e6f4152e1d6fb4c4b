@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-KANBAN
+wu: E-KANBAN.W1
+branch: HEAD
+tests:
+  unit: { count: 35, covers: "board and item note parse -> render byte-identical (plugin-serialiser fixture + proptest over arbitrary text); card id from the first wikilink, title, check; add/move/re-title touch only the card, placement where the plugin's laneToMd writes; the archive kept but never a lane; re-title keeps the link as written; multi-line titles refused; ids restricted to letters, digits and - . _ :; titles trimmed; note section set/append/add-missing; fenced code lines are never headings or cards; an open fence is refused; HTTP response, chunked body, ETag, path encoding; flag parsing, one stdin --section only; section names one trimmed line; owner-task note names cannot collide and their card links open the note; usage before any key read" }
+  integration: { count: 14, covers: "board init|show|read|put against a fake Local REST API on an ephemeral port (in-memory vault, per-file ETag, If-Match/If-None-Match/412, bearer check): init on an empty vault and never over an existing board; add/move/re-title; note sections + log keeping the owner's text; a board write and a note write each losing a race to an injected owner edit retry and keep both changes; always-412 fails loudly writing nothing; a refused card writes no note; a card refused after the note was written says so; an id leaving items/ is refused before any request; wrong key refused; the CLI reads the key file and prints JSON" }
+  e2e: { waived: "WU level: the epic e2e (xtask/tests/suite/e2e_kanban.rs) drives the built binary once W2's board wait exists" }
