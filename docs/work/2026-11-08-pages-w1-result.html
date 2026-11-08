@@ -9,7 +9,7 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-PAGES.W1 result — the landing site design, round 4</h1>
-      <p>Round 3 built one bold, product-forward page that opens the design doc. Round 4 records the owner's last two picks: request log V1, screenshots as lossless WebP. No choice is left open in the design.</p>
+      <p>Round 3 built one bold, product-forward page that opens the design doc. Round 4 records the owner's last two picks: request log V1 and screenshots as re-encoded PNG (WebP was picked first, then reversed the same day once its real saving was measured). No choice is left open in the design.</p>
       <div class="meta">v4 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
     </div>
   </header>
@@ -32,10 +32,9 @@
       <thead><tr><th>Round 4 pick (owner, 2026-11-08, via the router)</th><th>Where in the design doc</th></tr></thead>
       <tbody>
         <tr><td>P1 request log = V1, six rows with the app's status colours; V2 dropped</td><td><code>#round4</code>, <code>#rulings</code> P1; <code>#log-variants</code>, the V2 frames, <code>.log.quiet</code> and the mock's variant hook removed; the reduced-motion still strip moved into <code>#page</code>; C15 and <code>#motion</code> name V1 only</td></tr>
-        <tr><td>P2 screenshots as lossless WebP</td><td><code>#rulings</code> P2; <code>#assets</code>: encoder <code>image-webp</code> 0.2.4 in xtask, PNG kept as the source, <code>.webp</code> derived into <code>target/site/</code>, plain <code>&lt;img&gt;</code>, weights re-measured, notices unchanged; <code>#head</code>: <code>og:image</code> stays PNG, CSP unchanged</td></tr>
+        <tr><td>P2 screenshots as re-encoded PNG with the <code>png</code> crate xtask has (WebP first, reversed after the shippable pure-Rust encoder measured −30 %, not −81 %)</td><td><code>#round4</code>, <code>#rulings</code> P2; <code>#assets</code>: PNG list and weights re-measured, no new crate; <code>og:image</code> stays PNG, CSP unchanged</td></tr>
       </tbody>
     </table>
-    <div class="callout warn" data-c="webp-gap"><strong>The WebP saving W2 can ship is −30 %, not −81 %.</strong> Round 3's figure came from <code>cwebp</code> (C, not in CI). The pure-Rust <code>image-webp</code> writes the six shots in 762,248 B (cwebp: 183,654 B). First view unchanged at ≈ 66 KB.</div>
     <div data-item="outcome">
       <table data-c="outcome">
         <thead><tr><th>Round 3 requirement (router's brief and the owner's four picks), as now built</th><th>Where in the design doc</th></tr></thead>
@@ -46,7 +45,7 @@
           <tr><td>R3 subtle motion, off under reduced motion</td><td><code>#motion</code>: on-load rise, scroll-tied reveals, hover lift; every rule inside <code>prefers-reduced-motion: no-preference</code>; the log ends at 3.95 s</td></tr>
           <tr><td>R4 benefit stories, every line traceable, the pitch unchanged</td><td><code>#copy</code> C1–C48 with sources; C16–C29 cite README/GUIDE/PRIVACY/CHANGELOG lines</td></tr>
           <tr><td>D1, D2, D3 kept or said</td><td><code>#rulings</code>: D1 kept, D2 unchanged (same <code>site.js</code> and contract), D3 retold as R4</td></tr>
-          <tr><td>Constraints: CSP, no external request, no web font, script-off complete, contrast, focus, phone-first, weight</td><td><code>#head</code>, <code>#tokens</code> (log on <code>#141210</code> so <code>warn</code> passes), <code>#a11y</code>, <code>#assets</code> (first view ≈ 66 KB; whole page ≈ 0.81 MB with the WebP shots)</td></tr>
+          <tr><td>Constraints: CSP, no external request, no web font, script-off complete, contrast, focus, phone-first, weight</td><td><code>#head</code>, <code>#tokens</code> (log on <code>#141210</code> so <code>warn</code> passes), <code>#a11y</code>, <code>#assets</code> (first view ≈ 66 KB; whole page ≈ 0.94 MB with the re-encoded shots)</td></tr>
         </tbody>
       </table>
     </div>
@@ -65,9 +64,8 @@
           <tr><td>No sideways scroll</td><td><code>scrollWidth ≤ innerWidth</code> at 1440, 390 and 320 px, light and dark</td></tr>
           <tr><td>Contrast</td><td>every text pair computed with the WCAG 2 formula (<code>#tokens</code>); lowest: the app's <code>warn</code> on the log's <code>#141210</code>, 4.77:1</td></tr>
           <tr><td>Weights</td><td>round 3's built <code>index.html</code> 15,992 B, <code>site.css</code> 10,086 B, <code>site.js</code> 1,648 B (round 4 only removes the two V2 rules)</td></tr>
-          <tr><td>WebP sizes and losslessness (P2)</td><td>a scratch crate (outside the repo) encoded the six shots with <code>image-webp</code> 0.2.4: 762,248 B; <code>cwebp 1.6.0 -lossless -z 9 -exact</code>: 183,654 B; both decoded with <code>image-webp</code>'s decoder and compared to the PNG's RGB: identical for all twelve files</td></tr>
-          <tr><td>Encoder licence</td><td><code>cargo info</code>: <code>image-webp</code> MIT OR Apache-2.0; <code>zenwebp</code> AGPL-3.0-only (refused); <code>webp</code>/<code>webpx</code>/<code>webp-rs</code> bind C libwebp (refused)</td></tr>
-          <tr><td>Notices unchanged by the new crate</td><td>temporary <code>cargo add -p xtask image-webp@0.2.4</code>: lock gained <code>image-webp</code> + <code>quick-error 2.0.1</code>; <code>the_committed_notice_is_the_one_the_lockfiles_generate</code> passed; <code>cargo xtask licenses</code> rewrote <code>THIRD-PARTY-NOTICES.txt</code> byte-identical; edit reverted (tree clean)</td></tr>
+          <tr><td>Re-encoded PNG size and losslessness (P2)</td><td>a scratch crate (outside the repo) re-encoded the six shots with <code>png</code> 0.18.1 (RGB, <code>Compression::High</code>, <code>Filter::Adaptive</code>): 887,784 B vs 1,094,511 B (−19 %; round 3 reported 944,663 B); each decoded identical to its source</td></tr>
+          <tr><td>Why not WebP</td><td>the shippable pure-Rust <code>image-webp</code> 0.2.4 measured 762,248 B (−30 %), against the −81 % round 3 took from <code>cwebp</code>; the owner reversed P2 to PNG</td></tr>
           <tr><td>The doc renders the page first</td><td>headless Chrome at 1280 px: the 1440 dark frame directly under the doc header, V1 log; 13 frames, 13 iframes in the DOM; the round 4 table and callout render</td></tr>
           <tr><td>No denied name, no invented claim</td><td>new copy names no tool from <code>public_text.rs</code> <code>DENIED_NAMES</code>; each string's source in <code>#copy</code>; log rows are the screenshot fixture's reserved <code>example.*</code> hosts</td></tr>
           <tr><td>Doc layer</td><td>snapshots before this round: design <code>2026-11-08T07-07-27-846Z</code>, result <code>2026-11-08T07-07-29-218Z</code>; no open comments</td></tr>
@@ -77,15 +75,14 @@
     </div>
 
     <h2 id="distillation">Distillation</h2>
-    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. It becomes truth through W2 (<code>is_code</code>, the scans incl. the new motion and no-inline-style checks, the lossless WebP shots with <code>image-webp</code>), W3 (<code>site/</code> with log V1) and W5 (DEC-92, the DEC-89 rule 6 amendment for the site's amber glow, the DEC-91 amendment, the <code>docs/workflow.html</code> T1 line by owner <code>mr commit</code>).</p>
+    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. It becomes truth through W2 (<code>is_code</code>, the scans incl. the new motion and no-inline-style checks, the shot re-encode with the <code>png</code> crate), W3 (<code>site/</code> with log V1) and W5 (DEC-92, the DEC-89 rule 6 amendment for the site's amber glow, the DEC-91 amendment, the <code>docs/workflow.html</code> T1 line by owner <code>mr commit</code>).</p>
 
     <h2 id="follow-ups">Follow-ups</h2>
     <div data-item="follow-ups">
       <table data-c="follow-ups">
         <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
         <tbody>
-          <tr><td>P2 at −30 % (shippable encoder) instead of the −81 % it was picked on: keep WebP, or take it back to re-encoded PNG (−14 %, no new crate)</td><td>owner, via the router (the design records WebP)</td></tr>
-          <tr><td><code>image-webp</code> in <code>xtask/Cargo.toml</code>, the WebP derivation into <code>target/site/</code>, its same-pixels test</td><td>W2</td></tr>
+          <tr><td>The shot re-encode into <code>target/site/</code> and its same-pixels test</td><td>W2</td></tr>
           <tr><td>DEC-89 rule 6: the site as a brand surface where amber may glow (never text, state or control)</td><td>W5, owner <code>mr commit</code></td></tr>
           <tr><td>The plan still says “No OS detection”, Q13 “no” and a script-free page</td><td>router (plan doc on <code>epic/pages</code>)</td></tr>
           <tr><td>Motion, no-inline-style, contrast and story-drift checks; <code>is_code</code> += <code>site/</code>; the <code>site.js</code> scan</td><td>W2</td></tr>
