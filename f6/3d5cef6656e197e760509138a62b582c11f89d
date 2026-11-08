@@ -1,0 +1,31 @@
+schema: cr/v5
+scope: "WU apidoc/settings-api-page -> epic/apidoc"
+epic: E-APIDOC
+wu: E-APIDOC.W2
+branch: wu/apidoc/settings-api-page
+base: 26cbe54154200e38df4fb02fd900878e8491a475
+head: f63d5cef6656e197e760509138a62b582c11f89d
+diff_sha256: 384fbfd466a8ab52820a297cabcbe654599199eef7fd0734550a0b60c9138ebf
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 0
+  verifier_model: none
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 0
+  stage_seconds:
+    gate0: 38
+    finders: 19
+    verifiers: 0
+    total: 60
+  by_finder:
+    correctness: { found: 0, verified: 0 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits: []
+verdict: PASS
+date: 2026-11-08
