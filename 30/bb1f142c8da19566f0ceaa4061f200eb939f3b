@@ -1,0 +1,43 @@
+schema: cr/v5
+scope: "epic E-PAGES (W1-W6, close archive, the glow fix) -> main (round 2; round 1 FAILed on 297635d2 with the phone-width overflow, fixed in 30bb1f14)"
+epic: E-PAGES
+branch: epic/pages
+base: c782af92f6ed4771ddf814d777c274358655b049
+head: 30bb1f142c8da19566f0ceaa4061f200eb939f3b
+diff_sha256: 99e81ec20a87673d27aac9396da34884e5d0d33b7387407776258092dca1fadd
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 4
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 2
+  candidates:
+    blocker: 0
+    important: 2
+    nit: 6
+  stage_seconds:
+    gate0: 17
+    finders: 195
+    verifiers: 28
+    total: 261
+  by_finder:
+    correctness: { found: 5, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 7, verified: 1, waived: 0 }
+waivers: []
+nits:
+  - finding: "(refuted as important, kept as a nit) xtask/src/site.rs:1202 motion_problems reads only properties starting with animation or transition, so a -webkit- prefixed one escapes the calm-media-query rule and the 5 s budget"
+    waived: "a build-time lint over the repo's own site.css, which carries no prefixed property and meets DEC-92's motion promise; same class as round 1's waived comma-list and iteration-count readings, one follow-up for all three"
+  - finding: "(unverified) site/index.html:46 with site/site.js:34 after show() closes details#all, the Other systems link (href #all) scrolls to the closed details without opening it"
+    waived: "the visitor sees the Other systems summary at the scroll target and opens it with one click; nothing is hidden or wrong; a follow-up for a later site change"
+  - finding: "(unverified) site/site.test.mjs:47 no fixture drops one of the eight filled ids, and show() dereferences each without a null guard"
+    waived: "the ids are pinned by the integration test the_page_without_its_script_shows_every_file_and_hides_the_one_button, so a template edit dropping one fails the suite before it ships"
+  - finding: "(unverified) xtask/src/site.rs:10 site imports the generic HTML escape from walkthrough"
+    waived: "a shared helper reused, not duplicated; moving it is a refactor with no behaviour change (follow-up F7 covers the module split)"
+  - finding: "(unverified) xtask/src/site.rs:355 str_const is a second links.rs source scraper beside public_text::prefilled_fields"
+    waived: "both read one constant shape and a missing constant fails loudly; layout only"
+  - finding: "(unverified) xtask/src/site.rs:500 build owns the PNG re-encode, an image concern"
+    waived: "part of F7's module split; nothing observable changes"
+verdict: PASS
+date: 2026-11-08
