@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: a5e97b037dd97d87256adeca47ed84a10c8961f0
+base: e352e436a3d3bf6e5416a0fd7e953462605e33c3
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-router-kanban-visibility-gate-result.html
+report_sha256: d361373bba41125ff8b580bc9c8b5fe8e9b556d9569a6b2e1112bbdd5b871ed2
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBq/rC5Y5NO4zWbDCPaRxyRskCKIe/fE36FpCyVWDrMSeAg8RCBAdYnCS
+  Wko2t080SQFnjj+giCXAFYLK7IdEgG
+  -----END SSH SIGNATURE-----
