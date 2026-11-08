@@ -24,7 +24,7 @@
     <div class="inner">
       <h1>E-PAGES.W1 — the landing site design</h1>
       <p>The page first: a bold, dark, product-forward launch page with a live request log as its hero, benefit stories with the real app framed as windows, an amber glow, quiet reveals. The spec W2 and W3 build from sits folded below it.</p>
-      <div class="meta">Round 4 · the owner's picks: log V1, lossless WebP · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W2, W3</div>
+      <div class="meta">Round 4 · the owner's picks: log V1, re-encoded PNG · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W2, W3</div>
     </div>
   </header>
   <main>
@@ -47,9 +47,9 @@
     <table data-c="round4">
       <tr><th>#</th><th>Pick</th><th>Was open as</th><th>In this doc now</th></tr>
       <tr><td>P1</td><td>request log = <strong>V1</strong>: six rows in the app's status colours</td><td>V1 (recommended) or V2 (four rows, ink only)</td><td>V2, its frames and its <code>.log.quiet</code> rules are gone; <a href="#page">the page</a> carries V1 and its reduced-motion still strip; <a href="#copy">C15</a> and <a href="#motion">Motion</a> name only V1</td></tr>
-      <tr><td>P2</td><td>screenshots published as <strong>lossless WebP</strong></td><td>re-encoded PNG (recommended) or lossless WebP</td><td><a href="#assets">Assets</a>: the encoder crate W2 adds to xtask, the PNGs kept as the source, the page's <code>.webp</code> files, weights re-measured; <a href="#head">Head</a>: <code>og:image</code> stays PNG, the CSP is unchanged</td></tr>
+      <tr><td>P2</td><td>screenshots as <strong>re-encoded PNG</strong>, with the <code>png</code> crate xtask already has</td><td>re-encoded PNG (recommended) or lossless WebP</td><td>first picked WebP on round 3's −81 %; reversed the same day after the shippable pure-Rust encoder measured −30 %. <a href="#assets">Assets</a>: PNG shots re-encoded by W2, weights re-measured; no new crate</td></tr>
     </table>
-    <div class="callout warn" data-c="webp-gap"><strong>P2's saving is smaller than round 3 showed.</strong> Round 3's −81 % came from <code>cwebp</code>, a C tool W2 cannot run. The pure-Rust encoder W2 can ship (<code>image-webp</code> 0.2.4) writes the same pixels in <strong>762,248 B, −30 %</strong> (re-encoded PNG: −14 %). The first view does not move (≈ 66 KB: every shot is lazy). Details and the option table in <a href="#assets">Assets</a>.</div>
+
 
     <h2 id="round3">Round 3: what changed and why</h2>
     <table data-c="round3">
@@ -86,7 +86,7 @@
         <tr><td>R4</td><td>benefit stories: what you get, then one plain sentence; every line traceable; the tagline stays the README pitch</td><td>same</td><td><a href="#copy">Copy</a> C16–C27</td></tr>
         <tr><td>DEC-89 rule 6</td><td>“amber is a brand colour, never a UI colour”</td><td>R1 asks for an amber glow</td><td>amber appears only as decoration of the brand surface (the glows, the arriving row's edge, the picked card's halo), the way the social card and installer art use it; never text, never a state, never a control's fill. W5 records the site as a brand surface in a DEC-89 amendment (owner <code>mr commit</code>)</td></tr>
         <tr><td>P1</td><td>request log = V1, six rows with the app's status colours; V2 dropped</td><td>owner · 2026-11-08 (W1 round 4, via the router)</td><td>C15, <a href="#motion">Motion</a>, <code>#t-index</code>; no variation left in <code>site.css</code></td></tr>
-        <tr><td>P2</td><td>screenshots as lossless WebP, not re-encoded PNG</td><td>same</td><td><a href="#assets">Assets</a>: <code>image-webp</code> in xtask (W2), PNG stays the source in <code>.github/screenshots/</code>, plain <code>&lt;img src="*.webp"&gt;</code>; <code>og:image</code> stays <code>social-preview.png</code>; CSP unchanged</td></tr>
+        <tr><td>P2</td><td>screenshots as re-encoded PNG with the <code>png</code> crate xtask already has; no new crate</td><td>owner · 2026-11-08 (W1 round 4, via the router): WebP first, reversed the same day when the shippable encoder measured −30 %, not −81 %</td><td><a href="#assets">Assets</a>; <code>og:image</code> stays <code>social-preview.png</code>; CSP unchanged</td></tr>
       </table>
     </details>
 
@@ -273,33 +273,16 @@ if (picked) {
         <tr><td><code>site.js</code></td><td><code>site/</code>, as is</td><td>1,649 (cap 3,072)</td><td>index · <code>defer</code></td></tr>
         <tr><td><code>favicon.svg</code></td><td><code>ui/public/favicon.svg</code></td><td>601</td><td>both pages</td></tr>
         <tr><td><code>wordmark-dark.png</code></td><td><code>ui/src-tauri/icons/brand/</code> (1480×336, shown at 120×27)</td><td>23,228</td><td>top bar, footer, 404 · eager; <code>wordmark-light.png</code> is no longer used: every wordmark sits on a dark band</td></tr>
-        <tr><td><code>s1-main-window.webp</code>, <code>s6-setup-iphone.webp</code>, <code>s3-filter-chips.webp</code>, <code>s4-inspector-headers.webp</code>, <code>s5-send-again.webp</code>, <code>s10-capture-menu.webp</code></td><td>derived by W2's build from <code>.github/screenshots/*.png</code> (<code>cargo xtask ui screenshots</code>, 1440×800), lossless (P2)</td><td>194,228 · 59,796 · 27,026 · 172,770 · 161,022 · 147,406 = 762,248</td><td>first section + five stories · <code>&lt;img src="….webp" width="1440" height="800" loading="lazy"&gt;</code></td></tr>
-        <tr><td><code>social-preview.png</code></td><td><code>ui/src-tauri/icons/brand/</code></td><td>47,651</td><td><code>og:image</code> only, stays PNG</td></tr>
+        <tr><td>s1, s6, s3, s4, s5, s10 (<code>.png</code>, same names)</td><td><code>.github/screenshots/</code> (<code>cargo xtask ui screenshots</code>, 1440×800), re-encoded by W2's build (P2)</td><td>219,795 · 69,281 · 37,703 · 199,063 · 189,310 · 172,632 = 887,784</td><td>first section + five stories · <code>loading="lazy"</code></td></tr>
+        <tr><td><code>social-preview.png</code></td><td><code>ui/src-tauri/icons/brand/</code></td><td>47,651</td><td><code>og:image</code> only</td></tr>
       </table>
-      <p><strong>First view ≈ 66 KB</strong> (≤ 40 + 1.6 + 23 + 0.6), unchanged: no screenshot is above the fold. <strong>The whole page ≈ 0.81 MB</strong> (round 3's scratch build 15,992 + 10,086 + 1,648 + 601 + 23,228, plus the six WebP shots), down from ≈ 1.16 MB with the PNGs; the shots are 94 % of it.</p>
-      <table data-c="webp-measure">
-        <tr><th>The six shots, measured this round</th><th>Total (B)</th><th>Pixels vs the PNG</th><th>Ships in W2?</th></tr>
-        <tr><td>as committed (RGBA PNG, every pixel opaque)</td><td>1,094,511</td><td>—</td><td>stays the source</td></tr>
-        <tr><td>re-encoded PNG (round 3's recommendation, <code>png</code> crate)</td><td>944,663 (−14 %)</td><td>identical</td><td>no: P2 picked WebP</td></tr>
-        <tr><td><strong>lossless WebP, <code>image-webp</code> 0.2.4</strong>, default params, RGB (the alpha channel dropped, every pixel is opaque)</td><td><strong>762,248 (−30 %)</strong></td><td>identical (decoded and compared)</td><td><strong>yes</strong></td></tr>
-        <tr><td>lossless WebP, <code>cwebp -lossless -z 9 -exact</code> (libwebp 1.x, Homebrew)</td><td>183,654 (−83 %)</td><td>identical</td><td>no: a C tool on no CI runner; a reference for the gap</td></tr>
+      <p><strong>First view ≈ 66 KB</strong> (≤ 40 + 1.6 + 23 + 0.6): no screenshot is above the fold. <strong>The whole page ≈ 0.94 MB</strong> (round 3's scratch build 15,992 + 10,086 + 1,648 + 601 + 23,228, plus the six re-encoded shots), down from ≈ 1.15 MB with the committed PNGs; the shots are 95 % of it.</p>
+      <table data-c="png-measure">
+        <tr><th>The six shots (P2), measured this round</th><th>Total (B)</th><th>Pixels</th></tr>
+        <tr><td>as committed: RGBA PNG, every pixel opaque</td><td>1,094,511</td><td>—</td></tr>
+        <tr><td><strong>re-encoded</strong> with <code>png</code> 0.18.1 (xtask's): alpha dropped (RGB 8-bit), <code>Compression::High</code>, <code>Filter::Adaptive</code></td><td><strong>887,784 (−19 %)</strong></td><td>identical (decoded and compared)</td></tr>
       </table>
-      <table data-c="webp-encoder">
-        <tr><th>Encoder for xtask</th><th>Licence</th><th>Verdict</th></tr>
-        <tr><td><strong><code>image-webp</code> 0.2.4</strong> (image-rs; deps <code>byteorder-lite</code>, already in the lock through <code>image</code>, and <code>quick-error</code> 2.0.1)</td><td>MIT OR Apache-2.0</td><td class="rec">the pick: pure Rust, no <code>unsafe</code> needed in our code, already resolvable from the lock's registry</td></tr>
-        <tr><td><code>zenwebp</code> 0.4.6</td><td>AGPL-3.0-only OR commercial</td><td>refused: copyleft</td></tr>
-        <tr><td><code>webp</code> 0.3, <code>webp-rs</code>, <code>webpx</code></td><td>libwebp (BSD-3-Clause) via FFI</td><td>refused: a C build in xtask, not pure Rust</td></tr>
-      </table>
-      <table data-c="webp-consequences">
-        <tr><th>Consequence of P2</th><th>What holds</th></tr>
-        <tr><td>Dependency</td><td>W2 adds <code>image-webp = "0.2"</code> to <code>xtask/Cargo.toml</code>; <code>Cargo.lock</code> gains <code>image-webp</code> and <code>quick-error 2.0.1</code></td></tr>
-        <tr><td>Notices (DEC-88)</td><td>no change: xtask is build tooling, outside the normal-dependency closure of <code>trawler-ui</code> that <code>THIRD-PARTY-NOTICES.txt</code> lists. Checked with a temporary edit: the drift test passed and <code>cargo xtask licenses</code> rewrote the file byte-identical</td></tr>
-        <tr><td>Source of truth</td><td>the PNGs in <code>.github/screenshots/</code> stay committed and unchanged (README and GUIDE show them); no <code>.webp</code> is committed: W2 encodes into <code>target/site/</code> each build</td></tr>
-        <tr><td>Markup</td><td>plain <code>&lt;img src="*.webp"&gt;</code> with <code>width</code>/<code>height</code>, no <code>&lt;picture&gt;</code> fallback: every current browser decodes WebP</td></tr>
-        <tr><td>Social card</td><td><code>og:image</code> stays <code>social-preview.png</code>: link previews need PNG or JPEG</td></tr>
-        <tr><td>CSP</td><td><code>img-src 'self'</code> unchanged: the <code>.webp</code> files are same-origin</td></tr>
-        <tr><td>W2 test</td><td>each published <code>.webp</code> decodes to the same pixels as its PNG (unit, on a small fixture image)</td></tr>
-      </table>
+      <p>The committed PNGs stay as they are (README and GUIDE show them); W2 writes the re-encoded copies into <code>target/site/</code> each build and tests that each decodes to its source's pixels.</p>
     </details>
 
     <details class="spec" id="head" data-c="head">
@@ -311,7 +294,7 @@ if (picked) {
         <tr><td>script</td><td><code>&lt;script src="site.js" defer&gt;&lt;/script&gt;</code>, last in the index <code>&lt;head&gt;</code>; the only script on the site</td></tr>
         <tr><td>referrer · colour scheme</td><td><code>no-referrer</code> · <code>&lt;meta name="color-scheme" content="light dark"&gt;</code></td></tr>
         <tr><td>canonical · <code>og:url</code></td><td><code>https://lesslucifer.github.io/Trawler/</code></td></tr>
-        <tr><td>OG / Twitter</td><td><code>og:type website</code>, C2, C3, <code>og:image</code> = base + <code>social-preview.png</code> 1280×640 (PNG, not WebP: P2), <code>twitter:card summary_large_image</code></td></tr>
+        <tr><td>OG / Twitter</td><td><code>og:type website</code>, C2, C3, <code>og:image</code> = base + <code>social-preview.png</code> 1280×640 (PNG), <code>twitter:card summary_large_image</code></td></tr>
         <tr><td>404</td><td>favicon, CSS and wordmark by absolute path <code>/Trawler/…</code>; <code>&lt;meta name="robots" content="noindex"&gt;</code></td></tr>
       </table>
     </details>
@@ -342,7 +325,7 @@ if (picked) {
 
     <details class="spec" id="markup" data-c="markup">
       <summary>Markup and fill</summary>
-      <p>The source of every frame sits in this file after <code>&lt;/main&gt;</code>: <code>#t-index</code> and <code>#t-404</code> are the two pages, <code>#t-site-css</code> is <code>site.css</code>, <code>#t-mock-css</code> only forces a theme, crops sections and stills motion for the frames. W3 copies the pages, <code>site.css</code> and <code>site.js</code>, adds the script tag, turns each <code>data-fill</code> into W2's marker, and points each screenshot at its <code>.webp</code> (the frames here load the PNG sources: the <code>.webp</code> files exist only in W2's build).</p>
+      <p>The source of every frame sits in this file after <code>&lt;/main&gt;</code>: <code>#t-index</code> and <code>#t-404</code> are the two pages, <code>#t-site-css</code> is <code>site.css</code>, <code>#t-mock-css</code> only forces a theme, crops sections and stills motion for the frames. W3 copies the pages, <code>site.css</code> and <code>site.js</code>, adds the script tag, turns each <code>data-fill</code> into W2's marker, and points each screenshot at its re-encoded copy in <code>target/site/</code>.</p>
       <table>
         <tr><th>Element</th><th>Filled from (W2)</th></tr>
         <tr><td><code>.hero h1</code>, footer pitch, <code>.hero .sub</code></td><td>README.md: the <code>&lt;h3&gt;</code> pitch, the paragraph under it</td></tr>
@@ -362,10 +345,10 @@ if (picked) {
         <tr><th>Builds</th><th>Who</th><th>Checked by</th></tr>
         <tr><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code> from the templates and the listing, log V1</td><td>W3</td><td>W2's link, CSP/no-external, no-inline, motion, contrast, deny-list, kinds and scan tests; code review</td></tr>
         <tr><td><code>site/site.test.mjs</code></td><td>W3</td><td>W2's site check</td></tr>
-        <tr><td><code>is_code</code> += <code>site/</code>; the scans; the lossless WebP shots (<code>image-webp</code>); the story drift check</td><td>W2</td><td>W2's own tests</td></tr>
+        <tr><td><code>is_code</code> += <code>site/</code>; the scans; the shot re-encode (<code>png</code> crate); the story drift check</td><td>W2</td><td>W2's own tests</td></tr>
         <tr><td>Shots at 390 × 844 and 1440 × 900, light and dark, script off and on, and one with reduced motion</td><td>W3</td><td>owner sign-off on W3</td></tr>
       </table>
-      <p>Not verified: Safari and Firefox rendering and a real phone (frames and shots checked in Chrome only); scroll-driven reveals in Safari (shipped in 26) and their absence in Firefox (content then shows at rest, by design); the detection on real Windows on Arm, Linux arm64, iPadOS and ChromeOS; that GitHub Pages sets no cookie (W4, live); the WebP files in Safari and Firefox (Chrome only).</p>
+      <p>Not verified: Safari and Firefox rendering and a real phone (frames and shots checked in Chrome only); scroll-driven reveals in Safari (shipped in 26) and their absence in Firefox (content then shows at rest, by design); the detection on real Windows on Arm, Linux arm64, iPadOS and ChromeOS; that GitHub Pages sets no cookie (W4, live).</p>
     </details>
 
   </main>
