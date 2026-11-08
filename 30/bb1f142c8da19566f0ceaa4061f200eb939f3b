@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 30bb1f142c8da19566f0ceaa4061f200eb939f3b
+base: c782af92f6ed4771ddf814d777c274358655b049
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-08-pages-epic-result.html
+report_sha256: 3ed6ea2d3c3e3b58c5889c0e32af5d5d356336a4937733365aee2cf79193f14f
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECI3DfCgs6CD86Srjs72q7tJAbc1YR2pnLFSA/99escyEyNZNRclHwUOW
+  n93dFuZpP44+SDAy+0P9BrTs90K+kC
+  -----END SSH SIGNATURE-----
