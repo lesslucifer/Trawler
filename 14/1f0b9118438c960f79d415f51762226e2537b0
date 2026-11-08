@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU site-build -> epic/pages (round 6)"
+epic: E-PAGES
+wu: E-PAGES.W2
+branch: wu/pages/site-build
+base: b45561848bd8dd2e3ff365ad0f8a59edc7a9178c
+head: 141f0b9118438c960f79d415f51762226e2537b0
+diff_sha256: e9958ef55ddb094a3348979dea2a85e5b6464d913a4147aa67d5080432440862
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 1
+    important: 2
+    nit: 4
+  stage_seconds:
+    gate0: 25
+    total: 338
+  by_finder:
+    correctness: { found: 6, verified: 3 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 1, verified: 0 }
+findings: { found: 7, verified: 3, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-08
