@@ -1,0 +1,50 @@
+schema: cr/v5
+scope: "epic E-PAGES (W1-W6, close archive) -> main (round 1)"
+epic: E-PAGES
+branch: epic/pages
+base: c782af92f6ed4771ddf814d777c274358655b049
+head: 297635d23fff52c4e3153f036c1a204016135646
+diff_sha256: 23d65c49ab6be243a2bf5e19f5a2b7e27af3ca2a23e03e7f41024a0c20121e08
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 4
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 2
+  candidates:
+    blocker: 0
+    important: 3
+    nit: 6
+  stage_seconds:
+    finders: 315
+    verifiers: 50
+    total: 385
+  by_finder:
+    correctness: { found: 6, verified: 3 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 2, verified: 0 }
+findings: { found: 9, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "(refuted as important, kept as a nit) xtask/src/site.rs:1208 motion_problems reads the first two times of an animation declaration as duration and delay, so a comma list or a finite iteration count can run past 5 s unseen, and animation-iteration-count other than infinite is not read"
+    waived: "a build-time lint over the repo's own site.css, whose animations settle by about 3.95 s with one value each and no iteration count; the max-over-file reading over-approximates separate rules; a follow-up for the next stylesheet change that needs a list or a count"
+  - finding: "(refuted as important, kept as a nit) xtask/src/site.rs:426 values() renders README's features and PRIVACY's privacy block, which no marker uses, so a README edit outside the markdown subset fails the build for text the site never shows"
+    waived: "dead computation that fails loudly, never wrong output; the stories are hand-written by the owner's D3 = B pick and the drift check is the epic's recorded follow-up F1, which will use them"
+  - finding: "(unverified) xtask/src/site.rs:1115 a token pair redeclared inside an at-rule other than the dark :root query is not contrast-checked"
+    waived: "the epic's recorded follow-up F5, a stated limit pinned by its own test; none exists today"
+  - finding: "(unverified) xtask/src/site.rs:469 the PNG re-encode drops sRGB and eXIf chunks"
+    waived: "an untagged PNG is read as sRGB by browsers; the pixels are compared equal by the suite"
+  - finding: "(unverified) xtask/src/site.rs:362 first_sentence splits rendered HTML at the first '. ', so an e.g. in PRIVACY's lead would cut the headline"
+    waived: "PRIVACY's lead has none today; the cut is visible in the built page and the W3 shots"
+  - finding: "(unverified) xtask/src/site.rs:633 blob_problem reads and anchor-parses a linked tree file once per link"
+    waived: "build-time, a handful of links"
+  - finding: "(unverified) xtask/src/site.rs:114 arches repeats the per-OS architecture matrix package.rs and release.yml own"
+    waived: "downloads() refuses a release whose assets do not match the rows, so a drift fails the build loudly"
+  - finding: "(unverified) xtask/src/package.rs:332 HOMEPAGE = crate::site::BASE_URL makes package and site depend on each other"
+    waived: "one constant by design (W6, DEC-87 rule 4); the cycle is between two modules of one crate and compiles"
+verified:
+  - finding: "site/site.css:20 .stage::before inset -18% -10% spills the glow past each stage and nothing outside .hero clips it, so a phone-width page scrolls sideways"
+    severity: important
+    evidence: "built from the v0.1.0 fixture, headless Chrome at 390 px: scrollWidth 393 over clientWidth 375; at 360 px: 360 over 345; html, body carry no overflow-x rule"
+verdict: FAIL
+date: 2026-11-08
