@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W2
+branch: HEAD
+tests:
+  unit: { count: 18, covers: "relation flag to Vikunja kind mapping, label resolution incl. create-if-missing, user id resolution, the needs-owner predicate, summary/detail rendering, flag parsing and contradictions, refusal hints, HTTP response parsing, and an answer read before a connection reset surviving it" }
+  integration: { count: 18, covers: "every cargo xtask vikunja subcommand end to end against a fake Vikunja on an ephemeral port: method, path, bearer token and JSON body sent; pagination; non-2xx as an error naming the status; put's protocol order for the ask and the close; put --done posting the whole task it read; skips writing nothing; label create-if-missing; midway failures naming what was done; create with parent and blocking relations; --unassign by numeric id; a repeated --relation sent once" }
