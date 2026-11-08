@@ -567,3 +567,34 @@ fn a_relation_repeated_in_one_call_is_sent_once() {
         ]
     );
 }
+
+#[test]
+fn put_on_a_done_task_notes_that_show_hides_it_unless_this_call_marks_it_done() {
+    let server = Server::start();
+    let mut done = task(10, &json!(null), &json!(null));
+    done["done"] = json!(true);
+    server.route("GET", "/tasks/10", 200, &done);
+    server.route("GET", "/labels?page=1", 200, &json!([needs_owner_label()]));
+    server.route("PUT", "/tasks/10/comments", 201, &json!({"id": 3}));
+    server.route("PUT", "/tasks/10/assignees", 201, &json!({"user_id": 1}));
+    server.route("PUT", "/tasks/10/labels", 201, &json!({"label_id": 1}));
+    let ask =
+        ["put", "10", "--label", "needs-owner", "--assignee", "vuluu", "--comment", "testing"];
+    assert_eq!(
+        server.run(&ask).unwrap(),
+        "#10: commented\n#10: assigned vuluu\n#10: labelled needs-owner\n\
+         #10: note - this task is done, so show (and show --needs-owner) will not list it until it is marked open (--undone)"
+    );
+    assert_eq!(
+        server.run(&["put", "10", "--done", "--label", "needs-owner"]).unwrap(),
+        "#10: already done - skipped\n#10: labelled needs-owner"
+    );
+    assert_eq!(server.run(&["put", "10", "--comment", "c"]).unwrap(), "#10: commented");
+
+    server.route("GET", "/tasks/6", 200, &task(6, &json!(null), &json!(null)));
+    server.route("PUT", "/tasks/6/labels", 201, &json!({"label_id": 1}));
+    assert_eq!(
+        server.run(&["put", "6", "--label", "needs-owner"]).unwrap(),
+        "#6: labelled needs-owner"
+    );
+}

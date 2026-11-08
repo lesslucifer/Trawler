@@ -332,6 +332,7 @@ fn apply(
         }
     }
     write_fields(client, id, task, change, said)?;
+    let mut touched = false;
     for &(user, user_id) in assign {
         if list(task, "assignees").any(|a| id_of(a) == user_id) {
             said.push(format!("#{id}: {user} already assigned - skipped"));
@@ -342,6 +343,7 @@ fn apply(
                 Some(&json!({ "user_id": user_id })),
             )?;
             said.push(format!("#{id}: assigned {user}"));
+            touched = true;
         }
     }
     for name in &change.label {
@@ -358,6 +360,7 @@ fn apply(
         } else {
             client.call("PUT", &format!("{path}/labels"), Some(&json!({ "label_id": label })))?;
             said.push(format!("#{id}: labelled {name}"));
+            touched = true;
         }
     }
     for name in &change.unlabel {
@@ -365,6 +368,7 @@ fn apply(
             Some(label) => {
                 client.call("DELETE", &format!("{path}/labels/{label}"), None)?;
                 said.push(format!("#{id}: unlabelled {name}"));
+                touched = true;
             }
             None => said.push(format!("#{id}: not labelled {name} - skipped")),
         }
@@ -377,11 +381,21 @@ fn apply(
             Some(user_id) => {
                 client.call("DELETE", &format!("{path}/assignees/{user_id}"), None)?;
                 said.push(format!("#{id}: unassigned {user}"));
+                touched = true;
             }
             None => said.push(format!("#{id}: {user} not assigned - skipped")),
         }
     }
+    if touched {
+        said.extend(hidden_while_done(id, task, change));
+    }
     Ok(())
+}
+
+fn hidden_while_done(id: u64, task: &Value, change: &Put) -> Option<String> {
+    (task["done"].as_bool() == Some(true) && change.done != Some(true)).then(|| {
+        format!("#{id}: note - this task is done, so show (and show --needs-owner) will not list it until it is marked open (--undone)")
+    })
 }
 
 /// `POST /tasks/<id>` replaces the whole task - a partial body clears the
@@ -759,6 +773,17 @@ mod tests {
             .starts_with("put: unexpected --title"));
         assert!(parse(&["put"]).unwrap_err().starts_with("put needs a task id"));
         assert!(parse(&["put", "x"]).unwrap_err().contains("expected a task id"));
+    }
+
+    #[test]
+    fn a_done_task_gets_the_hidden_note_unless_this_call_marks_it_done() {
+        let mut done = task();
+        done["done"] = json!(true);
+        let note = hidden_while_done(7, &done, &Put::default()).unwrap();
+        assert!(note.starts_with("#7: note - this task is done"), "{note}");
+        let marking_done = Put { done: Some(true), ..Put::default() };
+        assert_eq!(hidden_while_done(7, &done, &marking_done), None);
+        assert_eq!(hidden_while_done(7, &task(), &Put::default()), None);
     }
 
     #[test]
