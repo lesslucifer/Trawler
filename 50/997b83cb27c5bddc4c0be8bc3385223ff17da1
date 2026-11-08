@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PAGES
+wu: E-PAGES.W3
+branch: HEAD
+tests:
+  unit: { count: 53, covers: "site.rs: the motion check (outside reduced-motion, infinite, smooth scroll, load motion over 5 s), contrast per token scope (.night/.log/.window-bar), PNG re-encode keeps pixels and drops opaque alpha, alt text README->GUIDE, the privacy lead split, the published date, test files never ship; site.test.mjs: 14 navigator fixtures ask for the right dl-* blocks, show() fills both buttons, unhides #one/#pick, closes #all with summary Other systems, unknown or a missing block leaves the page as without script" }
+  integration: { count: 8, covers: "the v0.1.0 fixture builds the frame minus its tests plus ASSETS with no problem; every shipped PNG decodes to its source's pixels and is no larger; the built page hides #one and #pick, keeps details#all open with All systems, three cards and the five dl-* blocks; node --test site/site.test.mjs is green" }
+  e2e: { waived: "the epic's e2e is the live Pages deploy after the owner's settings (epic plan, E2E test plan); the headless-Chrome shots in the W3 result are the manual visual check" }
