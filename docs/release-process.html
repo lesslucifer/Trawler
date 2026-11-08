@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Release process</h1>
       <p>How a version becomes a published release: numbering, notes, the tag, what the owner ticks when publishing, the final's cut, and rollback.</p>
-      <div class="meta">v2 · 2026-11-07 (the final's cut, from the rc rounds) · Trawler · T1 process · written by <span class="badge id">E-PRORELEASE.W7</span> · mechanism and its why: <a href="decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a> · update channel: <a href="decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a> · hand checks: <a href="backlog/hand-check-matrix.html">matrix</a></div>
+      <div class="meta">v3 · 2026-11-08 (the project site, E-PAGES) · Trawler · T1 process · written by <span class="badge id">E-PRORELEASE.W7</span> · mechanism and its why: <a href="decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a> · site: <a href="decisions/dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html">DEC-92</a> · update channel: <a href="decisions/dec-82-an-update-asks-is-signed-and-quits-through-the-check.html">DEC-82</a> · hand checks: <a href="backlog/hand-check-matrix.html">matrix</a></div>
     </div>
   </header>
   <main>
@@ -18,12 +18,16 @@
     <div class="diagram" data-c="flow"><pre class="mermaid">
 flowchart LR
   A["epic: CHANGELOG section + one-version bump"] --> B["gated merge"]
-  B --> C(["owner: tag v‹version› on the gated tip"])
+  B --> S0{"site answers 200?"}
+  S0 -- yes --> C(["owner: tag v‹version› on the gated tip"])
+  S0 -- no --> SD["fix the deploy · gh workflow run pages.yml"]
+  SD --> S0
   C --> D["release.yml → draft (DEC-86)"]
   D --> E{"draft review"}
   E -- bad --> F["next number"]
   F --> A
   E -- ok --> G(["owner publishes with the ticks below"])
+  G -- final --> P["pages.yml redeploys the site"]
   G --> H{"rc?"}
   H -- yes --> I["hand-check matrix"]
   I -- a ❌ --> F
@@ -98,10 +102,10 @@ flowchart LR
         <tr><td>2</td><td>the release epic's last commit bumps the workspace version to <code>0.1.0</code> and dates its CHANGELOG section, nothing else: <code>Cargo.toml</code> <code>[workspace.package] version</code>, <code>Cargo.lock</code> (refreshed by any <code>cargo build</code>), <code>ui/package.json</code></td><td>worker</td><td><code>cargo xtask package</code> refuses drift; <code>## [0.1.0] - ‹date›</code> already exists (every rc's notes read it): set ‹date› to the release day; edit the body only if the matrix fixes changed what it says; the bump's parent is the last rc's tag: <code>git diff --stat v0.1.0-N HEAD</code> lists only <code>Cargo.toml</code>, <code>Cargo.lock</code>, <code>ui/package.json</code>, <code>CHANGELOG.md</code>; any other commit after the rc tag needs a new rc <code>0.1.0-N+1</code> first (<a href="#versions">every final is preceded by an rc of the same final whose matrix passed</a>)</td></tr>
         <tr><td>3</td><td>gate the epic tip: <code>test/v2</code> + <code>doc/v1</code>, code-review, <code>verify-dod</code></td><td>worker</td><td>staged <code>cargo xtask mr confirm epic &lt;tip&gt; --as &lt;id&gt; --target main --report docs/.archive/&lt;epic&gt;-result.html</code></td></tr>
         <tr><td>4</td><td>confirm, merge <code>--no-ff</code> into <code>main</code>, push</td><td>owner</td><td>the staged <code>mr confirm</code>; <code>git merge --no-ff epic/&lt;slug&gt;</code>; <code>git push origin main</code></td></tr>
-        <tr><td>5</td><td>tag the merged <code>main</code> tip</td><td>owner</td><td><code>git tag v0.1.0 &amp;&amp; git push origin v0.1.0</code></td></tr>
+        <tr><td>5</td><td>tag the merged <code>main</code> tip, once the site answers (<a href="#site">The project site</a>)</td><td>owner</td><td><code>curl -sI https://lesslucifer.github.io/Trawler/</code> → 200; <code>git tag v0.1.0 &amp;&amp; git push origin v0.1.0</code></td></tr>
         <tr><td>6</td><td>build every platform, write <code>latest.json</code> and <code>SHA256SUMS</code>, leave a draft</td><td><span class="badge auto">release.yml</span></td><td><code>gh run watch $(gh run list --workflow release.yml -L 1 --json databaseId -q '.[0].databaseId')</code></td></tr>
         <tr><td>7</td><td>review the draft: installers incl. <code>.rpm</code>, a <code>.sig</code> per updater archive, <code>latest.json</code> with 18 platform entries, <code>SHA256SUMS</code>, notes = no rc line, What's new = <code>## [0.1.0]</code>, install, Check your download</td><td>owner (router checks)</td><td><code>gh release view v0.1.0 --json assets,body</code>; <code>gh release download v0.1.0 -p latest.json -O - | jq '.platforms|length'</code> → <code>18</code></td></tr>
-        <tr><td>8</td><td>publish: pre-release <b>unticked</b>, latest <b>ticked</b></td><td>owner</td><td>GitHub release page → Publish</td></tr>
+        <tr><td>8</td><td>publish: pre-release <b>unticked</b>, latest <b>ticked</b>; the site redeploys by itself</td><td>owner</td><td>GitHub release page → Publish; <code>gh run list --workflow pages.yml -L 1</code> green and the site's download block names the version</td></tr>
       </tbody>
     </table>
     <div class="callout" data-c="local-proof">A fix is claimed done only with <b>local proof on the target OS</b>: the new rc's own installer, installed and checked on a machine of that OS's <a href="backlog/hand-check-matrix.html">matrix</a> row, before testers re-run the row.</div>
@@ -118,12 +122,29 @@ flowchart LR
       <li>Never upload the rc's installers or edit its <code>latest.json</code> into the final.</li>
     </ul>
 
+    <h2 id="site">The project site</h2>
+    <table data-c="site">
+      <thead><tr><th>When</th><th><code>pages.yml</code></th><th>Owner does</th></tr></thead>
+      <tbody>
+        <tr><td>once, before the first push to <code>main</code> that carries <code>pages.yml</code></td><td>—</td><td>Settings → Pages → Source = <b>GitHub Actions</b>; Settings → Environments → <code>github-pages</code>: keep <code>main</code>, add a tag rule <code>v*</code> (a release event runs on its tag)</td></tr>
+        <tr><td>before any tag, rc or final</td><td>—</td><td><code>curl -sI https://lesslucifer.github.io/Trawler/</code> answers 200, else no tag: the installers name the site as their homepage (DEC-87 rule 4)</td></tr>
+        <tr><td>a push to <code>main</code></td><td>runs</td><td>nothing</td></tr>
+        <tr><td>a final published</td><td>runs</td><td>step 8's check</td></tr>
+        <tr><td>a pre-release published</td><td>skipped</td><td>nothing: the site keeps the latest final</td></tr>
+        <tr><td>a release published on a tag whose commit has no <code>pages.yml</code></td><td>does not run (a release event runs the workflow file at its tag)</td><td><code>gh workflow run pages.yml</code>, or the next push to <code>main</code></td></tr>
+        <tr><td>a published pre-release edited into the final (pre-release unticked, latest ticked)</td><td>does not run (an edit is not <code>published</code>)</td><td>the same</td></tr>
+        <tr><td>a patch on an older line (a <code>0.1.x</code> after <code>0.2.0</code>)</td><td>does not redeploy the site by itself: its tag runs that line's <code>pages.yml</code>, if any, and the build refuses a latest release newer than that tree</td><td>the same, only when the patch changed <code>releases/latest</code></td></tr>
+        <tr><td>a release pulled back to draft</td><td>does not run</td><td>the same (Rollback)</td></tr>
+      </tbody>
+    </table>
+    <p class="kd" data-c="site-why">The site always names <code>releases/latest</code>, read at build time; every run is visible in <code>gh run list --workflow pages.yml</code>. It publishes, it gates nothing (DEC-83).</p>
+
     <h2 id="rollback">Rollback</h2>
     <table data-c="rollback">
       <thead><tr><th>Found</th><th>Do</th><th>Never</th></tr></thead>
       <tbody>
         <tr><td>a red run or a bad draft</td><td>delete the draft (or leave it: a re-run replaces it); fix; next number</td><td>move or delete the tag</td></tr>
-        <tr><td>a bad published release</td><td><code>gh release edit v‹bad› --draft</code>: the channel falls back to the previous release; then fix forward with the next version, published as latest</td><td>replace an asset (the <code>.sig</code>, <code>latest.json</code> and <code>SHA256SUMS</code> bind them); reuse the number</td></tr>
+        <tr><td>a bad published release</td><td><code>gh release edit v‹bad› --draft</code>: the channel falls back to the previous release; then fix forward with the next version, published as latest; <code>gh workflow run pages.yml</code> so the site follows <code>releases/latest</code></td><td>replace an asset (the <code>.sig</code>, <code>latest.json</code> and <code>SHA256SUMS</code> bind them); reuse the number</td></tr>
         <tr><td>installs already on the bad version</td><td>they stay on it until the fix-forward release, which the updater offers them</td><td>expect a downgrade: the updater only offers a newer version (DEC-82)</td></tr>
       </tbody>
     </table>
