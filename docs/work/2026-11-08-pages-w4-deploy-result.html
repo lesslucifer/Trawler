@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af045359f34851f0dfb1cff" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W4 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W4 result: <code>pages.yml</code> builds and deploys the site</h1>
+      <p>What W4 built, how it is proven, what the router reviews, and what the owner switches on.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W4</span> · <code>wu/pages/deploy</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w4-deploy-plan.html">W4 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+<pre class="mermaid">flowchart LR
+  E(["push main · release published · by hand"]) --> B["build · contents: read<br>gh api releases/latest → $RUNNER_TEMP/release.json<br>cargo xtask site build --out target/site<br>upload-pages-artifact (path target/site)"]
+  B --> D["deploy · pages + id-token write<br>environment github-pages<br>deploy-pages"]
+  P(["release published, prerelease"]) -. "build if: false → both skipped" .-> B</pre>
+      <table data-c="outcome">
+        <thead><tr><th>File</th><th>What</th></tr></thead>
+        <tbody>
+          <tr><td><code>.github/workflows/pages.yml</code> (new)</td><td>two jobs as above; <code>contents: read</code> at the top; concurrency <code>pages</code>, never cancelled; build 15 min, deploy 15 min; no cache, no secret, no <code>configure-pages</code></td></tr>
+          <tr><td><code>xtask/tests/suite/pages_workflow.rs</code> (new) · <code>main.rs</code> (+1 line)</td><td>15 hermetic tests reading the repo's YAML (pattern of <code>release_workflow.rs</code>)</td></tr>
+          <tr><td><code>release.yml</code>, <code>ci.yml</code>, <code>site/</code>, <code>xtask/src/</code></td><td>untouched</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="pins">Pins</h2>
+    <table data-c="pins">
+      <thead><tr><th>Action</th><th>Pin</th><th>Check</th></tr></thead>
+      <tbody>
+        <tr><td><code>actions/checkout</code></td><td><code>11d5960a…7262</code> # v4.4.0</td><td>line equal to <code>release.yml</code> (test)</td></tr>
+        <tr><td><code>dtolnay/rust-toolchain</code></td><td><code>b725eda5…01a7ec</code> # stable, 2026-10-16 · toolchain 1.99.0</td><td>line equal to <code>release.yml</code>; toolchain = <code>rust-toolchain.toml</code> (test)</td></tr>
+        <tr><td><code>actions/upload-pages-artifact</code></td><td><code>fc324d3547104276b827a68afc52ff2a11cc49c9</code> # v5.0.0</td><td>tag ref → commit, re-read 2026-11-08 (<code>gh api</code>); latest release</td></tr>
+        <tr><td><code>actions/deploy-pages</code></td><td><code>368f82528645a54fb793d4d04e342629a3f51346</code> # v5.0.1</td><td>same; latest release</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table data-c="deviations">
+        <thead><tr><th>Epic plan shape</th><th>Built</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>gh api repos/${{ github.repository }}/releases/latest &gt; release.json</code></td><td><code>gh api "repos/$GITHUB_REPOSITORY/releases/latest" &gt; "$RUNNER_TEMP/release.json"</code></td><td>no expression interpolated into a shell line; the JSON stays outside the checkout</td></tr>
+          <tr><td>pre-release skip, place unstated</td><td><code>if:</code> on the build job only; deploy <code>needs: build</code></td><td>one condition; a skipped need skips the deploy</td></tr>
+          <tr><td>deploy timeout unstated</td><td>15 min</td><td>above deploy-pages' own 10 min wait</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Check</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>test first</td><td><code>pages_workflow</code> written before <code>pages.yml</code>: 14 of 15 red (only the helper's own test green)</td></tr>
+          <tr><td><code>cargo test -p xtask --test suite pages_workflow</code></td><td>15 passed</td></tr>
+          <tr><td>mutation sweep (16 one-line edits of <code>pages.yml</code>, restored after)</td><td>each red: cancel-in-progress true · persist-credentials true · upload path <code>.</code> · deploy-pages <code>@v5</code> · comment dropped · checkout SHA off by one · top <code>contents: write</code> · <code>id-token</code> dropped · release read from the event · pre-release clause dropped · environment renamed · <code>pull_request</code> trigger · <code>configure-pages</code> step · <code>secrets.GITHUB_TOKEN</code> · deploy timeout dropped · <code>continue-on-error</code></td></tr>
+          <tr><td><code>actionlint</code> 1.7.12 (with shellcheck)</td><td>clean on <code>pages.yml</code> and on all three workflows</td></tr>
+          <tr><td>the two run steps by hand on this Mac</td><td>read-only <code>gh api repos/lesslucifer/Trawler/releases/latest</code> → v0.1.0, not draft, not pre-release, 25 assets; <code>cargo xtask site build --release &lt;it&gt; --out &lt;scratch&gt;</code> → “wrote the site (9 files)”</td></tr>
+          <tr><td>code review · gates</td><td>recorded on the tip's notes (<code>cr/v5</code>, <code>test/v2</code>, <code>doc/v1</code>), not repeated here</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="router-review">Outside the cr gate: the router's review</h2>
+    <p><code>.github/workflows/pages.yml</code> is not a code path; the code review saw only <code>pages_workflow.rs</code>. The epic plan's 11-point checklist, mapped:</p>
+    <table data-c="router-review">
+      <thead><tr><th>#</th><th>Item</th><th>Where it holds</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>triggers: push main, release published (pre-release skipped), dispatch; nothing else</td><td><code>on:</code> + build <code>if:</code>; tests <code>the_site_deploys_on…</code>, <code>a_published_pre_release_skips…</code></td></tr>
+        <tr><td>2</td><td><code>contents: read</code> top; pages + id-token on deploy only</td><td><code>only_the_deploy_job_can_write…</code></td></tr>
+        <tr><td>3</td><td>full SHA + version comment; checkout/toolchain = <code>release.yml</code></td><td><code>every_action_is_pinned…</code>, <code>the_actions_release_yml_also_uses…</code></td></tr>
+        <tr><td>4</td><td><code>persist-credentials: false</code></td><td><code>no_checkout_leaves_the_token_in_git</code></td></tr>
+        <tr><td>5</td><td>upload path = build output only</td><td><code>the_build_writes_the_site_into_the_one_dir…</code> (path exactly <code>target/site</code>, the only <code>with</code> key)</td></tr>
+        <tr><td>6</td><td>no secret; the token only reads the release</td><td><code>no_secret_reaches_the_workflow</code>; <code>GH_TOKEN</code> only on the read step, job token <code>contents: read</code></td></tr>
+        <tr><td>7</td><td><code>releases/latest</code>, not the event payload</td><td><code>the_build_reads_the_latest_release…</code> (no step names <code>github.event</code>)</td></tr>
+        <tr><td>8</td><td>environment <code>github-pages</code></td><td><code>the_deploy_publishes_the_artifact…</code> (+ <code>url</code> = the step's <code>page_url</code>)</td></tr>
+        <tr><td>9</td><td>concurrency <code>pages</code>, no cancel</td><td><code>one_deploy_runs_at_a_time…</code></td></tr>
+        <tr><td>10</td><td>timeouts, no <code>continue-on-error</code></td><td><code>no_step_can_fail…</code></td></tr>
+        <tr><td>11</td><td><code>release.yml</code>, <code>ci.yml</code> unchanged</td><td><code>git diff epic/pages -- .github/workflows/release.yml .github/workflows/ci.yml</code> is empty</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="owner-settings">Owner settings (after the epic merges; agents never set them)</h2>
+    <table data-c="owner-settings">
+      <thead><tr><th>#</th><th>Where</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Settings → Pages → Build and deployment → Source</td><td>GitHub Actions</td></tr>
+        <tr><td>2</td><td>Settings → Environments → <code>github-pages</code> → Deployment branches and tags</td><td>keep <code>main</code>; Add deployment branch or tag rule → Ref type <b>Tag</b>, pattern <code>v*</code> (a release event runs on the tag ref)</td></tr>
+        <tr><td>3</td><td>Settings → Actions → General</td><td>nothing to change: workflow permissions may stay read-only, the deploy job asks for its own</td></tr>
+        <tr><td>then</td><td>first run</td><td><code>gh workflow run pages.yml</code> (or the next merge to <code>main</code>); <code>gh run list --workflow pages.yml -L 1</code> green; <code>curl -sI https://lesslucifer.github.io/Trawler/</code> → 200</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">No T2 change in W4: the workflow carries no new rule beyond the epic plan. W5 distils the epic (DEC-92 names the deploy: Actions, <code>releases/latest</code>, <code>pages.yml</code>; the <code>docs/release-process.html</code> rows that run <code>gh run list --workflow pages.yml</code>).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>Not verified: the <code>github-pages</code> default rule refusing a <code>v*</code> tag ref, the live deploy, GitHub Pages setting no cookie</td><td>owner, after settings #1–#2</td></tr>
+          <tr><td>A release published before <code>pages.yml</code> is on its tag runs no deploy; the next merge or a dispatch catches up</td><td>W5 release-process row</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
