@@ -370,7 +370,10 @@ fn apply(
         }
     }
     for user in &change.unassign {
-        match find_id(task, "assignees", "username", user) {
+        let named = |a: &&Value| {
+            a["username"].as_str() == Some(user) || user.parse().ok() == Some(id_of(a))
+        };
+        match list(task, "assignees").find(named).map(id_of) {
             Some(user_id) => {
                 client.call("DELETE", &format!("{path}/assignees/{user_id}"), None)?;
                 said.push(format!("#{id}: unassigned {user}"));
@@ -489,6 +492,12 @@ fn text(source: &str, stdin_taken: &mut bool) -> Result<String, String> {
     std::io::read_to_string(std::io::stdin()).map_err(|e| format!("read stdin: {e}"))
 }
 
+fn push_once(names: &mut Vec<String>, name: &str) {
+    if !names.iter().any(|n| n == name) {
+        names.push(name.to_string());
+    }
+}
+
 pub fn parse(args: &[&str]) -> Result<Command, String> {
     let (command, rest) = args.split_first().ok_or_else(|| USAGE.to_string())?;
     let mut stdin_taken = false;
@@ -532,10 +541,10 @@ pub fn parse(args: &[&str]) -> Result<Command, String> {
                 }
                 change.done = Some(done);
             }
-            ("put", "--assignee") => change.assign.push(value()?.to_string()),
-            ("put", "--unassign") => change.unassign.push(value()?.to_string()),
-            ("put", "--label") => change.label.push(value()?.to_string()),
-            ("put", "--unlabel") => change.unlabel.push(value()?.to_string()),
+            ("put", "--assignee") => push_once(&mut change.assign, value()?),
+            ("put", "--unassign") => push_once(&mut change.unassign, value()?),
+            ("put", "--label") => push_once(&mut change.label, value()?),
+            ("put", "--unlabel") => push_once(&mut change.unlabel, value()?),
             ("create", "--title") => new.title = value()?.to_string(),
             ("create", "--description") => {
                 new.description = Some(text(value()?, &mut stdin_taken)?);
@@ -549,7 +558,17 @@ pub fn parse(args: &[&str]) -> Result<Command, String> {
         "init" => Command::Init,
         "show" => Command::Show { project: show.0, needs_owner: show.1 },
         "read" => Command::Read(id),
-        "put" => Command::Put(id, change),
+        "put" => {
+            let both = |adds: &[String], removes: &[String]| {
+                adds.iter().find(|a| removes.contains(a)).cloned()
+            };
+            if let Some(name) = both(&change.assign, &change.unassign)
+                .or_else(|| both(&change.label, &change.unlabel))
+            {
+                return Err(format!("put: {name} is both added and removed"));
+            }
+            Command::Put(id, change)
+        }
         _ if new.title.trim().is_empty() => return Err(format!("create needs --title\n{USAGE}")),
         _ => Command::Create(new),
     })
@@ -726,6 +745,14 @@ mod tests {
             }
         );
         assert!(parse(&["put", "7", "--done", "--undone"]).unwrap_err().contains("contradict"));
+        let both = parse(&["put", "7", "--label", "x", "--unlabel", "x"]).unwrap_err();
+        assert_eq!(both, "put: x is both added and removed");
+        assert!(parse(&["put", "7", "--assignee", "vuluu", "--unassign", "vuluu"]).is_err());
+        let Command::Put(_, twice) = parse(&["put", "7", "--label", "x", "--label", "x"]).unwrap()
+        else {
+            panic!("not a put")
+        };
+        assert_eq!(twice.label, ["x"]);
         assert!(parse(&["put", "7", "--comment"]).unwrap_err().contains("--comment needs a value"));
         assert!(parse(&["put", "7", "--title", "t"])
             .unwrap_err()

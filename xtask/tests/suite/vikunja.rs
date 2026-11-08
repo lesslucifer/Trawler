@@ -523,3 +523,17 @@ fn a_create_whose_relation_fails_still_names_the_task_it_made() {
         "{err}"
     );
 }
+
+#[test]
+fn put_unassigns_a_user_named_by_numeric_id() {
+    let server = Server::start();
+    server.route("GET", "/tasks/6", 200, &task(6, &owner(), &json!(null)));
+    server.route(
+        "DELETE",
+        "/tasks/6/assignees/1",
+        200,
+        &json!({"message": "Successfully deleted."}),
+    );
+    assert_eq!(server.run(&["put", "6", "--unassign", "1"]).unwrap(), "#6: unassigned 1");
+    assert_eq!(server.writes(), [write("DELETE", "/tasks/6/assignees/1", None)]);
+}

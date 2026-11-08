@@ -48,10 +48,11 @@
       <table data-c="evidence">
         <thead><tr><th>Layer</th><th>What</th></tr></thead>
         <tbody>
-          <tr><td>integration</td><td><code>xtask/tests/suite/vikunja.rs</code>, 16 tests: a fake Vikunja on an ephemeral port records method, path, bearer token and JSON body; every subcommand through <code>vikunja::run</code>; pagination; non-2xx → error naming the status; the ask and close orders; <code>put --done</code> posts the full task it read; skips write nothing; a midway failure names what was done</td></tr>
-          <tr><td>unit</td><td><code>xtask/src/vikunja.rs</code> 12 + <code>xtask/src/vikunja/http.rs</code> 6: relation-kind mapping, label resolution incl. create-if-missing, user ids, needs-owner predicate, rendering, flag parsing, the reset regression (fails without the fix)</td></tr>
+          <tr><td>integration</td><td><code>xtask/tests/suite/vikunja.rs</code>, 17 tests: a fake Vikunja on an ephemeral port records method, path, bearer token and JSON body; every subcommand through <code>vikunja::run</code>; pagination; non-2xx → error naming the status; the ask and close orders; <code>put --done</code> posts the full task it read; skips write nothing; a midway failure names what was done; <code>--unassign</code> by numeric id (review round 1)</td></tr>
+          <tr><td>unit</td><td><code>xtask/src/vikunja.rs</code> 12 (flag parsing now also refusing a name both added and removed, deduping a repeated one) + <code>xtask/src/vikunja/http.rs</code> 6: relation-kind mapping, label resolution incl. create-if-missing, user ids, needs-owner predicate, rendering, flag parsing, the reset regression (fails without the fix)</td></tr>
           <tr><td>live, 127.0.0.1:3456</td><td>create epic #7 + WUs #8, #9 (subtasks, #9 blocked-by #8) → ask → <code>show --needs-owner</code> lists #9 only → close + done in one <code>put</code> → re-run skips → read → queue empty → label-create refused as 401. Tasks 7–9 deleted; project 3 empty, labels = <code>needs-owner</code>, server left running</td></tr>
-          <tr><td>commits</td><td><code>d7124edf</code> plan · <code>be640c4b</code> code + tests</td></tr>
+          <tr><td>commits</td><td><code>d7124edf</code> plan · <code>be640c4b</code> code + tests · <code>1158f31b</code> result</td></tr>
+          <tr><td>review</td><td>round 1 on <code>1158f31b</code>: FAIL — <code>--unassign &lt;numeric id&gt;</code> matched usernames only and reported a false skip (verified, blocker); fixed with its regression test first. Round 2 on the fixed tip</td></tr>
         </tbody>
       </table>
     </div>
