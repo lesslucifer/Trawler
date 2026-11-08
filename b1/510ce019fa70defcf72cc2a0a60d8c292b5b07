@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W3
+base: b331c71d4125198a75f00c10ed75c79bd5976a2a
+tip: b1510ce019fa70defcf72cc2a0a60d8c292b5b07
+diff_sha256: 30070dd3772c7b51786da3821b4f9d16ee73ad5ef20c67c81cbbcc67cdbeb6dc
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-08
