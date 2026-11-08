@@ -25,8 +25,7 @@ const CHECKSUMS: &str = "SHA256SUMS";
 const SYSTEMS: [Os; 3] = [Os::MacOs, Os::Windows, Os::Linux];
 const MIN_CONTRAST: f64 = 4.5;
 const DARK: &str = "@media (prefers-color-scheme: dark)";
-const REFUSED_MARKUP: [&str; 6] =
-    ["<iframe", "<form", "<object", "<embed", "<style", "javascript:"];
+const REFUSED_TAGS: [&str; 6] = ["iframe", "form", "object", "embed", "style", "base"];
 const SHIPPED_KINDS: [&str; 8] = ["html", "css", "js", "svg", "png", "jpg", "webp", "ico"];
 const HEAD_BEFORE_CSP: [&str; 4] = ["!doctype", "html", "head", "meta"];
 const SCRIPT_REFUSES: [&str; 18] = [
@@ -203,7 +202,12 @@ pub fn first_block<'a>(lines: &[&'a str]) -> Vec<&'a str> {
 
 fn block_refusal(line: &str) -> Option<&'static str> {
     let digits = line.len() - line.trim_start_matches(|c: char| c.is_ascii_digit()).len();
-    if line.trim_start().len() != line.len() {
+    let marks: String = line.chars().filter(|c| !c.is_whitespace()).collect();
+    let underline =
+        marks.chars().all(|c| c == '=') || (marks.len() > 1 && marks.chars().all(|c| c == '-'));
+    if !marks.is_empty() && underline {
+        Some("a rule or setext underline")
+    } else if line.trim_start().len() != line.len() {
         Some("an indented line")
     } else if line.starts_with('#') {
         Some("a heading")
@@ -420,109 +424,6 @@ pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>
     Ok(files)
 }
 
-fn starts_an_attribute(html: &str, at: usize) -> bool {
-    !html[..at].ends_with(|c: char| c.is_alphanumeric() || "-_.".contains(c))
-}
-
-/// Every address (`//`, `http:`, `https:`) outside an `href` value or a `content`
-/// value under `BASE_URL`: an address in any other attribute or in text may be fetched.
-fn stray_addresses(name: &str, html: &str) -> BTreeSet<String> {
-    let lower = html.to_ascii_lowercase();
-    let mut problems = BTreeSet::new();
-    let found = ["//", "http:", "https:"].into_iter().flat_map(|mark| lower.match_indices(mark));
-    for (at, _) in found {
-        let before = &html[..at];
-        let attribute = before.rfind('"').and_then(|open| {
-            let named = before[..open].strip_suffix('=')?;
-            let attribute =
-                named.rsplit(|c: char| !(c.is_alphanumeric() || "-:".contains(c))).next()?;
-            Some((attribute.to_ascii_lowercase(), &html[open + 1..]))
-        });
-        let allowed = match &attribute {
-            Some((attribute, _)) if attribute == "href" => true,
-            Some((attribute, value)) if attribute == "content" => value.starts_with(BASE_URL),
-            _ => false,
-        };
-        if !allowed {
-            let start = before.rfind(['"', '\'', ' ', '\n', '>', '=']).map_or(0, |at| at + 1);
-            let address =
-                html[start..].split(['"', '\'', ' ', '<', '>']).next().unwrap_or_default();
-            problems.insert(format!(
-                "{name}: {address} is an address outside an href, a request outside the site"
-            ));
-        }
-    }
-    problems
-}
-
-fn tag_problems(name: &str, html: &str) -> Vec<String> {
-    let lower = html.to_ascii_lowercase();
-    let mut problems = Vec::new();
-    for tag in lower.split('<').skip(1).filter_map(|rest| rest.split('>').next()) {
-        if tag.contains("http-equiv") && tag.contains("refresh") {
-            problems.push(format!("{name}: a meta refresh"));
-        }
-        for (at, _) in tag.match_indices('=') {
-            let named = tag[..at].trim_end();
-            let attribute = named
-                .rsplit(|c: char| !(c.is_ascii_alphanumeric() || "-:_".contains(c)))
-                .next()
-                .unwrap_or_default();
-            if attribute == "style" {
-                problems.push(format!("{name}: a style attribute"));
-            } else if attribute.len() > 2 && attribute.starts_with("on") {
-                problems.push(format!("{name}: an inline handler {attribute}"));
-            }
-        }
-    }
-    problems
-}
-
-fn heads_the_page(before: &str) -> bool {
-    before.to_ascii_lowercase().split('<').skip(1).all(|tag| {
-        HEAD_BEFORE_CSP.iter().any(|allowed| {
-            tag.strip_prefix(allowed).is_some_and(|rest| rest.starts_with([' ', '>', '\n', '/']))
-        })
-    })
-}
-
-fn svg_problems(name: &str, svg: &str) -> Vec<String> {
-    let lower = svg.to_ascii_lowercase();
-    let mut problems = tag_problems(name, svg);
-    for markup in ["<script", "<foreignobject"] {
-        if lower.contains(markup) {
-            problems.push(format!("{name}: carries {markup}"));
-        }
-    }
-    for href in attribute_values(svg, "href").into_iter().filter(|href| is_absolute(href)) {
-        problems.push(format!("{name}: {href} is a request outside the site"));
-    }
-    problems
-}
-
-fn script_tag_problems(files: &BTreeMap<String, Vec<u8>>, name: &str, html: &str) -> Vec<String> {
-    let lower = html.to_ascii_lowercase();
-    let mut problems = Vec::new();
-    for (at, _) in lower.match_indices("<script") {
-        let rest = &html[at..];
-        let Some(end) = rest.find('>') else {
-            problems.push(format!("{name}: an unclosed <script"));
-            continue;
-        };
-        let loads = match attribute_values(&rest[..end], "src")[..] {
-            [src] => resolve(files, name, src).ok(),
-            _ => None,
-        };
-        if loads.as_deref() != Some(SCRIPT) {
-            problems.push(format!("{name}: a <script> that does not load {SCRIPT} by src"));
-        }
-        if !lower[at + end + 1..].starts_with("</script>") {
-            problems.push(format!("{name}: an inline script"));
-        }
-    }
-    problems
-}
-
 /// The one script reaches no network, storage or code from a string, by name:
 /// a belt over the CSP's `default-src 'none'`, kept small enough to read whole.
 pub fn script_problems(name: &str, js: &str) -> Vec<String> {
@@ -541,43 +442,6 @@ pub fn script_problems(name: &str, js: &str) -> Vec<String> {
         }
     }
     problems
-}
-
-fn attribute_values<'a>(html: &'a str, attribute: &str) -> Vec<&'a str> {
-    let opener = format!("{attribute}=\"");
-    html.to_ascii_lowercase()
-        .match_indices(&opener)
-        .filter(|(at, _)| starts_an_attribute(html, *at))
-        .filter_map(|(at, _)| {
-            let start = at + opener.len();
-            html[start..].find('"').map(|end| &html[start..start + end])
-        })
-        .collect()
-}
-
-fn unquoted_attributes(name: &str, html: &str) -> Vec<String> {
-    let lower = html.to_ascii_lowercase();
-    let mut problems = Vec::new();
-    for attribute in ["href", "src", "srcset"] {
-        for (at, _) in lower.match_indices(attribute) {
-            let after = &lower[at + attribute.len()..];
-            if starts_an_attribute(&lower, at)
-                && after.trim_start().starts_with('=')
-                && !after.starts_with("=\"")
-            {
-                problems.push(format!("{name}: a {attribute} not written {attribute}=\"…\""));
-            }
-        }
-    }
-    problems
-}
-
-fn src_targets(html: &str) -> Vec<&str> {
-    let mut found = attribute_values(html, "src");
-    for srcset in attribute_values(html, "srcset") {
-        found.extend(srcset.split(',').filter_map(|candidate| candidate.split_whitespace().next()));
-    }
-    found
 }
 
 fn css_urls(css: &str) -> Vec<&str> {
@@ -638,7 +502,8 @@ fn resolve(files: &BTreeMap<String, Vec<u8>>, from: &str, target: &str) -> Resul
 
 fn blob_problem(facts: &Facts<'_>, from: &str, href: &str) -> Option<String> {
     let path = href.strip_prefix(&facts.blob())?;
-    let (file, anchor) = path.split_once('#').unwrap_or((path, ""));
+    let (path, anchor) = path.split_once('#').unwrap_or((path, ""));
+    let file = path.split('?').next().unwrap_or(path);
     if !public_text::exists_as_named(facts.repo, Path::new(file)) {
         return Some(format!("{from}: {href} (the tree has no {file})"));
     }
@@ -650,14 +515,145 @@ fn blob_problem(facts: &Facts<'_>, from: &str, href: &str) -> Option<String> {
         .then(|| format!("{from}: {href} (no heading #{anchor} in {file})"))
 }
 
-fn link_tags(html: &str) -> Vec<&str> {
-    html.to_ascii_lowercase()
-        .match_indices("<link")
-        .filter_map(|(at, _)| {
-            let start = at + "<link".len();
-            html[start..].find('>').map(|end| &html[start..start + end])
-        })
-        .collect()
+struct Tag<'a> {
+    name: String,
+    attributes: Vec<(String, &'a str)>,
+    raw: &'a str,
+}
+
+impl Tag<'_> {
+    fn get(&self, attribute: &str) -> Option<&str> {
+        self.attributes.iter().find(|(name, _)| name == attribute).map(|(_, value)| *value)
+    }
+}
+
+/// The tags of a page, each attribute read with its quotes, and the text between
+/// them; comments are skipped, and a script's or style's body is its tag's `raw`.
+fn parse(html: &str) -> (Vec<Tag<'_>>, Vec<&str>) {
+    let mut tags = Vec::new();
+    let mut text = Vec::new();
+    let mut at = 0;
+    while let Some(open) = html[at..].find('<').map(|found| at + found) {
+        text.push(&html[at..open]);
+        let rest = &html[open + 1..];
+        if rest.starts_with("!--") {
+            at = rest.find("-->").map_or(html.len(), |end| open + 1 + end + 3);
+            continue;
+        }
+        if !rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '/' || c == '!') {
+            text.push("<");
+            at = open + 1;
+            continue;
+        }
+        let (mut tag, end) = read_tag(html, open + 1);
+        at = end;
+        if tag.name == "script" || tag.name == "style" {
+            let closing = format!("</{}", tag.name);
+            let body =
+                html[at..].to_ascii_lowercase().find(&closing).map_or(html.len(), |end| at + end);
+            tag.raw = &html[at..body];
+            at = body;
+        }
+        tags.push(tag);
+    }
+    text.push(&html[at..]);
+    (tags, text)
+}
+
+fn read_tag(html: &str, start: usize) -> (Tag<'_>, usize) {
+    let name_end = html[start + 1..]
+        .find(|c: char| c.is_whitespace() || c == '/' || c == '>')
+        .map_or(html.len(), |end| start + 1 + end);
+    let mut tag =
+        Tag { name: html[start..name_end].to_ascii_lowercase(), attributes: Vec::new(), raw: "" };
+    let mut rest = &html[name_end..];
+    loop {
+        rest = rest.trim_start_matches(|c: char| c.is_whitespace() || c == '/');
+        if rest.is_empty() {
+            return (tag, html.len());
+        }
+        if let Some(after) = rest.strip_prefix('>') {
+            return (tag, html.len() - after.len());
+        }
+        let name_length = rest
+            .find(|c: char| c.is_whitespace() || "/>=".contains(c))
+            .unwrap_or(rest.len())
+            .max(1);
+        let name = rest[..name_length].to_ascii_lowercase();
+        let after_name = rest[name_length..].trim_start();
+        let (value, after) = match after_name.strip_prefix('=').map(str::trim_start) {
+            Some(quoted) if quoted.starts_with(['"', '\'']) => {
+                let (quote, body) = quoted.split_at(1);
+                let end = body.find(quote).unwrap_or(body.len());
+                (&body[..end], &body[(end + 1).min(body.len())..])
+            }
+            Some(bare) => {
+                let end = bare.find(|c: char| c.is_whitespace() || c == '>').unwrap_or(bare.len());
+                bare.split_at(end)
+            }
+            None => ("", after_name),
+        };
+        tag.attributes.push((name, value));
+        rest = after;
+    }
+}
+
+fn csp_policy() -> &'static str {
+    CSP.split_once("content=\"").and_then(|(_, rest)| rest.strip_suffix("\">")).unwrap_or(CSP)
+}
+
+fn names_an_address(value: &str) -> bool {
+    let value = value.to_ascii_lowercase();
+    value.contains("//") || value.contains("http:") || value.contains("https:")
+}
+
+fn tag_problems(name: &str, tags: &[Tag<'_>], refused: &[&str]) -> Vec<String> {
+    let mut problems = Vec::new();
+    for tag in tags {
+        if refused.contains(&tag.name.as_str()) {
+            problems.push(format!("{name}: carries <{}>", tag.name));
+        }
+        if tag.name == "meta"
+            && tag.get("http-equiv").is_some_and(|value| value.eq_ignore_ascii_case("refresh"))
+        {
+            problems.push(format!("{name}: a meta refresh"));
+        }
+        for (attribute, value) in &tag.attributes {
+            if attribute == "style" {
+                problems.push(format!("{name}: a style attribute"));
+            } else if attribute.len() > 2 && attribute.starts_with("on") {
+                problems.push(format!("{name}: an inline handler {attribute}"));
+            }
+            if value.trim_start().to_ascii_lowercase().starts_with("javascript:") {
+                problems.push(format!("{name}: a javascript: address"));
+            }
+        }
+    }
+    problems
+}
+
+fn svg_problems(name: &str, svg: &str) -> Vec<String> {
+    let (tags, _) = parse(svg);
+    let refused: Vec<&str> =
+        REFUSED_TAGS.iter().copied().chain(["script", "foreignobject"]).collect();
+    let mut problems = tag_problems(name, &tags, &refused);
+    for tag in &tags {
+        for (attribute, value) in &tag.attributes {
+            if !attribute.starts_with("xmlns") && names_an_address(value) {
+                problems.push(format!("{name}: {value} is a request outside the site"));
+            }
+        }
+    }
+    problems
+}
+
+/// A request's target inside the site, or `None` when it leaves the site.
+fn local(target: &str) -> Option<String> {
+    match target.strip_prefix(BASE_URL) {
+        Some(rest) => Some(format!("{}{rest}", base_path())),
+        None if is_absolute(target) => None,
+        None => Some(target.to_string()),
+    }
 }
 
 fn html_problems(
@@ -667,64 +663,105 @@ fn html_problems(
     html: &str,
     downloads: &mut Vec<String>,
 ) -> Vec<String> {
-    let mut problems = Vec::new();
-    let heads = html.find(CSP).is_some_and(|at| heads_the_page(&html[..at]));
-    if html.matches("Content-Security-Policy").count() != 1 || !heads {
+    let (tags, text) = parse(html);
+    let mut problems = tag_problems(name, &tags, &REFUSED_TAGS);
+    let csp: Vec<usize> = (0..tags.len())
+        .filter(|at| {
+            tags[*at].name == "meta"
+                && tags[*at]
+                    .get("http-equiv")
+                    .is_some_and(|value| value.eq_ignore_ascii_case("content-security-policy"))
+        })
+        .collect();
+    let heads = match csp[..] {
+        [at] => {
+            tags[at].get("content") == Some(csp_policy())
+                && tags[..at].iter().all(|tag| HEAD_BEFORE_CSP.contains(&tag.name.as_str()))
+        }
+        _ => false,
+    };
+    if !heads {
         problems.push(format!(
             "{name}: the CSP meta is missing, altered, doubled or not first in <head>; want {CSP}"
         ));
     }
-    problems.extend(unquoted_attributes(name, html));
-    problems.extend(stray_addresses(name, html));
-    problems.extend(tag_problems(name, html));
-    problems.extend(script_tag_problems(files, name, html));
-    let lower = html.to_lowercase();
-    problems.extend(
-        REFUSED_MARKUP
-            .iter()
-            .filter(|markup| lower.contains(*markup))
-            .map(|markup| format!("{name}: carries {}", markup.trim())),
-    );
-    for tag in link_tags(html) {
-        let rel = attribute_values(tag, "rel");
-        let external = attribute_values(tag, "href")
-            .into_iter()
-            .any(|href| is_absolute(href) && !href.starts_with(BASE_URL));
-        let canonical = matches!(rel[..], [rel] if rel.eq_ignore_ascii_case("canonical"));
-        if external && !canonical {
-            problems.push(format!("{name}: <link{tag}> loads from outside the site"));
+    let scripts: Vec<&Tag<'_>> = tags.iter().filter(|tag| tag.name == "script").collect();
+    if scripts.len() > 1 {
+        problems.push(format!("{name}: more than one <script>"));
+    }
+    for script in scripts {
+        let loads = script.get("src").and_then(|src| resolve(files, name, &unescaped(src)).ok());
+        if loads.as_deref() != Some(SCRIPT) {
+            problems.push(format!("{name}: a <script> that does not load {SCRIPT} by src"));
+        }
+        if !script.raw.trim().is_empty() {
+            problems.push(format!("{name}: an inline script"));
         }
     }
-    for content in attribute_values(html, "content") {
-        if let Some(local) = unescaped(content).strip_prefix(BASE_URL) {
-            problems.extend(resolve(files, name, &format!("{}{local}", base_path())).err());
-        }
-    }
-    for target in src_targets(html) {
-        let target = unescaped(target);
-        if is_absolute(&target) {
-            problems.push(format!("{name}: {target} is a request outside the site"));
-        } else if let Err(problem) = resolve(files, name, &target) {
-            problems.push(problem);
-        }
-    }
-    let download_prefix = format!("{}/releases/download/", facts.source);
-    for href in attribute_values(html, "href").into_iter().map(unescaped) {
-        if let Some(local) = href.strip_prefix(BASE_URL) {
-            let local = format!("{}{local}", base_path());
-            problems.extend(resolve(files, name, &local).err());
-        } else if href == facts.source || href.starts_with(&format!("{}/", facts.source)) {
-            if href.starts_with(&download_prefix) {
-                downloads.push(href.clone());
+    let request = |target: &str, problems: &mut Vec<String>| match local(target) {
+        Some(target) => problems.extend(resolve(files, name, &target).err()),
+        None => problems.push(format!("{name}: {target} is a request outside the site")),
+    };
+    for tag in &tags {
+        for (attribute, value) in &tag.attributes {
+            let value = unescaped(value);
+            match attribute.as_str() {
+                "src" => request(&value, &mut problems),
+                "srcset" | "imagesrcset" => {
+                    for candidate in value.split(',').filter_map(|c| c.split_whitespace().next()) {
+                        request(candidate, &mut problems);
+                    }
+                }
+                "href" if tag.name == "link" => match local(&value) {
+                    Some(target) => problems.extend(resolve(files, name, &target).err()),
+                    None => {
+                        problems
+                            .push(format!("{name}: <link> {value} loads from outside the site"));
+                    }
+                },
+                "href" => {
+                    problems.extend(navigation_problems(files, facts, name, &value, downloads));
+                }
+                "content" if value.starts_with(BASE_URL) => request(&value, &mut problems),
+                _ if names_an_address(&value) => problems.push(format!(
+                    "{name}: {value} is an address outside an href, a request outside the site"
+                )),
+                _ => {}
             }
-            problems.extend(blob_problem(facts, name, &href));
-        } else if is_absolute(&href) {
-            problems.push(format!("{name}: {href} goes outside {}", facts.source));
-        } else {
-            problems.extend(resolve(files, name, &href).err());
         }
+    }
+    for words in text.iter().filter(|words| words.contains("://")) {
+        problems.push(format!("{name}: an address in the text: {}", words.trim()));
     }
     problems
+}
+
+fn navigation_problems(
+    files: &BTreeMap<String, Vec<u8>>,
+    facts: &Facts<'_>,
+    name: &str,
+    href: &str,
+    downloads: &mut Vec<String>,
+) -> Vec<String> {
+    let source = &facts.source;
+    if href.starts_with(BASE_URL) || !is_absolute(href) {
+        return local(href)
+            .and_then(|target| resolve(files, name, &target).err())
+            .into_iter()
+            .collect();
+    }
+    let Some(tail) =
+        href.strip_prefix(source.as_str()).filter(|tail| tail.is_empty() || tail.starts_with('/'))
+    else {
+        return vec![format!("{name}: {href} goes outside {source}")];
+    };
+    if tail.split(['/', '?', '#']).any(|segment| segment == ".." || segment == ".") {
+        return vec![format!("{name}: {href} leaves {source}")];
+    }
+    if href.starts_with(&format!("{source}/releases/download/")) {
+        downloads.push(href.to_string());
+    }
+    blob_problem(facts, name, href).into_iter().collect()
 }
 
 fn download_problems(facts: &Facts<'_>, hrefs: &[String]) -> Vec<String> {
@@ -1254,10 +1291,10 @@ mod tests {
         for (body, needle) in [
             ("<img SRC=\"https://x.test/a.png\">", "outside the site"),
             ("<a HREF=\"https://x.test/\">x</a>", "goes outside"),
-            ("<img src='https://x.test/a.png'>", "not written src=\""),
-            ("<img src=https://x.test/a.png>", "not written src=\""),
-            ("<a href = \"https://x.test/\">x</a>", "not written href=\""),
-            ("<img srcset='a.png 1x'>", "not written srcset=\""),
+            ("<img src='https://x.test/a.png'>", "outside the site"),
+            ("<img src=https://x.test/a.png>", "outside the site"),
+            ("<a href = \"https://x.test/\">x</a>", "goes outside"),
+            ("<img srcset='a.png 1x, https://x.test/b.png 2x'>", "outside the site"),
         ] {
             let problems = problems_of(body);
             assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
@@ -1300,9 +1337,12 @@ mod tests {
 
     #[test]
     fn the_one_script_is_site_js_by_src_with_no_inline_code() {
-        let body =
-            "<script src=\"site.js\" defer></script><script src=\"/Trawler/site.js\"></script>";
-        assert_eq!(problems_of(body), Vec::<String>::new());
+        for body in [
+            "<script src=\"site.js\" defer></script>",
+            "<script src=\"/Trawler/site.js\"></script>",
+        ] {
+            assert_eq!(problems_of(body), Vec::<String>::new(), "{body}");
+        }
         for (body, needle) in [
             ("<script>alert(1)</script>", "site.js"),
             ("<SCRIPT src=\"site.js\">alert(1)</SCRIPT>", "inline"),
@@ -1425,6 +1465,35 @@ mod tests {
             "<link rel=\"icon\" href=\"https://lesslucifer.github.io/Trawler/a.png\">",
         ] {
             assert_eq!(problems_of(body), Vec::<String>::new(), "{body}");
+        }
+    }
+
+    #[test]
+    fn a_tag_is_read_with_its_quotes() {
+        for (body, needle) in [
+            ("<img alt=\"a > b\" onerror=\"go()\" src=\"a.png\">", "onerror"),
+            ("<img alt='a > b' src=\"https://x.test/a.png\">", "outside the site"),
+            ("<base href=\"https://github.com/lesslucifer/Trawler/\">", "<base>"),
+            ("<script src=\"site.js\"></script><script src=\"site.js\"></script>", "one <script>"),
+            ("<a href=\"https://github.com/lesslucifer/Trawler/../Other\">x</a>", "leaves"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        for body in [
+            "<meta name=\"description\" content=\"Press one=two, style=dark\">",
+            "<a href=\"https://github.com/lesslucifer/Trawler/releases/latest?only=1&amp;style=x\">x</a>",
+            "<a href=\"https://github.com/lesslucifer/Trawler/blob/main/README.md?plain=1#install\">x</a>",
+            "<p>a < b and c > d</p>",
+        ] {
+            assert_eq!(problems_of(body), Vec::<String>::new(), "{body}");
+        }
+    }
+
+    #[test]
+    fn a_rule_or_setext_underline_is_outside_the_subset() {
+        for lines in [&["One", "---"][..], &["One", "==="], &["- - -"], &["* * *"]] {
+            assert!(render(lines, BLOB).is_err(), "{lines:?}");
         }
     }
 
