@@ -158,6 +158,15 @@ fn the_page_without_its_script_shows_every_file_and_hides_the_one_button() {
 }
 
 #[test]
+fn the_stage_glow_never_widens_the_page_on_a_phone() {
+    let out = tempfile::tempdir().unwrap();
+    build_into(&repo().join(FIXTURE), out.path()).unwrap();
+    let css = std::fs::read_to_string(out.path().join("site.css")).unwrap();
+    assert!(css.contains(".stage::before {") && css.contains("inset: -18% -10%"));
+    assert!(css.lines().any(|rule| rule == "main { overflow-x: clip; }"), "main clips sideways");
+}
+
+#[test]
 fn site_js_passes_its_detection_and_show_tests() {
     let run = std::process::Command::new("node")
         .args(["--test", "site/site.test.mjs"])

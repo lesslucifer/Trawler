@@ -17,6 +17,7 @@ code, .file { font-family: var(--mono); font-size: 0.875em; }
 .btn.small { min-height: 44px; padding: 11px 18px; font-size: 15px; }
 .eyebrow { font: 600 12px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-mute); }
 .big { font-size: clamp(34px, 5vw, 60px); line-height: 1.06; letter-spacing: -0.025em; }
+main { overflow-x: clip; }
 .stage { position: relative; isolation: isolate; }
 .stage::before { content: ""; position: absolute; z-index: -1; inset: -18% -10%; background: radial-gradient(closest-side, var(--glow), transparent); pointer-events: none; }
 .window { overflow: hidden; border: 1px solid #3f3a36; border-radius: 12px; background: #2b2622; box-shadow: 0 24px 64px rgb(0 0 0 / 0.35); text-align: left; }
