@@ -1,0 +1,40 @@
+schema: cr/v5
+scope: "WU pages/deploy -> epic/pages"
+epic: E-PAGES
+wu: E-PAGES.W4
+branch: wu/pages/deploy
+base: 3a93c47319845007ec1ce02f51242823dc114c6c
+head: 72a9909ba4ca41b95b3823db3b928801c6ad288f
+diff_sha256: f5e65531996608a3564bfecd7304b57eb48860b49f0ccd6619c018da8a3067de
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 5
+  stage_seconds:
+    finders: 40
+    verifiers: 17
+    total: 88
+  by_finder:
+    correctness: { found: 6, verified: 1 }
+    efficiency: { found: 0, verified: 0 }
+findings: { found: 6, verified: 1, waived: 0 }
+nits:
+  - finding: "the_build_reads_the_latest_release_never_the_event_payload scans only step YAML for the substring github.event, so $GITHUB_EVENT_PATH, toJSON(github), github['event'] or a job/workflow-level env carrying the event would pass (proposed important, verified nit)"
+    waived: "the property is held by the other assertions: exactly one gh api step reading repos/$GITHUB_REPOSITORY/releases/latest, the site build's --release is the file that step wrote and follows it, and the build reads release data only from that file; every bypass is a deliberate edit the router's independent review of pages.yml (checklist item 7) reads"
+  - finding: "the --out target/site and --release checks on the site build step are substring matches, so --out target/site-old would pass (unverified candidate)"
+    waived: "the upload path is asserted exactly; a build writing elsewhere leaves target/site absent and upload-pages-artifact fails the run (if-no-files-found: error inside the action), so the mismatch cannot deploy silently"
+  - finding: "only the top-level concurrency is asserted; a job-level concurrency with cancel-in-progress true would pass (unverified candidate)"
+    waived: "release_workflow.rs holds the same shape the same way; a job-level block is a deliberate edit the router's checklist item 9 reads"
+  - finding: "version comments are only checked non-empty, so upload-pages-artifact and deploy-pages may carry any comment text (unverified candidate)"
+    waived: "the requirement is a version comment beside a full SHA; the SHA is the binding pin and the comment is for the reader; the two Pages pins were read from their release tags in this WU"
+  - finding: "pinned_lines keeps quotes on a quoted uses value and reads a uses:-prefixed line inside a run block as a pin (unverified candidate)"
+    waived: "both are false reds, not gaps: the equality against the YAML-parsed uses list turns either into a visible red naming the line, never a silent pass"
+  - finding: "workflow_dispatch is checked only as a key, so an inputs block would pass (unverified candidate)"
+    waived: "inputs cannot change what the build reads (the workflow references no inputs and the release read is fixed); the requirement names only the trigger"
+verdict: PASS
+date: 2026-11-08
