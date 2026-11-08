@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af091b69f34851f0dfb1f8f" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-VIKUNJA.W3 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-VIKUNJA.W3 plan: <code>cargo xtask vikunja webhook-listen</code></h1>
+      <p>A standing loopback listener that turns Vikunja webhooks into one JSON line per owner-relevant transition, and loses nothing across a relaunch.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU plan · <span class="badge id">E-VIKUNJA.W3</span> · <code>wu/router-vikunja/webhook-listener</code> → <code>epic/router-vikunja</code></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement"><code>cargo xtask vikunja webhook-listen [--port &lt;p&gt;] [--state &lt;file&gt;] [--secret-file &lt;file&gt;] [--poll &lt;secs&gt;]</code> binds <code>127.0.0.1</code>, registers itself as project 3's webhook with a secret kept in a 600 file, reconciles every open task (and every task it last saw asking) against the live API, then stays running and prints to stdout one JSON line per real transition — <code>needs-owner</code>, <code>answered</code>, <code>closed</code>, <code>comment</code>, <code>unreachable</code>/<code>reachable</code> — rejecting and logging any delivery whose HMAC-SHA256 signature does not verify.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-VIKUNJA, summary block W3 "webhook receiver → Telegram bridge" (the bridge itself stays the router's: this process only prints). Fills the "Webhook listener (W3)" row of <code>vikunja-protocol.md</code>'s Standing processes. Process epic, no UC.</p>
+
+    <h2 id="flow">Flow</h2>
+    <div class="diagram" data-c="flow">
+      <pre class="mermaid">
+flowchart TD
+  S["start"] --> B["bind 127.0.0.1:port"]
+  B --> R["register: delete any project-3 webhook with this target_url, PUT a new one with the secret"]
+  R --> C["reconcile (remind): open tasks ∪ tasks last seen asking"]
+  C --> L["print listening"]
+  L --> W{"delivery"}
+  W -- "signature fails" --> X["401 + stderr log, nothing read"]
+  W -- "verifies" --> T["GET the task + its comments → diff vs state → lines"]
+  L --> P["every --poll s: reconcile; failure → unreachable once, recovery → reachable"]
+      </pre>
+      <div class="caption">Bind before register, register before reconcile: a delivery arriving during the reconcile waits in the accept backlog, so no change falls between the read and the subscription.</div>
+    </div>
+
+    <h2 id="transitions">Transitions</h2>
+    <table data-c="transitions">
+      <thead><tr><th>asking = open ∧ assignee vuluu ∧ label needs-owner</th><th>Line</th></tr></thead>
+      <tbody>
+        <tr><td>not asking → asking (or asking at startup: a relaunch re-announces every pending ask)</td><td><code>{"event":"needs-owner","task_id":9,"title":"…","by":"…"}</code></td></tr>
+        <tr><td>asking → not asking, label gone</td><td><code>{"event":"answered",…}</code> — the only answer signal</td></tr>
+        <tr><td>asking → not asking, label still on (marked done, or unassigned)</td><td><code>{"event":"closed",…}</code> — left the queue without an answer</td></tr>
+        <tr><td>a comment newer than the task's last seen comment id, not by <code>trawler-router</code></td><td><code>{"event":"comment","task_id":9,"title":"…","by":"vuluu","text":"…"}</code> — never a lifecycle transition</td></tr>
+        <tr><td>the reconcile poll fails / succeeds again</td><td><code>{"event":"unreachable","error":"…"}</code> / <code>{"event":"reachable"}</code></td></tr>
+      </tbody>
+    </table>
+    <div class="callout" data-c="truth">The payload is a trigger, never the truth: the live probe saw deliveries arrive out of order and after later writes, so every delivery re-reads the task and its comments from the API and diffs them against the state file. A duplicate delivery therefore diffs to nothing.</div>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Exists after</th><th>Checkable by</th></tr></thead>
+        <tbody>
+          <tr><td><code>xtask/src/vikunja/listen.rs</code> wired as <code>cargo xtask vikunja webhook-listen</code>, in its usage</td><td><code>cargo xtask vikunja</code> prints it</td></tr>
+          <tr><td>a real project-3 webhook pointed at the listener; a relaunch replaces it, never duplicates it</td><td>live transcript in the result report</td></tr>
+          <tr><td><code>vikunja-protocol.md</code> states start / check / stop / watch and the relaunch-on-death duty</td><td>the protocol doc</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Plan</th></tr></thead>
+        <tbody>
+          <tr><td>integration (<code>xtask/tests/suite/vikunja.rs</code>)</td><td>the real binary on an ephemeral port against W2's fake Vikunja: registration replaces only its own stale webhook; startup reconcile prints a pre-existing ask and an unseen owner comment before <code>listening</code>; signed deliveries print <code>answered</code> / <code>comment</code>, a no-change delivery and a router comment print nothing; a badly signed delivery gets 401, an stderr log and no API read; a relaunch on the same state re-announces the pending ask and repeats no comment; a down fake prints <code>unreachable</code> then <code>reachable</code>; an unreachable Vikunja at startup is an error</td></tr>
+          <tr><td>unit</td><td>the transition diff (old snapshot + task + comments → lines, or none) incl. remind, closed vs answered, router comments dropped, watermark; signature verification against an RFC 4231 vector and a tampered body; flag parsing</td></tr>
+          <tr><td>live (manual, recorded in the result)</td><td>against 127.0.0.1:3456: start → <code>put</code> an ask → <code>needs-owner</code> line; kill, relaunch → the reconcile line; unregister and delete the test task</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
