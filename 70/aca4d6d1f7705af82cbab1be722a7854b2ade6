@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PAGES
+wu: E-PAGES.W2
+branch: HEAD
+tests:
+  unit: { count: 52, covers: "site::tests (23): the markdown subset renders bullets, paragraphs, code, bold and links (relative -> blob/main) and refuses every other construct by name; README pitch and sub line, sections, markers (unknown or unclosed refused); the release is refused when draft, pre-release, missing an Os::bundles kind x arch, carrying two files for one row or a versionless file, lacking SHA256SUMS or newer than the tree; each output check is red on a crafted file set (unresolved link or #id, a foreign absolute href, a blob/main file or heading the tree lacks, a changed or doubled CSP, an external src/srcset/data:/<link>, script/iframe/form/style markup, an attribute not written attr=\"...\" or in upper case, CSS url()/@import, a denied name, no guide link, download rows off by a kind or a tag, a token pair under 4.5:1 in the light or dark :root); BASE_URL is the github.io address of links.rs SOURCE_CODE; site/ names no denied tool; USAGE; argument count. public_text: installer_kinds takes the version (a pre-release drops rpm). Red first: the quoting/case test failed before its fix" }
+  integration: { count: 5, covers: "the committed v0.1.0 release fixture builds exactly the site/ frame plus site::ASSETS into a temp dir, no docs path, problems() empty on the written dir; the page links all 11 installer ids at releases/download/v0.1.0/, its title is the README pitch, the CSP is present and no marker is left; the fixture minus the arm64 msi is refused 'v0.1.0 lacks msi-arm64' and writes nothing; a draft or pre-release fixture is refused; a non-empty --out is refused and kept" }
+  e2e: { waived: "the epic's e2e is the live Pages deploy, which needs the owner's repo settings and the public network after the epic merges (epic plan, E2E test plan); the build was also served locally and rendered in headless Chrome at 1440 and 390 px" }
