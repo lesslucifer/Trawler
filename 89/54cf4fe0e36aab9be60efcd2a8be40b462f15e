@@ -1,0 +1,12 @@
+schema: doc/v1
+epic: E-VIKUNJA
+branch: HEAD
+changes:
+  - path: "docs/decisions/dec-93-the-owner-answers-on-a-vikunja-task-by-removing-its-label.html"
+    tier: T2
+    action: added
+    distills: "the epic's decision record every WU's t2_waived deferred to the close: one Vikunja project (epic task, WU subtask, blocking = order only, no buckets), an ask = comment -> assign vuluu -> needs-owner and only the label's removal answers, task before branch with the Branch: line and vikunja check as backstop, the server and signed-webhook listener as standing heartbeat-held processes, the scoped never-printed token and whole-task writes; where each fact lives and which tests hold it"
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "v25: the DEC-93 row"
