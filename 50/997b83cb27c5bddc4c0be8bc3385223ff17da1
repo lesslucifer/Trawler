@@ -1,0 +1,98 @@
+schema: doc/v1
+epic: E-PAGES
+wu: E-PAGES.W3
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-pages-w3-site-pages-plan.html"
+    tier: T3
+    action: added
+    distills: "the W3 plan: requirement, what W2 left, decisions D1-D8, test plan"
+  - path: "docs/work/2026-11-08-pages-w3-result/1440-dark-script-off.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (1440-dark-script-off) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/1440-dark-script-on.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (1440-dark-script-on) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/1440-light-script-off.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (1440-light-script-off) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/1440-light-script-on.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (1440-light-script-on) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/390-dark-reduced-motion-hero.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (390-dark-reduced-motion-hero) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/390-dark-script-off.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (390-dark-script-off) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/390-dark-script-on.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (390-dark-script-on) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/390-light-script-off.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (390-light-script-off) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/390-light-script-on.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (390-light-script-on) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/404-1440.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (404-1440) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-linux-arm64-download.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-linux-arm64-download) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-linux-arm64-hero.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-linux-arm64-hero) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-linux-x64-download.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-linux-x64-download) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-linux-x64-hero.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-linux-x64-hero) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-macos-download.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-macos-download) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-macos-hero.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-macos-hero) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-windows-arm64-download.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-windows-arm64-download) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-windows-arm64-hero.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-windows-arm64-hero) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-windows-x64-download-1440.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-windows-x64-download-1440) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-windows-x64-download.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-windows-x64-download) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-result/state-windows-x64-hero.jpg"
+    tier: T3
+    action: added
+    distills: "a headless-Chrome shot of the built site (state-windows-x64-hero) for the W3 result"
+  - path: "docs/work/2026-11-08-pages-w3-site-pages-result.html"
+    tier: T3
+    action: added
+    distills: "the W3 result: outcome, shots per theme/width/script/system, evidence, deviations, try-it recipe, follow-ups"
+t2_waived: "the site's T2 truths (DEC-92, UC-INSTALL entry point, DEC-89/91 amendments) are W5's distillation of the whole epic per the epic plan"
