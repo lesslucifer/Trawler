@@ -20,4 +20,5 @@ mod tally;
 mod target_isolation;
 mod ui;
 mod verify_doc;
+mod vikunja;
 mod walkthrough;

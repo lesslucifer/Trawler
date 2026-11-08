@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af088799f34851f0dfb1f84" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-VIKUNJA.W2 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-VIKUNJA.W2 result: <code>cargo xtask vikunja</code> ships</h1>
+      <p>What the client does, where it split calls and why, and what the live run against 127.0.0.1:3456 showed.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-VIKUNJA.W2</span> · <code>wu/router-vikunja/cli-client</code> → <code>epic/router-vikunja</code> · plan <a href="2026-11-08-router-vikunja-cli-client-plan.html">W2 plan</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <p>Delivered against the requirement: <code>init · show [--project] [--needs-owner] · read · put · create</code>, the router token alone, every task-field write a whole-task read-modify-write.</p>
+      <table data-c="calls">
+        <thead><tr><th><code>put</code> facet</th><th>Call</th><th>Batched?</th></tr></thead>
+        <tbody>
+          <tr><td><code>--done/--undone</code>, <code>--description</code></td><td>one <code>POST /tasks/&lt;id&gt;</code> carrying the whole task read at the start</td><td>yes — one write for both fields</td></tr>
+          <tr><td><code>--comment</code></td><td><code>PUT /tasks/&lt;id&gt;/comments</code></td><td>own endpoint</td></tr>
+          <tr><td><code>--relation</code></td><td><code>PUT /tasks/&lt;id&gt;/relations</code> per relation</td><td>no bulk endpoint exists</td></tr>
+          <tr><td><code>--assignee/--unassign</code></td><td><code>PUT …/assignees</code> · <code>DELETE …/assignees/&lt;uid&gt;</code></td><td>split: <code>…/assignees/bulk</code> exists but the router token is refused it (401)</td></tr>
+          <tr><td><code>--label/--unlabel</code></td><td><code>PUT …/labels</code> · <code>DELETE …/labels/&lt;lid&gt;</code></td><td>split: <code>…/labels/bulk</code> refused to the token too (401)</td></tr>
+        </tbody>
+      </table>
+      <p>Order is fixed whatever the flag order — comment → relations → task fields → assign → label → unlabel → unassign — so one <code>put</code> is the protocol's ask (label lands last) or its close (label off before the assignee). Adds already present / removals already absent are skipped and said: Vikunja answers those with 8001 / 4021 / 403 otherwise. A label or assignee change on a task left done appends a note that <code>show</code> (and <code>show --needs-owner</code>) will not list it until <code>--undone</code> — unless the same call passes <code>--done</code> (owner fix).</p>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table data-c="deviations">
+        <thead><tr><th>Plan / brief said</th><th>Shipped</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><code>--assignee &lt;username&gt;</code> resolved by the API</td><td>resolved through the ids the protocol fixes (<code>vuluu</code> 1, <code>trawler-router</code> 2) or a numeric id; <code>--unassign</code> reads the name from the task's own assignees</td><td>the token has no user-read right: <code>GET /users</code>, <code>/user</code>, <code>/projects/3/projectusers</code> all 401</td></tr>
+          <tr><td>a missing label is created</td><td>implemented, reported as <code>CREATED LABEL …</code>; against the real instance the create is refused and named as a 401 token-permission error, nothing written</td><td>the token holds labels read only (W1's scope); widening it is the owner's call</td></tr>
+          <tr><td>—</td><td><code>put --description</code> and <code>create --description</code> added</td><td>the protocol's "write the <code>Branch:</code> line" step needs it, and it is a task field, so it rides the same whole-task write</td></tr>
+          <tr><td>reuse the board client's HTTP code</td><td>ported from <code>epic/router-kanban</code> (not on this base); the request is now one write and an answer read before a reset is kept</td><td>live: Vikunja refuses a scoped-out <code>PUT</code> and closes before reading the body; the reset surfaced as "Connection reset by peer" instead of the 401</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Layer</th><th>What</th></tr></thead>
+        <tbody>
+          <tr><td>integration</td><td><code>xtask/tests/suite/vikunja.rs</code>, 19 tests: a fake Vikunja on an ephemeral port records method, path, bearer token and JSON body; every subcommand through <code>vikunja::run</code>; pagination; non-2xx → error naming the status; the ask and close orders; <code>put --done</code> posts the full task it read; skips write nothing; a midway failure names what was done; <code>--unassign</code> by numeric id (review round 1); a repeated <code>--relation</code> sent once (round 2); the done-task note fires on a label/assignee change, not with <code>--done</code> in the same call, not on an open task (owner fix)</td></tr>
+          <tr><td>unit</td><td><code>xtask/src/vikunja.rs</code> 12 (flag parsing now also refusing a name both added and removed, deduping a repeated one) + <code>xtask/src/vikunja/http.rs</code> 6: relation-kind mapping, label resolution incl. create-if-missing, user ids, needs-owner predicate, rendering, flag parsing, the reset regression (fails without the fix)</td></tr>
+          <tr><td>live, 127.0.0.1:3456</td><td>create epic #7 + WUs #8, #9 (subtasks, #9 blocked-by #8) → ask → <code>show --needs-owner</code> lists #9 only → close + done in one <code>put</code> → re-run skips → read → queue empty → label-create refused as 401. Tasks 7–9 deleted; project 3 empty, labels = <code>needs-owner</code>, server left running. Owner fix: scratch #14 marked done → <code>put --label needs-owner --assignee vuluu --comment</code> printed the note, the same put on it while open printed none; #14 deleted</td></tr>
+          <tr><td>commits</td><td><code>d7124edf</code> plan · <code>be640c4b</code> code + tests · <code>1158f31b</code> result</td></tr>
+          <tr><td>review</td><td>round 1 on <code>1158f31b</code>: FAIL — <code>--unassign &lt;numeric id&gt;</code> matched usernames only and reported a false skip (verified, blocker); fixed with its regression test first. Round 2 on <code>34d09d5b</code>: FAIL — a <code>--relation</code> repeated in one call was sent twice and Vikunja's duplicate refusal stopped the put midway (verified, important); fixed the same way. Round 3 on <code>0baa9f72</code>: PASS. Owner then found a put on a done task silent about <code>show</code> hiding it; fixed with its tests, reviewed again on the new tip</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">Nothing citable in T1/T2: the command surface lives in <code>cargo xtask vikunja</code>'s usage, which <code>vikunja-protocol.md</code> already declares authoritative once W2 ships. The epic's DEC is minted at epic close.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>For</th></tr></thead>
+        <tbody>
+          <tr><td><code>vikunja-protocol.md</code>'s "Raw API" section → point at <code>cargo xtask vikunja</code>, and state the token cannot create labels or read users</td><td>W4 (skill wiring)</td></tr>
+          <tr><td>Widen the token to labels create, if the owner wants <code>--label</code> to mint labels</td><td>owner</td></tr>
+          <tr><td>Create E-APIDOC / E-KANBAN tasks with <code>create</code> from their verified git state</td><td>router</td></tr>
+          <tr><td>No <code>delete</code> or <code>--title</code>: not asked for; add when a protocol step needs one</td><td>—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
