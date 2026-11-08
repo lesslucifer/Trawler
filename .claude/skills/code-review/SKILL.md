@@ -10,7 +10,7 @@ Fixing belongs to the session that triggered the run (§7). What to review
 lives in `rubric.md` next to this file — finders read it; this file only
 sequences the run.
 
-**The subject is code.** `src/`, `xtask/`, `tests/`, `ui/src/`, `ui/e2e/` —
+**The subject is code.** `src/`, `xtask/`, `tests/`, `ui/src/`, `ui/e2e/`, `site/` —
 the paths `notes::is_code` names, one definition shared with the gate. A
 document is never judged, cited or bound here: the design dimension left this
 run for a step of its own (§3b), and a diff that changes no code path asks for
@@ -27,7 +27,7 @@ no review, no note and no finders at all.
   `HEAD_R=$(git rev-parse <head>)`. Merge-base, not the base tip — commits
   that landed on the base branch after the fork must not pollute the diff.
 - The reviewed diff is `git diff BASE..HEAD_R -- <the code paths>`, plus the
-  working-tree half when it is in scope. The paths are the five prefixes above;
+  working-tree half when it is in scope. The paths are the six prefixes above;
   read them off `cargo xtask notes write`'s `code_sha256` line when it printed
   one, so the bytes you judge and the bytes you bind are the same ones.
 - Optional, repeatable: `--waive "<finding summary>: <reason>"` — the
@@ -196,7 +196,7 @@ returning to the caller (§7) so finder quality stays visible.
 
 - `CODE_SHA=$(git diff --no-color --no-ext-diff BASE..HEAD_R -- <the code paths> | shasum -a 256 | cut -d' ' -f1)`
   (add the working-tree half the same way when it was in scope). The paths are
-  the five prefixes from the top of this file; the flags match `cargo xtask
+  the six prefixes from the top of this file; the flags match `cargo xtask
   verify-dod`'s recomputation — the binding must be byte-identical. A diff with
   no code path has no hash to write, and asks for no note at all.
 - The note body is one YAML document, contract `cr/v5`.

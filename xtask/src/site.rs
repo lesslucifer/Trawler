@@ -1,0 +1,1905 @@
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
+use std::path::{Component, Path, PathBuf};
+
+use serde::Deserialize;
+
+use crate::package::Os;
+use crate::public_text;
+use crate::release_manifest::CHECKSUMS;
+use crate::walkthrough::escape;
+
+pub const BASE_URL: &str = "https://lesslucifer.github.io/Trawler/";
+pub const CSP: &str = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'\">";
+pub const SCRIPT: &str = "site.js";
+pub const SCRIPT_BUDGET: usize = 4096;
+pub const FRAME: &str = "site";
+pub const ASSETS: [(&str, &str); 5] = [
+    ("ui/public/favicon.svg", "favicon.svg"),
+    ("ui/src-tauri/icons/brand/wordmark-light.png", "wordmark-light.png"),
+    ("ui/src-tauri/icons/brand/wordmark-dark.png", "wordmark-dark.png"),
+    ("ui/src-tauri/icons/brand/social-preview.png", "social-preview.png"),
+    (".github/screenshots/s1-main-window.png", "s1-main-window.png"),
+];
+const LINKS: &str = "ui/src-tauri/src/links.rs";
+const SYSTEMS: [Os; 3] = [Os::MacOs, Os::Windows, Os::Linux];
+const MIN_CONTRAST: f64 = 4.5;
+const DARK: &str = "@media (prefers-color-scheme: dark)";
+const REFUSED_TAGS: [&str; 11] = [
+    "iframe",
+    "form",
+    "object",
+    "embed",
+    "style",
+    "base",
+    "noscript",
+    "noembed",
+    "noframes",
+    "xmp",
+    "plaintext",
+];
+const FOREIGN: [&str; 2] = ["svg", "math"];
+const SVG_ELEMENTS: [&str; 17] = [
+    "svg",
+    "g",
+    "path",
+    "rect",
+    "circle",
+    "ellipse",
+    "line",
+    "polyline",
+    "polygon",
+    "defs",
+    "lineargradient",
+    "radialgradient",
+    "stop",
+    "clippath",
+    "mask",
+    "symbol",
+    "use",
+];
+const REFERENCES: [&str; 4] = ["amp;", "quot;", "lt;", "gt;"];
+const SHIPPED_KINDS: [&str; 8] = ["html", "css", "js", "svg", "png", "jpg", "webp", "ico"];
+const HEAD_BEFORE_CSP: [&str; 3] = ["html", "head", "meta"];
+const RAW_TEXT: [&str; 4] = ["script", "style", "title", "textarea"];
+const SCRIPT_REFUSES: [&str; 18] = [
+    "fetch",
+    "XMLHttpRequest",
+    "WebSocket",
+    "sendBeacon",
+    "EventSource",
+    "import",
+    "eval",
+    "Function",
+    "cookie",
+    "localStorage",
+    "sessionStorage",
+    "indexedDB",
+    "serviceWorker",
+    "Worker",
+    "SharedWorker",
+    "WebTransport",
+    "RTCPeerConnection",
+    "://",
+];
+
+/// The path the site is served under, `/Trawler/`.
+pub fn base_path() -> &'static str {
+    let host_and_path = BASE_URL.split_once("://").map_or(BASE_URL, |(_, rest)| rest);
+    host_and_path.find('/').map_or("/", |at| &host_and_path[at..])
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Release {
+    pub tag_name: String,
+    pub draft: bool,
+    pub prerelease: bool,
+    pub assets: Vec<Asset>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Asset {
+    pub name: String,
+}
+
+fn arches(os: Os) -> &'static [&'static str] {
+    match os {
+        Os::MacOs => &["universal"],
+        Os::Windows | Os::Linux => &["x64", "arm64"],
+    }
+}
+
+/// Every `<kind>-<arch>` a final at `version` ships: one download row each.
+pub fn installer_ids(version: &str) -> BTreeSet<String> {
+    let mut ids = BTreeSet::new();
+    for os in SYSTEMS {
+        for kind in public_text::installer_kinds(os, version) {
+            ids.extend(arches(os).iter().map(|arch| format!("{kind}-{arch}")));
+        }
+    }
+    ids
+}
+
+pub fn installer_id(file: &str) -> Result<Option<String>, String> {
+    let Some(kind) = public_text::kind_of(file) else { return Ok(None) };
+    let arch = if kind == "dmg" {
+        if !file.contains("universal") {
+            return Err(format!("{file} is not the universal dmg"));
+        }
+        "universal"
+    } else if crate::release_manifest::arch_of(file)? == "aarch64" {
+        "arm64"
+    } else {
+        "x64"
+    };
+    Ok(Some(format!("{kind}-{arch}")))
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Downloads {
+    pub tag: String,
+    pub version: String,
+    pub files: BTreeMap<String, String>,
+}
+
+pub fn downloads(release: &Release, workspace: &str) -> Result<Downloads, String> {
+    let tag = &release.tag_name;
+    if release.draft {
+        return Err(format!("{tag} is a draft; the site names a published release"));
+    }
+    let version = tag.strip_prefix('v').ok_or(format!("tag {tag} does not start with v"))?;
+    if release.prerelease || version.contains('-') {
+        return Err(format!("{tag} is a pre-release; the site names the latest final"));
+    }
+    if crate::package::version_order(version)? > crate::package::version_order(workspace)? {
+        return Err(format!(
+            "{tag} is newer than this tree's {workspace}; build the site from a tree that has it"
+        ));
+    }
+    let mut files = BTreeMap::new();
+    for asset in &release.assets {
+        let Some(id) = installer_id(&asset.name)? else { continue };
+        if !names_version(&asset.name, version) {
+            return Err(format!("{} names no version {version}", asset.name));
+        }
+        if let Some(other) = files.insert(id.clone(), asset.name.clone()) {
+            return Err(format!("{other} and {} both claim {id}", asset.name));
+        }
+    }
+    let missing: Vec<String> =
+        installer_ids(version).into_iter().filter(|id| !files.contains_key(id)).collect();
+    if !missing.is_empty() {
+        return Err(format!("{tag} lacks {}", missing.join(", ")));
+    }
+    if !release.assets.iter().any(|asset| asset.name == CHECKSUMS) {
+        return Err(format!("{tag} lacks {CHECKSUMS}"));
+    }
+    Ok(Downloads { tag: tag.clone(), version: version.to_string(), files })
+}
+
+fn names_version(file: &str, version: &str) -> bool {
+    let part_of_a_number = |c: char| c.is_ascii_digit() || c == '.';
+    file.match_indices(version).any(|(at, _)| {
+        !file[..at].chars().next_back().is_some_and(part_of_a_number)
+            && !file[at + version.len()..].chars().next().is_some_and(part_of_a_number)
+    })
+}
+
+pub fn str_const(rust: &str, name: &str) -> Option<String> {
+    let value = rust.split(&format!("const {name}: &str = \"")).nth(1)?;
+    value.split('"').next().map(String::from)
+}
+
+fn inner<'a>(html: &'a str, open: &str, close: &str) -> Option<(&'a str, &'a str)> {
+    let start = html.find(open)? + open.len();
+    let body_start = start + html[start..].find('>')? + 1;
+    let length = html[body_start..].find(close)?;
+    Some((&html[body_start..body_start + length], &html[body_start + length + close.len()..]))
+}
+
+fn plain(what: &str, html: &str) -> Result<String, String> {
+    let text = html.split_whitespace().collect::<Vec<_>>().join(" ");
+    if text.is_empty() || text.contains(['<', '>', '&']) {
+        return Err(format!("README.md's {what} is not one line of plain text: {text:?}"));
+    }
+    Ok(text)
+}
+
+/// The README's `<h3>` pitch and the centred line under it.
+pub fn pitch_and_sub(readme: &str) -> Result<(String, String), String> {
+    let (pitch, rest) = inner(readme, "<h3", "</h3>").ok_or("README.md has no <h3> pitch")?;
+    let (sub, _) = inner(rest, "<p align=\"center\"", "</p>")
+        .ok_or("README.md has no <p align=\"center\"> line under the pitch")?;
+    Ok((plain("pitch", pitch)?, plain("sub line", sub)?))
+}
+
+/// The lines under `heading` up to the next heading.
+pub fn section<'a>(file: &str, markdown: &'a str, heading: &str) -> Result<Vec<&'a str>, String> {
+    let mut lines = markdown.lines().skip_while(|line| line.trim_end() != heading);
+    if lines.next().is_none() {
+        return Err(format!("{file} has no {heading:?} heading"));
+    }
+    Ok(lines.take_while(|line| !line.starts_with('#')).collect())
+}
+
+fn blocks<'a>(lines: &[&'a str]) -> Vec<Vec<&'a str>> {
+    lines
+        .split(|line| line.trim().is_empty())
+        .filter(|block| !block.is_empty())
+        .map(<[&str]>::to_vec)
+        .collect()
+}
+
+pub fn first_block<'a>(lines: &[&'a str]) -> Vec<&'a str> {
+    blocks(lines).into_iter().next().unwrap_or_default()
+}
+
+fn block_refusal(line: &str) -> Option<&'static str> {
+    let digits = line.len() - line.trim_start_matches(|c: char| c.is_ascii_digit()).len();
+    let marks: String = line.chars().filter(|c| !c.is_whitespace()).collect();
+    let underline =
+        marks.chars().all(|c| c == '=') || (marks.len() > 1 && marks.chars().all(|c| c == '-'));
+    if !marks.is_empty() && underline {
+        Some("a rule or setext underline")
+    } else if line.trim_start().len() != line.len() {
+        Some("an indented line")
+    } else if line.starts_with('#') {
+        Some("a heading")
+    } else if line.starts_with('>') {
+        Some("a quote")
+    } else if line.starts_with('|') {
+        Some("a table")
+    } else if line.starts_with("```") {
+        Some("a code fence")
+    } else if digits > 0 && (line[digits..].starts_with(". ") || line[digits..].starts_with(") ")) {
+        Some("a numbered list")
+    } else if line.starts_with("* ") || line.starts_with("+ ") {
+        Some("a list marked other than -")
+    } else {
+        None
+    }
+}
+
+/// Bullets and paragraphs of `code`, **bold**, [links](..) and text; any other
+/// markdown is refused, so a construct this renderer would print raw fails the build.
+pub fn render(lines: &[&str], blob: &str) -> Result<String, String> {
+    let mut html = Vec::new();
+    for block in blocks(lines) {
+        if let Some(refusal) = block.iter().find_map(|line| block_refusal(line)) {
+            return Err(format!("{refusal} is outside the site's markdown: {block:?}"));
+        }
+        let items: Vec<&str> = block.iter().filter_map(|line| line.strip_prefix("- ")).collect();
+        if items.len() == block.len() {
+            let rendered: Vec<String> = items
+                .iter()
+                .map(|item| Ok(format!("<li>{}</li>", inline(item, blob)?)))
+                .collect::<Result<_, String>>()?;
+            html.push(format!("<ul>\n{}\n</ul>", rendered.join("\n")));
+        } else if items.is_empty() {
+            html.push(format!("<p>{}</p>", inline(&block.join(" "), blob)?));
+        } else {
+            return Err(format!("a list run into a paragraph: {block:?}"));
+        }
+    }
+    Ok(html.join("\n"))
+}
+
+fn link_target(target: &str, blob: &str) -> Result<String, String> {
+    if target.is_empty() || target.contains(char::is_whitespace) {
+        return Err(format!("a link target with a title or no address: {target:?}"));
+    }
+    if target.starts_with('#') {
+        return Err(format!("a link to {target} has no page on the site"));
+    }
+    if target.contains("://") {
+        Ok(target.to_string())
+    } else {
+        Ok(format!("{blob}{target}"))
+    }
+}
+
+fn inline(text: &str, blob: &str) -> Result<String, String> {
+    let mut html = String::new();
+    let mut bold = false;
+    let mut rest = text;
+    while let Some(c) = rest.chars().next() {
+        if let Some(after) = rest.strip_prefix('`') {
+            let end = after.find('`').ok_or(format!("an unclosed ` in {text:?}"))?;
+            let _ = write!(html, "<code>{}</code>", escape(&after[..end]));
+            rest = &after[end + 1..];
+        } else if let Some(after) = rest.strip_prefix("**") {
+            html.push_str(if bold { "</strong>" } else { "<strong>" });
+            bold = !bold;
+            rest = after;
+        } else if let Some(after) = rest.strip_prefix('[') {
+            let (label, tail) =
+                after.split_once("](").ok_or(format!("a [ that opens no link in {text:?}"))?;
+            let (target, tail) =
+                tail.split_once(')').ok_or(format!("an unclosed link in {text:?}"))?;
+            let href = escape(&link_target(target, blob)?);
+            let _ = write!(html, "<a href=\"{href}\">{}</a>", inline(label, blob)?);
+            rest = tail;
+        } else if rest.starts_with("![") || rest.starts_with("://") || "*_\\~<".contains(c) {
+            return Err(format!("{c:?} at {rest:?} is outside the site's markdown"));
+        } else {
+            html.push_str(&escape(&c.to_string()));
+            rest = &rest[c.len_utf8()..];
+        }
+    }
+    if bold {
+        return Err(format!("an unclosed ** in {text:?}"));
+    }
+    Ok(html)
+}
+
+pub fn fill(file: &str, text: &str, values: &BTreeMap<String, String>) -> Result<String, String> {
+    let mut filled = String::new();
+    let mut rest = text;
+    while let Some(at) = rest.find("{{") {
+        filled.push_str(&rest[..at]);
+        let after = &rest[at + 2..];
+        let end = after.find("}}").ok_or(format!("{file}: a {{{{ marker is never closed"))?;
+        let name = &after[..end];
+        let value = values.get(name).ok_or(format!("{file}: no marker {{{{{name}}}}}"))?;
+        filled.push_str(value);
+        rest = &after[end + 2..];
+    }
+    filled.push_str(rest);
+    Ok(filled)
+}
+
+fn read(repo: &Path, file: &str) -> Result<String, String> {
+    std::fs::read_to_string(repo.join(file)).map_err(|e| format!("read {file}: {e}"))
+}
+
+/// What the checks hold the built files against.
+pub struct Facts<'a> {
+    pub repo: &'a Path,
+    pub source: String,
+    pub guide: String,
+    pub release: Downloads,
+}
+
+impl<'a> Facts<'a> {
+    pub fn of(repo: &'a Path, release: Downloads) -> Result<Self, String> {
+        let links = read(repo, LINKS)?;
+        let named = |name| str_const(&links, name).ok_or(format!("{LINKS} has no {name}"));
+        Ok(Self { repo, source: named("SOURCE_CODE")?, guide: named("USER_GUIDE")?, release })
+    }
+
+    fn blob(&self) -> String {
+        format!("{}/blob/main/", self.source)
+    }
+}
+
+fn values(facts: &Facts<'_>) -> Result<BTreeMap<String, String>, String> {
+    let downloads = &facts.release;
+    let readme = read(facts.repo, "README.md")?;
+    let privacy = read(facts.repo, "PRIVACY.md")?;
+    let (pitch, sub) = pitch_and_sub(&readme)?;
+    let source = &facts.source;
+    let blob = &facts.blob();
+    let tag = &downloads.tag;
+    let mut values = BTreeMap::from([
+        ("pitch".to_string(), escape(&pitch)),
+        ("sub".to_string(), escape(&sub)),
+        (
+            "features".to_string(),
+            render(&section("README.md", &readme, "## What you can do")?, blob)?,
+        ),
+        (
+            "privacy".to_string(),
+            render(&first_block(&section("PRIVACY.md", &privacy, "# Privacy")?), blob)?,
+        ),
+        ("version".to_string(), escape(&downloads.version)),
+        ("release".to_string(), escape(&format!("{source}/releases/tag/{tag}"))),
+        ("latest".to_string(), escape(&format!("{source}/releases/latest"))),
+        (
+            "sha256sums".to_string(),
+            escape(&format!("{source}/releases/download/{tag}/{CHECKSUMS}")),
+        ),
+        ("guide".to_string(), escape(&facts.guide)),
+        ("source".to_string(), escape(source)),
+        ("base".to_string(), escape(BASE_URL)),
+        ("path".to_string(), escape(base_path())),
+    ]);
+    for (id, file) in &downloads.files {
+        let href = format!("{source}/releases/download/{tag}/{file}");
+        values.insert(format!("href:{id}"), escape(&href));
+        values.insert(format!("file:{id}"), escape(file));
+    }
+    Ok(values)
+}
+
+fn has_extension(file: &str, extension: &str) -> bool {
+    Path::new(file).extension().is_some_and(|ext| ext.eq_ignore_ascii_case(extension))
+}
+
+fn is_text(file: &str) -> bool {
+    ["html", "css", "js", "svg"].into_iter().any(|extension| has_extension(file, extension))
+}
+
+/// The site's files by name, filled and checked; nothing is written.
+pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>>, String> {
+    let release: Release =
+        serde_json::from_str(release_json).map_err(|e| format!("the release JSON: {e}"))?;
+    let facts = Facts::of(repo, downloads(&release, &crate::package::version_of(repo)?)?)?;
+    let values = values(&facts)?;
+    let mut files = BTreeMap::new();
+    let frame = std::fs::read_dir(repo.join(FRAME)).map_err(|e| format!("read {FRAME}/: {e}"))?;
+    for entry in frame {
+        let entry = entry.map_err(|e| e.to_string())?;
+        let path = entry.path();
+        let name = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+        if name.starts_with('.') {
+            continue;
+        }
+        if !entry.file_type().is_ok_and(|kind| kind.is_file()) {
+            return Err(format!("{FRAME}/{name} is not a file; the frame is flat"));
+        }
+        let bytes = std::fs::read(&path).map_err(|e| format!("read {FRAME}/{name}: {e}"))?;
+        let bytes = if has_extension(&name, "html") {
+            let text = String::from_utf8(bytes).map_err(|e| format!("{FRAME}/{name}: {e}"))?;
+            fill(&format!("{FRAME}/{name}"), &text, &values)?.into_bytes()
+        } else {
+            bytes
+        };
+        files.insert(name, bytes);
+    }
+    for (from, to) in ASSETS {
+        let bytes = std::fs::read(repo.join(from)).map_err(|e| format!("read {from}: {e}"))?;
+        if files.insert(to.to_string(), bytes).is_some() {
+            return Err(format!("{FRAME}/{to} and the asset {from} share a name"));
+        }
+    }
+    let problems = problems(&files, &facts);
+    if !problems.is_empty() {
+        return Err(format!("the site is refused:\n  {}", problems.join("\n  ")));
+    }
+    Ok(files)
+}
+
+/// The one script reaches no network, storage or code from a string, by name:
+/// a belt over the CSP's `default-src 'none'`, kept small enough to read whole.
+pub fn script_problems(name: &str, js: &str) -> Vec<String> {
+    let mut problems = Vec::new();
+    if js.len() > SCRIPT_BUDGET {
+        problems.push(format!("{name}: {} bytes, over the {SCRIPT_BUDGET}-byte budget", js.len()));
+    }
+    let identifier = |c: char| c.is_alphanumeric() || c == '_' || c == '$';
+    for word in SCRIPT_REFUSES {
+        let named = js.match_indices(word).any(|(at, _)| {
+            !js[..at].chars().next_back().is_some_and(identifier)
+                && !js[at + word.len()..].chars().next().is_some_and(identifier)
+        });
+        if named || (word == "://" && js.contains(word)) {
+            problems.push(format!("{name}: names {word}"));
+        }
+    }
+    problems
+}
+
+fn css_urls(css: &str) -> Vec<&str> {
+    css.to_ascii_lowercase()
+        .match_indices("url(")
+        .filter_map(|(at, _)| {
+            let start = at + "url(".len();
+            css[start..]
+                .find(')')
+                .map(|end| css[start..start + end].trim().trim_matches(['"', '\'']))
+        })
+        .collect()
+}
+
+fn is_absolute(target: &str) -> bool {
+    target.starts_with("//")
+        || target.split(['/', '?', '#']).next().is_some_and(|head| head.contains(':'))
+}
+
+fn unescaped(attribute: &str) -> String {
+    attribute
+        .replace("&quot;", "\"")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+}
+
+fn resolve(files: &BTreeMap<String, Vec<u8>>, from: &str, target: &str) -> Result<String, String> {
+    let (path, anchor) = target.split_once('#').unwrap_or((target, ""));
+    let path = path.split('?').next().unwrap_or(path);
+    let joined = if path.is_empty() {
+        PathBuf::from(from)
+    } else if let Some(from_root) = path.strip_prefix(base_path()) {
+        PathBuf::from(from_root)
+    } else if path.starts_with('/') {
+        return Err(format!("{from}: {target} is outside {}", base_path()));
+    } else {
+        Path::new(from).parent().unwrap_or(Path::new("")).join(path)
+    };
+    let mut parts = PathBuf::new();
+    for part in joined.components() {
+        match part {
+            Component::Normal(name) => parts.push(name),
+            Component::CurDir => {}
+            _ if parts.pop() => {}
+            _ => return Err(format!("{from}: {target} leaves the site")),
+        }
+    }
+    let mut name = parts.to_string_lossy().replace('\\', "/");
+    if name.is_empty() || path.ends_with('/') {
+        name = format!("{name}{}index.html", if name.is_empty() { "" } else { "/" });
+    }
+    let file = files.get(&name).ok_or(format!("{from}: {target} (no {name} in the site)"))?;
+    let text = String::from_utf8_lossy(file);
+    let named = || {
+        parse(&text).tags.iter().any(|tag| tag.get("id").is_some_and(|id| unescaped(id) == anchor))
+    };
+    if !anchor.is_empty() && !named() {
+        return Err(format!("{from}: {target} (no id=\"{anchor}\" in {name})"));
+    }
+    Ok(name)
+}
+
+fn blob_problem(facts: &Facts<'_>, from: &str, href: &str) -> Option<String> {
+    let path = href.strip_prefix(&facts.blob())?;
+    let (path, anchor) = path.split_once('#').unwrap_or((path, ""));
+    let file = path.split('?').next().unwrap_or(path);
+    if !public_text::exists_as_named(facts.repo, Path::new(file)) {
+        return Some(format!("{from}: {href} (the tree has no {file})"));
+    }
+    if anchor.is_empty() || !has_extension(file, "md") {
+        return None;
+    }
+    let text = std::fs::read_to_string(facts.repo.join(file)).unwrap_or_default();
+    (!public_text::anchors(&text).contains(anchor))
+        .then(|| format!("{from}: {href} (no heading #{anchor} in {file})"))
+}
+
+struct Tag<'a> {
+    name: String,
+    attributes: Vec<(String, &'a str)>,
+    raw: &'a str,
+    at: usize,
+}
+
+struct Page<'a> {
+    tags: Vec<Tag<'a>>,
+    text: Vec<&'a str>,
+    skipped: Vec<&'a str>,
+}
+
+impl Tag<'_> {
+    fn get(&self, attribute: &str) -> Option<&str> {
+        self.attributes.iter().find(|(name, _)| name == attribute).map(|(_, value)| *value)
+    }
+}
+
+/// The tags of a page, each attribute read with its quotes, the text between them,
+/// and what a browser skips as a comment; a raw-text element's body is its `raw`.
+fn parse(html: &str) -> Page<'_> {
+    let mut tags = Vec::new();
+    let mut text = Vec::new();
+    let mut skipped = Vec::new();
+    let mut at = 0;
+    while let Some(open) = html[at..].find('<').map(|found| at + found) {
+        text.push(&html[at..open]);
+        let rest = &html[open + 1..];
+        let after = |skipped: usize| html.len() - rest[skipped..].len();
+        if let Some(comment) = rest.strip_prefix("!--") {
+            let end = [comment.find("-->").map(|e| e + 3), comment.find("--!>").map(|e| e + 4)]
+                .into_iter()
+                .flatten()
+                .min();
+            at = end.map_or(html.len(), |end| after(3 + end));
+            skipped.push(&html[open..at]);
+            continue;
+        }
+        let bogus = rest.starts_with(['!', '?'])
+            || (rest.starts_with('/') && !rest[1..].starts_with(|c: char| c.is_ascii_alphabetic()));
+        if bogus {
+            at = rest.find('>').map_or(html.len(), |end| after(end + 1));
+            skipped.push(&html[open..at]);
+            continue;
+        }
+        if !rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '/') {
+            text.push("<");
+            at = open + 1;
+            continue;
+        }
+        let (mut tag, end) = read_tag(html, open + 1);
+        at = end;
+        if RAW_TEXT.contains(&tag.name.as_str()) {
+            let closing = format!("</{}", tag.name);
+            let body =
+                html[at..].to_ascii_lowercase().find(&closing).map_or(html.len(), |end| at + end);
+            tag.raw = &html[at..body];
+            if tag.name == "title" || tag.name == "textarea" {
+                text.push(tag.raw);
+            }
+            at = body;
+        }
+        tags.push(tag);
+    }
+    text.push(&html[at..]);
+    Page { tags, text, skipped }
+}
+
+fn read_tag(html: &str, start: usize) -> (Tag<'_>, usize) {
+    let name_end = html[start + 1..]
+        .find(|c: char| is_html_space(c) || c == '/' || c == '>')
+        .map_or(html.len(), |end| start + 1 + end);
+    let mut tag = Tag {
+        name: html[start..name_end].to_ascii_lowercase(),
+        attributes: Vec::new(),
+        raw: "",
+        at: start - 1,
+    };
+    let mut rest = &html[name_end..];
+    loop {
+        rest = rest.trim_start_matches(|c: char| is_html_space(c) || c == '/');
+        if rest.is_empty() {
+            return (tag, html.len());
+        }
+        if let Some(after) = rest.strip_prefix('>') {
+            return (tag, html.len() - after.len());
+        }
+        let name_length =
+            rest.find(|c: char| is_html_space(c) || "/>=".contains(c)).unwrap_or(rest.len()).max(1);
+        let name = rest[..name_length].to_ascii_lowercase();
+        let after_name = rest[name_length..].trim_start_matches(is_html_space);
+        let (value, after) = match after_name
+            .strip_prefix('=')
+            .map(|value| value.trim_start_matches(is_html_space))
+        {
+            Some(quoted) if quoted.starts_with(['"', '\'']) => {
+                let (quote, body) = quoted.split_at(1);
+                let end = body.find(quote).unwrap_or(body.len());
+                (&body[..end], &body[(end + 1).min(body.len())..])
+            }
+            Some(bare) => {
+                let end = bare.find(|c: char| is_html_space(c) || c == '>').unwrap_or(bare.len());
+                bare.split_at(end)
+            }
+            None => ("", after_name),
+        };
+        tag.attributes.push((name, value));
+        rest = after;
+    }
+}
+
+fn csp_policy() -> &'static str {
+    CSP.split_once("content=\"").and_then(|(_, rest)| rest.strip_suffix("\">")).unwrap_or(CSP)
+}
+
+/// What a browser skips as a comment, which the checks would rather not guess at:
+/// comments, declarations other than the doctype, processing instructions,
+/// malformed end tags; and end tags with attributes.
+fn misread_markup(name: &str, page: &Page<'_>) -> Vec<String> {
+    let mut problems = Vec::new();
+    for markup in &page.skipped {
+        let lower = markup.to_ascii_lowercase();
+        if lower.starts_with("<!--") {
+            problems.push(format!("{name}: a comment"));
+        } else if !lower.starts_with("<!doctype") {
+            let shown: String = markup.chars().take(24).collect();
+            problems.push(format!("{name}: markup a browser reads as a comment: {shown}"));
+        }
+    }
+    for tag in
+        page.tags.iter().filter(|tag| tag.name.starts_with('/') && !tag.attributes.is_empty())
+    {
+        problems.push(format!("{name}: an end tag with attributes <{}>", tag.name));
+    }
+    problems
+}
+
+/// An attribute value as a URL parser reads it: no leading or trailing control
+/// or space, no tab or newline anywhere.
+fn url_form(value: &str) -> String {
+    value
+        .trim_matches(|c: char| c <= ' ')
+        .chars()
+        .filter(|c| !matches!(c, '\t' | '\n' | '\r'))
+        .collect()
+}
+
+fn stray_references(name: &str, html: &str) -> Vec<String> {
+    html.match_indices('&')
+        .filter(|(at, _)| !REFERENCES.iter().any(|reference| html[at + 1..].starts_with(reference)))
+        .map(|(at, _)| {
+            let reference: String = html[at..].chars().take(12).collect();
+            format!("{name}: a character reference other than &amp; &quot; &lt; &gt;: {reference}")
+        })
+        .collect()
+}
+
+fn is_html_space(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\r' | '\x0c')
+}
+
+fn names_an_address(value: &str) -> bool {
+    let value: String = value.chars().filter(|c| !matches!(c, '\t' | '\n' | '\r')).collect();
+    let value = value.to_ascii_lowercase();
+    value.contains("//") || value.contains("http:") || value.contains("https:")
+}
+
+fn tag_problems(name: &str, tags: &[Tag<'_>], refused: &[&str]) -> Vec<String> {
+    let mut problems = Vec::new();
+    for tag in tags {
+        if refused.contains(&tag.name.as_str()) {
+            problems.push(format!("{name}: carries <{}>", tag.name));
+        }
+        if tag.name == "meta"
+            && tag.get("http-equiv").is_some_and(|value| value.eq_ignore_ascii_case("refresh"))
+        {
+            problems.push(format!("{name}: a meta refresh"));
+        }
+        for (attribute, value) in &tag.attributes {
+            if attribute == "style" {
+                problems.push(format!("{name}: a style attribute"));
+            } else if attribute.len() > 2 && attribute.starts_with("on") {
+                problems.push(format!("{name}: an inline handler {attribute}"));
+            }
+            let compact: String =
+                value.chars().filter(|c| !c.is_ascii_control() && !c.is_whitespace()).collect();
+            let prose =
+                attribute == "alt" || attribute == "title" || attribute.starts_with("aria-");
+            if !prose && compact.to_ascii_lowercase().starts_with("javascript:") {
+                problems.push(format!("{name}: a javascript: address"));
+            }
+        }
+    }
+    problems
+}
+
+/// An svg is a drawing: the elements of `SVG_ELEMENTS` and nothing an XML reader
+/// could take for more (no processing instruction, declaration, comment or CDATA
+/// after a leading `<?xml …?>`).
+fn svg_problems(name: &str, svg: &str) -> Vec<String> {
+    let body = svg.trim_start();
+    let body = match body.strip_prefix("<?xml").filter(|rest| rest.starts_with(is_html_space)) {
+        Some(declared) => declared.split_once("?>").map_or("", |(_, rest)| rest),
+        None => body,
+    };
+    let mut problems = Vec::new();
+    if body.contains("<?") || body.contains("<!") {
+        problems.push(format!("{name}: a processing instruction, declaration, comment or CDATA"));
+    }
+    let tags = parse(body).tags;
+    problems.extend(tag_problems(name, &tags, &[]));
+    for tag in &tags {
+        let element = tag.name.trim_start_matches('/');
+        if !SVG_ELEMENTS.contains(&element) {
+            problems.push(format!("{name}: <{element}> is no drawing element"));
+        }
+        for (attribute, value) in &tag.attributes {
+            if !attribute.starts_with("xmlns") && names_an_address(value) {
+                problems.push(format!("{name}: {value} is a request outside the site"));
+            }
+        }
+    }
+    problems
+}
+
+/// A request's target inside the site, or `None` when it leaves the site.
+fn local(target: &str) -> Option<String> {
+    match target.strip_prefix(BASE_URL) {
+        Some(rest) => Some(format!("{}{rest}", base_path())),
+        None if is_absolute(target) => None,
+        None => Some(target.to_string()),
+    }
+}
+
+fn html_problems(
+    files: &BTreeMap<String, Vec<u8>>,
+    facts: &Facts<'_>,
+    name: &str,
+    html: &str,
+    downloads: &mut Vec<String>,
+) -> Vec<String> {
+    let page = parse(html);
+    let (tags, text) = (&page.tags, &page.text);
+    let mut problems = tag_problems(name, tags, &[&REFUSED_TAGS[..], &FOREIGN].concat());
+    problems.extend(misread_markup(name, &page));
+    problems.extend(stray_references(name, html));
+    let csp: Vec<usize> = (0..tags.len())
+        .filter(|at| {
+            tags[*at].name == "meta"
+                && tags[*at]
+                    .get("http-equiv")
+                    .is_some_and(|value| value.eq_ignore_ascii_case("content-security-policy"))
+        })
+        .collect();
+    let heads = match csp[..] {
+        [at] => {
+            let before = parse(&html[..tags[at].at]);
+            tags[at].get("content") == Some(csp_policy())
+                && before.tags.iter().all(|tag| HEAD_BEFORE_CSP.contains(&tag.name.as_str()))
+                && before.text.iter().all(|words| words.trim_matches(is_html_space).is_empty())
+        }
+        _ => false,
+    };
+    if !heads {
+        problems.push(format!(
+            "{name}: the CSP meta is missing, altered, doubled or not first in <head>; want {CSP}"
+        ));
+    }
+    let scripts: Vec<&Tag<'_>> = tags.iter().filter(|tag| tag.name == "script").collect();
+    if scripts.len() > 1 {
+        problems.push(format!("{name}: more than one <script>"));
+    }
+    for script in scripts {
+        let loads = script
+            .get("src")
+            .and_then(|src| local(&url_form(&unescaped(src))))
+            .and_then(|target| resolve(files, name, &target).ok());
+        if loads.as_deref() != Some(SCRIPT) {
+            problems.push(format!("{name}: a <script> that does not load {SCRIPT} by src"));
+        }
+        if !script.raw.trim().is_empty() {
+            problems.push(format!("{name}: an inline script"));
+        }
+    }
+    let request = |target: &str, problems: &mut Vec<String>| match local(target) {
+        Some(target) => problems.extend(resolve(files, name, &target).err()),
+        None => problems.push(format!("{name}: {target} is a request outside the site")),
+    };
+    for tag in tags {
+        for (attribute, value) in &tag.attributes {
+            let value = unescaped(value);
+            let url = url_form(&value);
+            match attribute.as_str() {
+                "src" => request(&url, &mut problems),
+                "srcset" | "imagesrcset" => {
+                    for candidate in value.split(',').filter_map(|c| c.split_whitespace().next()) {
+                        request(&url_form(candidate), &mut problems);
+                    }
+                }
+                "href" if tag.name == "link" => match local(&url) {
+                    Some(target) => problems.extend(resolve(files, name, &target).err()),
+                    None => {
+                        problems
+                            .push(format!("{name}: <link> {value} loads from outside the site"));
+                    }
+                },
+                "href" => {
+                    problems.extend(navigation_problems(files, facts, name, &url, downloads));
+                }
+                "content" if url.starts_with(BASE_URL) => request(&url, &mut problems),
+                _ if names_an_address(&value) => problems.push(format!(
+                    "{name}: {value} is an address outside an href, a request outside the site"
+                )),
+                _ => {}
+            }
+        }
+    }
+    for words in text.iter().filter(|words| words.contains("://")) {
+        problems.push(format!("{name}: an address in the text: {}", words.trim()));
+    }
+    problems
+}
+
+fn navigation_problems(
+    files: &BTreeMap<String, Vec<u8>>,
+    facts: &Facts<'_>,
+    name: &str,
+    href: &str,
+    downloads: &mut Vec<String>,
+) -> Vec<String> {
+    let source = &facts.source;
+    if href.starts_with(BASE_URL) || !is_absolute(href) {
+        return local(href)
+            .and_then(|target| resolve(files, name, &target).err())
+            .into_iter()
+            .collect();
+    }
+    let Some(tail) =
+        href.strip_prefix(source.as_str()).filter(|tail| tail.is_empty() || tail.starts_with('/'))
+    else {
+        return vec![format!("{name}: {href} goes outside {source}")];
+    };
+    let escapes = tail.contains('\\') || tail.to_ascii_lowercase().contains("%2e");
+    if escapes || tail.split(['/', '?', '#']).any(|segment| segment == ".." || segment == ".") {
+        return vec![format!("{name}: {href} leaves {source}")];
+    }
+    if href.starts_with(&format!("{source}/releases/download/")) {
+        downloads.push(href.to_string());
+    }
+    blob_problem(facts, name, href).into_iter().collect()
+}
+
+fn download_problems(facts: &Facts<'_>, hrefs: &[String]) -> Vec<String> {
+    let release = &facts.release;
+    let prefix = format!("{}/releases/download/{}/", facts.source, release.tag);
+    let mut problems = Vec::new();
+    let mut ids = BTreeSet::new();
+    for href in hrefs {
+        let Some(file) = href.strip_prefix(&prefix) else {
+            problems.push(format!("{href} is not a {} download", release.tag));
+            continue;
+        };
+        if file != CHECKSUMS && !release.files.values().any(|shipped| shipped == file) {
+            problems.push(format!("{href} names no file of {}", release.tag));
+        }
+        match installer_id(file) {
+            Ok(Some(id)) => {
+                ids.insert(id);
+            }
+            Ok(None) => {}
+            Err(problem) => problems.push(problem),
+        }
+    }
+    let want = installer_ids(&release.version);
+    if ids != want {
+        let missing: Vec<&String> = want.difference(&ids).collect();
+        let extra: Vec<&String> = ids.difference(&want).collect();
+        problems.push(format!(
+            "the download rows lack {missing:?} and add {extra:?} against Os::bundles at {}",
+            release.version
+        ));
+    }
+    problems
+}
+
+fn hex_colour(value: &str) -> Option<[u8; 3]> {
+    let hex = value.strip_prefix('#')?;
+    let digits: Vec<u8> = hex
+        .chars()
+        .map(|c| c.to_digit(16).and_then(|d| u8::try_from(d).ok()))
+        .collect::<Option<_>>()?;
+    match digits[..] {
+        [r, g, b] => Some([r * 17, g * 17, b * 17]),
+        [r1, r2, g1, g2, b1, b2] => Some([r1 * 16 + r2, g1 * 16 + g2, b1 * 16 + b2]),
+        _ => None,
+    }
+}
+
+fn luminance(rgb: [u8; 3]) -> f64 {
+    let linear = |channel: u8| {
+        let c = f64::from(channel) / 255.0;
+        if c <= 0.040_45 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    0.2126 * linear(rgb[0]) + 0.7152 * linear(rgb[1]) + 0.0722 * linear(rgb[2])
+}
+
+pub fn contrast(a: [u8; 3], b: [u8; 3]) -> f64 {
+    let (la, lb) = (luminance(a), luminance(b));
+    (la.max(lb) + 0.05) / (la.min(lb) + 0.05)
+}
+
+type Tokens = BTreeMap<String, String>;
+
+/// The custom properties each scheme ends with, in cascade order: a top-level
+/// `:root` sets both, the dark scheme's `:root` only dark; `None` without one.
+pub fn themes(css: &str) -> (Tokens, Option<Tokens>) {
+    let mut light = Tokens::new();
+    let mut dark = Tokens::new();
+    let mut dark_seen = false;
+    let mut stack: Vec<String> = Vec::new();
+    let mut text = String::new();
+    let mut declare = |stack: &[String], text: &str| {
+        let Some((":root", outer)) = stack.split_last().map(|(last, outer)| (last.as_str(), outer))
+        else {
+            return;
+        };
+        let Some((name, value)) = text.split_once(':') else { return };
+        let value = value.split('!').next().unwrap_or(value);
+        let (name, value) = (name.trim().to_string(), value.trim().to_string());
+        if !name.starts_with("--") {
+            return;
+        }
+        match outer {
+            [] => {
+                light.insert(name.clone(), value.clone());
+                dark.insert(name, value);
+            }
+            [media] if media.replace(' ', "") == DARK.replace(' ', "") => {
+                dark_seen = true;
+                dark.insert(name, value);
+            }
+            _ => {}
+        }
+    };
+    let css = strip_comments(css);
+    for c in css.chars() {
+        match c {
+            '{' => {
+                stack.push(text.split_whitespace().collect::<Vec<_>>().join(" "));
+                text.clear();
+            }
+            '}' => {
+                declare(&stack, &text);
+                stack.pop();
+                text.clear();
+            }
+            ';' => {
+                declare(&stack, &text);
+                text.clear();
+            }
+            _ => text.push(c),
+        }
+    }
+    (light, dark_seen.then_some(dark))
+}
+
+fn strip_comments(css: &str) -> String {
+    let mut kept = String::new();
+    let mut rest = css;
+    while let Some(at) = rest.find("/*") {
+        kept.push_str(&rest[..at]);
+        rest = rest[at + 2..].find("*/").map_or("", |end| &rest[at + 2 + end + 2..]);
+    }
+    kept + rest
+}
+
+pub fn contrast_problems(file: &str, css: &str) -> Vec<String> {
+    let (light, dark) = themes(css);
+    let mut problems = Vec::new();
+    if dark.is_none() {
+        problems.push(format!("{file}: no {DARK} :root theme"));
+    }
+    let dark = dark.unwrap_or_else(|| light.clone());
+    for (theme, tokens) in [("light", &light), ("dark", &dark)] {
+        let colours = |prefix: &str| -> Vec<(&String, &String)> {
+            tokens.iter().filter(|(name, _)| name.starts_with(prefix)).collect()
+        };
+        let (texts, backgrounds) = (colours("--text"), colours("--bg"));
+        if texts.is_empty() || backgrounds.is_empty() {
+            problems.push(format!("{file} {theme}: needs --text* and --bg* tokens"));
+            continue;
+        }
+        for (text, text_value) in &texts {
+            for (background, background_value) in &backgrounds {
+                let (Some(fg), Some(bg)) = (hex_colour(text_value), hex_colour(background_value))
+                else {
+                    problems.push(format!(
+                        "{file} {theme}: {text} {text_value} or {background} {background_value} is no #hex colour"
+                    ));
+                    continue;
+                };
+                let ratio = contrast(fg, bg);
+                if ratio < MIN_CONTRAST {
+                    problems.push(format!(
+                        "{file} {theme}: {text} {text_value} on {background} {background_value} is {ratio:.2}:1, under {MIN_CONTRAST}:1"
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
+/// Everything that keeps the built site from shipping, one line each.
+pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<String> {
+    let mut problems = Vec::new();
+    let mut downloads = Vec::new();
+    for name in files.keys() {
+        if !SHIPPED_KINDS.iter().any(|kind| has_extension(name, kind)) {
+            problems.push(format!(
+                "{name}: may not ship; the site holds pages, styles, {SCRIPT} and images"
+            ));
+        }
+    }
+    for (name, bytes) in files.iter().filter(|(name, _)| is_text(name)) {
+        let Ok(text) = std::str::from_utf8(bytes) else {
+            problems.push(format!("{name}: not UTF-8"));
+            continue;
+        };
+        problems.extend(public_text::denied_names(name, text));
+        if has_extension(name, "html") {
+            problems.extend(html_problems(files, facts, name, text, &mut downloads));
+        } else if has_extension(name, "svg") {
+            problems.extend(svg_problems(name, text));
+        } else if has_extension(name, "js") {
+            if name == SCRIPT {
+                problems.extend(script_problems(name, text));
+            } else {
+                problems.push(format!("{name}: a script other than {SCRIPT}"));
+            }
+        } else {
+            if text.to_ascii_lowercase().contains("@import") {
+                problems.push(format!("{name}: carries @import"));
+            }
+            if text.contains('\\') {
+                problems.push(format!("{name}: a CSS escape (write the character itself)"));
+            }
+            if strip_comments(text).contains("//") {
+                problems.push(format!("{name}: an address with // is a request outside the site"));
+            }
+            for target in css_urls(text).into_iter().filter(|target| !target.starts_with('#')) {
+                if is_absolute(target) {
+                    problems.push(format!("{name}: url({target}) is a request outside the site"));
+                } else if let Err(problem) = resolve(files, name, target) {
+                    problems.push(problem);
+                }
+            }
+            problems.extend(contrast_problems(name, text));
+        }
+    }
+    let guide = &facts.guide;
+    let links_the_guide = files.get("index.html").is_some_and(|bytes| {
+        let html = String::from_utf8_lossy(bytes);
+        parse(&html).tags.iter().any(|tag| {
+            let href = tag.get("href").map(unescaped).unwrap_or_default();
+            tag.name == "a" && (href == *guide || href.starts_with(&format!("{guide}#")))
+        })
+    });
+    if !links_the_guide {
+        problems.push(format!("index.html: no link to the guide {guide}"));
+    }
+    problems.extend(download_problems(facts, &downloads));
+    problems
+}
+
+pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
+    let usage = || crate::USAGE.to_string();
+    let ["build", rest @ ..] = args else { return Err(usage()) };
+    let release = crate::flag_value(rest, "--release").ok_or_else(usage)?;
+    let out = PathBuf::from(crate::flag_value(rest, "--out").ok_or_else(usage)?);
+    if rest.len() != 4 {
+        return Err(usage());
+    }
+    let json = std::fs::read_to_string(&release).map_err(|e| format!("read {release}: {e}"))?;
+    let files = build(repo, &json)?;
+    if std::fs::read_dir(&out).is_ok_and(|mut entries| entries.next().is_some()) {
+        return Err(format!("{} is not empty; remove it and build again", out.display()));
+    }
+    std::fs::create_dir_all(&out).map_err(|e| format!("create {}: {e}", out.display()))?;
+    for (name, bytes) in &files {
+        std::fs::write(out.join(name), bytes).map_err(|e| format!("write {name}: {e}"))?;
+    }
+    Ok((0, format!("wrote the site ({} files) in {}", files.len(), out.display())))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn repo() -> PathBuf {
+        crate::repo_root().unwrap()
+    }
+
+    const SOURCE: &str = "https://github.com/lesslucifer/Trawler";
+    const BLOB: &str = "https://github.com/lesslucifer/Trawler/blob/main/";
+
+    fn release(tag: &str, names: &[&str]) -> Release {
+        Release {
+            tag_name: tag.to_string(),
+            draft: false,
+            prerelease: false,
+            assets: names.iter().map(|name| Asset { name: (*name).to_string() }).collect(),
+        }
+    }
+
+    const FULL: [&str; 13] = [
+        "Trawler_0.1.0_universal.dmg",
+        "Trawler_0.1.0_x64-setup.exe",
+        "Trawler_0.1.0_x64_en-US.msi",
+        "Trawler_0.1.0_arm64-setup.exe",
+        "Trawler_0.1.0_arm64_en-US.msi",
+        "Trawler_0.1.0_amd64.AppImage",
+        "Trawler_0.1.0_amd64.deb",
+        "Trawler-0.1.0-1.x86_64.rpm",
+        "Trawler_0.1.0_aarch64.AppImage",
+        "Trawler_0.1.0_arm64.deb",
+        "Trawler-0.1.0-1.aarch64.rpm",
+        "Trawler.app.tar.gz",
+        "SHA256SUMS",
+    ];
+
+    fn without(dropped: &str) -> Vec<&'static str> {
+        FULL.iter().copied().filter(|name| *name != dropped).collect()
+    }
+
+    #[test]
+    fn a_final_ships_eleven_rows_and_each_file_names_its_row() {
+        let ids = installer_ids("0.1.0");
+        assert_eq!(ids.len(), 11, "{ids:?}");
+        assert!(!installer_ids("0.1.0-2").iter().any(|id| id.starts_with("rpm")));
+        assert_eq!(installer_id("Trawler_0.1.0_arm64_en-US.msi").unwrap().unwrap(), "msi-arm64");
+        assert_eq!(installer_id("Trawler_0.1.0_amd64.AppImage").unwrap().unwrap(), "appimage-x64");
+        assert_eq!(installer_id("Trawler_0.1.0_universal.dmg").unwrap().unwrap(), "dmg-universal");
+        assert_eq!(installer_id("Trawler_0.1.0_x64-setup.exe.sig").unwrap(), None);
+        assert_eq!(installer_id("Trawler.app.tar.gz").unwrap(), None);
+        assert!(installer_id("Trawler_0.1.0_aarch64.dmg").is_err());
+    }
+
+    #[test]
+    fn a_full_final_names_each_row_s_file() {
+        let found = downloads(&release("v0.1.0", &FULL), "0.1.0").unwrap();
+        assert_eq!(found.version, "0.1.0");
+        assert_eq!(found.files.len(), 11);
+        assert_eq!(found.files["rpm-arm64"], "Trawler-0.1.0-1.aarch64.rpm");
+    }
+
+    #[test]
+    fn a_draft_a_pre_release_or_a_missing_kind_is_refused() {
+        let mut draft = release("v0.1.0", &FULL);
+        draft.draft = true;
+        assert!(downloads(&draft, "0.1.0").unwrap_err().contains("draft"));
+        let mut pre = release("v0.1.0", &FULL);
+        pre.prerelease = true;
+        assert!(downloads(&pre, "0.1.0").unwrap_err().contains("pre-release"));
+        assert!(downloads(&release("v0.1.0-3", &FULL), "0.1.0")
+            .unwrap_err()
+            .contains("pre-release"));
+        let refusal =
+            downloads(&release("v0.1.0", &without("Trawler_0.1.0_arm64_en-US.msi")), "0.1.0")
+                .unwrap_err();
+        assert_eq!(refusal, "v0.1.0 lacks msi-arm64");
+        let refusal = downloads(&release("v0.1.0", &without("SHA256SUMS")), "0.1.0").unwrap_err();
+        assert!(refusal.contains("SHA256SUMS"), "{refusal}");
+        assert!(downloads(&release("0.1.0", &FULL), "0.1.0").unwrap_err().contains("start with v"));
+    }
+
+    #[test]
+    fn two_files_for_one_row_or_a_file_of_another_version_is_refused() {
+        let mut names = FULL.to_vec();
+        names.push("Trawler_0.1.0_x64_de-DE.msi");
+        assert!(downloads(&release("v0.1.0", &names), "0.1.0").unwrap_err().contains("msi-x64"));
+        let mut names = without("Trawler_0.1.0_amd64.deb");
+        names.push("Trawler_0.0.9_amd64.deb");
+        let refusal = downloads(&release("v0.1.0", &names), "0.1.0").unwrap_err();
+        assert!(refusal.contains("names no version 0.1.0"), "{refusal}");
+        let mut names = without("Trawler_0.1.0_amd64.deb");
+        names.push("Trawler_10.1.0_amd64.deb");
+        let refusal = downloads(&release("v0.1.0", &names), "0.1.0").unwrap_err();
+        assert!(refusal.contains("Trawler_10.1.0_amd64.deb names no version"), "{refusal}");
+    }
+
+    #[test]
+    fn a_release_newer_than_the_tree_is_refused() {
+        assert!(downloads(&release("v0.1.0", &FULL), "0.2.0-1").is_ok());
+        let refusal = downloads(&release("v0.1.0", &FULL), "0.1.0-7").unwrap_err();
+        assert!(refusal.contains("newer than this tree's 0.1.0-7"), "{refusal}");
+    }
+
+    #[test]
+    fn the_subset_renders_bullets_paragraphs_code_bold_and_links() {
+        let lines = [
+            "- Filter with `status:4xx` & **more**.",
+            "- See [the guide](GUIDE.md#install).",
+            "",
+            "One",
+            "line.",
+        ];
+        assert_eq!(
+            render(&lines, BLOB).unwrap(),
+            "<ul>\n<li>Filter with <code>status:4xx</code> &amp; <strong>more</strong>.</li>\n\
+             <li>See <a href=\"https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install\">the guide</a>.</li>\n\
+             </ul>\n<p>One line.</p>"
+        );
+    }
+
+    #[test]
+    fn markdown_outside_the_subset_is_refused_not_printed_raw() {
+        for text in [
+            "*one*",
+            "_one_",
+            "a \\* b",
+            "~~gone~~",
+            "<b>x</b>",
+            "![i](a.png)",
+            "[a] b",
+            "[a](b",
+            "[a](b.md \"t\")",
+            "[top](#install)",
+            "`open",
+            "**open",
+            "see https://example.com",
+        ] {
+            assert!(render(&[text], BLOB).is_err(), "{text}");
+        }
+        for lines in [
+            &["## H"][..],
+            &["> q"],
+            &["| a |"],
+            &["1. one"],
+            &["* one"],
+            &["- a", "  b"],
+            &["- a", "b"],
+            &["```", "x"],
+        ] {
+            assert!(render(lines, BLOB).is_err(), "{lines:?}");
+        }
+    }
+
+    #[test]
+    fn the_readme_s_pitch_and_sub_line_are_its_h3_and_the_line_under_it() {
+        let readme = "<p align=\"center\">logo</p>\n<h3 align=\"center\">See it.</h3>\n\n<p align=\"center\">\n  A free\n  proxy.\n</p>\n";
+        assert_eq!(
+            pitch_and_sub(readme).unwrap(),
+            ("See it.".to_string(), "A free proxy.".to_string())
+        );
+        assert!(pitch_and_sub("<h3>a <b>b</b></h3><p align=\"center\">c</p>").is_err());
+        assert!(pitch_and_sub("<h3>a</h3>").is_err());
+        assert!(pitch_and_sub("<h3>A &amp; B</h3><p align=\"center\">c</p>").is_err());
+    }
+
+    #[test]
+    fn a_section_ends_at_the_next_heading_and_a_missing_one_is_named() {
+        let markdown = "# Privacy\n\nLead.\nMore.\n\n| a |\n## Next\n";
+        let lines = section("P.md", markdown, "# Privacy").unwrap();
+        assert_eq!(first_block(&lines), ["Lead.", "More."]);
+        assert!(section("P.md", markdown, "## What").unwrap_err().contains("P.md"));
+    }
+
+    #[test]
+    fn markers_fill_and_an_unknown_or_open_one_is_refused() {
+        let values = BTreeMap::from([("a".to_string(), "{{b}}".to_string())]);
+        assert_eq!(fill("f", "x {{a}} {y}", &values).unwrap(), "x {{b}} {y}");
+        assert_eq!(fill("f", "{{b}}", &values).unwrap_err(), "f: no marker {{b}}");
+        assert!(fill("f", "{{a", &values).unwrap_err().contains("never closed"));
+    }
+
+    #[test]
+    fn links_rs_consts_are_read_as_written() {
+        let rust = "pub const SOURCE_CODE: &str = \"https://x.test/r\";\nconst B: &str = \"b\";\n";
+        assert_eq!(str_const(rust, "SOURCE_CODE").unwrap(), "https://x.test/r");
+        assert_eq!(str_const(rust, "C"), None);
+    }
+
+    #[test]
+    fn the_base_url_is_the_project_s_github_io_address() {
+        let links = std::fs::read_to_string(repo().join(LINKS)).unwrap();
+        let source = str_const(&links, "SOURCE_CODE").unwrap();
+        let (owner, name) =
+            source.trim_start_matches("https://github.com/").split_once('/').unwrap();
+        assert_eq!(BASE_URL, format!("https://{owner}.github.io/{name}/"));
+        assert_eq!(base_path(), format!("/{name}/"));
+    }
+
+    fn facts(repo: &Path) -> Facts<'_> {
+        Facts {
+            repo,
+            source: SOURCE.to_string(),
+            guide: format!("{SOURCE}/blob/main/GUIDE.md"),
+            release: downloads(&release("v0.1.0", &FULL), "0.1.0").unwrap(),
+        }
+    }
+
+    const CSS: &str = ":root { --bg: #ffffff; --text: #000000; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000000; --text: #ffffff; } }\n";
+
+    fn page(body: &str) -> String {
+        let rows: Vec<String> = FULL[..11]
+            .iter()
+            .map(|file| format!("<a href=\"{SOURCE}/releases/download/v0.1.0/{file}\">x</a>"))
+            .collect();
+        format!(
+            "<head>{CSP}<link rel=\"stylesheet\" href=\"site.css\"></head><body id=\"top\">\
+             <a href=\"{SOURCE}/blob/main/GUIDE.md\">g</a>{}{body}</body>",
+            rows.join("")
+        )
+    }
+
+    fn site(body: &str, css: &str) -> BTreeMap<String, Vec<u8>> {
+        BTreeMap::from([
+            ("index.html".to_string(), page(body).into_bytes()),
+            ("site.css".to_string(), css.as_bytes().to_vec()),
+            ("a.png".to_string(), Vec::new()),
+            ("site.js".to_string(), b"document.documentElement.dataset.os = \"mac\";".to_vec()),
+        ])
+    }
+
+    fn problems_of(body: &str) -> Vec<String> {
+        let repo = repo();
+        problems(&site(body, CSS), &facts(&repo))
+    }
+
+    #[test]
+    fn a_page_of_resolving_links_and_its_rows_is_green() {
+        let body = "<img src=\"a.png\" srcset=\"a.png 1x, /Trawler/a.png 2x\"><a href=\"#top\">t</a>\
+                    <a href=\"https://lesslucifer.github.io/Trawler/\">home</a>\
+                    <link rel=\"canonical\" href=\"https://lesslucifer.github.io/Trawler/\">\
+                    <a href=\"https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install\">i</a>";
+        assert_eq!(problems_of(body), Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_link_that_misses_the_site_or_the_tree_is_red() {
+        for (body, needle) in [
+            ("<img src=\"b.png\">", "no b.png"),
+            ("<a href=\"#gone\">x</a>", "no id=\"gone\""),
+            ("<a href=\"../x.html\">x</a>", "leaves the site"),
+            ("<a href=\"/other/\">x</a>", "outside /Trawler/"),
+            ("<a href=\"https://example.com/\">x</a>", "goes outside"),
+            ("<a href=\"https://github.com/lesslucifer/TrawlerX\">x</a>", "goes outside"),
+            (
+                "<a href=\"https://github.com/lesslucifer/Trawler/blob/main/NOPE.md\">x</a>",
+                "no NOPE.md",
+            ),
+            (
+                "<a href=\"https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#nope\">x</a>",
+                "no heading #nope",
+            ),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+    }
+
+    #[test]
+    fn any_request_outside_the_site_or_markup_the_csp_blocks_is_red() {
+        for (body, needle) in [
+            ("<img src=\"https://x.test/a.png\">", "outside the site"),
+            ("<img srcset=\"a.png 1x, //x.test/a.png 2x\">", "outside the site"),
+            ("<img src=\"data:image/png;base64,AA\">", "outside the site"),
+            ("<link rel=\"icon\" href=\"https://x.test/f.svg\">", "loads from outside"),
+            ("<LINK rel=\"stylesheet\" href=\"https://x.test/s.css\">", "loads from outside"),
+            ("<script src=\"a.js\"></script>", "site.js"),
+            ("<iframe></iframe>", "<iframe"),
+            ("<form></form>", "<form"),
+            ("<p style=\"color:red\">x</p>", "style attribute"),
+            ("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src *\">", "CSP"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        let repo = repo();
+        let mut files = site("", CSS);
+        files.insert("index.html".to_string(), page("").replace(CSP, "").into_bytes());
+        assert!(problems(&files, &facts(&repo)).iter().any(|p| p.contains("CSP")));
+    }
+
+    #[test]
+    fn an_attribute_in_another_case_or_quoting_is_still_held() {
+        for (body, needle) in [
+            ("<img SRC=\"https://x.test/a.png\">", "outside the site"),
+            ("<a HREF=\"https://x.test/\">x</a>", "goes outside"),
+            ("<img src='https://x.test/a.png'>", "outside the site"),
+            ("<img src=https://x.test/a.png>", "outside the site"),
+            ("<a href = \"https://x.test/\">x</a>", "goes outside"),
+            ("<img srcset='a.png 1x, https://x.test/b.png 2x'>", "outside the site"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        let repo = repo();
+        let found = problems(
+            &site("", &format!("{CSS}body {{ background: URL(https://x.test/a.png) }}")),
+            &facts(&repo),
+        );
+        assert!(found.iter().any(|p| p.contains("outside the site")), "{found:?}");
+        let found = problems(&site("", &format!("{CSS}@IMPORT \"x.css\";")), &facts(&repo));
+        assert!(found.iter().any(|p| p.contains("@import")), "{found:?}");
+    }
+
+    #[test]
+    fn a_url_glued_to_another_attribute_or_in_any_other_attribute_or_css_string_is_red() {
+        for body in [
+            "<img alt=\"x\"src=\"https://x.test/a.png\">",
+            "<img/src=\"https://x.test/a.png\">",
+            "<img alt=\"x\"src=\"//x.test/a.png\">",
+            "<video poster=\"//x.test/p.png\"></video>",
+            "<a href=\"#top\" ping=\"https://x.test/\">x</a>",
+            "<p>see https://x.test/</p>",
+            "<meta property=\"og:image\" content=\"https://x.test/s.png\">",
+        ] {
+            assert!(!problems_of(body).is_empty(), "{body}");
+        }
+        let body =
+            "<meta property=\"og:image\" content=\"https://lesslucifer.github.io/Trawler/a.png\">";
+        assert_eq!(problems_of(body), Vec::<String>::new());
+        let repo = repo();
+        for css in [
+            "body { background: image-set(\"https://x.test/a.png\" 1x) }",
+            "body { background: -webkit-image-set('//x.test/a.png' 1x) }",
+        ] {
+            let found = problems(&site("", &format!("{CSS}{css}")), &facts(&repo));
+            assert!(found.iter().any(|p| p.contains("outside the site")), "{css}: {found:?}");
+        }
+    }
+
+    #[test]
+    fn the_one_script_is_site_js_by_src_with_no_inline_code() {
+        for body in [
+            "<script src=\"site.js\" defer></script>",
+            "<script src=\"/Trawler/site.js\"></script>",
+        ] {
+            assert_eq!(problems_of(body), Vec::<String>::new(), "{body}");
+        }
+        for (body, needle) in [
+            ("<script>alert(1)</script>", "site.js"),
+            ("<SCRIPT src=\"site.js\">alert(1)</SCRIPT>", "inline"),
+            ("<button onclick=\"go()\">x</button>", "onclick"),
+            ("<img src=\"a.png\" ONLOAD=\"go()\">", "onload"),
+            ("<meta http-equiv=\"refresh\" content=\"0;url=https:x.test\">", "refresh"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        assert_eq!(problems_of("<p>Turn it on: one = two.</p>"), Vec::<String>::new());
+        let repo = repo();
+        let mut files = site("", CSS);
+        files.insert("more.js".to_string(), Vec::new());
+        assert!(problems(&files, &facts(&repo)).iter().any(|p| p.contains("more.js")));
+    }
+
+    #[test]
+    fn site_js_reaches_no_network_storage_or_eval_and_stays_small() {
+        let benign = "const os = navigator.userAgentData?.platform ?? navigator.platform;\n\
+                      // important: the page works without this\n\
+                      document.querySelector(`[data-os]`)?.classList.add(\"mine\");";
+        assert_eq!(script_problems("site.js", benign), Vec::<String>::new());
+        for code in [
+            "fetch('/x')",
+            "new XMLHttpRequest()",
+            "new WebSocket(u)",
+            "navigator.sendBeacon(u)",
+            "new EventSource(u)",
+            "import('./x.js')",
+            "import x from './x.js'",
+            "eval(s)",
+            "new Function(s)",
+            "document.cookie = 'a=b'",
+            "localStorage.setItem('a', 'b')",
+            "sessionStorage.a = 1",
+            "indexedDB.open('a')",
+            "navigator.serviceWorker.register('s.js')",
+            "new Worker('w.js')",
+            "img.src = 'https://x.test/p.png'",
+        ] {
+            assert!(!script_problems("site.js", code).is_empty(), "{code}");
+        }
+        let big = format!("const a = \"{}\";", "x".repeat(SCRIPT_BUDGET));
+        assert!(script_problems("site.js", &big)[0].contains("bytes"));
+    }
+
+    #[test]
+    fn an_address_by_scheme_alone_a_download_the_release_lacks_or_a_missing_og_file_is_red() {
+        for body in [
+            "<a href=\"#top\" ping=\"https:x.test\">x</a>",
+            "<video poster=\"http:x.test/p.png\"></video>",
+            "<meta property=\"og:image\" content=\"https://lesslucifer.github.io/Trawler/nope.png\">",
+        ] {
+            assert!(!problems_of(body).is_empty(), "{body}");
+        }
+        let fake = format!(
+            "<a href=\"{SOURCE}/releases/download/v0.1.0/Trawler_9.9.9_x64-setup.exe\">x</a>"
+        );
+        let found = problems_of(&fake);
+        assert!(found.iter().any(|p| p.contains("no file of v0.1.0")), "{found:?}");
+    }
+
+    #[test]
+    fn the_csp_must_head_the_page_where_the_browser_applies_it() {
+        let repo = repo();
+        let moved = |page: String| {
+            let mut files = site("", CSS);
+            files.insert("index.html".to_string(), page.into_bytes());
+            problems(&files, &facts(&repo))
+        };
+        let commented = page("").replace(CSP, &format!("<!-- {CSP} -->"));
+        let in_body = page("")
+            .replacen(CSP, "", 1)
+            .replace("<body id=\"top\">", &format!("<body id=\"top\">{CSP}"));
+        let after_link =
+            page("").replacen(CSP, "", 1).replace("site.css\">", &format!("site.css\">{CSP}"));
+        for page in [commented, in_body, after_link] {
+            let found = moved(page.clone());
+            assert!(found.iter().any(|p| p.contains("CSP")), "{page}: {found:?}");
+        }
+        let prefixed =
+            format!("<!DOCTYPE html><html lang=\"en\"><meta charset=\"utf-8\">{}", page(""));
+        assert_eq!(moved(prefixed), Vec::<String>::new());
+    }
+
+    #[test]
+    fn only_pages_styles_the_script_and_images_ship_and_an_svg_runs_nothing() {
+        let repo = repo();
+        for (name, bytes) in [
+            ("x.htm", "<p>x</p>"),
+            ("x.xhtml", "<p>x</p>"),
+            ("x.mjs", "fetch('/')"),
+            ("x.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>"),
+            ("y.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" onload=\"go()\"></svg>"),
+            ("z.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"><image href=\"https://x.test/a.png\"/></svg>"),
+        ] {
+            let mut files = site("", CSS);
+            files.insert(name.to_string(), bytes.as_bytes().to_vec());
+            let found = problems(&files, &facts(&repo));
+            assert!(found.iter().any(|p| p.starts_with(name)), "{name}: {found:?}");
+        }
+        let mut files = site("", CSS);
+        let favicon = std::fs::read(repo.join("ui/public/favicon.svg")).unwrap();
+        files.insert("favicon.svg".to_string(), favicon);
+        assert_eq!(problems(&files, &facts(&repo)), Vec::<String>::new());
+    }
+
+    #[test]
+    fn an_attribute_is_judged_by_its_tag_not_by_prose() {
+        for (body, needle) in [
+            ("<p title=\"x\"style=\"color:red\">x</p>", "style"),
+            ("<meta http-equiv='refresh' content='0'>", "refresh"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        for body in [
+            "<p>Set style= in your CSS.</p>",
+            "<link rel=\"icon\" href=\"https://lesslucifer.github.io/Trawler/a.png\">",
+        ] {
+            assert_eq!(problems_of(body), Vec::<String>::new(), "{body}");
+        }
+    }
+
+    #[test]
+    fn a_tag_is_read_with_its_quotes() {
+        for (body, needle) in [
+            ("<img alt=\"a > b\" onerror=\"go()\" src=\"a.png\">", "onerror"),
+            ("<img alt='a > b' src=\"https://x.test/a.png\">", "outside the site"),
+            ("<base href=\"https://github.com/lesslucifer/Trawler/\">", "<base>"),
+            ("<script src=\"site.js\"></script><script src=\"site.js\"></script>", "one <script>"),
+            ("<a href=\"https://github.com/lesslucifer/Trawler/../Other\">x</a>", "leaves"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        for body in [
+            "<meta name=\"description\" content=\"Press one=two, style=dark\">",
+            "<a href=\"https://github.com/lesslucifer/Trawler/releases/latest?only=1&amp;style=x\">x</a>",
+            "<a href=\"https://github.com/lesslucifer/Trawler/blob/main/README.md?plain=1#install\">x</a>",
+            "<p>a < b and c > d</p>",
+        ] {
+            assert_eq!(problems_of(body), Vec::<String>::new(), "{body}");
+        }
+    }
+
+    #[test]
+    fn a_rule_or_setext_underline_is_outside_the_subset() {
+        for lines in [&["One", "---"][..], &["One", "==="], &["- - -"], &["* * *"]] {
+            assert!(render(lines, BLOB).is_err(), "{lines:?}");
+        }
+    }
+
+    #[test]
+    fn markup_a_browser_reads_otherwise_than_the_checks_is_refused() {
+        for (body, needle) in [
+            ("<!-- x --!> <a href=\"https://x.test/\">y</a> -->", "comment"),
+            ("<!x a=\"><a href='https://x.test/'>go</a><!x b=\">", "<!x"),
+            ("<?x a=\"><a href='https://x.test/'>go</a>\"?>", "<?"),
+            ("</ a=\"><a href='https://x.test/'>go</a>\">", "</"),
+            ("</p class=\"x\">", "end tag"),
+            ("<title><!-- </title><a href=https://x.test/>", "x.test"),
+            ("<textarea></textarea><a href=\"https://x.test/\">x</a>", "x.test"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+    }
+
+    #[test]
+    fn the_guide_link_and_an_anchor_are_real_tags() {
+        let repo = repo();
+        let mut files = site("", CSS);
+        let guide = format!("{SOURCE}/blob/main/GUIDE.md");
+        let page = page("").replacen(
+            &format!("<a href=\"{guide}\">g</a>"),
+            &format!("<p data-x=\"href=&quot;{guide}&quot;\">g</p>"),
+            1,
+        );
+        files.insert("index.html".to_string(), page.into_bytes());
+        assert!(problems(&files, &facts(&repo)).iter().any(|p| p.contains("no link to the guide")));
+        let found = problems_of("<p data-id=\"gone\">x</p><a href=\"#gone\">x</a>");
+        assert!(found.iter().any(|p| p.contains("no id=\"gone\"")), "{found:?}");
+    }
+
+    #[test]
+    fn an_encoded_or_escaping_address_is_red_and_a_colon_in_a_query_is_not() {
+        for body in [
+            "<a href=\"#top\" ping=\"&#104;ttps:&#47;&#47;x.test\">x</a>",
+            "<a href=\"#top\" ping=\"ht\ttps://x.test\">x</a>",
+            "<a href=\"https://github.com/lesslucifer/Trawler/issues/%2e%2e/%2E%2E/other\">x</a>",
+            "<a href=\"https://github.com/lesslucifer/Trawler/blob/main/x\\..\\..\\other\">x</a>",
+        ] {
+            assert!(!problems_of(body).is_empty(), "{body}");
+        }
+        assert_eq!(problems_of("<a href=\"index.html?t=12:30#top\">x</a>"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_light_token_after_the_dark_block_overrides_it_too() {
+        let css = ":root { --bg: #ffffff; --text: #000000; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000000; --text: #ffffff; } }\n:root { --text: #111111; }";
+        let found = contrast_problems("s.css", css);
+        assert!(found.iter().any(|p| p.contains("dark: --text #111111")), "{found:?}");
+    }
+
+    #[test]
+    fn the_page_subset_leaves_a_browser_no_other_reading() {
+        for (body, needle) in [
+            (
+                "<meta http-equiv=\"re&#102resh\" content=\"0;url=&#104ttps:&#47&#47x.test\">",
+                "character reference",
+            ),
+            ("<p>&nbsp;&copy</p>", "character reference"),
+            ("<a x=1\u{a0}y=\"><img src=//x.test/a.png>\">x</a>", "x.test"),
+            (
+                "<noscript><a href=\"</noscript><img src=//x.test/a.png>\">x</a></noscript>",
+                "<noscript>",
+            ),
+            ("<svg><title><img src=//x.test/a.png></title></svg>", "<svg>"),
+            ("<xmp></xmp>", "<xmp>"),
+            (
+                "<a href=\"#top\" title=\"java\tscript:x\" data-x=\"\u{1}javascript:go()\">x</a>",
+                "javascript:",
+            ),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        assert_eq!(
+            problems_of("<p>Fish &amp; chips &lt;3 &quot;q&quot; &gt;</p>"),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn a_css_comment_or_an_in_page_reference_is_read_as_a_browser_does() {
+        let repo = repo();
+        let css = format!("{CSS}/*/ x */ body {{ filter: url(#blur) }}");
+        assert_eq!(problems(&site("", &css), &facts(&repo)), Vec::<String>::new());
+        let css = format!("{CSS}/*/ x */ body {{ background: url(https://x.test/a.png) }}");
+        assert!(!problems(&site("", &css), &facts(&repo)).is_empty(), "{css}");
+    }
+
+    #[test]
+    fn text_before_the_csp_ends_the_head_and_is_red() {
+        let repo = repo();
+        for prefix in ["<html><head>x", "<!DOCTYPE html>junk<html><head>"] {
+            let mut files = site("", CSS);
+            let page =
+                page("").replacen("<head>", "", 1).replacen(CSP, &format!("{prefix}{CSP}"), 1);
+            files.insert("index.html".to_string(), page.clone().into_bytes());
+            let found = problems(&files, &facts(&repo));
+            assert!(found.iter().any(|p| p.contains("CSP")), "{page}: {found:?}");
+        }
+    }
+
+    #[test]
+    fn an_svg_holds_only_drawing_elements() {
+        let repo = repo();
+        for svg in [
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><title><script>alert(1)</script></title></svg>",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><x:script xmlns:x=\"http://www.w3.org/2000/svg\">alert(1)</x:script></svg>",
+            "<?xml-stylesheet href=\"https://x.test/s.css\"?><svg xmlns=\"http://www.w3.org/2000/svg\"></svg>",
+            "<!DOCTYPE svg [<!ENTITY x \"y\">]><svg xmlns=\"http://www.w3.org/2000/svg\">&x;</svg>",
+        ] {
+            let mut files = site("", CSS);
+            files.insert("x.svg".to_string(), svg.as_bytes().to_vec());
+            let found = problems(&files, &facts(&repo));
+            assert!(found.iter().any(|p| p.starts_with("x.svg")), "{svg}: {found:?}");
+        }
+        let mut files = site("", CSS);
+        let declared = "<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\"><g><path d=\"M0 0\"/></g></svg>";
+        files.insert("x.svg".to_string(), declared.as_bytes().to_vec());
+        assert_eq!(problems(&files, &facts(&repo)), Vec::<String>::new());
+    }
+
+    #[test]
+    fn an_address_is_read_as_a_url_parser_reads_it() {
+        let found =
+            problems_of("<a href=\"https://github.com/lesslucifer/Trawler/.\t./evil/x\">x</a>");
+        assert!(found.iter().any(|p| p.contains("leaves")), "{found:?}");
+        assert_eq!(
+            problems_of("<script src=\"https://lesslucifer.github.io/Trawler/site.js\"></script>"),
+            Vec::<String>::new()
+        );
+        assert_eq!(
+            problems_of(
+                "<img src=\"a.png\" alt=\"JavaScript: tips a </ b\" title=\"javascript:\">"
+            ),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn a_stylesheet_escapes_nothing_and_its_tokens_read_as_a_browser_does() {
+        let repo = repo();
+        let escaped = format!("{CSS}@\\69mport \"https:\\2f\\2fx.test/x.css\";");
+        assert!(problems(&site("", &escaped), &facts(&repo)).iter().any(|p| p.contains("escape")));
+        let css = ":root { --bg: #ffffff !important; --text: #000000; }\n@media (prefers-color-scheme:dark) { :root { --bg: #000000; --text: #ffffff; } }";
+        assert_eq!(contrast_problems("s.css", css), Vec::<String>::new());
+    }
+
+    #[test]
+    fn css_may_load_only_files_of_the_site() {
+        let repo = repo();
+        for (css, needle) in [
+            ("@import \"x.css\";", "@import"),
+            ("body { background: url(https://x.test/a.png) }", "outside the site"),
+            ("body { background: url('b.png') }", "no b.png"),
+        ] {
+            let found = problems(&site("", &format!("{CSS}{css}")), &facts(&repo));
+            assert!(found.iter().any(|p| p.contains(needle)), "{css}: {found:?}");
+        }
+        assert_eq!(
+            problems(
+                &site("", &format!("{CSS}body {{ background: url(\"a.png\") }}")),
+                &facts(&repo)
+            ),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn a_denied_name_or_a_missing_guide_link_is_red() {
+        assert!(problems_of("<p>Like Charles.</p>").iter().any(|p| p.contains("names charles")));
+        let repo = repo();
+        let mut files = site("", CSS);
+        let page = page("").replace(&format!("{SOURCE}/blob/main/GUIDE.md\""), "#top\"");
+        files.insert("index.html".to_string(), page.into_bytes());
+        assert!(problems(&files, &facts(&repo)).iter().any(|p| p.contains("no link to the guide")));
+    }
+
+    #[test]
+    fn download_rows_off_by_a_kind_or_a_tag_are_red() {
+        let repo = repo();
+        let mut files = site("", CSS);
+        let msi = "Trawler_0.1.0_arm64_en-US.msi";
+        let page = page("")
+            .replace(&format!("<a href=\"{SOURCE}/releases/download/v0.1.0/{msi}\">x</a>"), "");
+        files.insert("index.html".to_string(), page.into_bytes());
+        let found = problems(&files, &facts(&repo));
+        assert!(found.iter().any(|p| p.contains("lack [\"msi-arm64\"]")), "{found:?}");
+        let found =
+            problems_of(&format!("<a href=\"{SOURCE}/releases/download/v0.0.9/{msi}\">x</a>"));
+        assert!(found.iter().any(|p| p.contains("not a v0.1.0 download")), "{found:?}");
+    }
+
+    #[test]
+    fn contrast_is_held_in_both_themes_and_dark_inherits_what_it_keeps() {
+        assert!((contrast([0, 0, 0], [255, 255, 255]) - 21.0).abs() < 1e-9);
+        assert_eq!(hex_colour("#fa0"), Some([255, 170, 0]));
+        assert_eq!(contrast_problems("s.css", CSS), Vec::<String>::new());
+        let light_fail = ":root { --bg: #ffffff; --text: #777777; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000000; } }";
+        let found = contrast_problems("s.css", light_fail);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("s.css light: --text #777777 on --bg #ffffff is 4.48:1"),
+            "{found:?}"
+        );
+        let dark_fail = ":root { --bg: #ffffff; --text: #000000; --text-mute: #595959; }\n/* x */ @media (prefers-color-scheme: dark) { :root { --bg: #444444; --text: #ffffff; } }";
+        let found = contrast_problems("s.css", dark_fail);
+        assert!(found.len() == 1 && found[0].contains("dark: --text-mute #595959"), "{found:?}");
+        assert!(contrast_problems("s.css", ":root { --bg: #fff; --text: #000; }")[0]
+            .contains("no @media"));
+        assert!(contrast_problems("s.css", ":root { --bg: white; --text: #000; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000; --text: #fff; } }")
+            .iter()
+            .any(|p| p.contains("no #hex")));
+    }
+
+    #[test]
+    fn the_site_frame_names_no_other_tool() {
+        let frame = repo().join(FRAME);
+        let named: Vec<String> = std::fs::read_dir(&frame)
+            .unwrap()
+            .flatten()
+            .flat_map(|entry| {
+                let text = std::fs::read_to_string(entry.path()).unwrap_or_default();
+                public_text::denied_names(&entry.file_name().to_string_lossy(), &text)
+            })
+            .collect();
+        assert!(named.is_empty(), "{named:?}");
+    }
+
+    #[test]
+    fn site_build_is_documented() {
+        assert!(crate::USAGE.contains("cargo xtask site build --release <json> --out <dir>"));
+    }
+
+    #[test]
+    fn an_extra_or_missing_argument_is_usage() {
+        let repo = repo();
+        for args in [
+            &["build", "--release", "r.json"][..],
+            &["build", "--release", "r", "--out", "o", "x"],
+            &["make"],
+        ] {
+            assert_eq!(run(args, &repo).unwrap_err(), crate::USAGE, "{args:?}");
+        }
+    }
+}

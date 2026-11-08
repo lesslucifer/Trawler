@@ -14,6 +14,7 @@ mod mr;
 mod notes_write;
 mod preflight;
 mod release_workflow;
+mod site;
 mod tally;
 mod target_isolation;
 mod ui;

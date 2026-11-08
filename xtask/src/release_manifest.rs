@@ -5,13 +5,14 @@ use serde_json::{json, Map, Value};
 
 const TEMPLATE: &str = ".github/release-notes.md";
 const CHANGELOG: &str = "CHANGELOG.md";
+pub(crate) const CHECKSUMS: &str = "SHA256SUMS";
 const ARCHS: [&str; 2] = ["x86_64", "aarch64"];
 
 fn has(name: &str, suffix: &str) -> bool {
     name.ends_with(suffix)
 }
 
-fn arch_of(name: &str) -> Result<&'static str, String> {
+pub(crate) fn arch_of(name: &str) -> Result<&'static str, String> {
     if name.contains("aarch64") || name.contains("arm64") {
         Ok("aarch64")
     } else if name.contains("x86_64") || name.contains("x64") || name.contains("amd64") {
@@ -187,7 +188,7 @@ pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let latest = manifest(&release, &assets)?;
     let sums = checksums(dist, &assets)?;
     let text = serde_json::to_string_pretty(&latest).map_err(|e| e.to_string())?;
-    std::fs::write(dist.join("SHA256SUMS"), sums).map_err(|e| e.to_string())?;
+    std::fs::write(dist.join(CHECKSUMS), sums).map_err(|e| e.to_string())?;
     std::fs::write(dist.join("latest.json"), text).map_err(|e| e.to_string())?;
     std::fs::write(dist.join("notes.md"), &notes).map_err(|e| e.to_string())?;
     Ok((0, format!("wrote latest.json, notes.md and SHA256SUMS for {tag} in {}", dist.display())))

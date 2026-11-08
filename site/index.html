@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Trawler — {{pitch}}</title>
+  <meta name="description" content="{{pitch}}">
+  <link rel="canonical" href="{{base}}">
+  <meta property="og:title" content="Trawler">
+  <meta property="og:description" content="{{pitch}}">
+  <meta property="og:url" content="{{base}}">
+  <meta property="og:image" content="{{base}}social-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="site.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <main id="main">
+    <h1>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="wordmark-dark.png">
+        <img alt="Trawler" src="wordmark-light.png" width="370" height="96">
+      </picture>
+    </h1>
+    <p class="pitch">{{pitch}}</p>
+    <p>{{sub}}</p>
+    <img alt="Trawler's main window: the list of captured requests, one JSON response open in the inspector" src="s1-main-window.png" width="1440" height="800">
+
+    <h2 id="download">Download Trawler {{version}}</h2>
+    <ul>
+      <li>macOS 11 or later · Apple Silicon and Intel: <a href="{{href:dmg-universal}}">{{file:dmg-universal}}</a></li>
+      <li>Windows x64: <a href="{{href:nsis-x64}}">{{file:nsis-x64}}</a> · <a href="{{href:msi-x64}}">{{file:msi-x64}}</a></li>
+      <li>Windows arm64: <a href="{{href:nsis-arm64}}">{{file:nsis-arm64}}</a> · <a href="{{href:msi-arm64}}">{{file:msi-arm64}}</a></li>
+      <li>Linux x64: <a href="{{href:appimage-x64}}">{{file:appimage-x64}}</a> · <a href="{{href:deb-x64}}">{{file:deb-x64}}</a> · <a href="{{href:rpm-x64}}">{{file:rpm-x64}}</a></li>
+      <li>Linux arm64: <a href="{{href:appimage-arm64}}">{{file:appimage-arm64}}</a> · <a href="{{href:deb-arm64}}">{{file:deb-arm64}}</a> · <a href="{{href:rpm-arm64}}">{{file:rpm-arm64}}</a></li>
+    </ul>
+    <p>First open: <a href="{{guide}}#install">the guide</a>. Every file: <a href="{{latest}}">the latest release</a>. Check your download: <a href="{{sha256sums}}">SHA256SUMS</a>.</p>
+
+    <h2 id="features">What you can do</h2>
+    {{features}}
+
+    <h2 id="privacy">Privacy</h2>
+    {{privacy}}
+    <p><a href="{{source}}/blob/main/PRIVACY.md">PRIVACY.md</a></p>
+  </main>
+  <footer>
+    <a href="{{guide}}">Guide</a> · <a href="{{source}}/blob/main/CHANGELOG.md">Changelog</a> · <a href="{{source}}">Source</a> · <a href="{{release}}">Release notes</a>
+  </footer>
+</body>
+</html>
