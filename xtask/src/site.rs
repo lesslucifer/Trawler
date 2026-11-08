@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use crate::package::Os;
 use crate::public_text;
+use crate::release_manifest::CHECKSUMS;
 use crate::walkthrough::escape;
 
 pub const BASE_URL: &str = "https://lesslucifer.github.io/Trawler/";
@@ -21,13 +22,13 @@ pub const ASSETS: [(&str, &str); 5] = [
     (".github/screenshots/s1-main-window.png", "s1-main-window.png"),
 ];
 const LINKS: &str = "ui/src-tauri/src/links.rs";
-const CHECKSUMS: &str = "SHA256SUMS";
 const SYSTEMS: [Os; 3] = [Os::MacOs, Os::Windows, Os::Linux];
 const MIN_CONTRAST: f64 = 4.5;
 const DARK: &str = "@media (prefers-color-scheme: dark)";
 const REFUSED_TAGS: [&str; 6] = ["iframe", "form", "object", "embed", "style", "base"];
 const SHIPPED_KINDS: [&str; 8] = ["html", "css", "js", "svg", "png", "jpg", "webp", "ico"];
-const HEAD_BEFORE_CSP: [&str; 4] = ["!doctype", "html", "head", "meta"];
+const HEAD_BEFORE_CSP: [&str; 3] = ["html", "head", "meta"];
+const RAW_TEXT: [&str; 4] = ["script", "style", "title", "textarea"];
 const SCRIPT_REFUSES: [&str; 18] = [
     "fetch",
     "XMLHttpRequest",
@@ -458,7 +459,7 @@ fn css_urls(css: &str) -> Vec<&str> {
 
 fn is_absolute(target: &str) -> bool {
     target.starts_with("//")
-        || target.split(['/', '#']).next().is_some_and(|head| head.contains(':'))
+        || target.split(['/', '?', '#']).next().is_some_and(|head| head.contains(':'))
 }
 
 fn unescaped(attribute: &str) -> String {
@@ -471,6 +472,7 @@ fn unescaped(attribute: &str) -> String {
 
 fn resolve(files: &BTreeMap<String, Vec<u8>>, from: &str, target: &str) -> Result<String, String> {
     let (path, anchor) = target.split_once('#').unwrap_or((target, ""));
+    let path = path.split('?').next().unwrap_or(path);
     let joined = if path.is_empty() {
         PathBuf::from(from)
     } else if let Some(from_root) = path.strip_prefix(base_path()) {
@@ -494,7 +496,10 @@ fn resolve(files: &BTreeMap<String, Vec<u8>>, from: &str, target: &str) -> Resul
         name = format!("{name}{}index.html", if name.is_empty() { "" } else { "/" });
     }
     let file = files.get(&name).ok_or(format!("{from}: {target} (no {name} in the site)"))?;
-    if !anchor.is_empty() && !String::from_utf8_lossy(file).contains(&format!("id=\"{anchor}\"")) {
+    let text = String::from_utf8_lossy(file);
+    let named =
+        || parse(&text).0.iter().any(|tag| tag.get("id").is_some_and(|id| unescaped(id) == anchor));
+    if !anchor.is_empty() && !named() {
         return Err(format!("{from}: {target} (no id=\"{anchor}\" in {name})"));
     }
     Ok(name)
@@ -536,22 +541,36 @@ fn parse(html: &str) -> (Vec<Tag<'_>>, Vec<&str>) {
     while let Some(open) = html[at..].find('<').map(|found| at + found) {
         text.push(&html[at..open]);
         let rest = &html[open + 1..];
-        if rest.starts_with("!--") {
-            at = rest.find("-->").map_or(html.len(), |end| open + 1 + end + 3);
+        let after = |skipped: usize| html.len() - rest[skipped..].len();
+        if let Some(comment) = rest.strip_prefix("!--") {
+            let end = [comment.find("-->").map(|e| e + 3), comment.find("--!>").map(|e| e + 4)]
+                .into_iter()
+                .flatten()
+                .min();
+            at = end.map_or(html.len(), |end| after(3 + end));
             continue;
         }
-        if !rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '/' || c == '!') {
+        let bogus = rest.starts_with(['!', '?'])
+            || (rest.starts_with('/') && !rest[1..].starts_with(|c: char| c.is_ascii_alphabetic()));
+        if bogus {
+            at = rest.find('>').map_or(html.len(), |end| after(end + 1));
+            continue;
+        }
+        if !rest.starts_with(|c: char| c.is_ascii_alphabetic() || c == '/') {
             text.push("<");
             at = open + 1;
             continue;
         }
         let (mut tag, end) = read_tag(html, open + 1);
         at = end;
-        if tag.name == "script" || tag.name == "style" {
+        if RAW_TEXT.contains(&tag.name.as_str()) {
             let closing = format!("</{}", tag.name);
             let body =
                 html[at..].to_ascii_lowercase().find(&closing).map_or(html.len(), |end| at + end);
             tag.raw = &html[at..body];
+            if tag.name == "title" || tag.name == "textarea" {
+                text.push(tag.raw);
+            }
             at = body;
         }
         tags.push(tag);
@@ -602,7 +621,43 @@ fn csp_policy() -> &'static str {
     CSP.split_once("content=\"").and_then(|(_, rest)| rest.strip_suffix("\">")).unwrap_or(CSP)
 }
 
+/// Markup the checks skip as a browser does but would rather not guess at:
+/// comments, declarations other than the doctype, processing instructions,
+/// malformed or attributed end tags.
+fn misread_markup(name: &str, html: &str, tags: &[Tag<'_>]) -> Vec<String> {
+    let lower = html.to_ascii_lowercase();
+    let mut problems = Vec::new();
+    if lower.contains("<!--") {
+        problems.push(format!("{name}: a comment"));
+    }
+    for (at, _) in lower.match_indices('<') {
+        let rest = &lower[at + 1..];
+        let declaration =
+            rest.starts_with('!') && !rest.starts_with("!--") && !rest.starts_with("!doctype");
+        let bogus_end =
+            rest.starts_with('/') && !rest[1..].starts_with(|c: char| c.is_ascii_alphabetic());
+        if declaration || rest.starts_with('?') || bogus_end {
+            let markup: String = html[at..].chars().take_while(|c| *c != '>').take(24).collect();
+            problems.push(format!("{name}: markup a browser reads as a comment: {markup}"));
+        }
+    }
+    for tag in tags.iter().filter(|tag| tag.name.starts_with('/') && !tag.attributes.is_empty()) {
+        problems.push(format!("{name}: an end tag with attributes <{}>", tag.name));
+    }
+    problems
+}
+
+fn encodes_beyond_the_four(value: &str) -> bool {
+    value.match_indices('&').any(|(at, _)| {
+        let rest = &value[at + 1..];
+        let length =
+            rest.find(|c: char| !c.is_ascii_alphanumeric() && c != '#').unwrap_or(rest.len());
+        rest[length..].starts_with(';') && !["amp", "quot", "lt", "gt"].contains(&&rest[..length])
+    })
+}
+
 fn names_an_address(value: &str) -> bool {
+    let value: String = value.chars().filter(|c| !matches!(c, '\t' | '\n' | '\r')).collect();
     let value = value.to_ascii_lowercase();
     value.contains("//") || value.contains("http:") || value.contains("https:")
 }
@@ -665,6 +720,7 @@ fn html_problems(
 ) -> Vec<String> {
     let (tags, text) = parse(html);
     let mut problems = tag_problems(name, &tags, &REFUSED_TAGS);
+    problems.extend(misread_markup(name, html, &tags));
     let csp: Vec<usize> = (0..tags.len())
         .filter(|at| {
             tags[*at].name == "meta"
@@ -704,6 +760,9 @@ fn html_problems(
     };
     for tag in &tags {
         for (attribute, value) in &tag.attributes {
+            if encodes_beyond_the_four(value) {
+                problems.push(format!("{name}: an encoded character in {attribute}=\"{value}\""));
+            }
             let value = unescaped(value);
             match attribute.as_str() {
                 "src" => request(&value, &mut problems),
@@ -755,7 +814,8 @@ fn navigation_problems(
     else {
         return vec![format!("{name}: {href} goes outside {source}")];
     };
-    if tail.split(['/', '?', '#']).any(|segment| segment == ".." || segment == ".") {
+    let escapes = tail.contains('\\') || tail.to_ascii_lowercase().contains("%2e");
+    if escapes || tail.split(['/', '?', '#']).any(|segment| segment == ".." || segment == ".") {
         return vec![format!("{name}: {href} leaves {source}")];
     }
     if href.starts_with(&format!("{source}/releases/download/")) {
@@ -829,10 +889,12 @@ pub fn contrast(a: [u8; 3], b: [u8; 3]) -> f64 {
 
 type Tokens = BTreeMap<String, String>;
 
-/// The custom properties of the top-level `:root` and of the dark scheme's `:root`.
-pub fn themes(css: &str) -> (Tokens, Tokens) {
+/// The custom properties each scheme ends with, in cascade order: a top-level
+/// `:root` sets both, the dark scheme's `:root` only dark; `None` without one.
+pub fn themes(css: &str) -> (Tokens, Option<Tokens>) {
     let mut light = Tokens::new();
     let mut dark = Tokens::new();
+    let mut dark_seen = false;
     let mut stack: Vec<String> = Vec::new();
     let mut text = String::new();
     let mut declare = |stack: &[String], text: &str| {
@@ -840,15 +902,21 @@ pub fn themes(css: &str) -> (Tokens, Tokens) {
         else {
             return;
         };
-        let theme = match outer {
-            [] => &mut light,
-            [media] if media == DARK => &mut dark,
-            _ => return,
-        };
-        if let Some((name, value)) = text.split_once(':') {
-            if name.trim().starts_with("--") {
-                theme.insert(name.trim().to_string(), value.trim().to_string());
+        let Some((name, value)) = text.split_once(':') else { return };
+        let (name, value) = (name.trim().to_string(), value.trim().to_string());
+        if !name.starts_with("--") {
+            return;
+        }
+        match outer {
+            [] => {
+                light.insert(name.clone(), value.clone());
+                dark.insert(name, value);
             }
+            [media] if media == DARK => {
+                dark_seen = true;
+                dark.insert(name, value);
+            }
+            _ => {}
         }
     };
     let css = strip_comments(css);
@@ -870,7 +938,7 @@ pub fn themes(css: &str) -> (Tokens, Tokens) {
             _ => text.push(c),
         }
     }
-    (light, dark)
+    (light, dark_seen.then_some(dark))
 }
 
 fn strip_comments(css: &str) -> String {
@@ -884,13 +952,12 @@ fn strip_comments(css: &str) -> String {
 }
 
 pub fn contrast_problems(file: &str, css: &str) -> Vec<String> {
-    let (light, dark_overrides) = themes(css);
+    let (light, dark) = themes(css);
     let mut problems = Vec::new();
-    if dark_overrides.is_empty() {
+    if dark.is_none() {
         problems.push(format!("{file}: no {DARK} :root theme"));
     }
-    let mut dark = light.clone();
-    dark.extend(dark_overrides);
+    let dark = dark.unwrap_or_else(|| light.clone());
     for (theme, tokens) in [("light", &light), ("dark", &dark)] {
         let colours = |prefix: &str| -> Vec<(&String, &String)> {
             tokens.iter().filter(|(name, _)| name.starts_with(prefix)).collect()
@@ -965,12 +1032,16 @@ pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<Str
             problems.extend(contrast_problems(name, text));
         }
     }
-    let index = files.get("index.html").map(|bytes| String::from_utf8_lossy(bytes));
-    let guide = escape(&facts.guide);
-    if !index.is_some_and(|html| {
-        html.contains(&format!("href=\"{guide}\"")) || html.contains(&format!("href=\"{guide}#"))
-    }) {
-        problems.push(format!("index.html: no link to the guide {}", facts.guide));
+    let guide = &facts.guide;
+    let links_the_guide = files.get("index.html").is_some_and(|bytes| {
+        let html = String::from_utf8_lossy(bytes);
+        parse(&html).0.iter().any(|tag| {
+            let href = tag.get("href").map(unescaped).unwrap_or_default();
+            tag.name == "a" && (href == *guide || href.starts_with(&format!("{guide}#")))
+        })
+    });
+    if !links_the_guide {
+        problems.push(format!("index.html: no link to the guide {guide}"));
     }
     problems.extend(download_problems(facts, &downloads));
     problems
@@ -1495,6 +1566,58 @@ mod tests {
         for lines in [&["One", "---"][..], &["One", "==="], &["- - -"], &["* * *"]] {
             assert!(render(lines, BLOB).is_err(), "{lines:?}");
         }
+    }
+
+    #[test]
+    fn markup_a_browser_reads_otherwise_than_the_checks_is_refused() {
+        for (body, needle) in [
+            ("<!-- x --!> <a href=\"https://x.test/\">y</a> -->", "comment"),
+            ("<!x a=\"><a href='https://x.test/'>go</a><!x b=\">", "<!x"),
+            ("<?x a=\"><a href='https://x.test/'>go</a>\"?>", "<?"),
+            ("</ a=\"><a href='https://x.test/'>go</a>\">", "</"),
+            ("</p class=\"x\">", "end tag"),
+            ("<title><!-- </title><a href=https://x.test/>", "x.test"),
+            ("<textarea></textarea><a href=\"https://x.test/\">x</a>", "x.test"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+    }
+
+    #[test]
+    fn the_guide_link_and_an_anchor_are_real_tags() {
+        let repo = repo();
+        let mut files = site("", CSS);
+        let guide = format!("{SOURCE}/blob/main/GUIDE.md");
+        let page = page("").replacen(
+            &format!("<a href=\"{guide}\">g</a>"),
+            &format!("<p data-x=\"href=&quot;{guide}&quot;\">g</p>"),
+            1,
+        );
+        files.insert("index.html".to_string(), page.into_bytes());
+        assert!(problems(&files, &facts(&repo)).iter().any(|p| p.contains("no link to the guide")));
+        let found = problems_of("<p data-id=\"gone\">x</p><a href=\"#gone\">x</a>");
+        assert!(found.iter().any(|p| p.contains("no id=\"gone\"")), "{found:?}");
+    }
+
+    #[test]
+    fn an_encoded_or_escaping_address_is_red_and_a_colon_in_a_query_is_not() {
+        for body in [
+            "<a href=\"#top\" ping=\"&#104;ttps:&#47;&#47;x.test\">x</a>",
+            "<a href=\"#top\" ping=\"ht\ttps://x.test\">x</a>",
+            "<a href=\"https://github.com/lesslucifer/Trawler/issues/%2e%2e/%2E%2E/other\">x</a>",
+            "<a href=\"https://github.com/lesslucifer/Trawler/blob/main/x\\..\\..\\other\">x</a>",
+        ] {
+            assert!(!problems_of(body).is_empty(), "{body}");
+        }
+        assert_eq!(problems_of("<a href=\"index.html?t=12:30#top\">x</a>"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn a_light_token_after_the_dark_block_overrides_it_too() {
+        let css = ":root { --bg: #ffffff; --text: #000000; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000000; --text: #ffffff; } }\n:root { --text: #111111; }";
+        let found = contrast_problems("s.css", css);
+        assert!(found.iter().any(|p| p.contains("dark: --text #111111")), "{found:?}");
     }
 
     #[test]
