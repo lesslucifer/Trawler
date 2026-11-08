@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af083d59f34851f0dfb1f73">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-VIKUNJA router-vikunja plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-VIKUNJA: Vikunja as the router↔owner surface</h1>
+      <p>Replaces the abandoned Obsidian-Kanban router surface (E-KANBAN) with a self-hosted Vikunja instance, after a retro and a tool survey ruled kanban columns out.</p>
+      <div class="meta">Draft v1 · 2026-11-08 · Trawler</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="why">Why this epic exists</h2>
+    <p>E-KANBAN stood up an Obsidian-Kanban board as the router↔owner interface. It worked mechanically, but
+    broke down on <b>task coordination</b>: column moves are a lossy signal (Done vs Approved had to be patched
+    after a near-miss), and card text can't carry comments/decisions without a side rule. Full retro:
+    <code>docs/.archive/kanban-router-retro.html</code> (once archived) — see the owner's own survey answers
+    there for the root complaint: "lost context/nuance" and "ambiguous signals."</p>
+    <p>A tool survey (Gitea/Forgejo, Vikunja, git-bug, Redmine, Huly, Plane — verified against primary docs, not
+    blog summaries) ranked <b>Vikunja</b> first: native reciprocal blocking/blocked-by task relations, comments on
+    the same object as the task, single-binary + bundled SQLite footprint, a real webhook system with typed
+    events, and an existing third-party MCP precedent for AI-driven updates.</p>
+
+    <h2 id="rulings">Owner's rulings (apply exactly)</h2>
+    <table>
+      <tr><th>Q</th><th>Decision</th></tr>
+      <tr><td>Mapping</td><td>One Vikunja project total. Each epic is a parent task; each WU is a subtask of its epic (Vikunja's parent/child relation). Blocking/blocked-by relations express sequencing and cross-epic dependencies on top of that hierarchy.</td></tr>
+      <tr><td>Needs-owner signal</td><td>Assignee + label, not a column/bucket. When something needs the owner: assign the task to the owner and add a <code>needs-owner</code> label. A saved filter ("assigned to me, open, needs-owner") is the owner's single "what needs me" view. A plain comment is not itself a signal — the label is the explicit, unambiguous marker (this directly fixes the Done/Approved ambiguity kanban hit).</td></tr>
+      <tr><td>Notifications</td><td>Real webhook receiver. Vikunja calls a small local HTTP listener on relevant events; the listener bridges to Telegram. Chosen over reusing the poll+Telegram pattern — lower latency, and it's the owner's explicit call despite being a new standing process to host.</td></tr>
+      <tr><td>Migration</td><td>Start clean. Only E-APIDOC (parked) and E-KANBAN's own close-out are live; create those fresh in Vikunja. The Issues Log and the retro stay as historical git/doc artifacts, not re-entered as tasks.</td></tr>
+    </table>
+
+    <div class="callout warn">
+      <b>Carry over from the kanban postmortem, don't re-litigate:</b> (1) "watch X" is a standing responsibility
+      from day one, not a per-ask action — the webhook listener needs the same immediate-relaunch + heartbeat
+      discipline the board watcher eventually got. (2) Detection ≠ prevention — the orphan-worktree check from
+      E-KANBAN.W4 is a pattern to port, not re-derive. (3) Verify board/task claims against real git/gate state
+      before asserting status in a report.
+    </div>
+
+    <h2 id="model">Data model</h2>
+    <div class="diagram" data-c="model-diagram">
+      <pre class="mermaid">
+graph TD
+  P["Vikunja project: Trawler Router"]
+  E1["Task: E-APIDOC (epic, parent)"]
+  W1["Subtask: E-APIDOC.W2 (settings-api-page, redesign)"]
+  W2["Subtask: E-APIDOC.W3 (pages hand-off)"]
+  P --> E1
+  E1 --> W1
+  E1 --> W2
+  W2 -. blocked by .-> W1
+      </pre>
+      <div class="caption">Parent/child carries hierarchy; a separate blocking relation carries sequencing — the two kanban conflated into one column.</div>
+    </div>
+
+    <h2 id="wus">Working units</h2>
+
+    <h3 id="w1">E-VIKUNJA.W1 — stand up the instance</h3>
+    <p>Install Vikunja locally (single binary, bundled SQLite, no Docker). Create the "Trawler Router" project,
+    the <code>needs-owner</code> label, an API token for the router, and the saved filter. Write
+    <code>.claude/skills/trawler-router/references/vikunja-protocol.md</code>: the authoritative spec for how
+    epics/WUs map to tasks/subtasks/relations/labels, and the lifecycle (who creates a task, when a label goes on
+    and comes off, what a comment vs a label-change means). This is the board-protocol.md replacement.</p>
+    <p><b>Test plan:</b> doc/infra-only — no code. Exempt from test/cr; still needs <code>mr/v1</code>.</p>
+
+    <h3 id="w2">E-VIKUNJA.W2 — xtask vikunja CLI client</h3>
+    <p><code>xtask vikunja</code>: <code>init</code> (store token, verify connectivity), <code>show</code> (list
+    open tasks, filtered), <code>read &lt;id&gt;</code>, <code>put &lt;id&gt; [--label] [--assignee] [--comment]
+    [--relation blocked-by:&lt;id&gt;]</code>. REST calls only (Vikunja's JSON API) — no markdown parsing needed,
+    unlike the old board client. Token read from a git-ignored config path, same pattern as the old
+    <code>~/.config/trawler/obsidian.key</code>.</p>
+    <p><b>Test plan (WU → integration):</b> a fake local HTTP server standing in for the Vikunja API, exercising
+    every subcommand end-to-end (request shape, response parsing, error on a non-2xx). Unit tests for request
+    building / response parsing in isolation.</p>
+
+    <h3 id="w3">E-VIKUNJA.W3 — webhook receiver → Telegram bridge</h3>
+    <p>A small standing local HTTP listener (<code>xtask vikunja webhook-listen</code> or similar — worker's call,
+    state reasoning) that Vikunja's webhook config points at. Filters for events that matter (assignee = owner AND
+    <code>needs-owner</code> label present; a comment added to an owner-assigned task), and on a match, prints a
+    one-line JSON event the router can watch for (same style as the old <code>board wait</code> events) — actual
+    Telegram sending stays the router's job via the Telegram plugin, same division of labor as before. Document
+    the standing-process discipline explicitly (must survive a relaunch, heartbeat-checked) in the protocol doc
+    from W1.</p>
+    <p><b>Test plan (WU → integration):</b> a tempdir + real local HTTP round-trip — POST a synthetic Vikunja
+    webhook payload at the listener, assert it emits the expected event line for a matching case and stays silent
+    for a non-matching one. Unit tests for the event-matching predicate in isolation.</p>
+
+    <h3 id="w4">E-VIKUNJA.W4 — orphan check + skill wiring</h3>
+    <p>Port the E-KANBAN.W4 orphan-worktree detector: scan <code>git worktree list</code> for
+    <code>epic/*</code>/<code>wu/*/*</code> branches with no Vikunja task referencing them (via a stored
+    branch-name field or convention), same honest detection-not-prevention framing. Update
+    <code>router-agent/SKILL.md</code> and <code>trawler-router/SKILL.md</code> to route status/asks/rulings
+    through Vikunja instead of the board; retire the board-specific routing language (the old
+    <code>xtask board</code> code stays in the tree, untouched, as E-KANBAN's shipped artifact — this epic
+    doesn't delete it, just stops routing through it).</p>
+    <p><b>Test plan (WU → integration):</b> same shape as E-KANBAN.W4's — a tempdir with real git worktrees (some
+    with matching tasks, one without) plus a fake Vikunja API, exercising the actual CLI command end-to-end.</p>
+
+    <h2 id="epic-test">Epic-level test plan (e2e)</h2>
+    <p>With a real local Vikunja instance running: create an epic+WU pair through the CLI, drive it through
+    needs-owner → labeled/assigned → commented → label removed (approval), fire a real webhook at the listener
+    for each transition, and assert the listener's event stream matches exactly what the protocol doc says should
+    happen at each step. This is the test that would have caught the kanban Done/Approved ambiguity, applied to
+    the new model.</p>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

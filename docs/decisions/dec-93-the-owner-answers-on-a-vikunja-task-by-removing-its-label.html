@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af0a0219f34851f0dfb1fa3">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-93: the owner answers on a Vikunja task, by removing its label</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-93 — the owner answers on a Vikunja task, by removing its label</h1>
+      <p>The router↔owner surface is one local Vikunja project: every epic and WU is a task, an ask is a comment plus the owner assigned plus the <code>needs-owner</code> label, and only the label's removal answers it.</p>
+      <div class="meta">v1 · 2026-11-09 · Trawler · T2 decision · minted at <strong>E-VIKUNJA</strong> close from the owner's rulings (mapping, needs-owner signal, notifications, migration) and W1–W4 · router tooling, no product behaviour · succeeds the unmerged E-KANBAN board (<code>epic/router-kanban</code>, abandoned) · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="shape">The surface</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  R["router"] -- "cargo xtask vikunja create / put" --> V["Vikunja 127.0.0.1:3456 · project 3"]
+  O["owner (web UI)"] -- "comment · remove needs-owner" --> V
+  V -- "signed webhook (once, no retry)" --> L["cargo xtask vikunja webhook-listen :3457"]
+  L -- "re-reads the task from the API" --> V
+  L -- "one JSON line per transition" --> R
+  R -- "cargo xtask vikunja check (every tick)" --> G["git worktree list ↔ Branch: lines"]
+  R -- "one-line ping" --> T(["Telegram"])
+      </pre>
+      <div class="caption">Webhooks are latency, the API is the truth; Telegram only pings, nobody answers there.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>One Vikunja project; an epic is a task, a WU its subtask; blocking relations carry order only, the hierarchy carries nothing else. No buckets: position, view and dates mean nothing (the Kanban view is deleted)</td><td>owner ruling (mapping); kanban columns conflated hierarchy, order and state</td></tr>
+      <tr><td>2</td><td>An ask = comment → assign <code>vuluu</code> → add <code>needs-owner</code>, label last; the owner's queue is exactly open ∧ <code>vuluu</code> ∧ <code>needs-owner</code> (saved filter <em>Needs me</em>)</td><td>owner ruling (signal): a plain comment or a column move is not a signal — the Done/Approved near-miss</td></tr>
+      <tr><td>3</td><td>Only removing <code>needs-owner</code> answers; marking a task done is archival and discards a pending ask</td><td>one explicit, unambiguous marker</td></tr>
+      <tr><td>4</td><td>Task before branch; the task's <code>Branch:</code> line is the only task ↔ branch link; <code>vikunja check</code> flags an untasked work worktree and an open task whose worktree is gone — detection, never prevention</td><td>E-KANBAN retro: E-APIDOC started off-board</td></tr>
+      <tr><td>5</td><td>The server and the listener are standing processes: started at session start, checked every heartbeat tick, relaunched the tick they are found dead; nothing registers persistence on the owner's machine</td><td>retro: "watch X" is a standing duty; a dead listener is silent</td></tr>
+      <tr><td>6</td><td>The listener verifies the HMAC, treats each delivery as a trigger and diffs the API's task against its state; it reconciles at start and every 60 s</td><td>W1/W3 probes: deliveries arrive out of order, read at send time, never retried</td></tr>
+      <tr><td>7</td><td>The router token is scoped (no user read, no label create, no bulk endpoints) and never printed; every task-field write is a whole-task read-modify-write</td><td>W1: a partial <code>POST /tasks/&lt;id&gt;</code> cleared the assignee</td></tr>
+    </table>
+
+    <h2 id="where">Where it lives</h2>
+    <table data-c="where">
+      <tr><th>Fact</th><th>Owner</th></tr>
+      <tr><td>Ids, ports, files, lifecycle as CLI calls, listener lines</td><td><code>.claude/skills/trawler-router/references/vikunja-protocol.md</code> (authoritative)</td></tr>
+      <tr><td>Router duties, heartbeat, pings</td><td><code>.claude/skills/router-agent/</code> · <code>.claude/skills/trawler-router/</code></td></tr>
+      <tr><td>Invocations and flags</td><td><code>cargo xtask vikunja</code> usage (<code>xtask/src/vikunja.rs</code>)</td></tr>
+    </table>
+
+    <h2 id="held">Held by</h2>
+    <table data-c="held">
+      <tr><th>Rules</th><th>Test</th></tr>
+      <tr><td>2, 3, 7</td><td><code>xtask/tests/suite/vikunja.rs</code> against a fake Vikunja: ask and close orders, whole-task writes, skips, the done-task note; <code>xtask/src/vikunja.rs</code> unit tests</td></tr>
+      <tr><td>3, 6</td><td>the real listener binary in the suite: signature refusal, transitions, relaunch re-announce; <code>vikunja/listen.rs</code> unit tests (RFC 4231 vector)</td></tr>
+      <tr><td>4</td><td>the suite's four-worktree check test; <code>vikunja/check.rs</code> unit tests</td></tr>
+      <tr><td>1, 5</td><td>router practice (skill files); not mechanised</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
