@@ -31,22 +31,28 @@ pub fn worktrees(porcelain: &str) -> BTreeMap<String, PathBuf> {
 const INLINE_TAGS: [&str; 10] = ["a", "b", "code", "em", "i", "mark", "s", "span", "strong", "u"];
 
 /// The web editor stores descriptions as HTML: block tags end a line, inline
-/// tags (`<strong>Branch:</strong>`, `<code>wu/x/y</code>`) vanish.
+/// tags (`<strong>Branch:</strong>`, `<code>wu/x/y</code>`) vanish. A `<` opens
+/// a tag only when a letter or `/` follows and its `>` comes before any newline
+/// or other `<`: plain text keeps `x < 3`, and the editor escapes a typed `<`.
 fn plain_text(description: &str) -> String {
     let mut text = String::new();
     let mut rest = description;
     while let Some((before, after)) = rest.split_once('<') {
         text.push_str(before);
-        let Some((tag, after)) = after.split_once('>') else {
+        let tag = after.split_once('>').filter(|(tag, _)| {
+            tag.starts_with(|c: char| c.is_ascii_alphabetic() || c == '/')
+                && !tag.contains(['\n', '<'])
+        });
+        let Some((tag, after_tag)) = tag else {
             text.push('<');
             rest = after;
-            break;
+            continue;
         };
         let name = tag.trim_start_matches('/').split([' ', '/']).next().unwrap_or_default();
         if !INLINE_TAGS.contains(&name.to_ascii_lowercase().as_str()) {
             text.push('\n');
         }
-        rest = after;
+        rest = after_tag;
     }
     text.push_str(rest);
     text.replace("&nbsp;", " ")
@@ -139,6 +145,8 @@ mod tests {
         assert_eq!(branch("<p>Branch:&nbsp;wu/x/y</p>").as_deref(), Some("wu/x/y"));
         assert_eq!(branch("Branch:\nBranch: wu/x/y").as_deref(), Some("wu/x/y"));
         assert_eq!(branch("a < b\nBranch: wu/x/y").as_deref(), Some("wu/x/y"));
+        assert_eq!(branch("x < 3\nBranch: wu/x/y\nA -> B").as_deref(), Some("wu/x/y"));
+        assert_eq!(branch("x<3 and\nBranch: wu/x/y\nA -> B").as_deref(), Some("wu/x/y"));
     }
 
     #[test]
