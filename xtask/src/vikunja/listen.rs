@@ -298,7 +298,7 @@ fn read_delivery(stream: &TcpStream) -> Result<Delivery, String> {
     let mut line = String::new();
     reader.read_line(&mut line).map_err(|e| e.to_string())?;
     let method = line.split_whitespace().next().ok_or("empty request")?.to_string();
-    let (mut length, mut signature) = (0, String::new());
+    let (mut length, mut signature) = (0_u64, String::new());
     loop {
         let mut header = String::new();
         reader.read_line(&mut header).map_err(|e| e.to_string())?;
@@ -309,7 +309,10 @@ fn read_delivery(stream: &TcpStream) -> Result<Delivery, String> {
             signature = value.trim().to_string();
         }
     }
-    let mut body = vec![0; length];
+    if length > MAX_REQUEST {
+        return Err(format!("body over {MAX_REQUEST} bytes"));
+    }
+    let mut body = vec![0; usize::try_from(length).map_err(|_| "bad Content-Length")?];
     reader.read_exact(&mut body).map_err(|e| format!("body: {e}"))?;
     Ok(Delivery { method, signature, body })
 }

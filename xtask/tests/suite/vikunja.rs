@@ -813,6 +813,16 @@ fn webhook_listen_answers_a_liveness_get_and_reports_an_unreachable_vikunja_once
     assert_eq!((alive.status, alive.body.as_str()), (200, "ok\n"));
     let secret = std::fs::read_to_string(dir.path().join("secret")).unwrap();
     assert_eq!(secret.len(), 64);
+    for huge in ["18446744073709551615", "4611686018427387904"] {
+        let mut stream = TcpStream::connect(listener.addr).unwrap();
+        write!(stream, "POST / HTTP/1.1\r\nContent-Length: {huge}\r\n\r\n").unwrap();
+        let mut answer = String::new();
+        stream.read_to_string(&mut answer).unwrap();
+        assert!(answer.starts_with("HTTP/1.1 400 "), "{answer}");
+    }
+    let oversized = listener.errors.recv_timeout(Duration::from_secs(20)).unwrap();
+    assert!(oversized.ends_with("body over 1048576 bytes"), "{oversized}");
+    assert_eq!(http::request(listener.addr, "GET", "/", &[], "").unwrap().status, 200);
 
     server.set_down(true);
     let down = listener.next();
