@@ -15,6 +15,7 @@ pub mod preflight;
 pub mod public_text;
 pub mod release_manifest;
 pub mod screenshots;
+pub mod site;
 pub mod smoke;
 pub mod tally;
 pub mod target;
@@ -57,6 +58,7 @@ usage:
   cargo xtask icons                                          (every shipped brand asset from ui/src-tauri/icons/source: icon set, tray pairs, installer art, favicon, repo face, SOURCES.sha256; rasterised by the pinned tauri icon)
   cargo xtask licenses                                       (THIRD-PARTY-NOTICES.txt: Trawler's licence, then every licence text of the release crates and production npm packages; the app bundles it)
   cargo xtask release-manifest <dist-dir> --tag v<version> --repo <owner/name> --pub-date <rfc3339>  (latest.json, notes.md and SHA256SUMS beside the release artifacts; refuses a missing signature, platform or CHANGELOG.md section)
+  cargo xtask site build --release <json> --out <dir>          (the Pages site: site/'s frame filled from README, PRIVACY, links.rs and a published final's release JSON, plus its assets; refuses a draft, pre-release or missing installer kind, and any link, CSP, script, deny-list, download-row or contrast problem in its own output; <dir> must be empty)
   cargo xtask smoke [--universal] [--profile <name>]          (install the package's own installer in a temp dir, run its core headless: a request through the proxy is captured, the CA is served, quitting frees both ports)
   cargo xtask ui build                                        (pnpm install + build → ui/dist/)
   cargo xtask ui dev                                          (pnpm install + launch the Tauri window)
@@ -101,6 +103,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["licenses", rest @ ..] => licenses::run(rest, repo),
         ["smoke", rest @ ..] => smoke::run(rest, repo),
         ["release-manifest", rest @ ..] => release_manifest::run(rest, repo),
+        ["site", rest @ ..] => site::run(rest, repo),
         ["ui", rest @ ..] => ui::run(rest, repo),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
         _ => Err(USAGE.to_string()),

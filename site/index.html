@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
+  <title>Trawler — {{pitch}}</title>
+  <meta name="description" content="{{pitch}}">
+  <link rel="canonical" href="{{base}}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Trawler">
+  <meta property="og:title" content="Trawler">
+  <meta property="og:description" content="{{sub}}">
+  <meta property="og:url" content="{{base}}">
+  <meta property="og:image" content="{{base}}social-preview.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="site.css">
+  <script src="site.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#download">Skip to download</a>
+  <header class="top night">
+    <div class="wrap top-in">
+      <a class="brand" href="{{base}}"><img alt="Trawler" src="wordmark-dark.png" width="120" height="27"></a>
+      <nav aria-label="Site">
+        <a class="nav-x" href="#features">Features</a>
+        <a class="nav-x" href="#privacy">Privacy</a>
+        <a class="nav-x" href="{{guide}}">Guide</a>
+        <a class="btn primary small" href="#download">Download</a>
+      </nav>
+    </div>
+  </header>
+  <main>
+    <section class="hero night">
+      <div class="wrap">
+        <div class="hero-text">
+          <p class="eyebrow">Free and open source · macOS · Windows · Linux</p>
+          <h1>{{pitch}}</h1>
+          <p class="sub">{{sub}}</p>
+          <p class="cta"><a class="btn primary" id="get" href="#download">Download for <span id="get-os">macOS · Windows · Linux</span></a><a class="btn" href="{{guide}}">Read the guide</a></p>
+          <p class="facts-line">Version {{version}} · MIT licence · no account</p>
+          <div class="pick" id="pick" hidden>
+            <p><span class="file" id="pick-file"></span> · <a href="#all">Other systems</a> · <a href="{{latest}}">Other downloads</a></p>
+            <p id="pick-first"></p>
+          </div>
+        </div>
+        <div class="stage">
+          <figure class="window log" role="img" aria-label="An example of Trawler's request list: six requests to example hosts">
+            <div class="window-bar"><span></span><span></span><span></span><b>Trawler</b></div>
+            <div class="log-head"><span>Method</span><span class="h">Host</span><span>Path</span><span>Status</span><span class="t">Time</span></div>
+            <div class="log-rows">
+              <div class="row"><span class="ok">GET</span><span class="h">www.example.org</span><span class="p">/</span><span class="ok">200</span><span class="t">84 ms</span></div>
+              <div class="row"><span class="create">POST</span><span class="h">api.example.com</span><span class="p">/v1/session</span><span class="ok">200</span><span class="t">133 ms</span></div>
+              <div class="row"><span class="ok">GET</span><span class="h">api.example.com</span><span class="p">/v1/orders/9f3c</span><span class="ok">200</span><span class="t">71 ms</span></div>
+              <div class="row"><span class="ok">GET</span><span class="h">api.example.com</span><span class="p">/v1/recommendations</span><span class="warn">404</span><span class="t">33 ms</span></div>
+              <div class="row"><span class="amend">PATCH</span><span class="h">api.example.com</span><span class="p">/v1/cart/items/C-3</span><span class="ok">200</span><span class="t">90 ms</span></div>
+              <div class="row"><span class="warn">DELETE</span><span class="h">api.example.com</span><span class="p">/v1/cart/items/B-7</span><span class="ok">204</span><span class="t">44 ms</span></div>
+            </div>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="show" id="features">
+      <div class="wrap">
+        <h2 class="big">Every request your apps make, in one list.</h2>
+        <p class="lede">Method, host, path, status and time for each one. Click a request and its headers and body open beside the list — HTTPS too, once your system trusts Trawler's certificate.</p>
+        <div class="stage">
+          <div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="s1-main-window.png" loading="lazy" width="1440" height="800" alt="{{alt:s1-main-window.png}}"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="stories">
+      <div class="wrap">
+        <h2 class="eyebrow">{{features-heading}}</h2>
+        <article class="story">
+          <div class="story-text"><h3>Your phone and simulators, from one screen.</h3><p>Capture an iPhone, an Android phone, the iOS Simulator or the Android emulator. Pick the device and the setup screen shows each step.</p></div>
+          <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="s6-setup-iphone.png" loading="lazy" width="1440" height="800" alt="{{alt:s6-setup-iphone.png}}"></div></div>
+        </article>
+        <article class="story">
+          <div class="story-text"><h3>Find the failing request.</h3><p>Filter by status, method, host or any text: <code>status:4xx</code> keeps the failures, <code>-method:OPTIONS</code> leaves those requests out.</p></div>
+          <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="s3-filter-chips.png" loading="lazy" width="1440" height="800" alt="{{alt:s3-filter-chips.png}}"></div></div>
+        </article>
+        <article class="story">
+          <div class="story-text"><h3>Read every header and every body.</h3><p>Headers, timing and bodies, with viewers for JSON, XML, HTML, forms and more. Copy any request as a curl command.</p></div>
+          <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="s4-inspector-headers.png" loading="lazy" width="1440" height="800" alt="{{alt:s4-inspector-headers.png}}"></div></div>
+        </article>
+        <article class="story">
+          <div class="story-text"><h3>Change it. Send it again.</h3><p>Replay a request with its method, address, a header or the body edited, or write one from scratch. The answer shows beside it.</p></div>
+          <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="s5-send-again.png" loading="lazy" width="1440" height="800" alt="{{alt:s5-send-again.png}}"></div></div>
+        </article>
+        <article class="story">
+          <div class="story-text"><h3>Keep what you captured.</h3><p>Captured requests live in memory and are gone when you quit. Export them to HAR, and open a HAR file or a curl command later.</p></div>
+          <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="s10-capture-menu.png" loading="lazy" width="1440" height="800" alt="{{alt:s10-capture-menu.png}}"></div></div>
+        </article>
+        <div class="tiles">
+          <div class="tile"><h3>Capture with the window closed.</h3><p>Trawler stays in the menu bar or the system tray and keeps capturing.</p></div>
+          <div class="tile"><h3>Updates from inside the app.</h3><p>Trawler asks before installing, and installs only a release signed by the project.</p></div>
+          <div class="tile"><h3>Native on macOS, Windows and Linux.</h3><p>MIT licence, no paid tier, no account.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="night" id="privacy">
+      <div class="wrap">
+        <p class="eyebrow">Privacy</p>
+        <h2 class="big">{{privacy-lead}}</h2>
+        <p class="lead">{{privacy-rest}}</p>
+        <div class="tiles">
+          <div class="tile"><h3>In memory, gone when you quit.</h3><p>Captured requests stay in memory on your machine. Export to HAR to keep them.</p></div>
+          <div class="tile"><h3>Two requests of its own.</h3><p>An update check to GitHub when it opens, at most once a day, which you can turn off; and the setup screen's test request to example.com when you click it.</p></div>
+          <div class="tile"><h3>Only this machine, until you allow another.</h3><p>Trawler listens only on this machine until you allow another device.</p></div>
+        </div>
+        <p class="fine">Trawler's certificate key is stored unencrypted in your app data folder. Remove the certificate when you stop using Trawler.</p>
+        <p class="fine">This site keeps the same promise: no analytics, no cookies, no tracking, and nothing loaded from any other site. One small script picks your system's download; it reads only what your browser reports about your system, and stores and sends nothing. GitHub hosts this page and sees your IP address, as any web host does.</p>
+        <p class="fine"><a href="{{source}}/blob/main/PRIVACY.md">What leaves your machine and what stays</a></p>
+      </div>
+    </section>
+
+    <section id="download">
+      <div class="wrap">
+        <h2 class="big">Download Trawler</h2>
+        <p class="meta">Version {{version}} · {{published}} · <a href="{{release}}">release notes</a></p>
+        <p class="honest">Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher the first time you open it. The line under each download says what to click. <a href="{{guide}}#install">Step by step</a></p>
+        <div class="one" id="one" hidden>
+          <p><a class="btn primary huge" id="one-get" href="#all">Download for <span id="one-os"></span></a></p>
+          <p class="file" id="one-file"></p>
+          <p class="one-first" id="one-first"></p>
+        </div>
+        <details class="all" id="all" open>
+          <summary>All systems</summary>
+          <div class="os">
+            <article class="card">
+              <h3>macOS</h3>
+              <p class="req">macOS 11 or later · Apple Silicon and Intel</p>
+              <div class="arch" id="dl-macos">
+                <p><a class="btn primary file" href="{{href:dmg-universal}}">{{file:dmg-universal}}</a></p>
+              </div>
+              <p class="first">First open: <b>Privacy &amp; Security → Open Anyway</b>. <a href="{{guide}}#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Windows</h3>
+              <div class="arch" id="dl-windows-x64">
+                <h4>x64</h4>
+                <p><a class="btn primary file" href="{{href:nsis-x64}}">{{file:nsis-x64}}</a></p>
+                <p class="alt">or <a class="file" href="{{href:msi-x64}}">{{file:msi-x64}}</a></p>
+              </div>
+              <div class="arch" id="dl-windows-arm64">
+                <h4>arm64</h4>
+                <p><a class="btn primary file" href="{{href:nsis-arm64}}">{{file:nsis-arm64}}</a></p>
+                <p class="alt">or <a class="file" href="{{href:msi-arm64}}">{{file:msi-arm64}}</a></p>
+              </div>
+              <p class="hint">Not sure which? <b>Settings → System → About → System type</b>.</p>
+              <p class="first">First open: <b>More info → Run anyway</b>. <a href="{{guide}}#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Linux</h3>
+              <div class="arch" id="dl-linux-x64">
+                <h4>x64</h4>
+                <p><a class="btn primary file" href="{{href:appimage-x64}}">{{file:appimage-x64}}</a></p>
+                <p class="alt">or <a class="file" href="{{href:deb-x64}}">{{file:deb-x64}}</a> · <a class="file" href="{{href:rpm-x64}}">{{file:rpm-x64}}</a></p>
+              </div>
+              <div class="arch" id="dl-linux-arm64">
+                <h4>arm64</h4>
+                <p><a class="btn primary file" href="{{href:appimage-arm64}}">{{file:appimage-arm64}}</a></p>
+                <p class="alt">or <a class="file" href="{{href:deb-arm64}}">{{file:deb-arm64}}</a> · <a class="file" href="{{href:rpm-arm64}}">{{file:rpm-arm64}}</a></p>
+              </div>
+              <p class="first">No prompt on first open. <a href="{{guide}}#install">Install commands</a></p>
+            </article>
+          </div>
+        </details>
+        <p class="after">Check your download: <a href="{{sha256sums}}">SHA256SUMS</a> · <a href="{{guide}}#check-your-download">how to check</a></p>
+        <p class="after"><a href="{{latest}}">Other downloads: every file of the latest release, on GitHub</a></p>
+      </div>
+    </section>
+  </main>
+  <footer class="night">
+    <div class="wrap foot-in">
+      <div class="foot-brand">
+        <img alt="Trawler" src="wordmark-dark.png" width="120" height="27">
+        <p>{{pitch}}</p>
+      </div>
+      <nav aria-label="Project files" class="foot">
+        <a href="{{guide}}">Guide</a>
+        <a href="{{source}}/blob/main/PRIVACY.md">Privacy</a>
+        <a href="{{source}}/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="{{source}}/blob/main/CONTRIBUTING.md">Contributing</a>
+        <a href="{{source}}/blob/main/SECURITY.md">Security</a>
+        <a href="{{source}}/blob/main/LICENSE">Licence</a>
+        <a href="{{source}}/issues/new/choose">Report an issue</a>
+        <a href="{{source}}">Source code</a>
+      </nav>
+      <p class="legal">MIT © 2026 Vu Luu</p>
+    </div>
+  </footer>
+</body>
+</html>

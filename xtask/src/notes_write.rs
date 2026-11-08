@@ -611,7 +611,7 @@ fn test_layers(
 fn declared_tests(path: &str, body: &str) -> Option<u32> {
     match path.rsplit('.').next()? {
         "rs" => Some(rust_tests(body)),
-        "ts" | "tsx" | "js" | "jsx" => Some(ts_tests(body)),
+        "ts" | "tsx" | "js" | "jsx" | "mjs" => Some(ts_tests(body)),
         _ => None,
     }
 }
@@ -826,6 +826,7 @@ test.each([[1], [2]])('a row', () => {});
 describe('a group', () => {});
 ";
         assert_eq!(declared_tests("ui/src/flow.test.ts", ts), Some(3));
+        assert_eq!(declared_tests("site/site.test.mjs", ts), Some(3), "a node:test module");
     }
 
     // An unrecognised file counted as zero would write a number the tree never
