@@ -45,7 +45,9 @@ fn the_v0_1_0_fixture_builds_the_frame_and_the_listed_assets_and_nothing_else() 
     }
     assert!(!files.keys().any(|name| name.contains("docs")), "{:?}", files.keys());
     let repo = repo();
-    let facts = site::Facts::of(&repo, "0.1.0").unwrap();
+    let release: site::Release =
+        serde_json::from_str(&std::fs::read_to_string(repo.join(FIXTURE)).unwrap()).unwrap();
+    let facts = site::Facts::of(&repo, site::downloads(&release, "0.1.0").unwrap()).unwrap();
     assert_eq!(site::problems(&files, &facts), Vec::<String>::new());
 }
 
@@ -69,6 +71,7 @@ fn the_built_page_links_every_installer_kind_at_v0_1_0_and_names_the_readme_pitc
         index.contains("<title>Trawler — See every HTTP and HTTPS request your apps make.</title>")
     );
     assert!(index.contains(site::CSP));
+    assert!(index.contains("<script src=\"site.js\""), "the page loads site.js");
     assert!(!index.contains("{{"), "an unfilled marker");
 }
 

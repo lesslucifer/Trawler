@@ -9,7 +9,9 @@ use crate::public_text;
 use crate::walkthrough::escape;
 
 pub const BASE_URL: &str = "https://lesslucifer.github.io/Trawler/";
-pub const CSP: &str = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'\">";
+pub const CSP: &str = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'\">";
+pub const SCRIPT: &str = "site.js";
+pub const SCRIPT_BUDGET: usize = 4096;
 pub const FRAME: &str = "site";
 pub const ASSETS: [(&str, &str); 5] = [
     ("ui/public/favicon.svg", "favicon.svg"),
@@ -23,8 +25,36 @@ const CHECKSUMS: &str = "SHA256SUMS";
 const SYSTEMS: [Os; 3] = [Os::MacOs, Os::Windows, Os::Linux];
 const MIN_CONTRAST: f64 = 4.5;
 const DARK: &str = "@media (prefers-color-scheme: dark)";
-const REFUSED_MARKUP: [&str; 8] =
-    ["<script", "<iframe", "<form", "<object", "<embed", "<style", " style=", "javascript:"];
+const REFUSED_MARKUP: [&str; 8] = [
+    "<iframe",
+    "<form",
+    "<object",
+    "<embed",
+    "<style",
+    " style=",
+    "javascript:",
+    "http-equiv=\"refresh\"",
+];
+const SCRIPT_REFUSES: [&str; 18] = [
+    "fetch",
+    "XMLHttpRequest",
+    "WebSocket",
+    "sendBeacon",
+    "EventSource",
+    "import",
+    "eval",
+    "Function",
+    "cookie",
+    "localStorage",
+    "sessionStorage",
+    "indexedDB",
+    "serviceWorker",
+    "Worker",
+    "SharedWorker",
+    "WebTransport",
+    "RTCPeerConnection",
+    "://",
+];
 
 /// The path the site is served under, `/Trawler/`.
 pub fn base_path() -> &'static str {
@@ -213,7 +243,7 @@ fn block_refusal(line: &str) -> Option<&'static str> {
 
 /// Bullets and paragraphs of `code`, **bold**, [links](..) and text; any other
 /// markdown is refused, so a construct this renderer would print raw fails the build.
-pub fn render(lines: &[&str], source: &str) -> Result<String, String> {
+pub fn render(lines: &[&str], blob: &str) -> Result<String, String> {
     let mut html = Vec::new();
     for block in blocks(lines) {
         if let Some(refusal) = block.iter().find_map(|line| block_refusal(line)) {
@@ -223,11 +253,11 @@ pub fn render(lines: &[&str], source: &str) -> Result<String, String> {
         if items.len() == block.len() {
             let rendered: Vec<String> = items
                 .iter()
-                .map(|item| Ok(format!("<li>{}</li>", inline(item, source)?)))
+                .map(|item| Ok(format!("<li>{}</li>", inline(item, blob)?)))
                 .collect::<Result<_, String>>()?;
             html.push(format!("<ul>\n{}\n</ul>", rendered.join("\n")));
         } else if items.is_empty() {
-            html.push(format!("<p>{}</p>", inline(&block.join(" "), source)?));
+            html.push(format!("<p>{}</p>", inline(&block.join(" "), blob)?));
         } else {
             return Err(format!("a list run into a paragraph: {block:?}"));
         }
@@ -235,7 +265,7 @@ pub fn render(lines: &[&str], source: &str) -> Result<String, String> {
     Ok(html.join("\n"))
 }
 
-fn link_target(target: &str, source: &str) -> Result<String, String> {
+fn link_target(target: &str, blob: &str) -> Result<String, String> {
     if target.is_empty() || target.contains(char::is_whitespace) {
         return Err(format!("a link target with a title or no address: {target:?}"));
     }
@@ -245,11 +275,11 @@ fn link_target(target: &str, source: &str) -> Result<String, String> {
     if target.contains("://") {
         Ok(target.to_string())
     } else {
-        Ok(format!("{source}/blob/main/{target}"))
+        Ok(format!("{blob}{target}"))
     }
 }
 
-fn inline(text: &str, source: &str) -> Result<String, String> {
+fn inline(text: &str, blob: &str) -> Result<String, String> {
     let mut html = String::new();
     let mut bold = false;
     let mut rest = text;
@@ -267,8 +297,8 @@ fn inline(text: &str, source: &str) -> Result<String, String> {
                 after.split_once("](").ok_or(format!("a [ that opens no link in {text:?}"))?;
             let (target, tail) =
                 tail.split_once(')').ok_or(format!("an unclosed link in {text:?}"))?;
-            let href = escape(&link_target(target, source)?);
-            let _ = write!(html, "<a href=\"{href}\">{}</a>", inline(label, source)?);
+            let href = escape(&link_target(target, blob)?);
+            let _ = write!(html, "<a href=\"{href}\">{}</a>", inline(label, blob)?);
             rest = tail;
         } else if rest.starts_with("![") || rest.starts_with("://") || "*_\\~<".contains(c) {
             return Err(format!("{c:?} at {rest:?} is outside the site's markdown"));
@@ -308,38 +338,39 @@ pub struct Facts<'a> {
     pub repo: &'a Path,
     pub source: String,
     pub guide: String,
-    pub version: String,
+    pub release: Downloads,
 }
 
 impl<'a> Facts<'a> {
-    pub fn of(repo: &'a Path, version: &str) -> Result<Self, String> {
+    pub fn of(repo: &'a Path, release: Downloads) -> Result<Self, String> {
         let links = read(repo, LINKS)?;
         let named = |name| str_const(&links, name).ok_or(format!("{LINKS} has no {name}"));
-        Ok(Self {
-            repo,
-            source: named("SOURCE_CODE")?,
-            guide: named("USER_GUIDE")?,
-            version: version.to_string(),
-        })
+        Ok(Self { repo, source: named("SOURCE_CODE")?, guide: named("USER_GUIDE")?, release })
+    }
+
+    fn blob(&self) -> String {
+        format!("{}/blob/main/", self.source)
     }
 }
 
-fn values(facts: &Facts<'_>, downloads: &Downloads) -> Result<BTreeMap<String, String>, String> {
+fn values(facts: &Facts<'_>) -> Result<BTreeMap<String, String>, String> {
+    let downloads = &facts.release;
     let readme = read(facts.repo, "README.md")?;
     let privacy = read(facts.repo, "PRIVACY.md")?;
     let (pitch, sub) = pitch_and_sub(&readme)?;
     let source = &facts.source;
+    let blob = &facts.blob();
     let tag = &downloads.tag;
     let mut values = BTreeMap::from([
         ("pitch".to_string(), escape(&pitch)),
         ("sub".to_string(), escape(&sub)),
         (
             "features".to_string(),
-            render(&section("README.md", &readme, "## What you can do")?, source)?,
+            render(&section("README.md", &readme, "## What you can do")?, blob)?,
         ),
         (
             "privacy".to_string(),
-            render(&first_block(&section("PRIVACY.md", &privacy, "# Privacy")?), source)?,
+            render(&first_block(&section("PRIVACY.md", &privacy, "# Privacy")?), blob)?,
         ),
         ("version".to_string(), escape(&downloads.version)),
         ("release".to_string(), escape(&format!("{source}/releases/tag/{tag}"))),
@@ -366,16 +397,15 @@ fn has_extension(file: &str, extension: &str) -> bool {
 }
 
 fn is_text(file: &str) -> bool {
-    has_extension(file, "html") || has_extension(file, "css")
+    has_extension(file, "html") || has_extension(file, "css") || has_extension(file, "js")
 }
 
 /// The site's files by name, filled and checked; nothing is written.
 pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>>, String> {
     let release: Release =
         serde_json::from_str(release_json).map_err(|e| format!("the release JSON: {e}"))?;
-    let downloads = downloads(&release, &crate::package::version_of(repo)?)?;
-    let facts = Facts::of(repo, &downloads.version)?;
-    let values = values(&facts, &downloads)?;
+    let facts = Facts::of(repo, downloads(&release, &crate::package::version_of(repo)?)?)?;
+    let values = values(&facts)?;
     let mut files = BTreeMap::new();
     let frame = std::fs::read_dir(repo.join(FRAME)).map_err(|e| format!("read {FRAME}/: {e}"))?;
     for entry in frame {
@@ -410,11 +440,13 @@ fn starts_an_attribute(html: &str, at: usize) -> bool {
     !html[..at].ends_with(|c: char| c.is_alphanumeric() || "-_.".contains(c))
 }
 
-/// Every `//` outside an `href` value or a `content` value under `BASE_URL`:
-/// an address in any other attribute or in text may be fetched.
-fn stray_addresses(name: &str, html: &str) -> Vec<String> {
-    let mut problems = Vec::new();
-    for (at, _) in html.match_indices("//") {
+/// Every address (`//`, `http:`, `https:`) outside an `href` value or a `content`
+/// value under `BASE_URL`: an address in any other attribute or in text may be fetched.
+fn stray_addresses(name: &str, html: &str) -> BTreeSet<String> {
+    let lower = html.to_ascii_lowercase();
+    let mut problems = BTreeSet::new();
+    let found = ["//", "http:", "https:"].into_iter().flat_map(|mark| lower.match_indices(mark));
+    for (at, _) in found {
         let before = &html[..at];
         let attribute = before.rfind('"').and_then(|open| {
             let named = before[..open].strip_suffix('=')?;
@@ -428,10 +460,71 @@ fn stray_addresses(name: &str, html: &str) -> Vec<String> {
             _ => false,
         };
         if !allowed {
-            let address = html[at..].split(['"', '\'', ' ', '<', '>']).next().unwrap_or_default();
-            problems.push(format!(
+            let start = before.rfind(['"', '\'', ' ', '\n', '>', '=']).map_or(0, |at| at + 1);
+            let address =
+                html[start..].split(['"', '\'', ' ', '<', '>']).next().unwrap_or_default();
+            problems.insert(format!(
                 "{name}: {address} is an address outside an href, a request outside the site"
             ));
+        }
+    }
+    problems
+}
+
+fn event_handlers(name: &str, html: &str) -> Vec<String> {
+    let lower = html.to_ascii_lowercase();
+    let tags = lower.split('<').skip(1).filter_map(|rest| rest.split('>').next());
+    let mut problems = Vec::new();
+    for tag in tags {
+        for (at, _) in tag.match_indices("on").filter(|(at, _)| starts_an_attribute(tag, *at)) {
+            let rest = &tag[at..];
+            let length = rest.find(|c: char| !c.is_ascii_alphabetic()).unwrap_or(rest.len());
+            if length > 2 && rest[length..].trim_start().starts_with('=') {
+                problems.push(format!("{name}: an inline handler {}", &rest[..length]));
+            }
+        }
+    }
+    problems
+}
+
+fn script_tag_problems(files: &BTreeMap<String, Vec<u8>>, name: &str, html: &str) -> Vec<String> {
+    let lower = html.to_ascii_lowercase();
+    let mut problems = Vec::new();
+    for (at, _) in lower.match_indices("<script") {
+        let rest = &html[at..];
+        let Some(end) = rest.find('>') else {
+            problems.push(format!("{name}: an unclosed <script"));
+            continue;
+        };
+        let loads = match attribute_values(&rest[..end], "src")[..] {
+            [src] => resolve(files, name, src).ok(),
+            _ => None,
+        };
+        if loads.as_deref() != Some(SCRIPT) {
+            problems.push(format!("{name}: a <script> that does not load {SCRIPT} by src"));
+        }
+        if !lower[at + end + 1..].starts_with("</script>") {
+            problems.push(format!("{name}: an inline script"));
+        }
+    }
+    problems
+}
+
+/// The one script reaches no network, storage or code from a string, by name:
+/// a belt over the CSP's `default-src 'none'`, kept small enough to read whole.
+pub fn script_problems(name: &str, js: &str) -> Vec<String> {
+    let mut problems = Vec::new();
+    if js.len() > SCRIPT_BUDGET {
+        problems.push(format!("{name}: {} bytes, over the {SCRIPT_BUDGET}-byte budget", js.len()));
+    }
+    let identifier = |c: char| c.is_alphanumeric() || c == '_' || c == '$';
+    for word in SCRIPT_REFUSES {
+        let named = js.match_indices(word).any(|(at, _)| {
+            !js[..at].chars().next_back().is_some_and(identifier)
+                && !js[at + word.len()..].chars().next().is_some_and(identifier)
+        });
+        if named || (word == "://" && js.contains(word)) {
+            problems.push(format!("{name}: names {word}"));
         }
     }
     problems
@@ -499,7 +592,7 @@ fn unescaped(attribute: &str) -> String {
         .replace("&amp;", "&")
 }
 
-fn resolve(files: &BTreeMap<String, Vec<u8>>, from: &str, target: &str) -> Result<(), String> {
+fn resolve(files: &BTreeMap<String, Vec<u8>>, from: &str, target: &str) -> Result<String, String> {
     let (path, anchor) = target.split_once('#').unwrap_or((target, ""));
     let joined = if path.is_empty() {
         PathBuf::from(from)
@@ -527,11 +620,11 @@ fn resolve(files: &BTreeMap<String, Vec<u8>>, from: &str, target: &str) -> Resul
     if !anchor.is_empty() && !String::from_utf8_lossy(file).contains(&format!("id=\"{anchor}\"")) {
         return Err(format!("{from}: {target} (no id=\"{anchor}\" in {name})"));
     }
-    Ok(())
+    Ok(name)
 }
 
 fn blob_problem(facts: &Facts<'_>, from: &str, href: &str) -> Option<String> {
-    let path = href.strip_prefix(&format!("{}/blob/main/", facts.source))?;
+    let path = href.strip_prefix(&facts.blob())?;
     let (file, anchor) = path.split_once('#').unwrap_or((path, ""));
     if !public_text::exists_as_named(facts.repo, Path::new(file)) {
         return Some(format!("{from}: {href} (the tree has no {file})"));
@@ -567,6 +660,8 @@ fn html_problems(
     }
     problems.extend(unquoted_attributes(name, html));
     problems.extend(stray_addresses(name, html));
+    problems.extend(event_handlers(name, html));
+    problems.extend(script_tag_problems(files, name, html));
     let lower = html.to_lowercase();
     problems.extend(
         REFUSED_MARKUP
@@ -580,6 +675,11 @@ fn html_problems(
         let canonical = matches!(rel[..], [rel] if rel.eq_ignore_ascii_case("canonical"));
         if external && !canonical {
             problems.push(format!("{name}: <link{tag}> loads from outside the site"));
+        }
+    }
+    for content in attribute_values(html, "content") {
+        if let Some(local) = unescaped(content).strip_prefix(BASE_URL) {
+            problems.extend(resolve(files, name, &format!("{}{local}", base_path())).err());
         }
     }
     for target in src_targets(html) {
@@ -610,14 +710,18 @@ fn html_problems(
 }
 
 fn download_problems(facts: &Facts<'_>, hrefs: &[String]) -> Vec<String> {
-    let prefix = format!("{}/releases/download/v{}/", facts.source, facts.version);
+    let release = &facts.release;
+    let prefix = format!("{}/releases/download/{}/", facts.source, release.tag);
     let mut problems = Vec::new();
     let mut ids = BTreeSet::new();
     for href in hrefs {
         let Some(file) = href.strip_prefix(&prefix) else {
-            problems.push(format!("{href} is not a v{} download", facts.version));
+            problems.push(format!("{href} is not a {} download", release.tag));
             continue;
         };
+        if file != CHECKSUMS && !release.files.values().any(|shipped| shipped == file) {
+            problems.push(format!("{href} names no file of {}", release.tag));
+        }
         match installer_id(file) {
             Ok(Some(id)) => {
                 ids.insert(id);
@@ -626,13 +730,13 @@ fn download_problems(facts: &Facts<'_>, hrefs: &[String]) -> Vec<String> {
             Err(problem) => problems.push(problem),
         }
     }
-    let want = installer_ids(&facts.version);
+    let want = installer_ids(&release.version);
     if ids != want {
         let missing: Vec<&String> = want.difference(&ids).collect();
         let extra: Vec<&String> = ids.difference(&want).collect();
         problems.push(format!(
             "the download rows lack {missing:?} and add {extra:?} against Os::bundles at {}",
-            facts.version
+            release.version
         ));
     }
     problems
@@ -774,6 +878,12 @@ pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<Str
         problems.extend(public_text::denied_names(name, text));
         if has_extension(name, "html") {
             problems.extend(html_problems(files, facts, name, text, &mut downloads));
+        } else if has_extension(name, "js") {
+            if name == SCRIPT {
+                problems.extend(script_problems(name, text));
+            } else {
+                problems.push(format!("{name}: a script other than {SCRIPT}"));
+            }
         } else {
             if text.to_ascii_lowercase().contains("@import") {
                 problems.push(format!("{name}: carries @import"));
@@ -831,6 +941,7 @@ mod tests {
     }
 
     const SOURCE: &str = "https://github.com/lesslucifer/Trawler";
+    const BLOB: &str = "https://github.com/lesslucifer/Trawler/blob/main/";
 
     fn release(tag: &str, names: &[&str]) -> Release {
         Release {
@@ -937,7 +1048,7 @@ mod tests {
             "line.",
         ];
         assert_eq!(
-            render(&lines, SOURCE).unwrap(),
+            render(&lines, BLOB).unwrap(),
             "<ul>\n<li>Filter with <code>status:4xx</code> &amp; <strong>more</strong>.</li>\n\
              <li>See <a href=\"https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install\">the guide</a>.</li>\n\
              </ul>\n<p>One line.</p>"
@@ -961,7 +1072,7 @@ mod tests {
             "**open",
             "see https://example.com",
         ] {
-            assert!(render(&[text], SOURCE).is_err(), "{text}");
+            assert!(render(&[text], BLOB).is_err(), "{text}");
         }
         for lines in [
             &["## H"][..],
@@ -973,7 +1084,7 @@ mod tests {
             &["- a", "b"],
             &["```", "x"],
         ] {
-            assert!(render(lines, SOURCE).is_err(), "{lines:?}");
+            assert!(render(lines, BLOB).is_err(), "{lines:?}");
         }
     }
 
@@ -1027,7 +1138,7 @@ mod tests {
             repo,
             source: SOURCE.to_string(),
             guide: format!("{SOURCE}/blob/main/GUIDE.md"),
-            version: "0.1.0".to_string(),
+            release: downloads(&release("v0.1.0", &FULL), "0.1.0").unwrap(),
         }
     }
 
@@ -1050,6 +1161,7 @@ mod tests {
             ("index.html".to_string(), page(body).into_bytes()),
             ("site.css".to_string(), css.as_bytes().to_vec()),
             ("a.png".to_string(), Vec::new()),
+            ("site.js".to_string(), b"document.documentElement.dataset.os = \"mac\";".to_vec()),
         ])
     }
 
@@ -1098,7 +1210,7 @@ mod tests {
             ("<img src=\"data:image/png;base64,AA\">", "outside the site"),
             ("<link rel=\"icon\" href=\"https://x.test/f.svg\">", "loads from outside"),
             ("<LINK rel=\"stylesheet\" href=\"https://x.test/s.css\">", "loads from outside"),
-            ("<script src=\"a.js\"></script>", "<script"),
+            ("<script src=\"a.js\"></script>", "site.js"),
             ("<iframe></iframe>", "<iframe"),
             ("<form></form>", "<form"),
             ("<p style=\"color:red\">x</p>", "style="),
@@ -1160,6 +1272,74 @@ mod tests {
             let found = problems(&site("", &format!("{CSS}{css}")), &facts(&repo));
             assert!(found.iter().any(|p| p.contains("outside the site")), "{css}: {found:?}");
         }
+    }
+
+    #[test]
+    fn the_one_script_is_site_js_by_src_with_no_inline_code() {
+        let body =
+            "<script src=\"site.js\" defer></script><script src=\"/Trawler/site.js\"></script>";
+        assert_eq!(problems_of(body), Vec::<String>::new());
+        for (body, needle) in [
+            ("<script>alert(1)</script>", "site.js"),
+            ("<SCRIPT src=\"site.js\">alert(1)</SCRIPT>", "inline"),
+            ("<button onclick=\"go()\">x</button>", "onclick"),
+            ("<img src=\"a.png\" ONLOAD=\"go()\">", "onload"),
+            ("<meta http-equiv=\"refresh\" content=\"0;url=https:x.test\">", "refresh"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        assert_eq!(problems_of("<p>Turn it on: one = two.</p>"), Vec::<String>::new());
+        let repo = repo();
+        let mut files = site("", CSS);
+        files.insert("more.js".to_string(), Vec::new());
+        assert!(problems(&files, &facts(&repo)).iter().any(|p| p.contains("more.js")));
+    }
+
+    #[test]
+    fn site_js_reaches_no_network_storage_or_eval_and_stays_small() {
+        let benign = "const os = navigator.userAgentData?.platform ?? navigator.platform;\n\
+                      // important: the page works without this\n\
+                      document.querySelector(`[data-os]`)?.classList.add(\"mine\");";
+        assert_eq!(script_problems("site.js", benign), Vec::<String>::new());
+        for code in [
+            "fetch('/x')",
+            "new XMLHttpRequest()",
+            "new WebSocket(u)",
+            "navigator.sendBeacon(u)",
+            "new EventSource(u)",
+            "import('./x.js')",
+            "import x from './x.js'",
+            "eval(s)",
+            "new Function(s)",
+            "document.cookie = 'a=b'",
+            "localStorage.setItem('a', 'b')",
+            "sessionStorage.a = 1",
+            "indexedDB.open('a')",
+            "navigator.serviceWorker.register('s.js')",
+            "new Worker('w.js')",
+            "img.src = 'https://x.test/p.png'",
+        ] {
+            assert!(!script_problems("site.js", code).is_empty(), "{code}");
+        }
+        let big = format!("const a = \"{}\";", "x".repeat(SCRIPT_BUDGET));
+        assert!(script_problems("site.js", &big)[0].contains("bytes"));
+    }
+
+    #[test]
+    fn an_address_by_scheme_alone_a_download_the_release_lacks_or_a_missing_og_file_is_red() {
+        for body in [
+            "<a href=\"#top\" ping=\"https:x.test\">x</a>",
+            "<video poster=\"http:x.test/p.png\"></video>",
+            "<meta property=\"og:image\" content=\"https://lesslucifer.github.io/Trawler/nope.png\">",
+        ] {
+            assert!(!problems_of(body).is_empty(), "{body}");
+        }
+        let fake = format!(
+            "<a href=\"{SOURCE}/releases/download/v0.1.0/Trawler_9.9.9_x64-setup.exe\">x</a>"
+        );
+        let found = problems_of(&fake);
+        assert!(found.iter().any(|p| p.contains("no file of v0.1.0")), "{found:?}");
     }
 
     #[test]
