@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-PAGES
+wu: E-PAGES.W4
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-pages-w4-deploy-plan.html"
+    tier: T3
+    action: added
+    distills: "W4's requirement, the flow, the four pins and their sources, decisions (skip on the build job, $GITHUB_REPOSITORY and $RUNNER_TEMP, no cache, timeouts) and the test plan"
+  - path: "docs/work/2026-11-08-pages-w4-deploy-result.html"
+    tier: T3
+    action: added
+    distills: "what W4 built, the pins, deviations from the epic plan's shape, evidence (test first, mutation sweep, actionlint, the hand run), the router's 11-point map onto the tests, the owner's settings and first-run check, follow-ups"
+t2_waived: "W4 adds a workflow and its test with no new rule; DEC-92 (the deploy) and the release-process rows are minted by W5, which distills the whole epic (epic plan, Distillation plan)"
