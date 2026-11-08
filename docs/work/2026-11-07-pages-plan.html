@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PAGES — plan: a GitHub Pages landing site for Trawler</h1>
       <p>Audit and plan only. One page that explains Trawler in ten seconds, hands each visitor the right installer for the latest release, and sends them to the guide. It makes no request outside its own origin and repeats no fact it does not take from the root markdown.</p>
-      <div class="meta">v2 · 2026-11-08 · Trawler · T3 epic plan · <span class="badge id">E-PAGES</span> · branch <code>epic/pages</code> off <code>main</code> c782af92 · owner rulings Q1–Q13 recorded (<a href="#questions">Rulings</a>) · six WUs</div>
+      <div class="meta">v3 · 2026-11-08 · Trawler · T3 epic plan · <span class="badge id">E-PAGES</span> · branch <code>epic/pages</code> off <code>main</code> c782af92 · owner rulings Q1–Q13 + W1 design picks recorded (<a href="#questions">Rulings</a>) · six WUs, W1 and W2 merged (tip d4194fc8)</div>
     </div>
   </header>
   <main>
@@ -19,9 +19,9 @@
     <div data-item="intent">
       <table>
         <tr><th>Today</th><th>After E-PAGES</th></tr>
-        <tr><td>The repo's <em>website</em> field points at <code>github.com/lesslucifer/Trawler/releases</code>: an asset list of 26 files where the visitor must work out which one is theirs</td><td><code>https://lesslucifer.github.io/Trawler/</code> (Q1): the pitch, one screenshot, a download block per OS naming the exact file, the first-open warning per OS, links to the guide, privacy and changelog</td></tr>
+        <tr><td>The repo's <em>website</em> field points at <code>github.com/lesslucifer/Trawler/releases</code>: an asset list of 26 files where the visitor must work out which one is theirs</td><td><code>https://lesslucifer.github.io/Trawler/</code> (Q1): the pitch, a moving request log, the screenshots as benefit stories, one big download button for the detected system (the full file list for everyone else), the first-open warning per OS, links to the guide, privacy and changelog</td></tr>
         <tr><td>No Pages site (<code>gh api repos/lesslucifer/Trawler/pages</code> → 404)</td><td>A Pages site deployed by a pinned GitHub Actions workflow from a build of <code>site/</code>; <code>docs/</code> can never be in the artifact</td></tr>
-        <tr><td>The product promise is local-only (<code>PRIVACY.md</code>, DEC-91 rule 7)</td><td>The site keeps the same promise: no analytics, no cookies, no third-party script, font or image, enforced by a CSP meta tag and a test</td></tr>
+        <tr><td>The product promise is local-only (<code>PRIVACY.md</code>, DEC-91 rule 7)</td><td>The site keeps the same promise: no analytics, no cookies, no third-party script, font or image; its one script is same-origin <code>site.js</code> with no network or storage, enforced by a CSP meta tag and tests</td></tr>
         <tr><td>Installers name the repo as their homepage (deb, rpm, Windows uninstall entry)</td><td>From the first release tagged after the site is live, they name the site (Q12, W6)</td></tr>
       </table>
       <p>Why now: v0.1.0 is published as the latest release and the repo is public; the releases page is the interim homepage the brief names.</p>
@@ -36,14 +36,14 @@
     <div class="diagram" data-c="visitor-flow"><pre class="mermaid">
 flowchart LR
   V(["visitor"]) --> H["hero: wordmark · pitch · one-line sub · screenshot"]
-  H --> D["Download: OS detected by nothing — all three OS rows shown, each names its file"]
+  H --> D["Download: site.js detects the OS → one big button + Other systems; no script or unknown → the full list, open"]
   D --> F["first-open note per OS → GUIDE#install"]
   H --> W["What you can do (from README)"]
   W --> P["Privacy lead (from PRIVACY.md) → PRIVACY.md"]
   F --> G["Guide · Changelog · Source · Report an issue (GitHub links)"]
   P --> G
 </pre><div class="caption">One page. Every arrow leaving the page is a plain navigation to github.com; the page itself loads only its own files.</div></div>
-    <div class="callout" data-c="no-os-sniff"><strong>No OS detection.</strong> Picking the visitor's OS needs JavaScript reading <code>navigator.userAgentData</code> or the UA string, which cannot tell Windows arm64 from x64 nor Apple Silicon from Intel reliably. The download block shows every OS row; the macOS dmg is universal, so only Windows and Linux carry an arch choice. No script at all (<code>script-src 'none'</code>; Q3, Q13).</div>
+    <div class="callout" data-c="no-os-sniff"><strong>D2 (W1 round 4, P3): one button for your system.</strong> One tiny same-origin <code>site.js</code> (no network, no tracking, no storage) detects the OS; the detected system gets one big “Download for ‹system›” button, the rest fold under “Other systems” (native <code>details#all</code>). No script or an unknown system = the full file list, open. An “Other downloads” link to <code>releases/latest</code> + SHA256SUMS is always visible. The page is complete without the script. Spec: <a href="2026-11-08-pages-site-design.html#detect">design doc · Detection</a>.</div>
 
     <h2 id="audit">Audit — what exists at c782af92</h2>
     <p>✅ ready · ⚠️ partial · ❌ missing.</p>
@@ -61,7 +61,7 @@ flowchart LR
       <tr><td>Pages</td><td>❌</td><td>API 404; repo homepage = releases page</td><td>Workflow + owner settings → W4, <a href="#settings">Settings</a></td></tr>
       <tr><td>Repo description</td><td>⚠️</td><td><code>gh repo view</code>: “… a hackable Charles/Proxyman alternative”</td><td>Names two other tools, against DEC-91 rule 2's intent (the rule lists files, not repo settings) → Q10: owner replaces it (setting #4)</td></tr>
       <tr><td>Workflow conventions</td><td>⚠️</td><td><code>release.yml</code> pins every action by SHA + version comment, <code>persist-credentials: false</code>, top-level <code>contents: read</code>, write only on the job that needs it; <code>ci.yml</code> still uses tags (<code>actions/checkout@v4</code>)</td><td>New workflow follows <code>release.yml</code> → W4</td></tr>
-      <tr><td>Code-path classifier</td><td>⚠️</td><td><code>xtask/src/notes.rs:511</code> <code>is_code</code> = <code>src/ xtask/ tests/ ui/src/ ui/e2e/</code></td><td><code>site/</code> is not a code path; ruled: stays so while the site has no script (Q13)</td></tr>
+      <tr><td>Code-path classifier</td><td>⚠️</td><td><code>xtask/src/notes.rs:511</code> <code>is_code</code> = <code>src/ xtask/ tests/ ui/src/ ui/e2e/</code></td><td>Q13 = yes: <code>site/</code> is a code path (the site has a script), the cr gate covers it; W2 added it to <code>is_code</code> ✅</td></tr>
       <tr><td>Design review</td><td>⚠️</td><td><code>.claude/skills/design-review</code> scopes design runs and <code>.tsx</code> under <code>ui/src/</code></td><td>The site is neither; it gets an owner-reviewed design doc like E-PRORELEASE W11/W12 → W1</td></tr>
       <tr><td>Browser tooling</td><td>⚠️</td><td><code>ui/e2e/wdio.conf.ts</code> drives the Tauri app, not a browser; no Playwright in the repo; Chrome is installed on this Mac</td><td>Shots via headless Chrome CLI, a machine refusal (exit 2) where absent → W3</td></tr>
       <tr><td>Next free DEC</td><td>—</td><td>Highest on every local/remote branch and worktree (<code>epic/prorelease</code>, <code>epic/rc4</code>, <code>origin/*</code>): DEC-91</td><td>E-PAGES mints <strong>DEC-92</strong> → W5</td></tr>
@@ -77,7 +77,7 @@ flowchart LR
   LK["links.rs USER_GUIDE · SOURCE_CODE"] -- "guide + repo URLs" --> B
   IC["icons/: favicon.svg · wordmarks · social-preview.png"] --> B
   SS[".github/screenshots/s1…"] --> B
-  S["site/: index.html · 404.html · site.css (hand-written frame)"] --> B
+  S["site/: index.html · 404.html · site.css · site.js (hand-written frame)"] --> B
   B --> OUT["target/site/ → Pages artifact"]
   G["GUIDE · PRIVACY · CHANGELOG · CONTRIBUTING"] -. "linked, never copied" .-> OUT
 </pre><div class="caption">The frame is hand-written; every repeated fact is filled in at build time from the file that owns it.</div></div>
@@ -98,7 +98,7 @@ flowchart LR
       <tr><th>Option</th><th>Third-party request from the visitor</th><th>Rate limit</th><th>Staleness</th><th>Verdict</th></tr>
       <tr><td><strong>1 · build-time read of the latest release</strong> (the workflow runs <code>gh api repos/lesslucifer/Trawler/releases/latest</code> with its read token, passes the JSON to <code>cargo xtask site build --release &lt;file&gt;</code>)</td><td>none</td><td>1 authenticated call per deploy (1,000/h per repo for <code>GITHUB_TOKEN</code>)</td><td>until the next deploy; the workflow redeploys on <code>release: published</code> (Q11)</td><td>✔ ruled (Q3)</td></tr>
       <tr><td>2 · static link to <code>releases/latest</code> only</td><td>none</td><td>none</td><td>never stale</td><td>the fallback link under every row; alone it keeps today's “which file is mine” problem</td></tr>
-      <tr><td>3 · client-side fetch of <code>api.github.com</code></td><td><strong>yes</strong>: every visit tells GitHub the visitor's IP and the page they read</td><td>60/h per visitor IP unauthenticated, then an empty block</td><td>live</td><td>✘ breaks the local-only promise and needs a script</td></tr>
+      <tr><td>3 · client-side fetch of <code>api.github.com</code></td><td><strong>yes</strong>: every visit tells GitHub the visitor's IP and the page they read</td><td>60/h per visitor IP unauthenticated, then an empty block</td><td>live</td><td>✘ breaks the local-only promise (<code>site.js</code> makes no request)</td></tr>
     </table>
     <ul>
       <li>Links are versioned (<code>releases/download/v0.1.0/Trawler_0.1.0_universal.dmg</code>), never <code>latest/download/&lt;name&gt;</code>: asset names carry the version, so a <code>latest</code> link to a named file breaks on the next release.</li>
@@ -106,9 +106,9 @@ flowchart LR
       <li>A link click is a navigation to github.com, not a request the page makes; the CSP does not and need not cover it.</li>
     </ul>
 
-    <h3 id="which-file">“Which file is mine” — the block W1 designs</h3>
+    <h3 id="which-file">“Which file is mine” — the files per system (layout: D2 above)</h3>
     <table data-c="which-file">
-      <tr><th>System</th><th>Primary button</th><th>Also</th><th>First open (one line, link → GUIDE#install)</th></tr>
+      <tr><th>System</th><th>Primary file (the big button when detected)</th><th>Also</th><th>First open (one line, link → GUIDE#install)</th></tr>
       <tr><td>macOS 11+ · Apple Silicon and Intel</td><td><code>Trawler_‹v›_universal.dmg</code></td><td>—</td><td><strong>Privacy &amp; Security → Open Anyway</strong> (S8)</td></tr>
       <tr><td>Windows x64</td><td><code>Trawler_‹v›_x64-setup.exe</code></td><td><code>.msi</code></td><td><strong>More info → Run anyway</strong> (S9)</td></tr>
       <tr><td>Windows arm64</td><td><code>Trawler_‹v›_arm64-setup.exe</code></td><td><code>.msi</code></td><td>same</td></tr>
@@ -152,14 +152,20 @@ jobs:
 
     <h2 id="design">Design</h2>
     <table data-c="design">
-      <tr><th>Topic</th><th>Plan</th></tr>
-      <tr><td>Look</td><td>The app's warm dark: canvas <code>#2b2622</code>, ink <code>#f7f5f0</code>, mute <code>#aea69c</code> (6.2:1); amber <code>#e0a43a</code> as brand colour only (DEC-89 rule 6: never a UI colour in the app; on the site it is the mark and at most one accent rule). Light theme on <code>paper #f4f1ea</code> / <code>#1f1c19</code> (15:1). <code>deep-amber #a8741a</code> on paper is 3.6:1: decoration only, never text</td></tr>
+      <tr><th>Topic</th><th>Plan (spec: <a href="2026-11-08-pages-site-design.html">W1 design doc</a>; it wins on any detail)</th></tr>
+      <tr><td>Look · LOOK=A</td><td>Bold dark, product-forward: 700-weight headline up to 88 px, the app framed like a real window; hero, privacy band and footer dark in both themes. App palette: canvas <code>#2b2622</code>, ink <code>#f7f5f0</code>; light theme on <code>paper #f4f1ea</code></td></tr>
+      <tr><td>Accent · ACCENT=A</td><td>Amber glow as decoration of the brand surface only (glows, the arriving log row's edge, the primary button's hover halo): never text, a state or a control's fill. W5 records it as a DEC-89 rule 6 amendment</td></tr>
+      <tr><td>Hero · HERO=B</td><td>A moving request log, CSS only, V1: six rows in the app's status colours, arriving in under 4 s then still; a still strip under reduced motion. The framed s1 screenshot follows as the first story</td></tr>
+      <tr><td>Voice · VOICE=B · RHYTHM=A</td><td>Benefit stories: a heading saying what you get, one plain sentence, its own screenshot, alternating sides; three tiles for the rest. Every line traceable to README/GUIDE/PRIVACY/CHANGELOG; the headline stays the README pitch (Q5)</td></tr>
+      <tr><td>Download · DOWNLOAD=B</td><td>D2 as revised (<a href="#no-os-sniff">above</a>)</td></tr>
+      <tr><td>Layout · D1=A · D3=B</td><td>D1: centred stack, headline + download first. D3: bullets + more screens, retold as the stories (no bullet list remains)</td></tr>
+      <tr><td>Screenshots</td><td>Re-encoded PNG with the <code>png</code> crate xtask already has (P2; WebP reversed, closed); no new crate</td></tr>
       <tr><td>Theme switch</td><td><code>prefers-color-scheme</code> only, tokens on <code>:root</code>; no toggle (a toggle needs script and storage). Wordmark via <code>&lt;picture&gt;</code> exactly as the README does</td></tr>
       <tr><td>Fonts</td><td>System stacks (<code>system-ui</code>, <code>ui-monospace</code>): zero font bytes, no OFL notice on the site; the wordmark is an outlined image (DEC-89 rule 2). Ruled (Q9)</td></tr>
-      <tr><td>Responsive</td><td>One column under 720 px; download table becomes one card per OS; no horizontal scroll at 320 px</td></tr>
-      <tr><td>Accessible</td><td><code>lang="en"</code>, a skip link, one <code>h1</code>, visible <code>:focus-visible</code> ring, every image's alt from the README's alt text, ≥ 4.5:1 text contrast (test-computed from the CSS tokens), no motion at all (so <code>prefers-reduced-motion</code> has nothing to stop)</td></tr>
-      <tr><td>Budget</td><td>HTML + CSS ≤ 30 KB; first view ≤ 350 KB (s1 263 KB is the bulk); other images <code>loading="lazy"</code> with <code>width</code>/<code>height</code>; zero requests outside the origin; zero script</td></tr>
-      <tr><td>Head</td><td><code>&lt;meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'"&gt;</code>; <code>referrer no-referrer</code>; description = pitch; OG/Twitter card with absolute <code>og:image</code> = <code>‹base›/social-preview.png</code> (1280×640, the repo's own card); canonical URL; favicon = <code>ui/public/favicon.svg</code></td></tr>
+      <tr><td>Responsive</td><td>One column under 720 px; no horizontal scroll at 320 px</td></tr>
+      <tr><td>Accessible</td><td><code>lang="en"</code>, a skip link, one <code>h1</code>, visible <code>:focus-visible</code> ring, every image's alt from the README's alt text, ≥ 4.5:1 text contrast (test-computed from the CSS tokens, the log's included); subtle motion (reveals, hover, the log) only inside <code>prefers-reduced-motion: no-preference</code>, never <code>infinite</code></td></tr>
+      <tr><td>Budget</td><td>HTML + CSS ≤ 30 KB; first view ≤ 350 KB (s1 263 KB is the bulk); other images <code>loading="lazy"</code> with <code>width</code>/<code>height</code>; zero requests outside the origin; one script, <code>site.js</code> ≤ 4,096 B (<code>SCRIPT_BUDGET</code>)</td></tr>
+      <tr><td>Head</td><td>Index CSP <code>default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'</code> (meta); 404 the same without <code>script-src</code>; <code>&lt;script src="site.js" defer&gt;</code> the only script; no inline style or script; <code>referrer no-referrer</code>; description = pitch; OG/Twitter card with absolute <code>og:image</code> = <code>‹base›/social-preview.png</code> (1280×640, the repo's own card); canonical URL; favicon = <code>ui/public/favicon.svg</code></td></tr>
       <tr><td>404</td><td><code>404.html</code>: wordmark, “This page doesn't exist.”, link home; absolute asset paths under <code>/Trawler/</code> because Pages serves it at any depth</td></tr>
       <tr><td>Sitemap / robots</td><td>Skipped on github.io: crawlers read <code>robots.txt</code> only at the host root (<code>lesslucifer.github.io/robots.txt</code>, not ours) and a one-page site needs no sitemap. Revisit only if a custom domain comes (Q1 ruled github.io)</td></tr>
     </table>
@@ -169,15 +175,17 @@ jobs:
       <tr><th>Check</th><th>Where</th><th>Asserts</th></tr>
       <tr><td>Build from fixture</td><td><code>xtask</code> unit + integration (<code>xtask/tests/suite/site.rs</code>)</td><td><code>site build</code> on a v0.1.0 release fixture produces <code>index.html</code>, <code>404.html</code>, <code>site.css</code> and only the listed assets; no path under <code>docs/</code> in the output</td></tr>
       <tr><td>Links</td><td>same</td><td>every relative <code>href</code>/<code>src</code>/<code>srcset</code> resolves inside the output; every absolute <code>href</code> is <code>https://github.com/lesslucifer/Trawler/…</code>; the guide link equals <code>links.rs</code> <code>USER_GUIDE</code></td></tr>
-      <tr><td>No external requests</td><td>same</td><td>the CSP meta is present and exact; no absolute URL in any <code>src</code>, <code>srcset</code>, <code>&lt;link rel=stylesheet|icon|preload&gt;</code>, CSS <code>url()</code> or <code>@import</code>; no <code>&lt;script&gt;</code>, <code>&lt;iframe&gt;</code>, <code>&lt;form&gt;</code></td></tr>
+      <tr><td>No external requests</td><td>same</td><td>the CSP meta is present and exact per page; no absolute URL in any <code>src</code>, <code>srcset</code>, <code>&lt;link rel=stylesheet|icon|preload&gt;</code>, CSS <code>url()</code> or <code>@import</code>; one <code>&lt;script src="site.js" defer&gt;</code> in the index only; no inline script/style, <code>on…=</code>, <code>&lt;iframe&gt;</code>, <code>&lt;form&gt;</code></td></tr>
       <tr><td>Public text</td><td>extend <code>public_text.rs</code></td><td><code>DENIED_NAMES</code> over <code>site/*</code> and the built text; pitch = README h3 by construction</td></tr>
       <tr><td>Version and kinds</td><td>same</td><td>every download row names the kinds <code>Os::bundles</code> builds for a final at the release's version; the release version ≤ the workspace version in <code>Cargo.toml</code>; a fixture missing one asset is red</td></tr>
       <tr><td>Contrast</td><td>same</td><td>each text/background token pair in <code>site.css</code>, both themes, ≥ 4.5:1</td></tr>
+      <tr><td><code>site.js</code> scan · motion</td><td>same (W2 ✅)</td><td>no network, code-from-string, storage or side-effect-request API; ≤ 4,096 B; motion only under <code>no-preference</code>, no <code>infinite</code>, log done in 5 s</td></tr>
+      <tr><td>Detection behaviour</td><td><code>site/site.test.mjs</code> (W3), run by W2's site check</td><td>the 14 fixture cases pick the right <code>dl-*</code> id; <code>show()</code>: both buttons take the file's <code>href</code>, <code>#one</code> + <code>#pick</code> unhidden, <code>#all</code> closed with summary “Other systems”; unknown leaves <code>#one</code> hidden and <code>#all</code> open</td></tr>
       <tr><td>Workflow pin</td><td><code>xtask/tests/suite/pages_workflow.rs</code> (like <code>ci_workflow.rs</code>)</td><td>triggers, permissions per job, SHA-pinned actions, <code>persist-credentials: false</code>, artifact path <code>target/site</code>, no <code>continue-on-error</code>, timeouts</td></tr>
       <tr><td>Homepage = site</td><td><code>xtask/src/package.rs</code> unit (W6)</td><td><code>HOMEPAGE</code> is the site's base-URL constant from W2 (one fact, no second literal); <code>metadata_drift</code> on the tree is empty with all five fields switched; the fixtures name the site; a member still on the repo URL is red</td></tr>
-      <tr><td>Visual</td><td><code>cargo xtask site shots</code> (manual step of W3, not a gate)</td><td>headless Chrome <code>--screenshot</code> at 390×844 and 1440×900, light and dark (<code>--force-dark-mode</code>) into the W3 result for the owner; exit 2 when no Chrome is found</td></tr>
-      <tr><td>Code review</td><td><code>code-review</code> skill</td><td>every WU touching <code>xtask/</code> (W2, W3's test additions, W4's test, W6)</td></tr>
-      <tr><td>Design review</td><td>owner, on the W1 design doc</td><td>the design-review skill does not scope <code>site/</code>; the owner's rulings on W1 are the gate, like E-PRORELEASE W11–W13</td></tr>
+      <tr><td>Visual</td><td><code>cargo xtask site shots</code> (manual step of W3, not a gate)</td><td>headless Chrome <code>--screenshot</code> at 390×844 and 1440×900, light and dark (<code>--force-dark-mode</code>), script off and on, one reduced motion, into the W3 result for the owner; exit 2 when no Chrome is found</td></tr>
+      <tr><td>Code review</td><td><code>code-review</code> skill</td><td>every WU touching a code path, <code>site/</code> included (Q13): W2, W3, W4's test, W6</td></tr>
+      <tr><td>Design review</td><td>owner, on the W1 design doc</td><td>the design-review skill does not scope <code>site/</code>; the owner's W1 rulings (merged) are the gate, W3 the owner's shot sign-off</td></tr>
       <tr><td>Independent review of <code>.github/</code></td><td>router <code>trawler-05</code></td><td>W4 checklist below</td></tr>
     </table>
     <div class="callout" data-c="router-checklist"><strong>What the router checks on W4's <code>pages.yml</code>:</strong> (1) triggers are push to <code>main</code>, <code>release: published</code> (pre-release skipped) and <code>workflow_dispatch</code>, nothing on pull requests or other branches; (2) top-level <code>contents: read</code>, and <code>pages: write</code> + <code>id-token: write</code> on the deploy job only; (3) every <code>uses:</code> is a full SHA with a version comment, checkout and toolchain SHAs identical to <code>release.yml</code>; (4) <code>persist-credentials: false</code>; (5) the upload path is the build output dir, never <code>.</code>, <code>docs</code> or <code>site</code> raw; (6) no secret is referenced, the token only reads the release; (7) the release read is <code>releases/latest</code>, not the event payload; (8) <code>environment: github-pages</code> on the deploy job; (9) concurrency <code>pages</code>, no cancel-in-progress (a half-cancelled deploy); (10) timeouts set, no <code>continue-on-error</code>; (11) <code>release.yml</code> and <code>ci.yml</code> unchanged. The rulings leave this list as it was: Q11 confirms item 1's two triggers; W6 touches no file under <code>.github/</code>.</div>
@@ -212,9 +220,9 @@ flowchart LR
       <tr><td>—</td><td>Social preview</td><td>already custom (<code>usesCustomOpenGraphImage: true</code>)</td><td>nothing</td></tr>
     </table>
 
-    <h2 id="questions">Owner rulings — Q1–Q13 closed</h2>
+    <h2 id="questions">Owner rulings — Q1–Q13 and the W1 picks, closed</h2>
     <div data-item="open-questions">
-      <p><strong>Record:</strong> the owner (lesslucifer) answered all thirteen on 2026-11-08, relayed by router <code>trawler-05</code>. Twelve equal the v1 recommendation; <strong>Q12 differs</strong>. Open questions: none.</p>
+      <p><strong>Record:</strong> the owner (lesslucifer) answered all thirteen on 2026-11-08, relayed by router <code>trawler-05</code>. Eleven equal the v1 recommendation; <strong>Q12 differs</strong>, and <strong>Q13 was re-ruled yes</strong> in W1 round 2 with D2. Open questions: none.</p>
       <table data-c="owner-qs">
         <tr><th>Q</th><th>Decision</th><th>Ruling</th><th>Lands in</th></tr>
         <tr><td>Q1</td><td>Hosting and domain</td><td><code>https://lesslucifer.github.io/Trawler/</code>; no custom domain, no CNAME, no sitemap/robots</td><td>W2 base-URL constant, W4</td></tr>
@@ -229,7 +237,15 @@ flowchart LR
         <tr><td>Q10</td><td>Repo description</td><td>replaced by the owner with the exact text in setting #4</td><td>owner, setting #4</td></tr>
         <tr><td>Q11</td><td>Redeploy</td><td>on <code>release: published</code> (pre-releases skipped) and on merge to <code>main</code>; needs setting #2 (<code>v*</code> tag rule)</td><td>W4, settings #1–#2</td></tr>
         <tr><td>Q12</td><td>Metadata <code>homepage</code></td><td><strong>switch to the site</strong> (v1 recommended keep) — all five fields, not only the three named, because one constant holds them (<a href="#audit">audit</a>)</td><td><strong>W6</strong> (new), DEC-87 rule 4 amended</td></tr>
-        <tr><td>Q13</td><td><code>site/</code> a code path?</td><td>no, while the site has no script; a WU that adds JS adds <code>site/</code> to <code>is_code</code></td><td>—</td></tr>
+        <tr><td>Q13</td><td><code>site/</code> a code path?</td><td><strong>yes</strong> (re-ruled in W1 round 2): the site has a script, so <code>site/</code> is a code path and the cr gate covers it</td><td>W2 <code>is_code</code> ✅; W5 <code>docs/workflow.html</code> line (owner <code>mr commit</code>)</td></tr>
+      </table>
+      <table data-c="design-picks">
+        <tr><th>Pick</th><th>Ruling (owner · W1, 2026-11-08)</th><th>Lands in</th></tr>
+        <tr><td>D1 = A</td><td>centred stack, headline + download first</td><td>W3</td></tr>
+        <tr><td>D2 (revised, P3) · DOWNLOAD = B</td><td>one big “Download for ‹system›” button from <code>site.js</code> detection + “Other systems” (<code>details#all</code>); no script / unknown = full list open; “Other downloads” always visible</td><td>W3 markup, <code>site.js</code>, <code>site.test.mjs</code></td></tr>
+        <tr><td>D3 = B</td><td>bullets + more screens, retold as benefit stories</td><td>W3</td></tr>
+        <tr><td>LOOK = A · HERO = B · ACCENT = A · VOICE = B · RHYTHM = A</td><td>bold dark product-forward · moving CSS-only request log (V1, six rows) · amber glow · benefit stories · alternating</td><td>W3; ACCENT → W5 DEC-89 rule 6</td></tr>
+        <tr><td>P2</td><td>screenshots stay re-encoded PNG (not WebP)</td><td>W2 ✅</td></tr>
       </table>
       <div class="callout warn" data-c="q12-order"><strong>Q12 and the closing order.</strong> Pages deploys only from <code>main</code> (or a <code>v*</code> tag), so the address cannot resolve before the epic merges. The metadata's only reader is the bundler at a tag, so “resolves before it points” is kept where it reaches users: (1) W1–W6 land on <code>epic/pages</code>, W6 last; (2) epic merge; (3) owner settings #1–#2 → first <code>pages.yml</code> run green → the address answers 200; (4) setting #4; (5) only then the next rc tag — the first installers that carry the site as homepage. W5's release-process row makes step 5 a rule. Between (2) and (3) the tree names an address no shipped file carries.</div>
     </div>
@@ -244,7 +260,7 @@ flowchart LR
       <ul>
         <li><code>cargo xtask site build --release &lt;json&gt; --out &lt;dir&gt;</code> writes a one-page site whose download block names every v0.1.0 installer kind with working <code>releases/download/v0.1.0/…</code> links.</li>
         <li><code>.github/workflows/pages.yml</code> exists, pinned and tested; after the owner's settings and the merge, <code>https://lesslucifer.github.io/Trawler/</code> serves it.</li>
-        <li>DevTools Network on the live page shows requests to <code>lesslucifer.github.io</code> only; the page has no script.</li>
+        <li>DevTools Network on the live page shows requests to <code>lesslucifer.github.io</code> only; the only script is same-origin <code>site.js</code>, and the page is complete without it.</li>
         <li>Publishing the next final redeploys the site with its files, with no manual step.</li>
         <li>The deny-list, link and contrast tests hold the site text like the root markdown.</li>
         <li>Every <code>homepage</code> field in the tree names the site, held by one constant; the first rc tagged after the site answers ships deb/rpm/Windows entries that link it. Nothing already released changes.</li>
@@ -256,7 +272,7 @@ flowchart LR
       <ul>
         <li>A custom domain, analytics, a blog, docs search, translations, a rendered copy of the guide.</li>
         <li>Any change to <code>release.yml</code>, <code>ci.yml</code>, the updater channel or the app's links (About/Help keep <code>links.rs</code>; <code>repository</code> stays the repo).</li>
-        <li>OS auto-detection or any JavaScript.</li>
+        <li>Any script beyond <code>site.js</code>; any network, storage or tracking from it.</li>
         <li>New screenshots or brand art: the site uses what DEC-89/DEC-91 already generate.</li>
         <li>Setting repo settings, pushing, tagging or dispatching (owner only).</li>
       </ul>
@@ -265,8 +281,8 @@ flowchart LR
     <h2 id="wus">Working Units</h2>
     <div class="diagram" data-c="wu-graph"><pre class="mermaid">
 flowchart LR
-  W1["W1 · site design doc (owner rulings)"] --> W3["W3 · site/ pages + shots"]
-  W2["W2 · cargo xtask site build + checks"] --> W3
+  W1["W1 · site design doc ✅ merged"] --> W3["W3 · site/ pages + site.js + shots"]
+  W2["W2 · cargo xtask site build + checks ✅ merged"] --> W3
   W2 --> W4["W4 · pages.yml + its test · router review"]
   W3 --> W5["W5 · DEC-92 · UC-INSTALL · release-process (owner mr commit)"]
   W4 --> W5
@@ -276,39 +292,39 @@ flowchart LR
   W5 --> M
   M --> L(["owner settings → first deploy → site answers"])
   L --> T(["next rc tag: installers link the site"])
-</pre><div class="caption">W1 ∥ W2 now (all rulings in); then W3 ∥ W4; W5 ∥ W6 close. The site being live gates the next tag, not the merge (<a href="#questions">closing order</a>).</div></div>
+</pre><div class="caption">W1 and W2 merged into <code>epic/pages</code> (d4194fc8); next W3 ∥ W4; W5 ∥ W6 close. The site being live gates the next tag, not the merge (<a href="#questions">closing order</a>).</div></div>
     <div data-item="wu-summaries">
       <div data-wu="E-PAGES.W1">
-        <h3 id="w1">E-PAGES.W1 · site design <span class="badge approval">needs owner</span></h3>
+        <h3 id="w1">E-PAGES.W1 · site design <span class="badge auto">done · merged 658ff995</span></h3>
         <p data-item="wu-summary">A T3 design doc with an HTML mockup of the landing (hero, download block, features, privacy lead, footer, 404) in both themes at 390 px and 1440 px, the copy for every frame string, and the asset list; options where a call is open. Docs-only.</p>
         <p data-item="wu-maps-to">UC-INSTALL (new entry point); Q5, Q9; DEC-89 rules 2, 6; DEC-91 rule 1.</p>
-        <p data-item="wu-expected">The owner's rulings recorded in the doc; the mockup is the spec W3 builds and cites.</p>
+        <p data-item="wu-expected">Done: rounds 1–4 ruled (<a href="#design-picks">picks</a>); <a href="2026-11-08-pages-site-design.html">the design doc</a> is the spec W3 builds and cites.</p>
         <p data-item="wu-deps">none (parallel with W2)</p>
       </div>
       <div data-wu="E-PAGES.W2">
-        <h3 id="w2">E-PAGES.W2 · <code>cargo xtask site build</code> and its checks <span class="badge">code · cr</span></h3>
-        <p data-item="wu-summary">An xtask command that copies a stub <code>site/</code> frame into <code>--out</code>, fills the markers from README/PRIVACY (subset renderer that refuses unknown markdown), the release JSON (versioned links per <code>Os::bundles</code> kind, refusing a draft, pre-release or missing kind) and <code>links.rs</code>, copies the listed assets; owns the site base-URL constant <code>https://lesslucifer.github.io/Trawler/</code> (Q1) that OG/canonical tags and W6 read; plus the link, CSP/no-external, deny-list, version and contrast checks as unit tests in <code>xtask</code>.</p>
+        <h3 id="w2">E-PAGES.W2 · <code>cargo xtask site build</code> and its checks <span class="badge auto">done · merged d4194fc8</span></h3>
+        <p data-item="wu-summary">An xtask command that copies a stub <code>site/</code> frame into <code>--out</code>, fills the markers from README/PRIVACY (subset renderer that refuses unknown markdown), the release JSON (versioned links per <code>Os::bundles</code> kind, refusing a draft, pre-release or missing kind) and <code>links.rs</code>, copies the listed assets; owns the site base-URL constant <code>https://lesslucifer.github.io/Trawler/</code> (Q1) that OG/canonical tags and W6 read; plus the link, CSP/no-external, deny-list, version and contrast checks as unit tests in <code>xtask</code>. Also built per the W1 rulings: <code>is_code</code> += <code>site/</code> (Q13), the <code>site.js</code> scan (≤ 4,096 B) and motion check, the PNG shot re-encode, the story drift check; <code>site/site.js</code> is still a stub.</p>
         <p data-item="wu-maps-to">UC-INSTALL; Q2, Q3; DEC-91 rules 2–4.</p>
         <p data-item="wu-expected">Building from a committed v0.1.0 release fixture yields a page whose links resolve and whose download rows equal the README install table's kinds; a fixture missing the arm64 msi is red.</p>
         <p data-item="wu-deps">none (parallel with W1)</p>
       </div>
       <div data-wu="E-PAGES.W3">
         <h3 id="w3">E-PAGES.W3 · the site pages <span class="badge">design → build</span></h3>
-        <p data-item="wu-summary"><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code> built from W1's mockup on W2's markers: themes, responsive layout, OG/meta/CSP head, favicon and wordmark wiring; <code>cargo xtask site shots</code> for the owner's visual check.</p>
-        <p data-item="wu-maps-to">UC-INSTALL; W1's rulings.</p>
-        <p data-item="wu-expected">The built page passes every W2 check; light/dark × mobile/desktop shots in the result report match the mockup; the owner signs the result.</p>
-        <p data-item="wu-deps">W1, W2</p>
+        <p data-item="wu-summary"><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code> copied from the design doc's templates onto W2's markers, log V1: themes, responsive layout, OG/meta/CSP head, favicon and wordmark wiring. Revised D2: the one-button <code>#one</code> + <code>details#all</code> markup, the round 4 <code>site.js</code>, and <code>site/site.test.mjs</code> (14 fixture cases + the <code>show()</code> assertions); <code>cargo xtask site shots</code> for the owner's visual check.</p>
+        <p data-item="wu-maps-to">UC-INSTALL; W1's rulings (D1–D3, P1–P3, the picks); Q13 (cr gate).</p>
+        <p data-item="wu-expected">The built page passes every W2 check and <code>site.test.mjs</code>; light/dark × mobile/desktop × script off/on shots (+ reduced motion) in the result report match the design doc; code review; the owner signs the result.</p>
+        <p data-item="wu-deps">W1 ✅, W2 ✅ (ready)</p>
       </div>
       <div data-wu="E-PAGES.W4">
         <h3 id="w4">E-PAGES.W4 · the Pages workflow <span class="badge approval">router review</span></h3>
         <p data-item="wu-summary"><code>.github/workflows/pages.yml</code> as in <a href="#workflow-shape">the shape above</a>, and <code>xtask/tests/suite/pages_workflow.rs</code> pinning it; actionlint clean.</p>
         <p data-item="wu-maps-to">UC-INSTALL; Q1, Q11; DEC-86 (unchanged), DEC-83 (CI stays a signal; this workflow publishes, it gates nothing).</p>
         <p data-item="wu-expected">The test pins triggers, permissions, SHAs, artifact path; the router's 11-point checklist passes. First run happens only after the owner's settings #1–#2.</p>
-        <p data-item="wu-deps">W2 (the command it runs); parallel with W3</p>
+        <p data-item="wu-deps">W2 ✅ (ready); parallel with W3</p>
       </div>
       <div data-wu="E-PAGES.W5">
         <h3 id="w5">E-PAGES.W5 · distillation and the release-process rows <span class="badge approval">owner mr commit</span></h3>
-        <p data-item="wu-summary">Mint DEC-92 “the site is a build of the tree and the latest release, published by Actions, with no request outside its origin”; amend DEC-91 (the site joins the held text) and DEC-89 rule 10 (the site consumes favicon and wordmarks); UC-INSTALL entry point; the three <code>docs/release-process.html</code> rows (incl. the pre-tag “site answers” check), staged as <code>cargo xtask mr commit</code> for the owner.</p>
+        <p data-item="wu-summary">Mint DEC-92 “the site is a build of the tree and the latest release, published by Actions, with no request outside its origin”; amend DEC-91 (the site joins the held text), DEC-89 rule 10 (the site consumes favicon and wordmarks) and DEC-89 rule 6 (the site is a brand surface: amber as glow decoration, never text, state or fill); the <code>docs/workflow.html</code> line that <code>site/</code> is a code path (Q13); UC-INSTALL entry point; the three <code>docs/release-process.html</code> rows (incl. the pre-tag “site answers” check), staged as <code>cargo xtask mr commit</code> for the owner.</p>
         <p data-item="wu-maps-to">Distillation of the whole epic.</p>
         <p data-item="wu-expected">T2 carries the truth; the T1 edit is staged with its Reviewed-By path; the epic result report written.</p>
         <p data-item="wu-deps">W3, W4; parallel with W6</p>
@@ -318,7 +334,7 @@ flowchart LR
         <p data-item="wu-summary"><code>package::HOMEPAGE</code> becomes W2's site base-URL constant (no second literal); the five <code>homepage</code> fields (<code>Cargo.toml</code>, <code>ui/src-tauri/Cargo.toml</code>, <code>ui/src-tauri/tauri.conf.json</code> bundle, <code>login-service/Cargo.toml</code>, <code>xtask/Cargo.toml</code>) and the <code>package.rs</code> fixtures switch to <code>https://lesslucifer.github.io/Trawler/</code>; <code>repository</code> and <code>links.rs</code> stay the repo; DEC-87 rule 4 amended in the same WU.</p>
         <p data-item="wu-maps-to">UC-INSTALL (second contract); Q12; DEC-87 rule 4.</p>
         <p data-item="wu-expected"><code>metadata_drift</code> on the tree is empty; a member left on the repo URL is red; <code>cargo xtask package</code> on the host writes the site into the bundle's homepage (deb control <code>Homepage</code> / rpm <code>URL</code> on Linux, uninstall-entry links on Windows; the macOS dmg has no such field). Reaches users only through the next tag, after the site answers.</p>
-        <p data-item="wu-deps">W2 (the constant), W4 (the deploy that makes it resolve); merges into the epic last; the next tag waits for the live site</p>
+        <p data-item="wu-deps">W2 ✅ (the constant), W4 (the deploy that makes it resolve); merges into the epic last; the next tag waits for the live site</p>
       </div>
     </div>
 
@@ -338,10 +354,11 @@ flowchart LR
       <table>
         <tr><th>Target</th><th>Tier</th><th>Change</th></tr>
         <tr><td><code>docs/decisions/dec-92-…</code> + <code>decisions-index.html</code></td><td>T2</td><td>new: the site's source, build, deploy, privacy rules (next free number verified across all branches and worktrees today)</td></tr>
-        <tr><td>DEC-91, DEC-89</td><td>T2</td><td>amend as in W5</td></tr>
+        <tr><td>DEC-91, DEC-89 (rules 6 and 10)</td><td>T2</td><td>amend as in W5</td></tr>
         <tr><td>DEC-87 rule 4 + <code>decisions-index.html</code> summary</td><td>T2</td><td>homepage = the site; amended in W6</td></tr>
         <tr><td><code>docs/use-cases/web-ui.html#uc-install</code></td><td>T2</td><td>the site as an entry point</td></tr>
-        <tr><td><code>docs/release-process.html</code></td><td>T1</td><td>two rows; owner's <code>mr commit</code></td></tr>
+        <tr><td><code>docs/release-process.html</code></td><td>T1</td><td>three rows; owner's <code>mr commit</code></td></tr>
+        <tr><td><code>docs/workflow.html</code></td><td>T1</td><td><code>site/</code> is a code path (Q13); owner's <code>mr commit</code></td></tr>
         <tr><td><code>CLAUDE.md</code> commands line (<code>cargo xtask site build</code>)</td><td>T0</td><td>proposed to the owner only; T0 is edited on explicit request</td></tr>
         <tr><td>this plan + WU docs</td><td>T3</td><td>archived to <code>docs/.archive/</code> at close (DEC-3)</td></tr>
       </table>
@@ -351,6 +368,7 @@ flowchart LR
     <ul data-c="unverified">
       <li>That the <code>github-pages</code> environment's default rule refuses a deploy from a <code>v*</code> tag ref (the reason for setting #2): from GitHub's documented behaviour, not observed; Pages is off.</li>
       <li>The two Pages action SHAs are today's tag lookups; not run.</li>
+      <li>Detection on real Windows on Arm, Linux arm64, iPadOS and ChromeOS; Safari/Firefox rendering (design doc frames checked in Chrome only).</li>
       <li>Headless Chrome's <code>--force-dark-mode</code> setting <code>prefers-color-scheme: dark</code> for the shots: to be proven in W3.</li>
       <li>How the site renders on a real phone; budget numbers are from file sizes, not a measured load.</li>
     </ul>
