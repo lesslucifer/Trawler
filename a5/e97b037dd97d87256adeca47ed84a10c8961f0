@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU router-kanban/visibility-gate -> epic/router-kanban"
+epic: E-KANBAN
+wu: E-KANBAN.W4
+branch: wu/router-kanban/visibility-gate
+base: e352e436a3d3bf6e5416a0fd7e953462605e33c3
+head: a5e97b037dd97d87256adeca47ed84a10c8961f0
+diff_sha256: a16a2a1206fb0b4011d1ab74a3524d1a93777fc03746a557324f684bd49a6fc7
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: opus
+  shards: 1
+  candidates:
+    important: 2
+    nit: 4
+  stage_seconds:
+    gate0: 25
+    total: 144
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "carded_branches reads every card's note, archive included, on each heartbeat; an early stop once every candidate branch is carded would save reads in the clean case (proposed important, refuted to a nit)"
+    waived: "proving an orphan needs every card's ## Branch, a hung vault costs one timeout, a 10-minute loopback CLI is no hot path, and the archive read is a recorded plan decision"
+  - finding: "check reads the notes even when no epic/wu worktree exists"
+    waived: "the board GET must stay to surface the exit-3 offline signal; skipping only the note reads is a constant-factor tidy-up on an idle repo"
+  - finding: "a prunable worktree (directory deleted, not pruned) reports as an orphan with a dead path (proposed important, refuted to a nit)"
+    waived: "git still holds the branch, so it is uncarded work the backstop should surface; carding it clears it next tick"
+  - finding: "fetch_board is now a one-line wrapper over load_board"
+    waived: "keeps the String-typed callers in board.rs unchanged; one line, no rule duplicated"
+  - finding: "check repeats the Unreachable-to-event / Refused-to-error match also written in wait and watchdog"
+    waived: "each caller's surrounding control flow differs (wait retries, watchdog saves state); the mapping is two arms"
+  - finding: "branch_level's unit test stayed in mr.rs's test module"
+    waived: "it still pins the shared function through crate::branch_level; orphans' unit test covers the board consumer"
+verdict: PASS
+date: 2026-11-08
