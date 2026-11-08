@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af085e69f34851f0dfb1f78" data-artifact="wu-plan" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-VIKUNJA.W1 plan</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-VIKUNJA.W1 plan: stand up the Vikunja instance</h1>
+      <p>A local Vikunja with the Trawler Router project, the needs-owner signal and a scoped router token, plus the protocol that governs them.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU plan · <span class="badge id">E-VIKUNJA.W1</span> · <code>wu/router-vikunja/instance-setup</code> → <code>epic/router-vikunja</code></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="requirement">Requirement</h2>
+    <p data-item="requirement">With the router's token alone, the router can create an epic task and a WU subtask in the "Trawler Router" project of a loopback-only Vikunja, relate them, assign the owner and add <code>needs-owner</code>, and the owner's "Needs me" saved filter lists that task exactly while the label is on, as specified in <code>vikunja-protocol.md</code>.</p>
+
+    <h2 id="maps-to">Mapping</h2>
+    <p data-item="maps-to">E-VIKUNJA (Vikunja as the router↔owner surface), summary block W1 "stand up the instance"; owner's rulings: mapping, needs-owner signal, start clean. Process epic, no UC.</p>
+
+    <h2 id="expected">Expected result</h2>
+    <div data-item="expected">
+      <table data-c="expected">
+        <thead><tr><th>Exists after</th><th>Checkable by</th></tr></thead>
+        <tbody>
+          <tr><td>Vikunja (official binary, bundled SQLite) under <code>~/.local/share/vikunja/</code>, on <code>127.0.0.1:3456</code>, no persistence registered</td><td><code>curl -sf http://127.0.0.1:3456/api/v1/info</code></td></tr>
+          <tr><td>Users <code>vuluu</code> (owner) and <code>trawler-router</code>; project "Trawler Router" shared with the owner; label <code>needs-owner</code>; owner's saved filter "Needs me"</td><td>API reads</td></tr>
+          <tr><td>Router token at <code>~/.config/trawler/vikunja.key</code>, 600, permissions scoped to the router's calls</td><td><code>ls -l</code>; the smoke run uses only it</td></tr>
+          <tr><td>Webhook capability confirmed; no endpoint configured</td><td><code>/info</code> → <code>webhooks_enabled</code>; <code>GET /projects/3/webhooks</code> → <code>[]</code></td></tr>
+          <tr><td><code>.claude/skills/trawler-router/references/vikunja-protocol.md</code>, listed in <code>trawler-router/SKILL.md</code></td><td>read</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="test-plan">Test plan</h2>
+    <div data-item="test-plan">
+      <table data-c="test-plan">
+        <thead><tr><th>Level</th><th>Plan</th></tr></thead>
+        <tbody>
+          <tr><td>unit · integration</td><td>waived: docs/infra-only — the diff is <code>.claude/skills/</code> and <code>docs/work/</code>, no code path (<code>is_code</code>), so no cr/v5 owed</td></tr>
+          <tr><td>live smoke (manual, recorded in the result)</td><td>token-only: create epic + two WU tasks → subtask relations → <code>blocked</code> relation → assign owner → add label → comment → read back reciprocal relations → owner's filter lists the task → remove label → filter empty → delete all</td></tr>
+          <tr><td>webhook probe</td><td>a throwaway loopback listener and a temporary project webhook: record which events fire on assign, label add/remove, comment, done; delete both after</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

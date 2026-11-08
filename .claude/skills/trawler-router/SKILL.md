@@ -5,7 +5,7 @@ description: Run the router role on the Trawler project (Rust + Tauri MITM proxy
 
 # Trawler router
 
-Load `router-agent` first; this adds Trawler facts. Sources: `CLAUDE.md`, `docs/workflow.html`, `docs/testing-strategy.html`, DEC-3 (`docs/decisions/workflow-gates.html`), DEC-64, 77, 81–86. Code wins: if `xtask/` or the docs disagree, trust them and fix this skill. References: `commands.md` · `brief-skeleton.md` · `review-checklists.md` · `failure-modes.md`.
+Load `router-agent` first; this adds Trawler facts. Sources: `CLAUDE.md`, `docs/workflow.html`, `docs/testing-strategy.html`, DEC-3 (`docs/decisions/workflow-gates.html`), DEC-64, 77, 81–86. Code wins: if `xtask/` or the docs disagree, trust them and fix this skill. References: `commands.md` · `brief-skeleton.md` · `review-checklists.md` · `failure-modes.md` · `vikunja-protocol.md` (the Vikunja owner surface's contract; routing moves onto it in E-VIKUNJA.W4).
 
 ## Layout
 | Thing | Value |
