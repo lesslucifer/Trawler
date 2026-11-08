@@ -1,0 +1,34 @@
+schema: cr/v5
+scope: "WU orphan-check-and-wiring -> epic/router-vikunja"
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W4
+branch: wu/router-vikunja/orphan-check-and-wiring
+base: 26aa49c7cb60593240c0818d52b1abe7a9b344ad
+head: a4261c43ae274602ce2e8ab2e7930692d1b3de67
+diff_sha256: 9da918adcb62874f37018a1d38a9b77e4e39b988369fa689a467a91ff0bd9ff0
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus
+  shards: 1
+  candidates:
+    important: 3
+    nit: 5
+  stage_seconds:
+    finders: 111
+    verifiers: 108
+    total: 219
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 3, verified: 0 }
+findings: { found: 3, verified: 1, waived: 0 }
+blocking:
+  - finding: "plain_text treats a stray '<' in plain text followed by any later '>' as one tag and drops everything between, so 'x < 3\\nBranch: wu/x/y\\nA -> B' names no branch: a false orphan and no missing-worktree"
+    severity: blocker
+refuted:
+  - "a Branch: value in backticks or with trailing punctuation never matches: input outside the documented 'Branch: <branch>' convention, and the task still yields a missing-worktree the router fixes"
+  - "every tick pages through all project-3 tasks incl. done ones, growing with history: a loopback CLI once per 10 min, the documented contract, no bounded drop-in"
+verdict: FAIL
+date: 2026-11-09
