@@ -24,7 +24,7 @@
     <div class="inner">
       <h1>E-PAGES.W1 — the landing site design</h1>
       <p>The page first: a bold, dark, product-forward launch page with a live request log as its hero, benefit stories with the real app framed as windows, an amber glow, quiet reveals. The spec W2 and W3 build from sits folded below it.</p>
-      <div class="meta">Round 4 · the owner's picks: log V1, re-encoded PNG · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W2, W3</div>
+      <div class="meta">Round 4 · the owner's picks: log V1, re-encoded PNG, one download button · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W2, W3</div>
     </div>
   </header>
   <main>
@@ -48,6 +48,8 @@
       <tr><th>#</th><th>Pick</th><th>Was open as</th><th>In this doc now</th></tr>
       <tr><td>P1</td><td>request log = <strong>V1</strong>: six rows in the app's status colours</td><td>V1 (recommended) or V2 (four rows, ink only)</td><td>V2, its frames and its <code>.log.quiet</code> rules are gone; <a href="#page">the page</a> carries V1 and its reduced-motion still strip; <a href="#copy">C15</a> and <a href="#motion">Motion</a> name only V1</td></tr>
       <tr><td>P2</td><td>screenshots as <strong>re-encoded PNG</strong>, with the <code>png</code> crate xtask already has</td><td>re-encoded PNG (recommended) or lossless WebP</td><td>first picked WebP on round 3's −81 %; reversed the same day after the shippable pure-Rust encoder measured −30 %. <a href="#assets">Assets</a>: PNG shots re-encoded by W2, weights re-measured; no new crate</td></tr>
+      <tr><td>P3</td><td>download block = <strong>one big button + “Other systems”</strong> (D2 revised)</td><td>picked from rendered options: a card per OS with your system highlighted (staged), one big button, an OS switcher</td><td><a href="#detect">Detection</a>: the no-script base is the full file list, open; detected, the section shows one button for your file and folds the list under “Other systems”; <code>site.js</code>, the copy (C13, C35–C36, C40, C44, C49) and the tests owed change; W3 follow-up in <a href="#for-w3">For W2 and W3</a></td></tr>
+      <tr><td>Picker</td><td><code>LOOK=A HERO=B ACCENT=A VOICE=B DOWNLOAD=B RHYTHM=A</code></td><td>the owner saw a small rendered option per choice (2026-11-08)</td><td>every pick but DOWNLOAD confirms the staged design: bold dark look, the moving log, amber glow, benefit-story voice, alternating stories</td></tr>
     </table>
 
 
@@ -78,13 +80,13 @@
         <tr><td>Q9</td><td>system fonts + outlined wordmark</td><td>same</td><td>system stacks only; <code>wordmark-dark.png</code> in the top bar and the footer</td></tr>
         <tr><td>Q13</td><td>yes: <code>site/</code> is a code path (the site has a script)</td><td>owner · 2026-11-08 (W1 round 2, with D2)</td><td>W2 edits <code>is_code</code>; the <code>docs/workflow.html</code> T1 line is W5's owner <code>mr commit</code></td></tr>
         <tr><td>D1</td><td>centred stack, headline + download first</td><td>owner · W1 round 2</td><td>kept: eyebrow, pitch, sub, buttons, centred; the hero visual under them is now the request log (R2), s1 moves to the first section</td></tr>
-        <tr><td>D2</td><td>a card per OS as the no-script base + OS detection by one same-origin <code>site.js</code>; an “Other downloads” link stays visible</td><td>same</td><td>kept unchanged: same script, same page contract (<a href="#detect">Detection</a>); the cards are restyled</td></tr>
+        <tr><td>D2</td><td><s>a card per OS, yours highlighted</s> → one big button for your system + “Other systems”; the no-script base is the full file list; detection by one same-origin <code>site.js</code>; an “Other downloads” link to releases/latest stays visible</td><td>owner · W1 round 2; revised 2026-11-08 (W1 round 4, P3, picked from rendered options)</td><td><a href="#detect">Detection</a>: same <code>detect()</code>, CSP and fixture inputs; <code>show()</code> fills the one-button block and folds the list instead of reordering cards</td></tr>
         <tr><td>D3</td><td>bullets + More screens</td><td>same</td><td><strong>retold</strong> as R4: the bullets become story headings and sentences, the screens become each story's window; no bullet list remains</td></tr>
         <tr><td>R1</td><td>bold product-forward: dark, big headline, the app framed like a real window, a glowing amber accent</td><td>owner · 2026-11-08 (W1 round 3, via the router)</td><td>the hero, privacy band and footer are dark in both themes; amber only as glow (see the DEC-89 row)</td></tr>
         <tr><td>R2</td><td>hero visual = a moving request log, CSS only, still under reduced motion; the framed screenshot right after as the first benefit</td><td>same</td><td><code>.log</code> in <code>#t-index</code>, V1 (P1)</td></tr>
         <tr><td>R3</td><td>subtle motion: soft reveals, gentle hover; the log is the one lively element; always off under reduced motion</td><td>same</td><td><a href="#motion">Motion</a></td></tr>
         <tr><td>R4</td><td>benefit stories: what you get, then one plain sentence; every line traceable; the tagline stays the README pitch</td><td>same</td><td><a href="#copy">Copy</a> C16–C27</td></tr>
-        <tr><td>DEC-89 rule 6</td><td>“amber is a brand colour, never a UI colour”</td><td>R1 asks for an amber glow</td><td>amber appears only as decoration of the brand surface (the glows, the arriving row's edge, the picked card's halo), the way the social card and installer art use it; never text, never a state, never a control's fill. W5 records the site as a brand surface in a DEC-89 amendment (owner <code>mr commit</code>)</td></tr>
+        <tr><td>DEC-89 rule 6</td><td>“amber is a brand colour, never a UI colour”</td><td>R1 asks for an amber glow</td><td>amber appears only as decoration of the brand surface (the glows, the arriving row's edge, the primary button's hover halo), the way the social card and installer art use it; never text, never a state, never a control's fill. W5 records the site as a brand surface in a DEC-89 amendment (owner <code>mr commit</code>)</td></tr>
         <tr><td>P1</td><td>request log = V1, six rows with the app's status colours; V2 dropped</td><td>owner · 2026-11-08 (W1 round 4, via the router)</td><td>C15, <a href="#motion">Motion</a>, <code>#t-index</code>; no variation left in <code>site.css</code></td></tr>
         <tr><td>P2</td><td>screenshots as re-encoded PNG with the <code>png</code> crate xtask already has; no new crate</td><td>owner · 2026-11-08 (W1 round 4, via the router): WebP first, reversed the same day when the shippable encoder measured −30 %, not −81 %</td><td><a href="#assets">Assets</a>; <code>og:image</code> stays <code>social-preview.png</code>; CSP unchanged</td></tr>
       </table>
@@ -104,11 +106,11 @@
         <tr><td>C7</td><td>eyebrow</td><td>Free and open source · macOS · Windows · Linux</td><td>frame · README sub line “A free, open-source debugging proxy for macOS, Windows and Linux”</td></tr>
         <tr><td>C8</td><td><code>h1</code></td><td>See every HTTP and HTTPS request your apps make.</td><td>filled README pitch (Q5)</td></tr>
         <tr><td>C9</td><td>sub line</td><td>A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</td><td>filled README</td></tr>
-        <tr><td>C10</td><td>primary button</td><td>Download for ‹macOS · Windows · Linux›; detected: Download for ‹the picked card's <code>h3</code>›</td><td>frame (README's link words); the script copies the <code>h3</code></td></tr>
+        <tr><td>C10</td><td>primary button</td><td>Download for ‹macOS · Windows · Linux›; detected: Download for ‹the picked system's <code>h3</code>›</td><td>frame (README's link words); the script copies the <code>h3</code></td></tr>
         <tr><td>C11</td><td>second button</td><td>Read the guide</td><td>frame · GUIDE.md</td></tr>
         <tr><td>C12</td><td>under the buttons</td><td>Version ‹0.1.0› · MIT licence · no account</td><td>filled version · README FAQ “MIT licence, no paid tier, no account”</td></tr>
-        <tr><td>C13</td><td>detected only</td><td>‹file name› · <u>Other systems</u> · <u>Other downloads</u></td><td>frame words; file name copied from the picked link</td></tr>
-        <tr><td>C14</td><td>detected only</td><td>the picked card's C41, C42 or C43, with its link</td><td>copied by the script</td></tr>
+        <tr><td>C13</td><td>detected only</td><td>‹file name› · <u>Other systems</u> (→ <code>#all</code>) · <u>Other downloads</u></td><td>frame words; file name copied from the picked link</td></tr>
+        <tr><td>C14</td><td>detected only</td><td>the picked system's C41, C42 or C43, with its link</td><td>copied by the script</td></tr>
         <tr><td>C15</td><td>request log</td><td>window title “Trawler”; columns Method · Host · Path · Status · Time; six rows: GET www.example.org / 200 84 ms · POST api.example.com /v1/session 200 133 ms · GET api.example.com /v1/orders/9f3c 200 71 ms · GET api.example.com /v1/recommendations 404 33 ms · PATCH api.example.com /v1/cart/items/C-3 200 90 ms · DELETE api.example.com /v1/cart/items/B-7 204 44 ms; <code>aria-label</code> “An example of Trawler's request list: six requests to example hosts”</td><td>frame · rows copied from the s1/s4 screenshot fixture (reserved <code>example.*</code> hosts); column names from the app's list</td></tr>
         <tr><td>C16</td><td><code>#features h2</code></td><td>Every request your apps make, in one list.</td><td>frame · GUIDE.md intro “Trawler shows every HTTP and HTTPS request your apps make”</td></tr>
         <tr><td>C17</td><td>under it</td><td>Method, host, path, status and time for each one. Click a request and its headers and body open beside the list — HTTPS too, once your system trusts Trawler's certificate.</td><td>frame · the s1 columns; GUIDE#inspect-a-request “The inspector opens beside the list”; README First run (set up trusts the certificate)</td></tr>
@@ -125,23 +127,24 @@
         <tr><td>C28</td><td><code>#privacy h2</code> + lead</td><td>Trawler keeps your traffic on your machine. · It has no account, no analytics, no crash reporting and no telemetry.</td><td>filled PRIVACY.md lead, split after its first sentence</td></tr>
         <tr><td>C29</td><td>three tiles</td><td><strong>In memory, gone when you quit.</strong> Captured requests stay in memory on your machine. Export to HAR to keep them. · <strong>Two requests of its own.</strong> An update check to GitHub when it opens, at most once a day, which you can turn off; and the setup screen's test request to example.com when you click it. · <strong>Only this machine, until you allow another.</strong> Trawler listens only on this machine until you allow another device.</td><td>README Privacy bullets 1–2; PRIVACY.md “Other devices” row</td></tr>
         <tr><td>C30</td><td>the limit, where it bites</td><td>Trawler's certificate key is stored unencrypted in your app data folder. Remove the certificate when you stop using Trawler.</td><td>README Privacy bullet 3 (DEC-91 rule 1: limits stated where they bite)</td></tr>
-        <tr><td>C31</td><td>this site</td><td>This site keeps the same promise: no analytics, no cookies, no tracking, and nothing loaded from any other site. One small script puts your system's download first; it reads only what your browser reports about your system, and stores and sends nothing. GitHub hosts this page and sees your IP address, as any web host does.</td><td>frame (round 2's C31) · backed by W2's CSP, no-external and scan tests; PRIVACY.md “GitHub sees your IP address”</td></tr>
+        <tr><td>C31</td><td>this site</td><td>This site keeps the same promise: no analytics, no cookies, no tracking, and nothing loaded from any other site. One small script picks your system's download; it reads only what your browser reports about your system, and stores and sends nothing. GitHub hosts this page and sees your IP address, as any web host does.</td><td>frame (round 2's C31) · backed by W2's CSP, no-external and scan tests; PRIVACY.md “GitHub sees your IP address”</td></tr>
         <tr><td>C32</td><td>link</td><td><u>What leaves your machine and what stays</u></td><td>frame · PRIVACY.md</td></tr>
         <tr><td>C33</td><td><code>#download h2</code></td><td>Download Trawler</td><td>frame</td></tr>
         <tr><td>C34</td><td>under it</td><td>Version ‹0.1.0› · ‹2026-11-07› · <u>release notes</u></td><td>frame words, filled values</td></tr>
-        <tr><td>C35</td><td>the honest line</td><td>Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher the first time you open it. Each card says what to click. <u>Step by step</u></td><td>README “First open on macOS and Windows” + FAQ · GUIDE.md#install</td></tr>
-        <tr><td>C36</td><td>card <code>h3</code></td><td>macOS · Windows · Linux</td><td>frame</td></tr>
+        <tr><td>C35</td><td>the honest line</td><td>Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher the first time you open it. The line under each download says what to click. <u>Step by step</u></td><td>README “First open on macOS and Windows” + FAQ · GUIDE.md#install</td></tr>
+        <tr><td>C36</td><td>system <code>h3</code> in the list</td><td>macOS · Windows · Linux</td><td>frame</td></tr>
         <tr><td>C37</td><td>macOS requirement</td><td>macOS 11 or later · Apple Silicon and Intel</td><td>frame (= README install row)</td></tr>
         <tr><td>C38</td><td><code>h4</code> · file links · “or”</td><td>x64 · arm64 · <code>Trawler_0.1.0_universal.dmg</code> … · or</td><td>frame · filled release asset names</td></tr>
         <tr><td>C39</td><td>Windows hint</td><td>Not sure which? <strong>Settings → System → About → System type</strong>.</td><td>frame (plan)</td></tr>
-        <tr><td>C40</td><td>under the picked card's <code>h3</code>, detected only</td><td>Your system</td><td>frame (in every card, <code>hidden</code>)</td></tr>
+        <tr><td>C40</td><td>the list's <code>summary</code></td><td>All systems (no script, unknown system) · Other systems (detected)</td><td>frame; the script swaps the words</td></tr>
         <tr><td>C41</td><td>macOS first open</td><td>First open: <strong>Privacy &amp; Security → Open Anyway</strong>. <u>Step by step</u></td><td>frame (= README) · GUIDE.md#install</td></tr>
         <tr><td>C42</td><td>Windows first open</td><td>First open: <strong>More info → Run anyway</strong>. <u>Step by step</u></td><td>frame (= README) · GUIDE.md#install</td></tr>
         <tr><td>C43</td><td>Linux first open</td><td>No prompt on first open. <u>Install commands</u></td><td>frame (= README) · GUIDE.md#install</td></tr>
-        <tr><td>C44</td><td>under the cards</td><td>Check your download: <u>SHA256SUMS</u> · <u>how to check</u></td><td>frame · the release asset, GUIDE.md#check-your-download</td></tr>
+        <tr><td>C44</td><td>under the list</td><td>Check your download: <u>SHA256SUMS</u> · <u>how to check</u></td><td>frame · the release asset, GUIDE.md#check-your-download</td></tr>
         <tr><td>C45</td><td>always present</td><td><u>Other downloads: every file of the latest release, on GitHub</u></td><td>frame · releases/latest (Q3, D2)</td></tr>
         <tr><td>C46</td><td>footer</td><td>the pitch · MIT © 2026 Vu Luu</td><td>filled README pitch · README “Contributing · Security · Licence”</td></tr>
         <tr><td>C47</td><td>footer <code>nav</code> “Project files”</td><td>Guide · Privacy · Changelog · Contributing · Security · Licence · Report an issue · Source code</td><td>frame · blob/main files, issues/new/choose, the repo</td></tr>
+        <tr><td>C49</td><td>the one-button block, detected only</td><td>Download for ‹system› (C10's words) · ‹file name› · the system's C41, C42 or C43</td><td>copied by the script, like C10, C13, C14</td></tr>
         <tr><td>C48</td><td>404</td><td><code>&lt;title&gt;</code> Page not found — Trawler · <code>h1</code> This page doesn't exist. · <u>Go to the Trawler home page</u></td><td>frame</td></tr>
       </table>
       <p>Left out on purpose: “Nothing leaves your machine” (false: the update check goes to GitHub and captured requests go where they were going; PRIVACY.md says “keeps your traffic on your machine”, so the page says that); “in seconds” and any other speed, count or comparison (nothing measures it); testimonials, logos, other tools' names (DEC-91 rule 2).</p>
@@ -161,21 +164,21 @@
     </details>
 
     <details class="spec" id="detect" data-c="detect">
-      <summary>Download detection (D2, unchanged from round 2)</summary>
-      <p>A tiny same-origin script, no network request, no tracking, no storage. It reads what the browser reports (<code>navigator.userAgentData.platform</code>, <code>navigator.platform</code>, <code>navigator.userAgent</code>, <code>navigator.maxTouchPoints</code>, and on Chromium the one async hint <code>architecture</code>), picks one download block, and changes nothing else.</p>
+      <summary>Download detection (D2, revised in round 4: one button + Other systems)</summary>
+      <p>A tiny same-origin script, no network request, no tracking, no storage. It reads what the browser reports (<code>navigator.userAgentData.platform</code>, <code>navigator.platform</code>, <code>navigator.userAgent</code>, <code>navigator.maxTouchPoints</code>, and on Chromium the one async hint <code>architecture</code>), picks one download, fills the two buttons with it, and changes nothing else.</p>
       <table>
-        <tr><th>System</th><th>What a browser can tell</th><th>Primary (the hero button, first in the card)</th><th>Where the others sit</th></tr>
-        <tr><td><strong>macOS</strong></td><td>That it is a Mac; not Apple Silicon from Intel (Safari reports <code>MacIntel</code> on both)</td><td><code>Trawler_‹v›_universal.dmg</code>: one file serves both chips</td><td>none; “macOS 11 or later · Apple Silicon and Intel” stays visible</td></tr>
-        <tr><td><strong>Windows</strong></td><td>That it is Windows. Arch only on Chromium, through <code>getHighEntropyValues(['architecture'])</code> (async, absent in Firefox and Safari)</td><td><code>‹v›_x64-setup.exe</code> at once; promoted to <code>‹v›_arm64-setup.exe</code> only when the hint answers <code>"arm"</code></td><td>the other arch right below in the same card; each <code>.msi</code> on its “or” line; the “Not sure which?” hint</td></tr>
-        <tr><td><strong>Linux</strong></td><td>That it is Linux, and arm64 when the UA or <code>navigator.platform</code> says <code>aarch64</code>/<code>arm64</code> (or the hint says <code>"arm"</code>); never the distribution</td><td><code>‹v›_amd64.AppImage</code> / <code>‹v›_aarch64.AppImage</code>: any distribution, no password to install or update</td><td><code>.deb</code> and <code>.rpm</code> on the “or” line; “Install commands” → GUIDE#install</td></tr>
+        <tr><th>System</th><th>What a browser can tell</th><th>Primary (the hero button and the download button)</th><th>Where the others sit</th></tr>
+        <tr><td><strong>macOS</strong></td><td>That it is a Mac; not Apple Silicon from Intel (Safari reports <code>MacIntel</code> on both)</td><td><code>Trawler_‹v›_universal.dmg</code>: one file serves both chips</td><td>none; “macOS 11 or later · Apple Silicon and Intel” stays in the list</td></tr>
+        <tr><td><strong>Windows</strong></td><td>That it is Windows. Arch only on Chromium, through <code>getHighEntropyValues(['architecture'])</code> (async, absent in Firefox and Safari)</td><td><code>‹v›_x64-setup.exe</code> at once; promoted to <code>‹v›_arm64-setup.exe</code> only when the hint answers <code>"arm"</code></td><td>under “Other systems”: the other arch, each <code>.msi</code> on its “or” line, the “Not sure which?” hint</td></tr>
+        <tr><td><strong>Linux</strong></td><td>That it is Linux, and arm64 when the UA or <code>navigator.platform</code> says <code>aarch64</code>/<code>arm64</code> (or the hint says <code>"arm"</code>); never the distribution</td><td><code>‹v›_amd64.AppImage</code> / <code>‹v›_aarch64.AppImage</code>: any distribution, no password to install or update</td><td>under “Other systems”: <code>.deb</code> and <code>.rpm</code> on the “or” line; “Install commands” → GUIDE#install</td></tr>
         <tr><td>Phone, tablet, ChromeOS, anything else</td><td>Android, iPhone, iPad (also <code>MacIntel</code> with touch points), <code>CrOS</code>, <code>userAgentData.mobile</code>, an empty platform</td><td colspan="2">unknown: the page stays as with the script off</td></tr>
       </table>
       <table>
-        <tr><th>State</th><th>Hero button</th><th>Hero line under it</th><th>Download cards</th></tr>
-        <tr><td>no script · unknown</td><td>Download for macOS · Windows · Linux → <code>#download</code></td><td>hidden</td><td>macOS · Windows · Linux; x64 before arm64; no highlight</td></tr>
-        <tr><td><code>macos</code> · <code>windows-x64</code> · <code>windows-arm64</code> · <code>linux-x64</code> · <code>linux-arm64</code></td><td>Download for ‹system› → that file</td><td>the file name · Other systems · Other downloads, then the card's first-open line</td><td>the picked card first, a 2 px ink border, an amber halo and “Your system”; the picked arch block first inside it</td></tr>
+        <tr><th>State</th><th>Hero button</th><th>Hero line under it</th><th>Download section</th></tr>
+        <tr><td>no script · unknown</td><td>Download for macOS · Windows · Linux → <code>#download</code></td><td>hidden</td><td>no big button; the list open under “All systems”: macOS · Windows · Linux, x64 before arm64</td></tr>
+        <tr><td><code>macos</code> · <code>windows-x64</code> · <code>windows-arm64</code> · <code>linux-x64</code> · <code>linux-arm64</code></td><td>Download for ‹system› → that file</td><td>the file name · Other systems · Other downloads, then the card's first-open line</td><td>one big “Download for ‹system›” button, the file name and the first-open line; the list folded under “Other systems”, one click opens it</td></tr>
       </table>
-      <p>The reorder moves DOM nodes, not CSS <code>order</code>, so tab order and reading order follow what is seen. A missing <code>dl-*</code> id makes <code>show</code> return without a change.</p>
+      <p>Nothing moves: the list keeps its order in every state, so tab and reading order never change. The fold is a native <code>&lt;details&gt;</code>: it opens without a script, and the script only closes it. A missing <code>dl-*</code> id makes <code>show</code> return without a change.</p>
       <div class="fr-row fr-phones">
         <div class="fr-cell"><p class="fr-lbl"><strong>macos</strong> · 390 · light</p><div class="fr" data-w="390" data-theme="light" data-state="macos" data-only="hero download" aria-label="Detected macOS"></div></div>
         <div class="fr-cell"><p class="fr-lbl"><strong>windows-x64</strong> · 390 · dark</p><div class="fr" data-w="390" data-theme="dark" data-state="windows-x64" data-only="hero download" aria-label="Detected Windows x64"></div></div>
@@ -187,7 +190,7 @@
         <div class="fr-cell"><p class="fr-lbl"><strong>windows-x64</strong> · 1440 · light</p><div class="fr" data-w="1440" data-theme="light" data-state="windows-x64" data-only="hero download" aria-label="Detected Windows x64 at 1440 px"></div></div>
       </div>
       <h3 id="site-js">site.js</h3>
-      <p>The reference W3 copies (1,649 bytes, unchanged). A classic <code>defer</code> script: module scripts never run on a <code>file://</code> origin. It writes only <code>href</code>, <code>textContent</code>, <code>hidden</code>, one class and node order. The frames run exactly this text.</p>
+      <p>The reference W3 copies (revised in round 4; size below). A classic <code>defer</code> script: module scripts never run on a <code>file://</code> origin. It writes only <code>href</code>, <code>textContent</code>, <code>hidden</code> and the list's <code>open</code>. The frames run exactly this text.</p>
       <pre><code id="site-js-src">function detect(nav) {
   const ua = (nav.userAgent || '') + ' ' + (nav.platform || '');
   const data = nav.userAgentData;
@@ -203,18 +206,18 @@
 function show(key) {
   const block = document.getElementById('dl-' + key);
   if (!block) return;
-  const card = block.closest('.card');
-  const first = card.querySelector('.arch');
+  const system = block.closest('.card');
   const file = block.querySelector('a.file');
-  card.parentElement.prepend(card);
-  if (first !== block) first.before(block);
-  card.classList.add('mine');
-  card.querySelector('.mine-tag').hidden = false;
-  document.getElementById('get').href = file.href;
-  document.getElementById('get-os').textContent = card.querySelector('h3').textContent;
-  document.getElementById('pick-file').textContent = file.textContent;
-  document.getElementById('pick-first').replaceChildren(...card.querySelector('.first').cloneNode(true).childNodes);
+  const first = system.querySelector('.first');
+  for (const id of ['get', 'one-get']) document.getElementById(id).href = file.href;
+  for (const id of ['get-os', 'one-os']) document.getElementById(id).textContent = system.querySelector('h3').textContent;
+  for (const id of ['pick-file', 'one-file']) document.getElementById(id).textContent = file.textContent;
+  for (const id of ['pick-first', 'one-first']) document.getElementById(id).replaceChildren(...first.cloneNode(true).childNodes);
   document.getElementById('pick').hidden = false;
+  document.getElementById('one').hidden = false;
+  const all = document.getElementById('all');
+  all.open = false;
+  all.querySelector('summary').textContent = 'Other systems';
 }
 
 const picked = detect(navigator);
@@ -227,7 +230,7 @@ if (picked) {
     }, () =&gt; {});
   }
 }</code></pre>
-      <p>The page's side of the contract: blocks <code>dl-macos</code>, <code>dl-windows-x64</code>, <code>dl-windows-arm64</code>, <code>dl-linux-x64</code>, <code>dl-linux-arm64</code> (class <code>arch</code>, first link <code>a.file</code>) inside a <code>.card</code> with an <code>h3</code>, a hidden <code>.mine-tag</code> and a <code>.first</code> line; the hero's <code>#get</code> / <code>#get-os</code> and the hidden <code>#pick</code> with <code>#pick-file</code> and <code>#pick-first</code>. Only download cards carry the class <code>card</code>; feature and privacy boxes are <code>tile</code>.</p>
+      <p>The page's side of the contract: blocks <code>dl-macos</code>, <code>dl-windows-x64</code>, <code>dl-windows-arm64</code>, <code>dl-linux-x64</code>, <code>dl-linux-arm64</code> (class <code>arch</code>, first link <code>a.file</code>) inside a <code>.card</code> with an <code>h3</code> and a <code>.first</code> line, all inside <code>details#all</code> (open in the markup, with a <code>summary</code>); the download section's hidden <code>#one</code> with <code>#one-get</code>, <code>#one-os</code>, <code>#one-file</code>, <code>#one-first</code>; the hero's <code>#get</code> / <code>#get-os</code> and the hidden <code>#pick</code> with <code>#pick-file</code> and <code>#pick-first</code>. Only download systems carry the class <code>card</code>; feature and privacy boxes are <code>tile</code>.</p>
     </details>
 
     <details class="spec" id="tokens" data-c="tokens">
@@ -236,7 +239,7 @@ if (picked) {
       <table>
         <tr><th>Token</th><th>Use</th><th>Light</th><th>Dark</th><th><code>.night</code> bands (both themes)</th></tr>
         <tr><td><code>--bg</code></td><td>surface</td><td><code>#f4f1ea</code> paper</td><td><code>#2b2622</code> canvas</td><td><code>#1b1916</code> (DEC-89 social canvas)</td></tr>
-        <tr><td><code>--ink</code></td><td>headings, links, primary button fill, focus ring, picked card border</td><td><code>#1f1c19</code> · 15.0</td><td><code>#f7f5f0</code> · 13.7</td><td><code>#f7f5f0</code> · 16.1</td></tr>
+        <tr><td><code>--ink</code></td><td>headings, links, primary button fill, focus ring</td><td><code>#1f1c19</code> · 15.0</td><td><code>#f7f5f0</code> · 13.7</td><td><code>#f7f5f0</code> · 16.1</td></tr>
         <tr><td><code>--body</code></td><td>body text</td><td><code>#3d3833</code> · 10.3 (9.4 on tiles)</td><td><code>#c9c0ad</code> · 8.3 (6.9 on tiles)</td><td><code>#c9c0ad</code> · 9.7 (8.3 on tiles)</td></tr>
         <tr><td><code>--mute</code></td><td>eyebrow, labels, meta, captions</td><td><code>#5f5850</code> · 6.2 (5.7 on tiles)</td><td><code>#aea69c</code> · 6.2 (5.2 on tiles)</td><td><code>#aea69c</code> · 7.3 (6.2 on tiles)</td></tr>
         <tr><td><code>--raise</code></td><td>tiles, cards</td><td><code>#ece7dc</code></td><td><code>#383330</code> canvas-soft</td><td><code>#2b2622</code></td></tr>
@@ -248,7 +251,7 @@ if (picked) {
         <tr><td>row text · column labels · title bar text (on <code>#383330</code>)</td><td><code>#c9c0ad</code> · <code>#aea69c</code> · <code>#f7f5f0</code></td><td>10.4 · 7.8 · 11.4</td></tr>
         <tr><td>ok (GET, 2xx) · create (POST) · amend (PATCH) · warn (DELETE, 4xx)</td><td>the app's <code>#4cc38a</code> · <code>#e5bf4d</code> · <code>#a78bfa</code> · <code>#e5484d</code></td><td>8.4 · 10.5 · 6.8 · 4.8</td></tr>
       </table>
-      <p>The log's body is <code>#141210</code>, not the app's canvas, because the app's <code>warn</code> reads 3.8:1 on <code>#2b2622</code>; on <code>#141210</code> every status passes 4.5:1. The picked card is marked by border weight and a word, never by colour alone.</p>
+      <p>The log's body is <code>#141210</code>, not the app's canvas, because the app's <code>warn</code> reads 3.8:1 on <code>#2b2622</code>; on <code>#141210</code> every status passes 4.5:1.</p>
     </details>
 
     <details class="spec" id="a11y" data-c="a11y">
@@ -261,6 +264,7 @@ if (picked) {
         <tr><td>Motion</td><td><a href="#motion">Motion</a>: everything off under reduced motion; nothing loops; the log ends under 5 s</td></tr>
         <tr><td>Targets</td><td>buttons at least 44 px tall (48 px for the hero pair)</td></tr>
         <tr><td>Images</td><td>alt from README/GUIDE; <code>width</code>/<code>height</code> on each; every screenshot <code>loading="lazy"</code> (none is in the first view)</td></tr>
+        <tr><td>Download list</td><td>a native <code>&lt;details&gt;</code>/<code>&lt;summary&gt;</code>: keyboard and screen readers get its open state for free; open in the markup, so a page without the script shows every file</td></tr>
         <tr><td>Narrow screens</td><td>written phone-first: one column, the log drops Host and Time, file names wrap anywhere; nothing scrolls sideways at 320 px</td></tr>
       </table>
     </details>
@@ -270,13 +274,13 @@ if (picked) {
       <table>
         <tr><th>Published as</th><th>Copied from</th><th>Bytes</th><th>Used by · load</th></tr>
         <tr><td><code>index.html</code>, <code>404.html</code>, <code>site.css</code></td><td><code>site/</code> (W3), filled by W2</td><td>≤ 40 KB together (the doc's templates: ≈ 26 KB)</td><td>blocking (CSS)</td></tr>
-        <tr><td><code>site.js</code></td><td><code>site/</code>, as is</td><td>1,649 (cap 3,072)</td><td>index · <code>defer</code></td></tr>
+        <tr><td><code>site.js</code></td><td><code>site/</code>, as is</td><td>1,787 (cap 3,072)</td><td>index · <code>defer</code></td></tr>
         <tr><td><code>favicon.svg</code></td><td><code>ui/public/favicon.svg</code></td><td>601</td><td>both pages</td></tr>
         <tr><td><code>wordmark-dark.png</code></td><td><code>ui/src-tauri/icons/brand/</code> (1480×336, shown at 120×27)</td><td>23,228</td><td>top bar, footer, 404 · eager; <code>wordmark-light.png</code> is no longer used: every wordmark sits on a dark band</td></tr>
         <tr><td>s1, s6, s3, s4, s5, s10 (<code>.png</code>, same names)</td><td><code>.github/screenshots/</code> (<code>cargo xtask ui screenshots</code>, 1440×800), re-encoded by W2's build (P2)</td><td>219,795 · 69,281 · 37,703 · 199,063 · 189,310 · 172,632 = 887,784</td><td>first section + five stories · <code>loading="lazy"</code></td></tr>
         <tr><td><code>social-preview.png</code></td><td><code>ui/src-tauri/icons/brand/</code></td><td>47,651</td><td><code>og:image</code> only</td></tr>
       </table>
-      <p><strong>First view ≈ 66 KB</strong> (≤ 40 + 1.6 + 23 + 0.6): no screenshot is above the fold. <strong>The whole page ≈ 0.94 MB</strong> (round 3's scratch build 15,992 + 10,086 + 1,648 + 601 + 23,228, plus the six re-encoded shots), down from ≈ 1.15 MB with the committed PNGs; the shots are 95 % of it.</p>
+      <p><strong>First view ≈ 66 KB</strong> (≤ 40 + 1.8 + 23 + 0.6): no screenshot is above the fold. <strong>The whole page ≈ 0.94 MB</strong> (round 3's scratch build 15,992 + 10,086 + 1,648 + 601 + 23,228, plus the six re-encoded shots), down from ≈ 1.15 MB with the committed PNGs; the shots are 95 % of it.</p>
       <table data-c="png-measure">
         <tr><th>The six shots (P2), measured this round</th><th>Total (B)</th><th>Pixels</th></tr>
         <tr><td>as committed: RGBA PNG, every pixel opaque</td><td>1,094,511</td><td>—</td></tr>
@@ -309,7 +313,7 @@ if (picked) {
         <tr><td>Pages</td><td>anything but one <code>&lt;script src="site.js" defer&gt;</code> in the index; an inline script, <code>&lt;style&gt;</code>, <code>style=</code> or <code>on…=</code>; a script in the 404; a CSP that differs from <a href="#head">Head</a></td><td>W2</td></tr>
         <tr><td>Motion</td><td>an <code>animation</code>, <code>transition</code> or <code>animation-timeline</code> outside <code>@media (prefers-reduced-motion: no-preference)</code>; <code>infinite</code>; <code>scroll-behavior: smooth</code>; the last log row's delay + duration over 5 s</td><td>W2, over <code>site.css</code></td></tr>
         <tr><td>Contrast</td><td>any text pair in <a href="#tokens">Colour</a> under 4.5:1, the log's included</td><td>W2</td></tr>
-        <tr><td>Behaviour</td><td><code>site/site.test.mjs</code>: <code>node:test</code> + <code>node:vm</code>, the 14 fixture cases of round 2 (Safari/Chrome Mac, iPad desktop site, Edge x64/Arm, hint refused, Firefox Windows/Linux x64/arm64, Chrome Linux arm64, Android, iPhone, ChromeOS, nothing reported), asserting the <code>dl-*</code> ids asked</td><td>W3 builds, W2's check runs it</td></tr>
+        <tr><td>Behaviour</td><td><code>site/site.test.mjs</code>: <code>node:test</code> + <code>node:vm</code>, the 14 fixture cases of round 2 (Safari/Chrome Mac, iPad desktop site, Edge x64/Arm, hint refused, Firefox Windows/Linux x64/arm64, Chrome Linux arm64, Android, iPhone, ChromeOS, nothing reported), asserting the <code>dl-*</code> ids asked; and over a DOM stub, <code>show()</code>: both buttons take the picked file's <code>href</code>, <code>#one</code> and <code>#pick</code> unhidden, <code>#all</code> closed and its summary “Other systems”; an unknown system leaves <code>#one</code> hidden and <code>#all</code> open</td><td>W3 builds, W2's check runs it</td></tr>
       </table>
       <p>The scan is a tripwire; the CSP is the enforcement (the browser refuses every connection and every foreign image).</p>
     </details>
@@ -345,6 +349,7 @@ if (picked) {
         <tr><th>Builds</th><th>Who</th><th>Checked by</th></tr>
         <tr><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code> from the templates and the listing, log V1</td><td>W3</td><td>W2's link, CSP/no-external, no-inline, motion, contrast, deny-list, kinds and scan tests; code review</td></tr>
         <tr><td><code>site/site.test.mjs</code></td><td>W3</td><td>W2's site check</td></tr>
+        <tr><td>P3 (D2 revised): the one-button <code>#one</code> + <code>details#all</code> markup, the round 4 <code>site.js</code>, and the fixture test's new <code>show()</code> assertions (<a href="#js-tests">Tests</a>). W2's checks need no change: its download check accepts any layout, the scan words and the 4,096-byte budget hold, and its <code>site/site.js</code> is still a stub</td><td>W3</td><td>W2's site check; code review</td></tr>
         <tr><td><code>is_code</code> += <code>site/</code>; the scans; the shot re-encode (<code>png</code> crate); the story drift check</td><td>W2</td><td>W2's own tests</td></tr>
         <tr><td>Shots at 390 × 844 and 1440 × 900, light and dark, script off and on, and one with reduced motion</td><td>W3</td><td>owner sign-off on W3</td></tr>
       </table>
@@ -376,7 +381,7 @@ if (picked) {
             <p class="cta"><a class="btn primary" id="get" href="#download">Download for <span id="get-os">macOS · Windows · Linux</span></a><a class="btn" href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md">Read the guide</a></p>
             <p class="facts-line">Version <span data-fill="release: tag_name">0.1.0</span> · MIT licence · no account</p>
             <div class="pick" id="pick" hidden>
-              <p><span class="file" id="pick-file"></span> · <a href="#download">Other systems</a> · <a href="https://github.com/lesslucifer/Trawler/releases/latest">Other downloads</a></p>
+              <p><span class="file" id="pick-file"></span> · <a href="#all">Other systems</a> · <a href="https://github.com/lesslucifer/Trawler/releases/latest">Other downloads</a></p>
               <p id="pick-first"></p>
             </div>
           </div>
@@ -449,7 +454,7 @@ if (picked) {
             <div class="tile"><h3>Only this machine, until you allow another.</h3><p>Trawler listens only on this machine until you allow another device.</p></div>
           </div>
           <p class="fine">Trawler's certificate key is stored unencrypted in your app data folder. Remove the certificate when you stop using Trawler.</p>
-          <p class="fine">This site keeps the same promise: no analytics, no cookies, no tracking, and nothing loaded from any other site. One small script puts your system's download first; it reads only what your browser reports about your system, and stores and sends nothing. GitHub hosts this page and sees your IP address, as any web host does.</p>
+          <p class="fine">This site keeps the same promise: no analytics, no cookies, no tracking, and nothing loaded from any other site. One small script picks your system's download; it reads only what your browser reports about your system, and stores and sends nothing. GitHub hosts this page and sees your IP address, as any web host does.</p>
           <p class="fine"><a href="https://github.com/lesslucifer/Trawler/blob/main/PRIVACY.md">What leaves your machine and what stays</a></p>
         </div>
       </section>
@@ -458,11 +463,17 @@ if (picked) {
         <div class="wrap">
           <h2 class="big">Download Trawler</h2>
           <p class="meta">Version <span data-fill="release: tag_name">0.1.0</span> · <span data-fill="release: published_at">2026-11-07</span> · <a href="https://github.com/lesslucifer/Trawler/releases/tag/v0.1.0" data-fill="release: html_url">release notes</a></p>
-          <p class="honest">Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher the first time you open it. Each card says what to click. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+          <p class="honest">Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher the first time you open it. The line under each download says what to click. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+          <div class="one" id="one" hidden>
+            <p><a class="btn primary huge" id="one-get" href="#all">Download for <span id="one-os"></span></a></p>
+            <p class="file" id="one-file"></p>
+            <p class="one-first" id="one-first"></p>
+          </div>
+          <details class="all" id="all" open>
+            <summary>All systems</summary>
           <div class="os">
             <article class="card">
               <h3>macOS</h3>
-              <p class="mine-tag" hidden>Your system</p>
               <p class="req">macOS 11 or later · Apple Silicon and Intel</p>
               <div class="arch" id="dl-macos">
                 <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_universal.dmg">Trawler_0.1.0_universal.dmg</a></p>
@@ -471,7 +482,6 @@ if (picked) {
             </article>
             <article class="card">
               <h3>Windows</h3>
-              <p class="mine-tag" hidden>Your system</p>
               <div class="arch" id="dl-windows-x64">
                 <h4>x64</h4>
                 <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64-setup.exe">Trawler_0.1.0_x64-setup.exe</a></p>
@@ -487,7 +497,6 @@ if (picked) {
             </article>
             <article class="card">
               <h3>Linux</h3>
-              <p class="mine-tag" hidden>Your system</p>
               <div class="arch" id="dl-linux-x64">
                 <h4>x64</h4>
                 <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.AppImage">Trawler_0.1.0_amd64.AppImage</a></p>
@@ -501,6 +510,7 @@ if (picked) {
               <p class="first">No prompt on first open. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Install commands</a></p>
             </article>
           </div>
+          </details>
           <p class="after">Check your download: <a href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/SHA256SUMS">SHA256SUMS</a> · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#check-your-download">how to check</a></p>
           <p class="after"><a href="https://github.com/lesslucifer/Trawler/releases/latest">Other downloads: every file of the latest release, on GitHub</a></p>
         </div>
@@ -617,11 +627,16 @@ code, .file { font-family: var(--mono); font-size: 0.875em; }
 #download { padding: 96px 0; }
 .meta { margin-top: 12px; color: var(--mute); }
 .honest { max-width: 720px; margin-top: 16px; font-size: 16px; }
-.os { display: grid; gap: 16px; align-items: start; margin-top: 40px; }
+.os { display: grid; gap: 16px; align-items: start; margin-top: 20px; }
 .card { display: flex; flex-direction: column; gap: 12px; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--raise); }
-.card.mine { padding: 23px; border: 2px solid var(--ink); box-shadow: 0 0 0 6px var(--glow); }
 .card h3 { font-size: 24px; }
-.mine-tag { margin-top: -6px; color: var(--ink); font: 600 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.one { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 40px; }
+.btn.huge { min-height: 64px; padding: 20px 40px; font-size: 20px; line-height: 24px; }
+.one-first { color: var(--mute); font-size: 15px; }
+.all { margin-top: 40px; }
+.all > summary { width: fit-content; cursor: pointer; color: var(--ink); font-weight: 600; }
+.all > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+.one:not([hidden]) + .all { margin-top: 28px; }
 .arch { display: flex; flex-direction: column; gap: 8px; }
 h4 { color: var(--mute); font: 600 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
 .file { overflow-wrap: anywhere; }
