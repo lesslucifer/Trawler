@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 857df6c23898701437efd438e69368d078ef80c2
+base: c782af92f6ed4771ddf814d777c274358655b049
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-apidoc-w1-spec-and-docs-result.html
+report_sha256: da2374725c4204ded33cf87113b2af15b28ae35fecf20e86e868fcfb8e8ed6fa
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDlHvKNkVvE/D1uy7fAQ0QbuaCQoZal4pWUW1VpW0geXB2qJpHWMxTSWZ
+  HqiVyLB8wK6VChb2+0YCov0L5uKs8E
+  -----END SSH SIGNATURE-----
