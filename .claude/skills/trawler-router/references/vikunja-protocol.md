@@ -63,22 +63,45 @@ Same discipline the board watcher ended up with (E-KANBAN postmortem): watching 
 | Process | Owner | Every heartbeat tick | When found dead |
 |---|---|---|---|
 | Vikunja server | router | `curl -sf …/api/v1/info` | relaunch (Run it) the same tick; ping Telegram only if the relaunch fails |
-| Webhook listener (W3) | router | the liveness check W3 defines | relaunch the same tick, then run a reconciliation pass |
+| Webhook listener | router | `curl -sf -m 5 http://127.0.0.1:3457/` → `ok` | relaunch (Run the listener) the same tick, after the Vikunja server is up; its startup reconcile replays what the gap hid |
 
-Webhooks are latency; the API is the truth. Vikunja delivers each webhook once and never retries (≥ 400 or a 30 s timeout is lost), so after any relaunch, and at session start, the router reads the **Needs me** query and each open task's newest comments, and acts on any state it has not handled yet.
+Keeping the listener alive is the router's **standing responsibility for the whole session**, exactly like the board watcher was: started at session start, checked every heartbeat tick, relaunched the moment it is found dead — never a one-time check, never only when an ask is open. A dead listener is silent, not loud: nothing else tells the router an owner answered.
+
+Webhooks are latency; the API is the truth. Vikunja delivers each webhook once and never retries (≥ 400 or a 30 s timeout is lost); the listener covers that by reconciling against the API at every start and every 60 s.
+
+## Run the listener
+```sh
+L=~/.local/share/vikunja
+cd $M/Trawler && (nohup cargo xtask vikunja webhook-listen >> $L/listener.events 2>> $L/listener.log &)   # start
+curl -sf -m 5 http://127.0.0.1:3457/                                                                           # status: ok
+pkill -f 'xtask vikunja webhook-listen'                                                                   # stop
+tail -n0 -F $L/listener.events                                                                            # watch (Monitor): one line = one notification
+```
+Until E-VIKUNJA is on `main`, `cd` into a checkout of `epic/router-vikunja` instead of `$M/Trawler`. At start it binds `127.0.0.1:3457`, replaces its own project-3 webhook (same `target_url`; never a duplicate), reconciles, prints `listening`, then serves until killed. Files: secret `~/.config/trawler/vikunja-webhook-secret` (600, created on first start, re-sent at every registration; never printed), state `~/.config/trawler/vikunja-listener.json` (per task: asking, last comment id seen). Rejected deliveries are logged to stderr. `cargo xtask vikunja` has the flags (`--port`, `--state`, `--secret-file`, `--poll`).
+
+| Line (stdout, one JSON object each) | Means | Router does |
+|---|---|---|
+| `{"event":"needs-owner","task_id":9,"title":"…","by":"…"}` | task entered the owner's queue (open ∧ `vuluu` ∧ `needs-owner`); at startup, every ask still pending is re-announced (no `by`) | ping the owner unless it already pinged for this ask |
+| `{"event":"answered",…}` | left the queue with the label gone — the only answer | step 3, unless `by` is `trawler-router` (its own 2') |
+| `{"event":"closed",…}` | left the queue with the label still on (marked done or unassigned), or the asking task was deleted (then no `title`) | the done row of the table above |
+| `{"event":"comment","task_id":9,"title":"…","by":"vuluu","text":"…"}` | a comment not written by `trawler-router` (text is Vikunja's HTML) | reply / acknowledge — never a lifecycle step |
+| `{"event":"unreachable","error":"…"}` · `{"event":"reachable"}` | the 60 s reconcile failed / works again (printed once per outage) | relaunch the Vikunja server |
+| `{"event":"listening","port":3457,"webhook_id":4}` | startup finished; lines before it are the reconcile's | — |
+
+Every delivery is only a trigger: the listener re-reads the task and its comments from the API and diffs them against its state, because deliveries arrive out of order and after later writes. `by` is the doer of the delivery that showed the change. Reconcile scope: open tasks of project 3 plus tasks last seen asking; a comment on a done task while the listener was down is not replayed.
 
 ## Webhook capability (for W3)
 | Fact | Value |
 |---|---|
 | Enabled | `webhooks.enabled: true` (default; `/info` → `webhooks_enabled: true`) |
 | Loopback targets | need `outgoingrequests.allownonroutableips: true` (set in `config.yml`; the old `webhooks.allownonroutableips` is deprecated) |
-| Registration | per project: `PUT /projects/3/webhooks` `{target_url, secret, events[]}`; none configured yet |
-| Signature | header `X-Vikunja-Signature` = HMAC-SHA256 of the raw body keyed with the webhook `secret`; the listener verifies it before parsing |
+| Registration | per project: `GET`/`PUT /projects/3/webhooks` `{target_url, secret, events[]}`, `DELETE /projects/3/webhooks/<id>`; the router token may; responses never echo the secret. The listener owns its registration |
+| Signature | header `X-Vikunja-Signature` = lowercase hex HMAC-SHA256 of the raw body keyed with the webhook `secret`; the listener verifies it before parsing |
 | Delivery | once, no retry; 30 s timeout (`webhooks.timeoutseconds`) |
 | Body | `{event_name, time, data: {doer, project, task, …}}`; `data.task` carries full `labels[]` and `assignees[]` |
 | Events seen in a live probe | assign → `task.assignee.created` then `task.updated` · label add or remove → `task.updated` only (there is **no label event**) · comment → `task.comment.created` (`data.comment`) · done → `task.updated` |
 
-So the listener matches on state, not event names: `task.updated` / `task.assignee.created` whose task has `vuluu` in `assignees` and `needs-owner` in `labels` = an ask raised; a transition to no `needs-owner` with doer `vuluu` = an answer; `task.comment.created` with doer `vuluu` = an owner comment.
+Deliveries are sent asynchronously: they arrive out of order and carry the task as read at send time. So the listener matches on state, not event names: `task.updated` / `task.assignee.created` whose task has `vuluu` in `assignees` and `needs-owner` in `labels` = an ask raised; a transition to no `needs-owner` with doer `vuluu` = an answer; `task.comment.created` with doer `vuluu` = an owner comment.
 
 ## Raw API (until `cargo xtask vikunja`)
 ```sh

@@ -1,11 +1,15 @@
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::path::Path;
+use std::process::{Child, Command, Stdio};
+use std::sync::mpsc::{channel, Receiver};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use serde_json::{json, Value};
 use tempfile::NamedTempFile;
-use xtask::vikunja;
+use xtask::vikunja::{self, http, listen};
 
 const TOKEN: &str = "test-token";
 
@@ -27,6 +31,7 @@ struct Reply {
 struct Fake {
     routes: BTreeMap<(String, String), Reply>,
     requests: Vec<Request>,
+    down: bool,
 }
 
 struct Server {
@@ -39,7 +44,11 @@ impl Server {
     fn start() -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let api = listener.local_addr().unwrap().to_string();
-        let state = Arc::new(Mutex::new(Fake { routes: BTreeMap::new(), requests: Vec::new() }));
+        let state = Arc::new(Mutex::new(Fake {
+            routes: BTreeMap::new(),
+            requests: Vec::new(),
+            down: false,
+        }));
         let shared = Arc::clone(&state);
         std::thread::spawn(move || {
             for stream in listener.incoming() {
@@ -87,6 +96,10 @@ impl Server {
         requests.into_iter().map(|r| (r.method, r.target, r.body)).collect()
     }
 
+    fn set_down(&self, down: bool) {
+        self.state.lock().unwrap().down = down;
+    }
+
     fn writes(&self) -> Vec<Call> {
         self.requests().into_iter().filter(|(method, ..)| method != "GET").collect()
     }
@@ -120,6 +133,9 @@ fn serve(mut stream: TcpStream, state: &Mutex<Fake>) {
 
     let (status, payload, pages) = {
         let mut fake = state.lock().unwrap();
+        if fake.down {
+            return;
+        }
         fake.requests.push(Request { method: method.clone(), target: target.clone(), body });
         if headers.get("authorization").map(String::as_str) == Some(&format!("Bearer {TOKEN}")) {
             match fake.routes.get(&(method, target)) {
@@ -596,5 +612,262 @@ fn put_on_a_done_task_notes_that_show_hides_it_unless_this_call_marks_it_done() 
     assert_eq!(
         server.run(&["put", "6", "--label", "needs-owner"]).unwrap(),
         "#6: labelled needs-owner"
+    );
+}
+
+const SECRET: &str = "test-secret";
+
+fn comment(id: u64, who: &str, text: &str) -> Value {
+    json!({"id": id, "comment": text, "author": {"username": who}})
+}
+
+fn free_port() -> u16 {
+    TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port()
+}
+
+fn lines_of(stream: impl Read + Send + 'static) -> Receiver<String> {
+    let (send, receive) = channel();
+    std::thread::spawn(move || {
+        for line in BufReader::new(stream).lines() {
+            if send.send(line.unwrap()).is_err() {
+                break;
+            }
+        }
+    });
+    receive
+}
+
+struct Listen {
+    child: Child,
+    addr: SocketAddr,
+    lines: Receiver<String>,
+    errors: Receiver<String>,
+}
+
+impl Listen {
+    fn start(server: &Server, dir: &Path, port: u16, poll: &str) -> Self {
+        let path = |name: &str| dir.join(name).to_str().unwrap().to_string();
+        let mut child = Command::new(env!("CARGO_BIN_EXE_xtask"))
+            .args(["vikunja", "--api", &server.api, "--key-file"])
+            .arg(server.key.path())
+            .args(["webhook-listen", "--port", &port.to_string(), "--poll", poll])
+            .args(["--state", &path("state.json"), "--secret-file", &path("secret")])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        let lines = lines_of(child.stdout.take().unwrap());
+        let errors = lines_of(child.stderr.take().unwrap());
+        Self { child, addr: SocketAddr::from(([127, 0, 0, 1], port)), lines, errors }
+    }
+
+    fn next(&self) -> Value {
+        let line = self.lines.recv_timeout(Duration::from_secs(20)).expect("an event line");
+        serde_json::from_str(&line).unwrap()
+    }
+
+    fn post(&self, body: &str, signature: &str) -> u16 {
+        let headers = [("X-Vikunja-Signature", signature), ("Content-Type", "application/json")];
+        http::request(self.addr, "POST", "/", &headers, body).unwrap().status
+    }
+
+    fn deliver(&self, event: &str, task_id: u64, doer: &str) -> u16 {
+        let body = json!({
+            "event_name": event, "time": "2026-11-08T10:00:00Z",
+            "data": {"doer": {"id": 1, "username": doer}, "project": {"id": 3}, "task": {"id": task_id}}
+        })
+        .to_string();
+        self.post(&body, &listen::sign(SECRET, body.as_bytes()))
+    }
+}
+
+impl Drop for Listen {
+    fn drop(&mut self) {
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
+}
+
+fn webhooks_routes(server: &Server, port: u16) -> String {
+    let target = format!("http://127.0.0.1:{port}/");
+    let hooks =
+        json!([{"id": 4, "target_url": target}, {"id": 5, "target_url": "http://127.0.0.1:1/"}]);
+    server.route("GET", "/projects/3/webhooks?page=1", 200, &hooks);
+    server.route(
+        "DELETE",
+        "/projects/3/webhooks/4",
+        200,
+        &json!({"message": "Successfully deleted."}),
+    );
+    server.route("PUT", "/projects/3/webhooks", 200, &json!({"id": 6, "target_url": target}));
+    target
+}
+
+#[test]
+fn webhook_listen_registers_reconciles_then_prints_a_line_per_signed_transition() {
+    let server = Server::start();
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("secret"), format!("{SECRET}\n")).unwrap();
+    let port = free_port();
+    let target = webhooks_routes(&server, port);
+    let asking = task(9, &owner(), &json!([needs_owner_label()]));
+    let plain = task(4, &json!(null), &json!(null));
+    server.route("GET", &format!("{OPEN_IN_3}&page=1"), 200, &json!([plain, asking]));
+    let comments_4 = "/tasks/4/comments?order_by=asc&page=1";
+    let comments_9 = "/tasks/9/comments?order_by=asc&page=1";
+    server.route("GET", comments_4, 200, &json!([comment(1, "vuluu", "hello")]));
+    server.route("GET", comments_9, 200, &json!([comment(2, "trawler-router", "the ask")]));
+
+    let listener = Listen::start(&server, dir.path(), port, "60");
+    assert_eq!(
+        listener.next(),
+        json!({"event": "comment", "task_id": 4, "title": "E-X.W4 work", "by": "vuluu", "text": "hello"})
+    );
+    assert_eq!(
+        listener.next(),
+        json!({"event": "needs-owner", "task_id": 9, "title": "E-X.W9 work"})
+    );
+    assert_eq!(listener.next(), json!({"event": "listening", "port": port, "webhook_id": 6}));
+    let events = json!([
+        "task.updated",
+        "task.assignee.created",
+        "task.assignee.deleted",
+        "task.comment.created"
+    ]);
+    assert_eq!(
+        server.writes(),
+        [
+            write("DELETE", "/projects/3/webhooks/4", None),
+            write(
+                "PUT",
+                "/projects/3/webhooks",
+                Some(json!({"target_url": target, "secret": SECRET, "events": events}))
+            ),
+        ]
+    );
+
+    server.route("GET", "/tasks/4", 200, &plain);
+    server.route("GET", "/tasks/9", 200, &asking);
+    let router_comment =
+        json!([comment(2, "trawler-router", "the ask"), comment(3, "trawler-router", "more")]);
+    server.route("GET", comments_9, 200, &router_comment);
+    assert_eq!(listener.deliver("task.updated", 4, "vuluu"), 200);
+    assert_eq!(listener.deliver("task.comment.created", 9, "trawler-router"), 200);
+    assert_eq!(listener.deliver("task.updated", 9, "trawler-router"), 200);
+
+    let forged = json!({"event_name": "task.updated", "data": {"task": {"id": 77}}}).to_string();
+    assert_eq!(listener.post(&forged, &listen::sign("wrong", forged.as_bytes())), 401);
+    assert_eq!(listener.post(&forged, ""), 401);
+    let logged = listener.errors.recv_timeout(Duration::from_secs(20)).unwrap();
+    assert!(logged.starts_with("rejected delivery from 127.0.0.1:"), "{logged}");
+    assert!(logged.contains("X-Vikunja-Signature does not verify"), "{logged}");
+
+    let mut answered = asking.clone();
+    answered["labels"] = json!([]);
+    server.route("GET", "/tasks/9", 200, &answered);
+    let owner_said = json!([
+        comment(2, "trawler-router", "the ask"),
+        comment(3, "trawler-router", "more"),
+        comment(8, "vuluu", "go")
+    ]);
+    server.route("GET", comments_9, 200, &owner_said);
+    assert_eq!(listener.deliver("task.updated", 9, "vuluu"), 200);
+    assert_eq!(
+        listener.next(),
+        json!({"event": "comment", "task_id": 9, "title": "E-X.W9 work", "by": "vuluu", "text": "go"})
+    );
+    assert_eq!(
+        listener.next(),
+        json!({"event": "answered", "task_id": 9, "title": "E-X.W9 work", "by": "vuluu"})
+    );
+    assert!(server.requests().iter().all(|(_, target, _)| !target.contains("/77")));
+
+    server.route("GET", "/tasks/9", 200, &asking);
+    assert_eq!(listener.deliver("task.updated", 9, "vuluu"), 200);
+    assert_eq!(
+        listener.next(),
+        json!({"event": "needs-owner", "task_id": 9, "title": "E-X.W9 work", "by": "vuluu"})
+    );
+    assert_eq!(listener.lines.try_recv().ok(), None);
+
+    drop(listener);
+    let relaunched = Listen::start(&server, dir.path(), port, "60");
+    assert_eq!(
+        relaunched.next(),
+        json!({"event": "needs-owner", "task_id": 9, "title": "E-X.W9 work"})
+    );
+    assert_eq!(relaunched.next()["event"], "listening");
+
+    server.route("GET", "/tasks/9", 404, &json!({"code": 4002, "message": "not found"}));
+    assert_eq!(relaunched.deliver("task.updated", 9, "vuluu"), 200);
+    assert_eq!(relaunched.next(), json!({"event": "closed", "task_id": 9, "by": "vuluu"}));
+    assert_eq!(relaunched.deliver("task.updated", 9, "vuluu"), 200);
+    assert_eq!(relaunched.lines.try_recv().ok(), None);
+}
+
+#[test]
+fn webhook_listen_answers_a_liveness_get_and_reports_an_unreachable_vikunja_once_until_it_returns()
+{
+    let server = Server::start();
+    let dir = tempfile::tempdir().unwrap();
+    let port = free_port();
+    webhooks_routes(&server, port);
+    server.route("GET", &format!("{OPEN_IN_3}&page=1"), 200, &json!([]));
+    let listener = Listen::start(&server, dir.path(), port, "1");
+    assert_eq!(listener.next()["event"], "listening");
+    let alive = http::request(listener.addr, "GET", "/", &[], "").unwrap();
+    assert_eq!((alive.status, alive.body.as_str()), (200, "ok\n"));
+    let secret = std::fs::read_to_string(dir.path().join("secret")).unwrap();
+    assert_eq!(secret.len(), 64);
+    for huge in ["18446744073709551615", "4611686018427387904"] {
+        let mut stream = TcpStream::connect(listener.addr).unwrap();
+        write!(stream, "POST / HTTP/1.1\r\nContent-Length: {huge}\r\n\r\n").unwrap();
+        let mut answer = String::new();
+        stream.read_to_string(&mut answer).unwrap();
+        assert!(answer.starts_with("HTTP/1.1 400 "), "{answer}");
+    }
+    let mut stalled = TcpStream::connect(listener.addr).unwrap();
+    write!(stalled, "POST / HT").unwrap();
+    let started = std::time::Instant::now();
+    assert_eq!(http::request(listener.addr, "GET", "/", &[], "").unwrap().status, 200);
+    assert!(started.elapsed() < Duration::from_secs(3), "{:?}", started.elapsed());
+    drop(stalled);
+    let oversized = listener.errors.recv_timeout(Duration::from_secs(20)).unwrap();
+    assert!(oversized.ends_with("body over 1048576 bytes"), "{oversized}");
+    assert_eq!(http::request(listener.addr, "GET", "/", &[], "").unwrap().status, 200);
+
+    server.set_down(true);
+    let down = listener.next();
+    assert_eq!(down["event"], "unreachable");
+    assert!(down["error"].as_str().unwrap().contains(&server.api), "{down}");
+    server.set_down(false);
+    assert_eq!(listener.next(), json!({"event": "reachable"}));
+}
+
+#[test]
+fn webhook_listen_refuses_to_start_without_a_reachable_vikunja() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = |name: &str| dir.path().join(name).to_str().unwrap().to_string();
+    let key = path("key");
+    std::fs::write(&key, TOKEN).unwrap();
+    let dead = format!("127.0.0.1:{}", free_port());
+    let (state, secret) = (path("state.json"), path("secret"));
+    let refused = vikunja::run(&[
+        "--api",
+        &dead,
+        "--key-file",
+        &key,
+        "webhook-listen",
+        "--port",
+        "0",
+        "--state",
+        &state,
+        "--secret-file",
+        &secret,
+    ])
+    .unwrap_err();
+    assert!(
+        refused.starts_with(&format!("GET http://{dead}/api/v1/projects/3/webhooks")),
+        "{refused}"
     );
 }
