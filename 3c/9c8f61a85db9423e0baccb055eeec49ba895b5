@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-PAGES
+wu: E-PAGES.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-pages-w2-site-build-plan.html"
+    tier: T3
+    action: added
+    distills: "W2's requirement, the marker set W3 builds on, what the build refuses, the checks over its output (v2: the one same-origin site.js and its scan, site/ a code path), decisions and the test plan"
+  - path: "docs/work/2026-11-08-pages-w2-site-build-result.html"
+    tier: T3
+    action: added
+    distills: "what W2 built, the frame's contract for W3 and W4, deviations (attribute quoting/case check added, review round 1 FAIL and its fix, shared helpers reused), evidence, the hand try and follow-ups"
+t2_waived: "W2 adds an xtask command and its checks with no new rule; DEC-92 and the UC-INSTALL entry point are minted by W5, which distills the whole epic (epic plan, Distillation plan)"
