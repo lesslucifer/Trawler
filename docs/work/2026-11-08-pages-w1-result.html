@@ -8,70 +8,76 @@
 <body>
   <header class="doc-hero">
     <div class="inner">
-      <h1>E-PAGES.W1 result — the landing site design, round 1</h1>
-      <p>The one-page site and its 404, designed for W3 to build: the page as one template rendered in both themes at 390 and 1440 px, every string, every asset, the tokens with contrast. Three layout calls wait for the owner; the page is built on the recommendations.</p>
-      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+      <h1>E-PAGES.W1 result — the landing site design, round 2</h1>
+      <p>The one-page site and its 404, designed for W3 to build, now on the owner's rulings: D1 A (centred hero), D3 B (bullets + More screens), and D2 changed to a card per OS with OS auto-detection by one tiny same-origin script. The losing variants are gone; the detection rules, every detected state, the script and its test plan are in.</p>
+      <div class="meta">v2 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
     </div>
   </header>
   <main>
     <h2 id="outcome">Outcome</h2>
     <div class="diagram" data-c="page-shape">
       <pre class="mermaid">flowchart TB
-  H["Hero · D1 A: wordmark · pitch h1 · sub · Download / Read the guide · s1"] --> D["Download · D2 B: macOS | Windows x64, arm64 | Linux x64, arm64 · first open per OS → GUIDE#install"]
-  D --> S["SHA256SUMS · All files of the latest release (releases/latest)"]
+  H["Hero · D1 A: wordmark · pitch h1 · sub · Download for ‹system› / Read the guide · picked file + first-open line · s1"] --> D["Download · D2: macOS | Windows x64, arm64 | Linux x64, arm64 · the visitor's card first and marked 'Your system'"]
+  D --> S["SHA256SUMS · Other downloads: every file of the latest release (releases/latest), every state"]
   S --> F["What you can do · D3 B: README bullets + Setup / Filters / Send again"]
-  F --> P["Privacy: PRIVACY.md lead · the site's own promise · link"]
-  P --> FT["Footer: Guide · Privacy · Changelog · Contributing · Security · Licence · Report an issue · Source code"]</pre>
-      <div class="caption">The page as designed, top to bottom; every outbound link is a plain navigation to github.com.</div>
+  F --> P["Privacy: PRIVACY.md lead · the site's promise, the script, GitHub as host · link"]
+  P --> FT["Footer: Guide · Privacy · Changelog · Contributing · Security · Licence · Report an issue · Source code"]
+  JS["site.js (defer, same origin): reads navigator, reorders and marks; no request, no storage"] -.-> H
+  JS -.-> D</pre>
+      <div class="caption">The page as designed, top to bottom. With the script off the page is the same minus the dotted edges: all three cards in order, the hero button jumps to them.</div>
     </div>
     <div data-item="outcome">
       <table data-c="outcome">
-        <thead><tr><th>W1 requirement (brief + plan)</th><th>Where in the design doc</th></tr></thead>
+        <thead><tr><th>Round 2 requirement (router's brief)</th><th>Where in the design doc</th></tr></thead>
         <tbody>
-          <tr><td>HTML mockup, both themes, 390 px and 1440 px</td><td><code>#mockup</code> (four frames), <code>#page-404</code> (four frames); one iframe per frame, so the real CSS reflows</td></tr>
-          <tr><td>Hero: outlined wordmark, README pitch exactly, README sub line, s1</td><td><code>#t-index</code> <code>.hero</code>; copy C5–C10</td></tr>
-          <tr><td>Download: every OS row with its exact file kinds, first-open line per OS → GUIDE#install, releases/latest fallback, SHA256SUMS</td><td><code>#t-index</code> <code>#download</code>; copy C11–C23; all 13 installer files of v0.1.0 linked by versioned URL</td></tr>
-          <tr><td>Features, PRIVACY lead, footer to blob/main files, 404</td><td>copy C24–C31; <code>#t-404</code></td></tr>
-          <tr><td>Copy for every frame string</td><td><code>#copy</code> C1–C34, each marked frame or filled with its source</td></tr>
-          <tr><td>Asset list</td><td><code>#assets</code>: 9 files, bytes, load; first view ≈ 316 KB</td></tr>
-          <tr><td>Warm tokens, amber brand-only, contrast ≥ 4.5:1, focus, reduced motion, system fonts, no script/external</td><td><code>#frame</code>, <code>#tokens</code> (lowest text pair 6.2:1), <code>#a11y</code>, <code>#head</code> (CSP)</td></tr>
-          <tr><td>Open calls with 2–3 alternatives side by side, one recommended</td><td><code>#choices</code>: D1 hero (A), D2 download grouping (B), D3 features (B)</td></tr>
-          <tr><td>Owner rulings recorded</td><td><code>#rulings</code>: Q1, Q3–Q7, Q9, Q13 applied; D1–D3 open</td></tr>
+          <tr><td>Drop the losing variants (D1 B, C; D2 A, C; D3 A, C)</td><td><code>#t-variants-css</code> and its elements removed; the alternative frames removed; <code>#ruled</code> records what each ruling cut</td></tr>
+          <tr><td>D2 = the one-card-per-OS block as a no-script base + detection</td><td><code>#mockup</code> (the page with the script off, both themes, 390 and 1440 px); <code>#detect</code></td></tr>
+          <tr><td>Exact rules per OS and arch</td><td><code>#detect-rules</code>: macOS universal dmg (no arch step); Windows x64 <code>-setup.exe</code> primary, promoted to arm64 only on the Chromium hint <code>"arm"</code>, the other arch right below; Linux AppImage primary (any distribution, no password to install or update), <code>.deb</code>/<code>.rpm</code> on its “or” line; phones, tablets, ChromeOS and the unrecognised = unknown</td></tr>
+          <tr><td>Unknown default, no-script frames, a frame per detected state</td><td><code>#detect-states</code>: table + 10 frames (5 states × 1440 dark, 390 light) that run the real <code>site.js</code>; the no-script frames in <code>#mockup</code></td></tr>
+          <tr><td>The script</td><td><code>#site-js</code>: the reference, 1,649 bytes, classic <code>defer</code> (modules never run on <code>file://</code>), no visible string of its own, and the page contract (<code>dl-*</code> ids)</td></tr>
+          <tr><td>CSP and Q13</td><td><code>#head</code>: index <code>… script-src 'self' …</code>, 404 keeps no script; <code>#rulings</code>: Q13 flips to yes, W2 edits <code>is_code</code>, the <code>docs/workflow.html</code> T1 line is W5's owner <code>mr commit</code></td></tr>
+          <tr><td>Copy and privacy sentence that say what is true</td><td><code>#copy</code> C8, C10, C11, C16, C26 (“Other downloads”), C31 with its reasoning; C32–C34 of round 1 (losing variants) gone</td></tr>
+          <tr><td>Test plan</td><td><code>#js-scan</code> (W2, static: network, code-from-strings, storage, request-by-side-effect tokens, 3,072-byte cap, page checks); <code>#js-behaviour</code> + <code>#js-fixtures</code> (W3: <code>site/site.test.mjs</code>, <code>node:test</code> + <code>node:vm</code>, 14 cases, no new dependency)</td></tr>
+          <tr><td>Asset list</td><td><code>#assets</code>: <code>site.js</code> ≤ 3,072 bytes, index only, <code>defer</code>; first view ≈ 319 KB of the 350 KB budget</td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="deviations">Deviations</h2>
-    <p data-item="deviations">None from the plan's W1 row. Two additions, both within the plan's rules: a site sentence under the privacy lead (C28, backed by W2's CSP test) and <code>noindex</code> on the 404. The <code>design-review</code> skill was run: <code>cargo xtask design-scope</code> finds no design artifact in the range (this doc is a T3 design, not a design run or a component design), so no <code>design/v1</code> note is owed; the owner's rulings on D1–D3 are the design gate (plan, Quality gates). Docs-only WU: the test layers are waived ("design WU, no code; W2 and W3 carry the tests").</p>
+    <p data-item="deviations">Two calls the brief left to W1, both stated in the design: the hero gets a line under the buttons in a detected state (the picked file name, <em>Other systems</em>, <em>Other downloads</em>, and a copy of that card's first-open line). That is where the ruling's “sets the first-open line” lands. And the privacy sentence names GitHub as the host that sees each visit, so “no tracking” cannot be read as “nobody sees the request”. The plan's “No OS detection” line (Design) and its non-goal line are superseded by the D2 ruling; the plan itself is not edited here. The <code>design-review</code> skill's scope is unchanged from round 1: <code>cargo xtask design-scope</code> finds no design artifact in the range, so no <code>design/v1</code> note is owed. Docs-only WU: the test layers are waived, and W2 and W3 carry the tests this design specifies.</p>
 
     <h2 id="evidence">Evidence</h2>
     <div data-item="evidence">
       <table data-c="evidence">
         <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
         <tbody>
-          <tr><td>The frames render as intended</td><td>headless Chrome screenshot of the design doc at 1280 px wide (local, not committed): all 26 frames filled; 1440 and 390 reflow; dark and light tokens applied; the focus ring visible on the 390 dark frame</td></tr>
-          <tr><td>File names and links match the live release</td><td><code>gh api repos/lesslucifer/Trawler/releases/latest</code>: v0.1.0, published 2026-11-07, 25 assets; the 13 installer names and SHA256SUMS used verbatim</td></tr>
-          <tr><td>Contrast values</td><td>WCAG 2 relative-luminance formula over the token hexes (<code>#tokens</code>)</td></tr>
-          <tr><td>Strings filled from the right sources</td><td>README.md:8 (pitch), :10–12 (sub), “What you can do”, “More screens”; PRIVACY.md:3; GUIDE.md anchors <code>#install</code>, <code>#check-your-download</code></td></tr>
-          <tr><td>No denied name</td><td>the design's copy names none of <code>public_text.rs</code> <code>DENIED_NAMES</code></td></tr>
-          <tr><td>Doc layer</td><td>htmldoc id minted; baseline snapshot <code>2026-11-08T01-41-45-386Z</code></td></tr>
+          <tr><td>The frames render, the detected states included</td><td>headless Chrome screenshot of the design doc at 1280 px, 2× (local, not committed): the no-script page in both themes at both widths; in each state frame the picked card is first with its 2 px border and “Your system”; the arm64 block leads in <code>windows-arm64</code> (async hint) and <code>linux-arm64</code>; the hero says “Download for ‹system›” with the file name and the first-open line under it</td></tr>
+          <tr><td>The script behaves per the fixture table</td><td>a prototype of W3's <code>site.test.mjs</code> (scratch, not committed) ran the listed <code>site.js</code> in <code>node:vm</code> with Node 24.18: 14 of 14 cases pass, the async arm promotion and the refused hint included</td></tr>
+          <tr><td>The script passes its own scan and cap</td><td>none of the <code>#js-scan</code> tokens occurs in the listing; 1,649 bytes against the 3,072 cap</td></tr>
+          <tr><td>File names and links match the live release</td><td>unchanged from round 1: <code>gh api repos/lesslucifer/Trawler/releases/latest</code>, v0.1.0, the 13 installer names and SHA256SUMS used verbatim</td></tr>
+          <tr><td>Linux primary is right for the reason given</td><td>README.md Known limits: “Updating a <code>.deb</code> or <code>.rpm</code> install asks for your password”; GUIDE.md#linux: AppImage is <code>chmod +x</code> and run, <code>.deb</code>/<code>.rpm</code> need <code>sudo</code></td></tr>
+          <tr><td>Privacy wording is consistent</td><td>PRIVACY.md's update-check row: “GitHub sees your IP address”; C31 uses the same fact for the host</td></tr>
+          <tr><td>No denied name</td><td>the new copy (C8, C10, C16, C26, C31) names none of <code>public_text.rs</code> <code>DENIED_NAMES</code></td></tr>
+          <tr><td>Doc layer</td><td>snapshots before this round: design <code>2026-11-08T01-57-54-822Z</code>, result <code>2026-11-08T01-57-56-067Z</code>; no open comments</td></tr>
           <tr><td>e2e / integration / unit</td><td>waived: no code changes</td></tr>
         </tbody>
       </table>
     </div>
 
     <h2 id="distillation">Distillation</h2>
-    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. The ruled design becomes truth through W3 (<code>site/</code>) and W5 (DEC-92, the DEC-89/DEC-91 amendments, UC-INSTALL). The design doc archives at the epic's close (DEC-3).</p>
+    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. The ruled design becomes truth through W2 (<code>is_code</code> += <code>site/</code>, the scan), W3 (<code>site/</code>, <code>site.js</code>, its test) and W5 (DEC-92, the DEC-89/DEC-91 amendments, UC-INSTALL, and the <code>docs/workflow.html</code> T1 line by owner <code>mr commit</code>). The design doc archives at the epic's close (DEC-3).</p>
 
     <h2 id="follow-ups">Follow-ups</h2>
     <div data-item="follow-ups">
       <table data-c="follow-ups">
         <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
         <tbody>
-          <tr><td>Owner picks D1, D2, D3 (doc <code>#choices</code>); a switch is a new W1 commit that also drops the losing variants</td><td>owner via router → W1</td></tr>
+          <tr><td>The plan still says “No OS detection” and Q13 “no”: a plan revision records the D2 ruling and points W2 at <code>is_code</code> and the scan</td><td>router (plan doc on <code>epic/pages</code>)</td></tr>
+          <tr><td><code>is_code</code> += <code>site/</code>; the <code>site.js</code> scan and page checks; running <code>node --test site/</code> in the site check</td><td>W2</td></tr>
+          <tr><td><code>site/site.js</code> from the listing, <code>site/site.test.mjs</code> from the fixture table; shots with the script off and on</td><td>W3</td></tr>
+          <tr><td><code>docs/workflow.html</code> T1 line for <code>site/</code> as a code path</td><td>W5, owner <code>mr commit</code></td></tr>
           <tr><td>Marker syntax for the <code>data-fill</code> points</td><td>W2 (owns it), W3 applies it</td></tr>
-          <tr><td>Contrast, no-motion and no-external assertions over <code>site.css</code></td><td>W2's tests</td></tr>
-          <tr><td>Safari/Firefox and a real phone; the Windows 10 wording of <b>System type</b></td><td>W3 shots + the owner's look</td></tr>
+          <tr><td>Real-browser detection (Windows on Arm, Linux arm64, iPadOS, ChromeOS), Safari/Firefox rendering, a real phone; GitHub Pages sets no cookie; the Windows 10 wording of <b>System type</b></td><td>W3 shots, W4 live check, the owner's look</td></tr>
         </tbody>
       </table>
     </div>
