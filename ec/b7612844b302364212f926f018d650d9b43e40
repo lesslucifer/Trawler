@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: ecb7612844b302364212f926f018d650d9b43e40
+base: c782af92f6ed4771ddf814d777c274358655b049
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-router-kanban-board-client-result.html
+report_sha256: 8a28c43e5582efee4b01011858fa9ce409b034304c1cb5a62e16769ef0587457
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEAZ8/v2kL07Q6gvA+dGflg4hgD/4xtBbYwzGSBF5Wh+ggc9AsBC8PF/wt
+  QhFy4LMyBPxfVdS66qtL0i6ffkSZYE
+  -----END SSH SIGNATURE-----
