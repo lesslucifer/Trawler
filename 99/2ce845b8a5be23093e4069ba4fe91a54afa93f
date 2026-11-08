@@ -1,0 +1,27 @@
+schema: cr/v5
+scope: "WU spec-and-docs -> epic/apidoc"
+epic: E-APIDOC
+wu: E-APIDOC.W1
+branch: wu/apidoc/spec-and-docs
+base: c782af92f6ed4771ddf814d777c274358655b049
+head: 992ce845b8a5be23093e4069ba4fe91a54afa93f
+diff_sha256: 2708fb9f32c3a022224d38cb510e9085c4cb03306d03fdf5a587d19a075b2856
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 4
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 3, verified: 1 }
+findings: { found: 5, verified: 1, waived: 0 }
+verified:
+  - finding: "FILTER_KEYS (src/api/routes.rs:71) is a second hand-kept key list beside filter_predicate's match; a key added to the parser stays undocumented and no test fails"
+    severity: important
+verdict: FAIL
+date: 2026-11-08
