@@ -39,6 +39,25 @@ const REFUSED_TAGS: [&str; 11] = [
     "plaintext",
 ];
 const FOREIGN: [&str; 2] = ["svg", "math"];
+const SVG_ELEMENTS: [&str; 17] = [
+    "svg",
+    "g",
+    "path",
+    "rect",
+    "circle",
+    "ellipse",
+    "line",
+    "polyline",
+    "polygon",
+    "defs",
+    "lineargradient",
+    "radialgradient",
+    "stop",
+    "clippath",
+    "mask",
+    "symbol",
+    "use",
+];
 const REFERENCES: [&str; 4] = ["amp;", "quot;", "lt;", "gt;"];
 const SHIPPED_KINDS: [&str; 8] = ["html", "css", "js", "svg", "png", "jpg", "webp", "ico"];
 const HEAD_BEFORE_CSP: [&str; 3] = ["html", "head", "meta"];
@@ -538,6 +557,7 @@ struct Tag<'a> {
     name: String,
     attributes: Vec<(String, &'a str)>,
     raw: &'a str,
+    at: usize,
 }
 
 impl Tag<'_> {
@@ -597,8 +617,12 @@ fn read_tag(html: &str, start: usize) -> (Tag<'_>, usize) {
     let name_end = html[start + 1..]
         .find(|c: char| is_html_space(c) || c == '/' || c == '>')
         .map_or(html.len(), |end| start + 1 + end);
-    let mut tag =
-        Tag { name: html[start..name_end].to_ascii_lowercase(), attributes: Vec::new(), raw: "" };
+    let mut tag = Tag {
+        name: html[start..name_end].to_ascii_lowercase(),
+        attributes: Vec::new(),
+        raw: "",
+        at: start - 1,
+    };
     let mut rest = &html[name_end..];
     loop {
         rest = rest.trim_start_matches(|c: char| is_html_space(c) || c == '/');
@@ -709,12 +733,26 @@ fn tag_problems(name: &str, tags: &[Tag<'_>], refused: &[&str]) -> Vec<String> {
     problems
 }
 
+/// An svg is a drawing: the elements of `SVG_ELEMENTS` and nothing an XML reader
+/// could take for more (no processing instruction, declaration, comment or CDATA
+/// after a leading `<?xml …?>`).
 fn svg_problems(name: &str, svg: &str) -> Vec<String> {
-    let (tags, _) = parse(svg);
-    let refused: Vec<&str> =
-        REFUSED_TAGS.iter().copied().chain(["script", "foreignobject"]).collect();
-    let mut problems = tag_problems(name, &tags, &refused);
+    let body = svg.trim_start();
+    let body = match body.strip_prefix("<?xml").filter(|rest| rest.starts_with(is_html_space)) {
+        Some(declared) => declared.split_once("?>").map_or("", |(_, rest)| rest),
+        None => body,
+    };
+    let mut problems = Vec::new();
+    if body.contains("<?") || body.contains("<!") {
+        problems.push(format!("{name}: a processing instruction, declaration, comment or CDATA"));
+    }
+    let (tags, _) = parse(body);
+    problems.extend(tag_problems(name, &tags, &[]));
     for tag in &tags {
+        let element = tag.name.trim_start_matches('/');
+        if !SVG_ELEMENTS.contains(&element) {
+            problems.push(format!("{name}: <{element}> is no drawing element"));
+        }
         for (attribute, value) in &tag.attributes {
             if !attribute.starts_with("xmlns") && names_an_address(value) {
                 problems.push(format!("{name}: {value} is a request outside the site"));
@@ -754,8 +792,10 @@ fn html_problems(
         .collect();
     let heads = match csp[..] {
         [at] => {
+            let (before, words) = parse(&html[..tags[at].at]);
             tags[at].get("content") == Some(csp_policy())
-                && tags[..at].iter().all(|tag| HEAD_BEFORE_CSP.contains(&tag.name.as_str()))
+                && before.iter().all(|tag| HEAD_BEFORE_CSP.contains(&tag.name.as_str()))
+                && words.iter().all(|words| words.trim_matches(is_html_space).is_empty())
         }
         _ => false,
     };
@@ -1676,6 +1716,39 @@ mod tests {
         assert_eq!(problems(&site("", &css), &facts(&repo)), Vec::<String>::new());
         let css = format!("{CSS}/*/ x */ body {{ background: url(https://x.test/a.png) }}");
         assert!(!problems(&site("", &css), &facts(&repo)).is_empty(), "{css}");
+    }
+
+    #[test]
+    fn text_before_the_csp_ends_the_head_and_is_red() {
+        let repo = repo();
+        for prefix in ["<html><head>x", "<!DOCTYPE html>junk<html><head>"] {
+            let mut files = site("", CSS);
+            let page =
+                page("").replacen("<head>", "", 1).replacen(CSP, &format!("{prefix}{CSP}"), 1);
+            files.insert("index.html".to_string(), page.clone().into_bytes());
+            let found = problems(&files, &facts(&repo));
+            assert!(found.iter().any(|p| p.contains("CSP")), "{page}: {found:?}");
+        }
+    }
+
+    #[test]
+    fn an_svg_holds_only_drawing_elements() {
+        let repo = repo();
+        for svg in [
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><title><script>alert(1)</script></title></svg>",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\"><x:script xmlns:x=\"http://www.w3.org/2000/svg\">alert(1)</x:script></svg>",
+            "<?xml-stylesheet href=\"https://x.test/s.css\"?><svg xmlns=\"http://www.w3.org/2000/svg\"></svg>",
+            "<!DOCTYPE svg [<!ENTITY x \"y\">]><svg xmlns=\"http://www.w3.org/2000/svg\">&x;</svg>",
+        ] {
+            let mut files = site("", CSS);
+            files.insert("x.svg".to_string(), svg.as_bytes().to_vec());
+            let found = problems(&files, &facts(&repo));
+            assert!(found.iter().any(|p| p.starts_with("x.svg")), "{svg}: {found:?}");
+        }
+        let mut files = site("", CSS);
+        let declared = "<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\"><g><path d=\"M0 0\"/></g></svg>";
+        files.insert("x.svg".to_string(), declared.as_bytes().to_vec());
+        assert_eq!(problems(&files, &facts(&repo)), Vec::<String>::new());
     }
 
     #[test]
