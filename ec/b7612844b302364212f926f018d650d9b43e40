@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-KANBAN
+wu: E-KANBAN.W1
+base: c782af92f6ed4771ddf814d777c274358655b049
+tip: ecb7612844b302364212f926f018d650d9b43e40
+diff_sha256: 5c1e46a23c93e4b69075ea19d606292ffa554001488b5c6074b263f1b7908f4e
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-08
