@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aefd4099f34851f0dfb14a9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W1 result — the landing site design, round 1</h1>
+      <p>The one-page site and its 404, designed for W3 to build: the page as one template rendered in both themes at 390 and 1440 px, every string, every asset, the tokens with contrast. Three layout calls wait for the owner; the page is built on the recommendations.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="diagram" data-c="page-shape">
+      <pre class="mermaid">flowchart TB
+  H["Hero · D1 A: wordmark · pitch h1 · sub · Download / Read the guide · s1"] --> D["Download · D2 B: macOS | Windows x64, arm64 | Linux x64, arm64 · first open per OS → GUIDE#install"]
+  D --> S["SHA256SUMS · All files of the latest release (releases/latest)"]
+  S --> F["What you can do · D3 B: README bullets + Setup / Filters / Send again"]
+  F --> P["Privacy: PRIVACY.md lead · the site's own promise · link"]
+  P --> FT["Footer: Guide · Privacy · Changelog · Contributing · Security · Licence · Report an issue · Source code"]</pre>
+      <div class="caption">The page as designed, top to bottom; every outbound link is a plain navigation to github.com.</div>
+    </div>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>W1 requirement (brief + plan)</th><th>Where in the design doc</th></tr></thead>
+        <tbody>
+          <tr><td>HTML mockup, both themes, 390 px and 1440 px</td><td><code>#mockup</code> (four frames), <code>#page-404</code> (four frames); one iframe per frame, so the real CSS reflows</td></tr>
+          <tr><td>Hero: outlined wordmark, README pitch exactly, README sub line, s1</td><td><code>#t-index</code> <code>.hero</code>; copy C5–C10</td></tr>
+          <tr><td>Download: every OS row with its exact file kinds, first-open line per OS → GUIDE#install, releases/latest fallback, SHA256SUMS</td><td><code>#t-index</code> <code>#download</code>; copy C11–C23; all 13 installer files of v0.1.0 linked by versioned URL</td></tr>
+          <tr><td>Features, PRIVACY lead, footer to blob/main files, 404</td><td>copy C24–C31; <code>#t-404</code></td></tr>
+          <tr><td>Copy for every frame string</td><td><code>#copy</code> C1–C34, each marked frame or filled with its source</td></tr>
+          <tr><td>Asset list</td><td><code>#assets</code>: 9 files, bytes, load; first view ≈ 316 KB</td></tr>
+          <tr><td>Warm tokens, amber brand-only, contrast ≥ 4.5:1, focus, reduced motion, system fonts, no script/external</td><td><code>#frame</code>, <code>#tokens</code> (lowest text pair 6.2:1), <code>#a11y</code>, <code>#head</code> (CSP)</td></tr>
+          <tr><td>Open calls with 2–3 alternatives side by side, one recommended</td><td><code>#choices</code>: D1 hero (A), D2 download grouping (B), D3 features (B)</td></tr>
+          <tr><td>Owner rulings recorded</td><td><code>#rulings</code>: Q1, Q3–Q7, Q9, Q13 applied; D1–D3 open</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">None from the plan's W1 row. Two additions, both within the plan's rules: a site sentence under the privacy lead (C28, backed by W2's CSP test) and <code>noindex</code> on the 404. The <code>design-review</code> skill was run: <code>cargo xtask design-scope</code> finds no design artifact in the range (this doc is a T3 design, not a design run or a component design), so no <code>design/v1</code> note is owed; the owner's rulings on D1–D3 are the design gate (plan, Quality gates). Docs-only WU: the test layers are waived ("design WU, no code; W2 and W3 carry the tests").</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>The frames render as intended</td><td>headless Chrome screenshot of the design doc at 1280 px wide (local, not committed): all 26 frames filled; 1440 and 390 reflow; dark and light tokens applied; the focus ring visible on the 390 dark frame</td></tr>
+          <tr><td>File names and links match the live release</td><td><code>gh api repos/lesslucifer/Trawler/releases/latest</code>: v0.1.0, published 2026-11-07, 25 assets; the 13 installer names and SHA256SUMS used verbatim</td></tr>
+          <tr><td>Contrast values</td><td>WCAG 2 relative-luminance formula over the token hexes (<code>#tokens</code>)</td></tr>
+          <tr><td>Strings filled from the right sources</td><td>README.md:8 (pitch), :10–12 (sub), “What you can do”, “More screens”; PRIVACY.md:3; GUIDE.md anchors <code>#install</code>, <code>#check-your-download</code></td></tr>
+          <tr><td>No denied name</td><td>the design's copy names none of <code>public_text.rs</code> <code>DENIED_NAMES</code></td></tr>
+          <tr><td>Doc layer</td><td>htmldoc id minted; baseline snapshot <code>2026-11-08T01-41-45-386Z</code></td></tr>
+          <tr><td>e2e / integration / unit</td><td>waived: no code changes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. The ruled design becomes truth through W3 (<code>site/</code>) and W5 (DEC-92, the DEC-89/DEC-91 amendments, UC-INSTALL). The design doc archives at the epic's close (DEC-3).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
+        <tbody>
+          <tr><td>Owner picks D1, D2, D3 (doc <code>#choices</code>); a switch is a new W1 commit that also drops the losing variants</td><td>owner via router → W1</td></tr>
+          <tr><td>Marker syntax for the <code>data-fill</code> points</td><td>W2 (owns it), W3 applies it</td></tr>
+          <tr><td>Contrast, no-motion and no-external assertions over <code>site.css</code></td><td>W2's tests</td></tr>
+          <tr><td>Safari/Firefox and a real phone; the Windows 10 wording of <b>System type</b></td><td>W3 shots + the owner's look</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
