@@ -168,3 +168,13 @@ fn site_js_passes_its_detection_and_show_tests() {
     assert!(run.status.success(), "{said}{}", String::from_utf8_lossy(&run.stderr));
     assert!(said.contains("# fail 0") || said.contains("ℹ fail 0"), "{said}");
 }
+
+#[test]
+fn every_installer_homepage_is_the_page_the_built_site_calls_canonical() {
+    let out = tempfile::tempdir().unwrap();
+    build_into(&repo().join(FIXTURE), out.path()).unwrap();
+    let index = std::fs::read_to_string(out.path().join("index.html")).unwrap();
+    let canonical = format!("<link rel=\"canonical\" href=\"{}\">", xtask::package::HOMEPAGE);
+    assert!(index.contains(&canonical), "no {canonical}");
+    assert_eq!(xtask::package::metadata_drift(&repo()).unwrap(), Vec::<String>::new());
+}

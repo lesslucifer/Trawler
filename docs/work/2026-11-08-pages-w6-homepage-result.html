@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af061969f34851f0dfb1e01" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W6 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W6 result: the installers' homepage is the site</h1>
+      <p>Five homepage fields, one constant, the site address; red when any field is left on the repo URL.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W6</span> · <code>wu/pages/homepage</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w6-homepage-plan.html">W6 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <table data-c="outcome" data-item="outcome">
+      <thead><tr><th>Where</th><th>Before</th><th>After</th></tr></thead>
+      <tbody>
+        <tr><td><code>xtask/src/package.rs</code> <code>HOMEPAGE</code></td><td>its own repo-URL literal</td><td><code>crate::site::BASE_URL</code> (no second literal)</td></tr>
+        <tr><td><code>Cargo.toml</code> · <code>ui/src-tauri/Cargo.toml</code> · <code>login-service/Cargo.toml</code> · <code>xtask/Cargo.toml</code> <code>homepage</code></td><td><code>https://github.com/lesslucifer/Trawler</code></td><td><code>https://lesslucifer.github.io/Trawler/</code></td></tr>
+        <tr><td><code>ui/src-tauri/tauri.conf.json</code> <code>bundle.homepage</code></td><td>the repo</td><td>the site</td></tr>
+        <tr><td><code>repository</code> fields · <code>links.rs</code> · <code>Cargo.lock</code></td><td colspan="2">unchanged (the lock carries no homepage)</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="readers">Who reads the field</h2>
+<pre class="mermaid">flowchart LR
+  H["bundle.homepage (falls back to the crate's homepage)"] --> DEB["deb control: Homepage"]
+  H --> RPM["rpm: URL"]
+  H --> NSIS["NSIS uninstall key: URLInfoAbout · URLUpdateInfo · HelpLink"]
+  H --> MSI["MSI: ARP info / update / help links"]
+  H -.-> MAC["macOS dmg/app: no such field"]</pre>
+    <table data-c="readers">
+      <thead><tr><th>Check</th><th>Finding</th></tr></thead>
+      <tbody>
+        <tr><td>Tauri CLI 2.12.4 binary (darwin-arm64) config schema</td><td><code>homepage</code>: “If unset, will fallback to <code>homepage</code> defined in <code>Cargo.toml</code>. Supported bundle targets: deb, rpm, nsis and msi”</td></tr>
+        <tr><td>NSIS template in the same binary</td><td><code>!define HOMEPAGE "{{homepage}}"</code> → <code>HelpLink</code>, <code>URLInfoAbout</code>, <code>URLUpdateInfo</code> written verbatim</td></tr>
+        <tr><td>deb · rpm · MSI writers</td><td>not compiled into the macOS CLI; they read the same single field; not observable on this host</td></tr>
+        <tr><td>custom installer templates in <code>tauri.conf.json</code></td><td>none (only images under <code>nsis</code>/<code>wix</code>); the e2e/walkthrough overlays carry no homepage</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">Nothing else needs a change: every bundler target takes the field verbatim. It reaches users only through the next tag, after the site answers 200 (epic closing order).</div>
+
+    <h2 id="evidence">Evidence</h2>
+    <table data-c="evidence" data-item="evidence">
+      <thead><tr><th>Run</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>constant + fixtures switched, fields still the repo (red first)</td><td><code>the_tree_carries_one_licence_and_full_metadata</code> red, naming <code>xtask</code>, <code>trawler-ui</code>, <code>trawler</code>, <code>trawler-login-service</code> and <code>tauri.conf.json bundle.homepage</code></td></tr>
+        <tr><td>fields switched</td><td><code>package::</code> unit 32/32 · <code>suite site::</code> 9/9</td></tr>
+        <tr><td><code>cargo xtask gate0</code></td><td>green: fmt + clippy + 1594 tests</td></tr>
+        <tr><td>new unit <code>a_member_or_the_bundle_still_naming_the_repo_is_drift</code></td><td>a member and the bundle on the repo URL are each named</td></tr>
+        <tr><td>new integration <code>every_installer_homepage_is_the_page_the_built_site_calls_canonical</code></td><td>the v0.1.0-fixture site's canonical = <code>HOMEPAGE</code>; tree drift empty</td></tr>
+        <tr><td>code review · gates</td><td>recorded on the tip's notes (<code>cr/v5</code>, <code>test/v2</code>, <code>doc/v1</code>), not repeated here</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <table data-c="deviations" data-item="deviations">
+      <thead><tr><th>Plan said</th><th>Done</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>epic plan W6 row: DEC-87 rule 4 amended in the same WU</td><td>not edited</td><td>the W6 brief moves it to W5 (decisions and rule-bearing docs)</td></tr>
+        <tr><td>epic plan: <code>cargo xtask package</code> writes the site into the bundle's homepage</td><td>not run</td><td>this host is macOS: the dmg has no homepage field; deb/rpm/Windows bundles build only on their hosts at a tag</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="router-review">Outside the cr gate: the router's review</h2>
+    <table data-c="router-review">
+      <thead><tr><th>File</th><th>Change</th><th>Check</th></tr></thead>
+      <tbody>
+        <tr><td><code>Cargo.toml</code>:33</td><td>homepage → site</td><td>root manifest, not a code path</td></tr>
+        <tr><td><code>ui/src-tauri/Cargo.toml</code>:10</td><td>homepage → site</td><td>bundler fallback</td></tr>
+        <tr><td><code>ui/src-tauri/tauri.conf.json</code>:44</td><td><code>bundle.homepage</code> → site</td><td>the field the bundler reads first</td></tr>
+        <tr><td><code>login-service/Cargo.toml</code>:8</td><td>homepage → site</td><td>metadata only</td></tr>
+        <tr><td><code>Cargo.lock</code></td><td>none</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="distillation">Distillation</h2>
+    <table data-c="distillation" data-item="distillation">
+      <thead><tr><th>Doc</th><th>Owner</th></tr></thead>
+      <tbody>
+        <tr><td>DEC-87 rule 4 (“the GitHub repository” → the site) + decisions-index summary</td><td>W5 (this WU edits no decision or rule-bearing doc)</td></tr>
+        <tr><td>UC-INSTALL second contract (installed package's homepage = the site)</td><td>W5</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <table data-c="follow-ups" data-item="follow-ups">
+      <thead><tr><th>Item</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td>check the deb <code>Homepage</code>, rpm <code>URL</code> and Windows uninstall links on the first rc's installers</td><td>the next tag's hand-check, after the site answers 200</td></tr>
+      </tbody>
+    </table>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

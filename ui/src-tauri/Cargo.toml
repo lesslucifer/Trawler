@@ -7,7 +7,7 @@ rust-version = "1.77"
 license = "MIT"
 repository = "https://github.com/lesslucifer/Trawler"
 authors = ["Vu Luu"]
-homepage = "https://github.com/lesslucifer/Trawler"
+homepage = "https://lesslucifer.github.io/Trawler/"
 publish = false
 default-run = "trawler-ui"
 
