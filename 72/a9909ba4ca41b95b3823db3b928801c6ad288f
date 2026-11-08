@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-PAGES
+wu: E-PAGES.W4
+branch: HEAD
+tests:
+  unit: { waived: "W4 adds no library code: the diff is a workflow file and the integration test that holds it; that test's helper is pinned by its own test inside the integration file (a_pinned_line_reads_its_action_and_its_comment)" }
+  integration: { count: 15, covers: "pages.yml, read as YAML and as text: triggers exactly push [main] (branches only), release [published], workflow_dispatch; the build job's if skips only a pre-release release event and deploy needs build with no if of its own; top permissions {contents: read}, build none, deploy {pages: write, id-token: write}, jobs exactly build and deploy; every uses a 40-hex SHA with a # comment, checkout and rust-toolchain lines byte-equal to release.yml's; the toolchain equals rust-toolchain.toml; the one checkout has persist-credentials false; one gh api step reads repos/$GITHUB_REPOSITORY/releases/latest with GH_TOKEN = github.token and no step names github.event; the site build follows the read, takes its file as --release and writes --out target/site, the upload-pages-artifact step's only input is path target/site and follows the build; deploy is one deploy-pages step whose id feeds environment github-pages' url; no configure-pages; no secrets; concurrency pages without cancel-in-progress; every job has timeout-minutes <= 30 and no job or step continue-on-error or step if. Red first: 14 of 15 failed before pages.yml existed; a 16-edit mutation sweep of pages.yml turned each edit red" }
+  e2e: { waived: "the epic's e2e is the live Pages deploy, which needs the owner's repo settings #1-#2 and the public network after the epic merges (epic plan, E2E test plan); both run steps were run by hand against the real latest release" }
