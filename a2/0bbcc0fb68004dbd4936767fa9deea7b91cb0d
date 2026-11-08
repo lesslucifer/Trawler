@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU router-kanban/visibility-gate -> epic/router-kanban"
+epic: E-KANBAN
+wu: E-KANBAN.W4
+branch: wu/router-kanban/visibility-gate
+base: e352e436a3d3bf6e5416a0fd7e953462605e33c3
+head: a20bbcc0fb68004dbd4936767fa9deea7b91cb0d
+diff_sha256: 4606e3e2bd8dccdb59e0c7e67f5564422c53c4e8620d80610472e709385adc33
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  shards: 1
+  candidates:
+    important: 4
+    nit: 2
+  stage_seconds:
+    gate0: 26
+    total: 74
+  by_finder:
+    correctness: { found: 2, verified: 1 }
+    efficiency:  { found: 2, verified: 1 }
+    altitude:    { found: 2, verified: 1 }
+findings: { found: 4, verified: 1, waived: 0 }
+verified:
+  - { severity: important, finding: "commit 8f04aa99 tracks xtask/obsidian.key (the fixture key test-key), written by an intermediate non-hermetic test run; nothing reads it", evidence: "orchestrator checked directly: git log --diff-filter=A names 8f04aa99, file holds test-key, not git-ignored" }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-08
