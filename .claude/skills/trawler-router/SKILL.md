@@ -30,7 +30,7 @@ Never hand-write or copy a gate note between tips (a cr copy was denied: it is a
 | Note | When | By |
 |---|---|---|
 | `test/v2`, `doc/v1` | every WU/epic tip | `cargo xtask notes write wu\|epic <tip> [--target <ref>] [--judgment <file>]` |
-| `cr/v5` PASS | diff changes code paths `src/ xtask/ tests/ ui/src/ ui/e2e/` (`is_code`, `xtask/src/notes.rs`); bound by `diff_sha256` over them (CLAUDE.md still says cr/v2) | code-review skill on that tip |
+| `cr/v5` PASS | diff changes code paths `src/ xtask/ tests/ ui/src/ ui/e2e/ site/` (`is_code`, `xtask/src/notes.rs`); bound by `diff_sha256` over them (CLAUDE.md still says cr/v2) | code-review skill on that tip |
 | `design/v1` | closed design run / component design, or a non-test `.tsx` under `ui/src/` | design-review skill |
 | `mr/v1` · `dod/v1` | always, signed last, attests the result's bytes · receipt on green | owner `mr confirm` · merge hook |
 

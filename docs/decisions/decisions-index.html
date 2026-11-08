@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v23 · 2026-11-03 · Trawler</div>
+      <div class="meta">v24 · 2026-11-08 · Trawler</div>
     </div>
   </header>
   <main>
@@ -1070,7 +1070,7 @@
           <td><span class="badge id">DEC-87</span></td>
           <td><strong>One licence, one holder, no crate published.</strong> The root <code>LICENSE</code> is MIT, Copyright (c) 2026 Vu Luu;
             every crate, <code>ui/package.json</code> and the Tauri bundle say MIT, Vu Luu is publisher, copyright holder and author,
-            the homepage is the repository, and every crate is <code>publish = false</code> (the crates.io name is taken).
+            the homepage is the project site (<code>package::HOMEPAGE</code> = <code>site::BASE_URL</code>, E-PAGES Q12), the repository field the repo, and every crate is <code>publish = false</code> (the crates.io name is taken).
             <code>package::metadata_drift</code> names any source that disagrees</td>
           <td><span class="badge auto">active</span></td>
         </tr>
@@ -1090,9 +1090,9 @@
           <td><strong>One signed mark, one source folder.</strong> The owner signed 7b2 Sonar (ring, lit sweep, one blip on the
             <code>#2b2622</code> tile), ink + amber <code>#e0a43a</code>, lowercase DM Mono wordmark. <code>ui/src-tauri/icons/source/</code>
             (plain-fill SVG, <code>MANIFEST.json</code>) is the only source of every icon, tray glyph and brand image; tray states differ
-            by shape, templates on macOS only, a coloured pair elsewhere; amber is brand-only (DEC-19 holds in the UI); the W10-signed
+            by shape, templates on macOS only, a coloured pair elsewhere; amber is brand-only (DEC-19 holds in the UI; on the project site a glow decoration only, never text, state or fill); the W10-signed
             installer art (DMG, NSIS/WiX BMPs) and social card are sources there too, with paper, deep amber and label-chip colours;
-            <code>cargo xtask icons</code> regenerates the committed set reproducibly (drift-tested), the DMG background a 144-dpi PNG</td>
+            <code>cargo xtask icons</code> regenerates the committed set reproducibly (drift-tested), the DMG background a 144-dpi PNG; the site copies the favicon, dark wordmark and social card from it</td>
           <td><span class="badge auto">active</span></td>
         </tr>
         <tr>
@@ -1111,7 +1111,18 @@
           <td><strong>The public text is one voice, checked.</strong> Root markdown for users (README, CONTRIBUTING, SECURITY,
             CODE_OF_CONDUCT, PRIVACY, CHANGELOG, GUIDE), each fact in one file; no other tool named anywhere public; the README's
             install table follows <code>package.rs</code>; every link and anchor resolves; issues only at 0.1.0; screenshots from
-            <code>cargo xtask ui screenshots</code>, OS prompts by hand; held by <code>public_text</code>'s unit tests</td>
+            <code>cargo xtask ui screenshots</code>, OS prompts by hand; the project site is published text too (deny-list over its built output, facts filled from these files); held by <code>public_text</code>'s unit tests</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html"><code>dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html</code></a></td>
+          <td><span class="badge id">DEC-92</span></td>
+          <td><strong>The site is a build of the tree and the latest release.</strong> <code>https://lesslucifer.github.io/Trawler/</code>
+            (<code>site::BASE_URL</code>, no custom domain) is the <code>site/</code> frame filled by <code>cargo xtask site build</code> from
+            README/PRIVACY, <code>links.rs</code> and the <code>releases/latest</code> JSON (versioned links; refuses a draft, pre-release or missing kind);
+            no request outside its origin (exact CSP meta, one same-origin <code>site.js</code> ≤ 4,096 B with no network or storage, no analytics);
+            one voice with the root markdown; <code>pages.yml</code> deploys on push to <code>main</code>, a published final and dispatch, nothing else
+            (a promoted pre-release, a tag without <code>pages.yml</code>, an older-line patch need a dispatch); <code>site/</code> is a code path</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

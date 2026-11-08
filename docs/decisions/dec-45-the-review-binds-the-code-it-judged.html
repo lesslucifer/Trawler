@@ -12,7 +12,7 @@
       <p>E-SIMPWF.W4 makes the code review's subject, binding and inputs the code paths: the note is
       <code>cr/v4</code>, its <code>diff_sha256</code> covers <code>is_code</code> and nothing else, and a diff that changes
       no code path is asked for no review at all.</p>
-      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W4 · active</div>
+      <div class="meta">Decided 2026-09-12 · E-SIMPWF.W4 · amended 2026-11-08 by E-PAGES.W5 (<code>site/</code> is a code path) · active</div>
     </div>
   </header>
   <main>
@@ -22,7 +22,7 @@
       <p><strong>The code review binds the bytes of the code paths it judged.</strong> The note is
       <code>cr/v4</code>, and its <code>diff_sha256</code> is the hash of <code>git diff --no-color --no-ext-diff
       BASE..HEAD -- &lt;the paths <code>notes::is_code</code> names&gt;</code> — <code>src/</code>,
-      <code>xtask/</code>, <code>tests/</code>, <code>ui/src/</code>, <code>ui/e2e/</code>. A document the review never
+      <code>xtask/</code>, <code>tests/</code>, <code>ui/src/</code>, <code>ui/e2e/</code>, and since E-PAGES <code>site/</code> (<a href="dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html">DEC-92</a> rule 11). A document the review never
       opened cannot move it, so a docs-only commit landing after a PASS neither voids the verdict nor re-buys the
       fleet; a code edit still voids it, and the note the gate wants is written by the same command that printed the
       range, under the same flags.</p>

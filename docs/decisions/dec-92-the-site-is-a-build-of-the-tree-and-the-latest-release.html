@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af061979f34851f0dfb1e03">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — DEC-92: the site is a build of the tree and the latest release</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>DEC-92 — the site is a build of the tree and the latest release</h1>
+      <p>The project site is a hand-written frame whose every repeated fact is filled at build time, published by Actions, and it makes no request outside its own origin.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T2 decision · minted by <strong>E-PAGES.W5</strong> from the owner's rulings Q1–Q13 and the W1 picks · UC-INSTALL · relates to
+        <a href="dec-83-ci-is-a-signal-on-main-not-a-gate.html">DEC-83</a> · <a href="dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a> · <a href="dec-87-one-licence-one-holder-no-crate-published.html">DEC-87</a> · <a href="dec-89-one-signed-mark-one-source-folder.html">DEC-89</a> · <a href="dec-91-the-public-text-is-one-voice-checked.html">DEC-91</a> · <strong>active</strong></div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="shape">Where each fact comes from</h2>
+    <div class="diagram" data-c="shape">
+      <pre class="mermaid">
+flowchart LR
+  F["site/: index.html · 404.html · site.css · site.js (the frame)"] --> B["cargo xtask site build"]
+  R["README.md · PRIVACY.md · GUIDE.md"] -- "pitch · sub line · shot alts · privacy lead" --> B
+  L["links.rs"] -- "guide + source URLs" --> B
+  J["releases/latest JSON"] -- "version · date · files · SHA256SUMS" --> B
+  A["icons/ (DEC-89) · .github/screenshots/"] -- "site::ASSETS, PNG re-encoded" --> B
+  B --> C{"site checks"}
+  C -- green --> O["target/site"]
+  O --> P["pages.yml → github-pages"]
+  P --> V(["https://lesslucifer.github.io/Trawler/"])
+      </pre>
+      <div class="caption">The frame holds no fact; the build fills it or refuses. <code>docs/</code> never reaches the artifact.</div>
+    </div>
+
+    <h2 id="rules">The rules</h2>
+    <table data-c="rules">
+      <tr><th>#</th><th>Rule</th><th>Why</th></tr>
+      <tr><td>1</td><td>Address <code>https://lesslucifer.github.io/Trawler/</code>, one constant <code>site::BASE_URL</code> (canonical, OG image, the installers' <code>homepage</code> via DEC-87 rule 4); no custom domain, no <code>CNAME</code>, no sitemap or robots</td><td>owner ruling Q1; crawlers read robots only at the host root</td></tr>
+      <tr><td>2</td><td>A hand-written frame in <code>site/</code>, every repeated fact filled at build: README pitch (h3), sub line, features heading and shot alts; <code>PRIVACY.md</code>'s lead; <code>links.rs</code> guide and source URLs. The markdown renderer is a subset that refuses anything else. GUIDE, full PRIVACY, CHANGELOG, CONTRIBUTING are links to <code>blob/main</code>, never copied</td><td>Q2 (option C), Q6: one fact per tier, a drift is a red build, not a stale page</td></tr>
+      <tr><td>3</td><td>Downloads are read at build time from <code>releases/latest</code>, never by the visitor's browser; links are versioned (<code>releases/download/v‹x›/‹file›</code>); the build refuses a draft, a pre-release, a missing <code>Os::bundles</code> kind or a version above the workspace's; a <code>releases/latest</code> link and <code>SHA256SUMS</code> are always shown</td><td>Q3: a client-side API call tells GitHub who reads the page; a <code>latest/download/‹name›</code> link breaks on the next version</td></tr>
+      <tr><td>4</td><td>No request outside the origin: the exact CSP meta <code>site::CSP</code> on every page; no absolute <code>src</code>/<code>srcset</code>, CSS <code>url()</code> or <code>@import</code>; no <code>iframe</code>, <code>form</code>, inline script or style, <code>on…=</code>; no analytics, cookies or storage</td><td>Q4; the product's local-only promise (DEC-91 rule 7) holds on its own site</td></tr>
+      <tr><td>5</td><td>One script, same-origin <code>site.js</code> (≤ 4,096 B, <code>site::SCRIPT_BUDGET</code>): OS detection only; no network, storage or code-from-string API; the page is complete without it (no script or an unknown system = the full file list, open)</td><td>W1 pick D2; a scan refuses the APIs that could leak</td></tr>
+      <tr><td>6</td><td>Assets only from <code>site::ASSETS</code>: the DEC-89 generated favicon, dark wordmark and social card, and README screenshots, every PNG re-encoded to the same pixels; system font stacks, no font bytes</td><td>Q9; nothing is redrawn, nothing is fetched</td></tr>
+      <tr><td>7</td><td>Site text is public text: DEC-91 rules 1–2 (one voice, deny-list over every built text file); English only, <code>lang="en"</code>; <code>&lt;title&gt;</code> and description = the README pitch</td><td>Q5, Q7, W1 pick VOICE</td></tr>
+      <tr><td>8</td><td>Look: themes by <code>prefers-color-scheme</code> only (no toggle); every text/background token pair ≥ 4.5:1 per theme and token scope; motion only under <code>prefers-reduced-motion: no-preference</code>, never infinite, settled within 5 s; amber only as glow decoration (DEC-89 rule 6)</td><td>W1 picks LOOK, HERO, ACCENT; a toggle needs script and storage</td></tr>
+      <tr><td>9</td><td><code>.github/workflows/pages.yml</code> deploys: on push to <code>main</code>, <code>release: published</code> (a pre-release skips both jobs) and dispatch; it reads <code>releases/latest</code>, never the event payload; uploads <code>target/site</code> only; <code>contents: read</code> at the top, <code>pages</code> + <code>id-token</code> write on the deploy job only, environment <code>github-pages</code>; concurrency <code>pages</code>, never cancelled; actions pinned by SHA</td><td>Q11; a branch or folder source would publish <code>docs/</code> or the whole repo; it publishes, it gates nothing (DEC-83)</td></tr>
+      <tr><td>10</td><td>Nothing else redeploys it: a release on a tag whose commit lacks <code>pages.yml</code>, a pre-release edited into the final (an edit is not <code>published</code>) and an older-line patch each leave the site as it was until <code>gh workflow run pages.yml</code> or the next push to <code>main</code></td><td>a <code>release</code> event runs the workflow file at its tag; the steps live in <a href="../release-process.html">release-process</a></td></tr>
+      <tr><td>11</td><td><code>site/</code> is a code path (<code>notes::is_code</code>): the code review covers it</td><td>Q13: the site carries a script</td></tr>
+    </table>
+
+    <h2 id="held">Held by</h2>
+    <table data-c="held">
+      <tr><th>Rules</th><th>Test</th></tr>
+      <tr><td>1–8</td><td><code>xtask/src/site.rs</code> unit tests and <code>xtask/tests/suite/site.rs</code> on the committed v0.1.0 release fixture (links resolve inside the output, CSP exact, no external subresource, download rows = <code>Os::bundles</code> × version, contrast, motion, script scan, PNG pixels)</td></tr>
+      <tr><td>5</td><td><code>site/site.test.mjs</code> (<code>node --test</code>, run by the suite): 14 navigator fixtures and the <code>show()</code> states</td></tr>
+      <tr><td>9</td><td><code>xtask/tests/suite/pages_workflow.rs</code> + the router's review (the file is outside the code review)</td></tr>
+      <tr><td>11</td><td><code>notes.rs</code> <code>is_code</code> unit test</td></tr>
+      <tr><td>—</td><td>the live deploy (one origin in DevTools Network, the 404 at depth): an owner check after the first run</td></tr>
+    </table>
+
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

@@ -14,7 +14,7 @@
       UC-5 inspect), plus the native app's setup screen for capturing this machine or another device
       (UC-ONBOARD), the HAR round trip — taking a capture out and bringing one back (UC-6) — clearing the
       capture (UC-7), and sending a request again, edited or from scratch (UC-8).</p>
-      <div class="meta">v15 · 2026-11-05 · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
+      <div class="meta">v16 · 2026-11-08 (UC-INSTALL: the project site, E-PAGES) · Trawler · seeded by <span class="badge id">E-UISHELL</span> ·
       UC-4 by <span class="badge id">E-UIFOUND</span> · UC-5 by <span class="badge id">E-UIINSPECT</span> ·
       UC-ONBOARD by <span class="badge id">E-UISETUP</span>, rebuilt on the platform axis with
       reach beyond loopback by <span class="badge id">E-ONBOARD</span> ·
@@ -491,7 +491,8 @@
 
     <h2 id="uc-install">UC-INSTALL — Install Trawler from a release</h2>
     <p data-c="uc-install-contract">A user downloads their OS's own artifact from the published GitHub release
-      (<span class="badge id">E-PKG2</span>, <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a>).
+      (<span class="badge id">E-PKG2</span>, <a href="../decisions/dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a>),
+      directly or through the project site (<span class="badge id">E-PAGES</span>, <a href="../decisions/dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html">DEC-92</a>).
       Each package names Vu Luu as publisher and copyright holder and carries the MIT licence
       (<a href="../decisions/dec-87-one-licence-one-holder-no-crate-published.html">DEC-87</a>).
       Every installer carries <code>THIRD-PARTY-NOTICES.txt</code>, Trawler's licence and every bundled dependency's
@@ -503,6 +504,13 @@
       The repo's <code>README.md</code> carries the same install table, checked against <code>package.rs</code>, the first-open steps and the checksum check, and <code>PRIVACY.md</code> says what leaves the machine (<a href="../decisions/dec-91-the-public-text-is-one-voice-checked.html">DEC-91</a>).
       From then on the app is UC-4: one launch, an owned core, single instance, the CA in the platform's app data directory
       (<code>dev.trawler.app</code>).</p>
+    <table data-c="uc-install-site">
+      <tr><th>The site visitor</th><th>Gets</th></tr>
+      <tr><td>arrives at <code>https://lesslucifer.github.io/Trawler/</code> (the repo's website field; every installer's <code>homepage</code> from the first tag after the site answers, DEC-87 rule 4)</td><td>the pitch and screenshots; the page makes no request outside its own origin</td></tr>
+      <tr><td>on a detected system (macOS · Windows x64/arm64 · Linux x64/arm64)</td><td>one <em>Download for ‹system›</em> button: a direct, versioned link to that system's primary installer of the latest published final; every other file under <em>Other systems</em></td></tr>
+      <tr><td>with no script or an unknown system</td><td>the full file list, open</td></tr>
+      <tr><td>always</td><td>the first-open step per OS (→ <code>GUIDE.md#install</code>), <em>Other downloads</em> (<code>releases/latest</code>), <code>SHA256SUMS</code>, links to the guide, privacy and changelog</td></tr>
+    </table>
     <table data-c="uc-install-matrix">
       <tr><th>OS</th><th>Artifact</th><th>First open</th></tr>
       <tr><td>macOS 11+ (universal)</td><td><code>.dmg</code></td><td>ad-hoc signed · Privacy &amp; Security → Open Anyway</td></tr>
@@ -511,7 +519,7 @@
     </table>
     <p class="kd" data-c="uc-install-proof">Proven by <code>xtask/tests/package_bundle.rs</code> (macOS, <code>--features package-tests</code>):
       the packaged app's <code>Info.plist</code> carries the copyright and its <code>Resources</code> the committed third-party notice, the <code>.dmg</code> installed into a temp folder opens its window, whose own core captures through the proxy, mints its CA
-      under a temp <code>HOME</code>, and frees both ports when the app ends. Each release job smokes its own installer headless
+      under a temp <code>HOME</code>, and frees both ports when the app ends. The site: <code>xtask/tests/suite/site.rs</code> builds it from a committed release fixture (every download row = <code>Os::bundles</code> × version, links resolve, CSP exact) and <code>site/site.test.mjs</code> proves the detection per system; the live deploy is an owner check. Each release job smokes its own installer headless
       (<code>cargo xtask smoke</code>). The OS prompts and the installs in the Windows and Ubuntu VMs are hand checks of the first rc.</p>
 
     <h2 id="uc-update">UC-UPDATE — Take a new version from inside the app</h2>
