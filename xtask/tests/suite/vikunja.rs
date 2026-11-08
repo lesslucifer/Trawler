@@ -537,3 +537,33 @@ fn put_unassigns_a_user_named_by_numeric_id() {
     assert_eq!(server.run(&["put", "6", "--unassign", "1"]).unwrap(), "#6: unassigned 1");
     assert_eq!(server.writes(), [write("DELETE", "/tasks/6/assignees/1", None)]);
 }
+
+#[test]
+fn a_relation_repeated_in_one_call_is_sent_once() {
+    let server = Server::start();
+    server.route("GET", "/tasks/6", 200, &task(6, &json!(null), &json!(null)));
+    server.route("PUT", "/tasks/6/relations", 201, &json!({"task_id": 6}));
+    server.route("PUT", "/projects/3/tasks", 201, &json!({"id": 12}));
+    server.route("PUT", "/tasks/12/relations", 201, &json!({"task_id": 12}));
+    let relation = Some(json!({"other_task_id": 4, "relation_kind": "blocked"}));
+    server.run(&["put", "6", "--relation", "blocked-by:4", "--relation", "blocked-by:#4"]).unwrap();
+    server
+        .run(&[
+            "create",
+            "--title",
+            "t",
+            "--relation",
+            "blocked-by:4",
+            "--relation",
+            "blocked-by:4",
+        ])
+        .unwrap();
+    assert_eq!(
+        server.writes(),
+        [
+            write("PUT", "/tasks/6/relations", relation.clone()),
+            write("PUT", "/projects/3/tasks", Some(json!({"title": "t"}))),
+            write("PUT", "/tasks/12/relations", relation),
+        ]
+    );
+}

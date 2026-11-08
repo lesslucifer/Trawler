@@ -492,9 +492,9 @@ fn text(source: &str, stdin_taken: &mut bool) -> Result<String, String> {
     std::io::read_to_string(std::io::stdin()).map_err(|e| format!("read stdin: {e}"))
 }
 
-fn push_once(names: &mut Vec<String>, name: &str) {
-    if !names.iter().any(|n| n == name) {
-        names.push(name.to_string());
+fn push_once<T: PartialEq>(items: &mut Vec<T>, item: T) {
+    if !items.contains(&item) {
+        items.push(item);
     }
 }
 
@@ -533,7 +533,7 @@ pub fn parse(args: &[&str]) -> Result<Command, String> {
             ("put", "--description") => {
                 change.description = Some(text(value()?, &mut stdin_taken)?);
             }
-            ("put", "--relation") => change.relations.push(parse_relation(value()?)?),
+            ("put", "--relation") => push_once(&mut change.relations, parse_relation(value()?)?),
             ("put", "--done" | "--undone") => {
                 let done = *flag == "--done";
                 if change.done.is_some_and(|d| d != done) {
@@ -541,16 +541,16 @@ pub fn parse(args: &[&str]) -> Result<Command, String> {
                 }
                 change.done = Some(done);
             }
-            ("put", "--assignee") => push_once(&mut change.assign, value()?),
-            ("put", "--unassign") => push_once(&mut change.unassign, value()?),
-            ("put", "--label") => push_once(&mut change.label, value()?),
-            ("put", "--unlabel") => push_once(&mut change.unlabel, value()?),
+            ("put", "--assignee") => push_once(&mut change.assign, value()?.to_string()),
+            ("put", "--unassign") => push_once(&mut change.unassign, value()?.to_string()),
+            ("put", "--label") => push_once(&mut change.label, value()?.to_string()),
+            ("put", "--unlabel") => push_once(&mut change.unlabel, value()?.to_string()),
             ("create", "--title") => new.title = value()?.to_string(),
             ("create", "--description") => {
                 new.description = Some(text(value()?, &mut stdin_taken)?);
             }
             ("create", "--parent") => new.parent = Some(task_id(value()?)?),
-            ("create", "--relation") => new.relations.push(parse_relation(value()?)?),
+            ("create", "--relation") => push_once(&mut new.relations, parse_relation(value()?)?),
             _ => return Err(format!("{command}: unexpected {flag}\n{USAGE}")),
         }
     }
