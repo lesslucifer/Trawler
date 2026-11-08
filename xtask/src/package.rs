@@ -329,7 +329,7 @@ fn verify_signature(app: &Path) -> Result<(), String> {
 pub const SHIPPED: &str = "trawler-ui";
 pub const LICENCE: &str = "MIT";
 pub const HOLDER: &str = "Vu Luu";
-pub const HOMEPAGE: &str = "https://github.com/lesslucifer/Trawler";
+pub const HOMEPAGE: &str = crate::site::BASE_URL;
 
 #[derive(Debug, Deserialize)]
 struct Members {
@@ -937,7 +937,7 @@ mod tests {
     fn full_bundle() -> serde_json::Value {
         json(
             r#"{"bundle":{"license":"MIT","publisher":"Vu Luu",
-            "copyright":"Copyright \u00a9 2026 Vu Luu","homepage":"https://github.com/lesslucifer/Trawler",
+            "copyright":"Copyright \u00a9 2026 Vu Luu","homepage":"https://lesslucifer.github.io/Trawler/",
             "longDescription":"A proxy.","linux":{"deb":{"section":"devel"}}}}"#,
         )
     }
@@ -976,12 +976,29 @@ mod tests {
                 "trawler: license Some(\"Apache-2.0\"), the app is MIT",
                 "trawler-ui: publishable; the crates.io name is not ours",
                 "xtask: authors [] lack Vu Luu",
-                "xtask: homepage None, want https://github.com/lesslucifer/Trawler",
+                "xtask: homepage None, want https://lesslucifer.github.io/Trawler/",
                 "ui/package.json: license \"ISC\", the app is MIT",
                 "tauri.conf.json bundle.publisher: \"trawler\", want \"Vu Luu\"",
                 "tauri.conf.json bundle.licenseFile: set; the .dmg would ask to agree before it mounts",
                 "tauri.conf.json bundle.linux.deb.section: empty",
                 "LICENSE: not the MIT licence with \"Copyright (c) 2026 Vu Luu\"",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_member_or_the_bundle_still_naming_the_repo_is_drift() {
+        let repo = "https://github.com/lesslucifer/Trawler";
+        let mut members = one_version();
+        members[1].homepage = Some(repo.to_string());
+        let mut conf = full_bundle();
+        conf["bundle"]["homepage"] = repo.into();
+        let drift = metadata_drift_of(&members, &conf, &json(r#"{"license":"MIT"}"#), Some(MIT));
+        assert_eq!(
+            drift,
+            [
+                "trawler-ui: homepage Some(\"https://github.com/lesslucifer/Trawler\"), want https://lesslucifer.github.io/Trawler/",
+                "tauri.conf.json bundle.homepage: \"https://github.com/lesslucifer/Trawler\", want \"https://lesslucifer.github.io/Trawler/\"",
             ]
         );
     }
