@@ -1,0 +1,45 @@
+schema: cr/v5
+scope: "epic E-VIKUNJA epic/router-vikunja -> main"
+epic: E-VIKUNJA
+branch: epic/router-vikunja
+base: 14c767d73b75aad5e748b479b4d2a5f0046ad153
+head: 8954cf4fe0e36aab9be60efcd2a8be40b462f15e
+diff_sha256: 739eb7aef20d278d6df4fc903d2841c0917359da7adcd432096d5035dfb3f46c
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 4
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 7
+    nit: 9
+  stage_seconds:
+    gate0: 2
+    finders: 73
+    verifiers: 122
+    total: 195
+  by_finder:
+    correctness: { found: 7, verified: 2 }
+    efficiency:  { found: 5, verified: 2 }
+    altitude:    { found: 4, verified: 0 }
+findings: { found: 15, verified: 3, waived: 2 }
+waivers:
+  - finding: "listen.rs:224 - with no state file (first launch or a lost file) the startup reconcile prints every existing non-router comment on every open task as a comment line (verified important)"
+    reason: "deliberate, test-locked W3 behaviour: webhook_listen_registers_reconciles_then_prints_a_line_per_signed_transition starts with no state and asserts an existing owner comment prints before listening (W3 result: startup prints an unseen owner comment). Without state the listener cannot tell an acknowledged comment from an unacknowledged one and errs loud; a silent baseline would lose an owner comment posted while no listener ran, and a comment line is reply/acknowledge, never a lifecycle step, so a replay is noise, not a wrong action"
+  - finding: "listen.rs:170-177, 227-230 - the seen map keeps answered, closed and done tasks (only a 404 prunes) and save_state rewrites the whole map per change, growing with lifetime task count (verified important)"
+    reason: "each retained entry is that task's comment watermark: observe falls back to Seen::default(), so pruning a done task's entry makes the next delivery for it (an owner comment on a done task, an undone) replay its whole comment history. Growth is about 40 B per task of one single-owner project (epics, WUs, owner tasks), the reconcile walks open tasks only, and the rewrite is one small local file; bounding it needs a different watermark design, recorded as debt in the epic result"
+nits:
+  - finding: "listen.rs:400-403 - one unbounded thread per connection and a per-read timeout let a slow-drip loopback client hold a thread (verified nit)"
+    waived: "the listener binds 127.0.0.1 only; a local process able to connect has easier ways to disturb the machine, and the 1 MiB cap still bounds each request"
+  - finding: "listen.rs:308 - the 1 MiB read budget covers headers and body together, so a body within a header's length of 1 MiB is refused 400 (unverified candidate)"
+    waived: "Vikunja's deliveries are a few KB; the boundary only refuses bodies near 1 MiB"
+  - finding: "listen.rs:229 - a save_state failure inside a poll is reported as an unreachable Vikunja (unverified candidate)"
+    waived: "the line still prompts the heartbeat's relaunch path, and a disk write failure on the router's own config dir surfaces on stderr at the next start"
+  - finding: "vikunja.rs:620 - --api/--key-file are taken from anywhere in the args, so a comment text equal to one of them is consumed (unverified candidate)"
+    waived: "the router passes text through stdin (-) per the protocol; a comment that is exactly a flag name is not a protocol input"
+  - finding: "http.rs:20, listen.rs:307 - hand-rolled HTTP client and server beside smoke.rs and debug.rs (unverified candidate)"
+    waived: "the other sites are a test-only GET and a local debug view with different needs; xtask carries no HTTP dependency by choice"
+verdict: PASS
+date: 2026-11-09
