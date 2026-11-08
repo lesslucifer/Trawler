@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6af061989f34851f0dfb1e05" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W5 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W5 result: the epic distilled</h1>
+      <p>DEC-92 minted, four decisions amended, UC-INSTALL gains the site, and the two rule-bearing docs staged for the owner's signature.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W5</span> · <code>wu/pages/distill</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html#w5">epic plan W5</a> · docs-only</div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Doc</th><th>Tier</th><th>Change</th><th>Lands by</th></tr></thead>
+        <tbody>
+          <tr><td><a href="../decisions/dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html">DEC-92</a> (new)</td><td>T2</td><td>11 rules: address, frame + build-time facts, downloads from <code>releases/latest</code>, no request outside the origin (exact CSP), one script, assets, one voice, look, the deploy workflow, what does not redeploy, <code>site/</code> a code path; held-by table</td><td>WU commit</td></tr>
+          <tr><td>DEC-91</td><td>T2</td><td>v2: rule 8, the site is published text (deny-list over the built output, facts filled never retyped); diagram + held-by name <code>site.rs</code></td><td>WU commit</td></tr>
+          <tr><td>DEC-89</td><td>T2</td><td>v4: rule 6, the site is a brand surface, amber glow decoration only; rule 10, the site copies favicon, dark wordmark, social card (same pixels)</td><td>WU commit</td></tr>
+          <tr><td>DEC-87</td><td>T2</td><td>v2: rule 4, <code>homepage</code> = the site via one constant, <code>repository</code> stays the repo (Q12; the W6 brief put the amendment here)</td><td>WU commit</td></tr>
+          <tr><td>DEC-45</td><td>T2</td><td>the code-path list gains <code>site/</code></td><td>WU commit</td></tr>
+          <tr><td><code>decisions-index.html</code></td><td>T2</td><td>v24: DEC-92 row; DEC-87, DEC-89, DEC-91 summaries</td><td>WU commit</td></tr>
+          <tr><td><code>use-cases/web-ui.html#uc-install</code> + index</td><td>T2</td><td>the site as an entry point: a visitor table and its proof</td><td>WU commit</td></tr>
+          <tr><td><code>.claude/skills/trawler-router/SKILL.md</code></td><td>infra</td><td>the <code>cr/v5</code> code-path list gains <code>site/</code></td><td>WU commit</td></tr>
+          <tr><td>epic plan</td><td>T3</td><td>v4: W2/W3 attribution corrected; settings #1–#2 before the epic merge (closing order, WU graph); W3/W4 merged; DEC-87 rule 4 moved to W5; follow-ups table F1–F9</td><td>WU commit</td></tr>
+          <tr><td>W4 result</td><td>T3</td><td>v2: owner settings before the epic merge</td><td>WU commit</td></tr>
+          <tr><td><code>docs/release-process.html</code></td><td>T1</td><td>v3: <em>The project site</em> table (once-only settings, the pre-tag 200 check, which events redeploy and which need a dispatch); step 5 and 8 checks; Rollback dispatch; flow diagram</td><td><span class="badge approval">owner mr commit</span></td></tr>
+          <tr><td><code>docs/workflow.html</code></td><td>T1</td><td>v20: <code>site/</code> in both code-path lists (Q13)</td><td><span class="badge approval">owner mr commit</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Check</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>DEC-92 free</td><td>no <code>dec-92-*</code> file and no <code>DEC-92</code> mention outside E-PAGES on any local or <code>origin/*</code> branch (after <code>git fetch</code>) or worktree</td></tr>
+          <tr><td>facts against the tree</td><td><code>site::BASE_URL</code>, <code>CSP</code>, <code>SCRIPT_BUDGET</code>, <code>ASSETS</code> and <code>downloads()</code>' refusals; <code>notes::is_code</code>; <code>site.css</code>'s <code>--glow</code> uses; <code>pages.yml</code> triggers; W2's tip <code>d4194fc8</code> has the script scan but no motion check, PNG re-encode or node runner</td></tr>
+          <tr><td>tests</td><td>waived: docs-only, no code path touched</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table data-c="deviations">
+        <thead><tr><th>From the plan</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>DEC-87 rule 4 amended here, not in W6</td><td>the W6 brief assigns it to W5; true once W6 merges (both land before the epic merge)</td></tr>
+          <tr><td>release-process: one table instead of three rows</td><td>the brief adds three non-redeploying events and the once-only settings; a table of events reads better than scattered rows</td></tr>
+          <tr><td>DEC-45 and the router skill also edited</td><td>both spelled out the code-path list without <code>site/</code></td></tr>
+          <tr><td>no epic result report</td><td>written at the epic close, after W6</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <div data-item="distillation">
+      <p data-c="distillation">This WU is the epic's distillation (table above). Open: <code>CLAUDE.md</code> commands line for <code>cargo xtask site build</code> (T0, owner on request: plan F9).</p>
+    </div>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <p data-c="follow-ups">F1–F9 in the <a href="2026-11-07-pages-plan.html#follow-ups">epic plan</a>; F2 needs an owner ruling.</p>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

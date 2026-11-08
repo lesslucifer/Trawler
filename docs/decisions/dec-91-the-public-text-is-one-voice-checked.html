@@ -10,8 +10,8 @@
     <div class="inner">
       <h1>DEC-91 — the public text is one voice, checked</h1>
       <p>The repo's GitHub-facing files are root markdown written for users, each fact in one file, and a unit test holds their links, install table, names and forms.</p>
-      <div class="meta">v1 · 2026-11-06 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W5</strong> (rulings of W11 Q1–Q10, W12 Q4) · UC-INSTALL · relates to
-        <a href="dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a> · <a href="dec-89-one-signed-mark-one-source-folder.html">DEC-89</a> · <strong>active</strong></div>
+      <div class="meta">v2 · 2026-11-08 · Trawler · T2 decision · minted by <strong>E-PRORELEASE.W5</strong> (rulings of W11 Q1–Q10, W12 Q4), amended by <strong>E-PAGES.W5</strong> (the site, rule 8) · UC-INSTALL · relates to
+        <a href="dec-86-a-tag-ships-every-platform-as-a-draft.html">DEC-86</a> · <a href="dec-89-one-signed-mark-one-source-folder.html">DEC-89</a> · <a href="dec-92-the-site-is-a-build-of-the-tree-and-the-latest-release.html">DEC-92</a> · <strong>active</strong></div>
     </div>
   </header>
   <main>
@@ -26,6 +26,8 @@ flowchart LR
   R --> S["SECURITY.md<br/>private report · scope · CA key"]
   R --> L["CHANGELOG.md → release notes"]
   R --> K["CODE_OF_CONDUCT.md<br/>Contributor Covenant 2.1"]
+  R -. "pitch · sub · alts, filled at build" .-> W["project site (DEC-92)"]
+  P -. "lead, filled at build" .-> W
       </pre>
       <div class="caption">The README states each fact in one line and links the file that owns it.</div>
     </div>
@@ -40,10 +42,11 @@ flowchart LR
       <tr><td>5</td><td>Outside pull requests are not taken at 0.1.0: issues only, said politely in CONTRIBUTING, the PR template and the FAQ</td><td>owner ruling (W11 Q10)</td></tr>
       <tr><td>6</td><td>Product screenshots come from <code>cargo xtask ui screenshots</code> (the walkthrough's scenario build, a HAR fixture of reserved hosts, a temp <code>HOME</code>) into <code>.github/screenshots/</code>; only the OS prompts (S8, S9) are hand-captured once, on the last rc</td><td>reproducible shots that follow the UI; CI cannot show OS dialogs (W11 Q8)</td></tr>
       <tr><td>7</td><td>Privacy and security claims are only those the code backs: in memory only, loopback unless a device is allowed, an unencrypted CA key in the app data folder, two outbound calls (the update check with its switch, the setup test); <code>PRIVACY.md</code> says word for word what About's Privacy page (<code>ui/src/privacy.ts</code>) says; the bug form takes <code>version</code>, <code>os</code> and <code>install</code> as inputs, the fields About's <em>report an issue</em> prefills</td><td>a public promise the code breaks is the worst bug</td></tr>
+      <tr><td>8</td><td>The project site is published text: rules 1 and 2 hold over <code>site/</code> and every text file the site build writes (the deny-list runs on the built output); its facts are filled from these files at build, never retyped (DEC-92 rule 2)</td><td>owner ruling E-PAGES Q2; the site is the first page most visitors read</td></tr>
     </table>
 
     <h2 id="held">Held by</h2>
-    <p data-c="held"><code>xtask/src/public_text.rs</code>' unit tests (links and anchors resolve, the install table matches <code>Os::bundles</code>, no denied name in the published files or the metadata, issue forms and their config parse, the bug form takes the prefilled fields, <code>PRIVACY.md</code> = <code>privacy.ts</code>) and <code>xtask/src/screenshots.rs</code>' (a run is green only when every listed shot is a PNG; the spec takes exactly the listed shots).</p>
+    <p data-c="held"><code>xtask/src/public_text.rs</code>' unit tests (links and anchors resolve, the install table matches <code>Os::bundles</code>, no denied name in the published files or the metadata, issue forms and their config parse, the bug form takes the prefilled fields, <code>PRIVACY.md</code> = <code>privacy.ts</code>), <code>xtask/src/site.rs</code>' (every built text file passes <code>public_text::denied_names</code>) and <code>xtask/src/screenshots.rs</code>' (a run is green only when every listed shot is a PNG; the spec takes exactly the listed shots).</p>
 
   </main>
   <script type="module">

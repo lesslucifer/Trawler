@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PAGES.W4 result: <code>pages.yml</code> builds and deploys the site</h1>
       <p>What W4 built, how it is proven, what the router reviews, and what the owner switches on.</p>
-      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W4</span> · <code>wu/pages/deploy</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w4-deploy-plan.html">W4 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+      <div class="meta">v2 · 2026-11-08 (owner settings order corrected by W5) · Trawler · T3 WU result · <span class="badge id">E-PAGES.W4</span> · <code>wu/pages/deploy</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w4-deploy-plan.html">W4 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
     </div>
   </header>
   <main>
@@ -87,14 +87,15 @@
       </tbody>
     </table>
 
-    <h2 id="owner-settings">Owner settings (after the epic merges; agents never set them)</h2>
+    <h2 id="owner-settings">Owner settings (before the epic merges; agents never set them)</h2>
+    <div class="callout warn" data-c="owner-settings-order">Corrected by W5 (the W4 review's ordering finding): #1–#2 come <strong>before</strong> <code>epic/pages</code> merges into <code>main</code>. That merge is itself a push to <code>main</code> and runs <code>pages.yml</code>; without Pages on and the <code>github-pages</code> environment set, its first run fails.</div>
     <table data-c="owner-settings">
       <thead><tr><th>#</th><th>Where</th><th>Value</th></tr></thead>
       <tbody>
         <tr><td>1</td><td>Settings → Pages → Build and deployment → Source</td><td>GitHub Actions</td></tr>
         <tr><td>2</td><td>Settings → Environments → <code>github-pages</code> → Deployment branches and tags</td><td>keep <code>main</code>; Add deployment branch or tag rule → Ref type <b>Tag</b>, pattern <code>v*</code> (a release event runs on the tag ref)</td></tr>
         <tr><td>3</td><td>Settings → Actions → General</td><td>nothing to change: workflow permissions may stay read-only, the deploy job asks for its own</td></tr>
-        <tr><td>then</td><td>first run</td><td><code>gh workflow run pages.yml</code> (or the next merge to <code>main</code>); <code>gh run list --workflow pages.yml -L 1</code> green; <code>curl -sI https://lesslucifer.github.io/Trawler/</code> → 200</td></tr>
+        <tr><td>then</td><td>first run</td><td>the epic merge runs it (a red run after fixing a setting: <code>gh workflow run pages.yml</code>); <code>gh run list --workflow pages.yml -L 1</code> green; <code>curl -sI https://lesslucifer.github.io/Trawler/</code> → 200</td></tr>
       </tbody>
     </table>
 

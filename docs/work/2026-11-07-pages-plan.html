@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PAGES — plan: a GitHub Pages landing site for Trawler</h1>
       <p>Audit and plan only. One page that explains Trawler in ten seconds, hands each visitor the right installer for the latest release, and sends them to the guide. It makes no request outside its own origin and repeats no fact it does not take from the root markdown.</p>
-      <div class="meta">v3 · 2026-11-08 · Trawler · T3 epic plan · <span class="badge id">E-PAGES</span> · branch <code>epic/pages</code> off <code>main</code> c782af92 · owner rulings Q1–Q13 + W1 design picks recorded (<a href="#questions">Rulings</a>) · six WUs, W1 and W2 merged (tip d4194fc8)</div>
+      <div class="meta">v4 · 2026-11-08 · Trawler · T3 epic plan · <span class="badge id">E-PAGES</span> · branch <code>epic/pages</code> off <code>main</code> c782af92 · owner rulings Q1–Q13 + W1 design picks recorded (<a href="#questions">Rulings</a>) · six WUs, W1–W4 merged (tip 3ad2a280), W5 ∥ W6 closing · v4 corrected by W5: who built what, the closing order, <a href="#follow-ups">follow-ups</a></div>
     </div>
   </header>
   <main>
@@ -179,8 +179,8 @@ jobs:
       <tr><td>Public text</td><td>extend <code>public_text.rs</code></td><td><code>DENIED_NAMES</code> over <code>site/*</code> and the built text; pitch = README h3 by construction</td></tr>
       <tr><td>Version and kinds</td><td>same</td><td>every download row names the kinds <code>Os::bundles</code> builds for a final at the release's version; the release version ≤ the workspace version in <code>Cargo.toml</code>; a fixture missing one asset is red</td></tr>
       <tr><td>Contrast</td><td>same</td><td>each text/background token pair in <code>site.css</code>, both themes, ≥ 4.5:1</td></tr>
-      <tr><td><code>site.js</code> scan · motion</td><td>same (W2 ✅)</td><td>no network, code-from-string, storage or side-effect-request API; ≤ 4,096 B; motion only under <code>no-preference</code>, no <code>infinite</code>, log done in 5 s</td></tr>
-      <tr><td>Detection behaviour</td><td><code>site/site.test.mjs</code> (W3), run by W2's site check</td><td>the 14 fixture cases pick the right <code>dl-*</code> id; <code>show()</code>: both buttons take the file's <code>href</code>, <code>#one</code> + <code>#pick</code> unhidden, <code>#all</code> closed with summary “Other systems”; unknown leaves <code>#one</code> hidden and <code>#all</code> open</td></tr>
+      <tr><td><code>site.js</code> scan · motion</td><td>same (scan W2 ✅, motion W3 ✅)</td><td>no network, code-from-string, storage or side-effect-request API; ≤ 4,096 B; motion only under <code>no-preference</code>, no <code>infinite</code>, log done in 5 s</td></tr>
+      <tr><td>Detection behaviour</td><td><code>site/site.test.mjs</code> and its <code>node --test</code> runner in <code>xtask/tests/suite/site.rs</code> (both W3 ✅)</td><td>the 14 fixture cases pick the right <code>dl-*</code> id; <code>show()</code>: both buttons take the file's <code>href</code>, <code>#one</code> + <code>#pick</code> unhidden, <code>#all</code> closed with summary “Other systems”; unknown leaves <code>#one</code> hidden and <code>#all</code> open</td></tr>
       <tr><td>Workflow pin</td><td><code>xtask/tests/suite/pages_workflow.rs</code> (like <code>ci_workflow.rs</code>)</td><td>triggers, permissions per job, SHA-pinned actions, <code>persist-credentials: false</code>, artifact path <code>target/site</code>, no <code>continue-on-error</code>, timeouts</td></tr>
       <tr><td>Homepage = site</td><td><code>xtask/src/package.rs</code> unit (W6)</td><td><code>HOMEPAGE</code> is the site's base-URL constant from W2 (one fact, no second literal); <code>metadata_drift</code> on the tree is empty with all five fields switched; the fixtures name the site; a member still on the repo URL is red</td></tr>
       <tr><td>Visual</td><td><code>cargo xtask site shots</code> (manual step of W3, not a gate)</td><td>headless Chrome <code>--screenshot</code> at 390×844 and 1440×900, light and dark (<code>--force-dark-mode</code>), script off and on, one reduced motion, into the W3 result for the owner; exit 2 when no Chrome is found</td></tr>
@@ -207,12 +207,13 @@ flowchart LR
       <tr><td>after step 8 “publish”</td><td><em>the site redeploys by itself; <code>gh run list --workflow pages.yml -L 1</code> is green and the download block names ‹version›</em></td></tr>
       <tr><td>Rollback</td><td><em>a release pulled back to draft: <code>gh workflow run pages.yml</code> so the site follows <code>releases/latest</code></em></td></tr>
     </table>
+    <p class="kd" data-c="release-rows-built">Built by W5 as release-process's <em>The project site</em> table plus checks in steps 5 and 8 and Rollback; it adds the once-only settings row and the events that do not redeploy (a tag without <code>pages.yml</code>, a pre-release edited into the final, an older-line patch, a release pulled back to draft).</p>
 
     <h2 id="settings">Repo settings the owner switches on (agents never set them)</h2>
     <table data-c="settings">
       <tr><th>#</th><th>Where</th><th>Value</th><th>When</th></tr>
-      <tr><td>1</td><td>Settings → Pages → Build and deployment → Source</td><td><strong>GitHub Actions</strong></td><td>before the first <code>pages.yml</code> run (after the epic merges)</td></tr>
-      <tr><td>2</td><td>Settings → Environments → <code>github-pages</code> → Deployment branches and tags</td><td>keep <code>main</code>; add a <strong>tag</strong> rule <code>v*</code> (a <code>release</code> event runs on the tag ref, which the default <code>main</code>-only rule refuses)</td><td>with #1 (required: Q11 = release + merge)</td></tr>
+      <tr><td>1</td><td>Settings → Pages → Build and deployment → Source</td><td><strong>GitHub Actions</strong></td><td><strong>before the epic merges</strong>: that merge is itself a push to <code>main</code> and runs <code>pages.yml</code></td></tr>
+      <tr><td>2</td><td>Settings → Environments → <code>github-pages</code> → Deployment branches and tags</td><td>keep <code>main</code>; add a <strong>tag</strong> rule <code>v*</code> (a <code>release</code> event runs on the tag ref, which the default <code>main</code>-only rule refuses)</td><td>with #1, before the epic merges (required: Q11 = release + merge)</td></tr>
       <tr><td>3</td><td>Settings → Actions → General</td><td>Actions allowed (already: CI runs); workflow permissions may stay read-only, the deploy job requests its own</td><td>check only</td></tr>
       <tr><td>4</td><td>Repo home → About (⚙)</td><td>Website = <code>https://lesslucifer.github.io/Trawler/</code>; Description, exactly (Q10): <code>See every HTTP and HTTPS request your apps make. Free, open source, local-only, for macOS, Windows and Linux.</code></td><td>after the first green deploy</td></tr>
       <tr><td>5</td><td>—</td><td>before the next tag (rc or final): the site answers 200 (release-process row; W6's installers name it)</td><td>check only</td></tr>
@@ -245,9 +246,9 @@ flowchart LR
         <tr><td>D2 (revised, P3) · DOWNLOAD = B</td><td>one big “Download for ‹system›” button from <code>site.js</code> detection + “Other systems” (<code>details#all</code>); no script / unknown = full list open; “Other downloads” always visible</td><td>W3 markup, <code>site.js</code>, <code>site.test.mjs</code></td></tr>
         <tr><td>D3 = B</td><td>bullets + more screens, retold as benefit stories</td><td>W3</td></tr>
         <tr><td>LOOK = A · HERO = B · ACCENT = A · VOICE = B · RHYTHM = A</td><td>bold dark product-forward · moving CSS-only request log (V1, six rows) · amber glow · benefit stories · alternating</td><td>W3; ACCENT → W5 DEC-89 rule 6</td></tr>
-        <tr><td>P2</td><td>screenshots stay re-encoded PNG (not WebP)</td><td>W2 ✅</td></tr>
+        <tr><td>P2</td><td>screenshots stay re-encoded PNG (not WebP)</td><td>W3 ✅ (the re-encode)</td></tr>
       </table>
-      <div class="callout warn" data-c="q12-order"><strong>Q12 and the closing order.</strong> Pages deploys only from <code>main</code> (or a <code>v*</code> tag), so the address cannot resolve before the epic merges. The metadata's only reader is the bundler at a tag, so “resolves before it points” is kept where it reaches users: (1) W1–W6 land on <code>epic/pages</code>, W6 last; (2) epic merge; (3) owner settings #1–#2 → first <code>pages.yml</code> run green → the address answers 200; (4) setting #4; (5) only then the next rc tag — the first installers that carry the site as homepage. W5's release-process row makes step 5 a rule. Between (2) and (3) the tree names an address no shipped file carries.</div>
+      <div class="callout warn" data-c="q12-order"><strong>Q12 and the closing order.</strong> Pages deploys only from <code>main</code> (or a <code>v*</code> tag), so the address cannot resolve before the epic merges. The metadata's only reader is the bundler at a tag, so “resolves before it points” is kept where it reaches users: (1) W1–W6 land on <code>epic/pages</code>; (2) owner settings #1–#2 <strong>before</strong> the merge (corrected in v4, the W4 review's ordering finding: the merge is itself a push to <code>main</code> and runs <code>pages.yml</code>, which fails without them); (3) epic merge → first <code>pages.yml</code> run green → the address answers 200 (a red first run: <code>gh workflow run pages.yml</code> after fixing the setting); (4) setting #4; (5) only then the next rc tag — the first installers that carry the site as homepage. W5's release-process rows make (2) and (5) rules. Between (3)'s merge and its green run the tree names an address no shipped file carries.</div>
     </div>
 
     <h2 id="use-cases">Use-case requirements</h2>
@@ -288,11 +289,12 @@ flowchart LR
   W4 --> W5
   W2 --> W6["W6 · homepage = site (Q12)"]
   W4 --> W6
-  W6 --> M(["epic merge"])
-  W5 --> M
-  M --> L(["owner settings → first deploy → site answers"])
+  W6 --> S(["owner settings #1–#2"])
+  W5 --> S
+  S --> M(["epic merge = first deploy"])
+  M --> L(["site answers 200"])
   L --> T(["next rc tag: installers link the site"])
-</pre><div class="caption">W1 and W2 merged into <code>epic/pages</code> (d4194fc8); next W3 ∥ W4; W5 ∥ W6 close. The site being live gates the next tag, not the merge (<a href="#questions">closing order</a>).</div></div>
+</pre><div class="caption">W1–W4 merged into <code>epic/pages</code> (3ad2a280); W5 ∥ W6 close; the owner's settings come before the epic merge. The site being live gates the next tag, not the merge (<a href="#questions">closing order</a>).</div></div>
     <div data-item="wu-summaries">
       <div data-wu="E-PAGES.W1">
         <h3 id="w1">E-PAGES.W1 · site design <span class="badge auto">done · merged 658ff995</span></h3>
@@ -303,35 +305,35 @@ flowchart LR
       </div>
       <div data-wu="E-PAGES.W2">
         <h3 id="w2">E-PAGES.W2 · <code>cargo xtask site build</code> and its checks <span class="badge auto">done · merged d4194fc8</span></h3>
-        <p data-item="wu-summary">An xtask command that copies a stub <code>site/</code> frame into <code>--out</code>, fills the markers from README/PRIVACY (subset renderer that refuses unknown markdown), the release JSON (versioned links per <code>Os::bundles</code> kind, refusing a draft, pre-release or missing kind) and <code>links.rs</code>, copies the listed assets; owns the site base-URL constant <code>https://lesslucifer.github.io/Trawler/</code> (Q1) that OG/canonical tags and W6 read; plus the link, CSP/no-external, deny-list, version and contrast checks as unit tests in <code>xtask</code>. Also built per the W1 rulings: <code>is_code</code> += <code>site/</code> (Q13), the <code>site.js</code> scan (≤ 4,096 B) and motion check, the PNG shot re-encode, the story drift check; <code>site/site.js</code> is still a stub.</p>
+        <p data-item="wu-summary">An xtask command that copies a stub <code>site/</code> frame into <code>--out</code>, fills the markers from README/PRIVACY (subset renderer that refuses unknown markdown), the release JSON (versioned links per <code>Os::bundles</code> kind, refusing a draft, pre-release or missing kind) and <code>links.rs</code>, copies the listed assets; owns the site base-URL constant <code>https://lesslucifer.github.io/Trawler/</code> (Q1) that OG/canonical tags and W6 read; plus the link, CSP/no-external, deny-list, version and contrast checks as unit tests in <code>xtask</code>. Also built per the W1 rulings: <code>is_code</code> += <code>site/</code> (Q13) and the <code>site.js</code> scan (≤ 4,096 B); <code>site/site.js</code> is still a stub. <em>Corrected in v4:</em> the motion check, the PNG shot re-encode, the <code>site.test.mjs</code> runner and the contrast token scopes were built by W3, not W2 (<a href="2026-11-08-pages-w3-site-pages-result.html">W3 result</a>, Deviations); the story drift check by neither (<a href="#follow-ups">follow-ups</a>).</p>
         <p data-item="wu-maps-to">UC-INSTALL; Q2, Q3; DEC-91 rules 2–4.</p>
         <p data-item="wu-expected">Building from a committed v0.1.0 release fixture yields a page whose links resolve and whose download rows equal the README install table's kinds; a fixture missing the arm64 msi is red.</p>
         <p data-item="wu-deps">none (parallel with W1)</p>
       </div>
       <div data-wu="E-PAGES.W3">
-        <h3 id="w3">E-PAGES.W3 · the site pages <span class="badge">design → build</span></h3>
+        <h3 id="w3">E-PAGES.W3 · the site pages <span class="badge auto">done · merged 3ad2a280</span></h3>
         <p data-item="wu-summary"><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code> copied from the design doc's templates onto W2's markers, log V1: themes, responsive layout, OG/meta/CSP head, favicon and wordmark wiring. Revised D2: the one-button <code>#one</code> + <code>details#all</code> markup, the round 4 <code>site.js</code>, and <code>site/site.test.mjs</code> (14 fixture cases + the <code>show()</code> assertions); <code>cargo xtask site shots</code> for the owner's visual check.</p>
         <p data-item="wu-maps-to">UC-INSTALL; W1's rulings (D1–D3, P1–P3, the picks); Q13 (cr gate).</p>
         <p data-item="wu-expected">The built page passes every W2 check and <code>site.test.mjs</code>; light/dark × mobile/desktop × script off/on shots (+ reduced motion) in the result report match the design doc; code review; the owner signs the result.</p>
         <p data-item="wu-deps">W1 ✅, W2 ✅ (ready)</p>
       </div>
       <div data-wu="E-PAGES.W4">
-        <h3 id="w4">E-PAGES.W4 · the Pages workflow <span class="badge approval">router review</span></h3>
+        <h3 id="w4">E-PAGES.W4 · the Pages workflow <span class="badge auto">done · merged 7b4fc6ac</span></h3>
         <p data-item="wu-summary"><code>.github/workflows/pages.yml</code> as in <a href="#workflow-shape">the shape above</a>, and <code>xtask/tests/suite/pages_workflow.rs</code> pinning it; actionlint clean.</p>
         <p data-item="wu-maps-to">UC-INSTALL; Q1, Q11; DEC-86 (unchanged), DEC-83 (CI stays a signal; this workflow publishes, it gates nothing).</p>
         <p data-item="wu-expected">The test pins triggers, permissions, SHAs, artifact path; the router's 11-point checklist passes. First run happens only after the owner's settings #1–#2.</p>
         <p data-item="wu-deps">W2 ✅ (ready); parallel with W3</p>
       </div>
       <div data-wu="E-PAGES.W5">
-        <h3 id="w5">E-PAGES.W5 · distillation and the release-process rows <span class="badge approval">owner mr commit</span></h3>
+        <h3 id="w5">E-PAGES.W5 · distillation and the release-process rows <span class="badge approval">owner mr commit</span> <span class="badge auto">built · <a href="2026-11-08-pages-w5-distill-result.html">result</a></span></h3>
         <p data-item="wu-summary">Mint DEC-92 “the site is a build of the tree and the latest release, published by Actions, with no request outside its origin”; amend DEC-91 (the site joins the held text), DEC-89 rule 10 (the site consumes favicon and wordmarks) and DEC-89 rule 6 (the site is a brand surface: amber as glow decoration, never text, state or fill); the <code>docs/workflow.html</code> line that <code>site/</code> is a code path (Q13); UC-INSTALL entry point; the three <code>docs/release-process.html</code> rows (incl. the pre-tag “site answers” check), staged as <code>cargo xtask mr commit</code> for the owner.</p>
         <p data-item="wu-maps-to">Distillation of the whole epic.</p>
-        <p data-item="wu-expected">T2 carries the truth; the T1 edit is staged with its Reviewed-By path; the epic result report written.</p>
+        <p data-item="wu-expected">T2 carries the truth; the T1 edit is staged with its Reviewed-By path; the epic result report is written at the epic close (after W6).</p>
         <p data-item="wu-deps">W3, W4; parallel with W6</p>
       </div>
       <div data-wu="E-PAGES.W6">
         <h3 id="w6">E-PAGES.W6 · the installers' homepage is the site <span class="badge">code · cr</span></h3>
-        <p data-item="wu-summary"><code>package::HOMEPAGE</code> becomes W2's site base-URL constant (no second literal); the five <code>homepage</code> fields (<code>Cargo.toml</code>, <code>ui/src-tauri/Cargo.toml</code>, <code>ui/src-tauri/tauri.conf.json</code> bundle, <code>login-service/Cargo.toml</code>, <code>xtask/Cargo.toml</code>) and the <code>package.rs</code> fixtures switch to <code>https://lesslucifer.github.io/Trawler/</code>; <code>repository</code> and <code>links.rs</code> stay the repo; DEC-87 rule 4 amended in the same WU.</p>
+        <p data-item="wu-summary"><code>package::HOMEPAGE</code> becomes W2's site base-URL constant (no second literal); the five <code>homepage</code> fields (<code>Cargo.toml</code>, <code>ui/src-tauri/Cargo.toml</code>, <code>ui/src-tauri/tauri.conf.json</code> bundle, <code>login-service/Cargo.toml</code>, <code>xtask/Cargo.toml</code>) and the <code>package.rs</code> fixtures switch to <code>https://lesslucifer.github.io/Trawler/</code>; <code>repository</code> and <code>links.rs</code> stay the repo; DEC-87 rule 4 is amended by W5 (router brief), not here.</p>
         <p data-item="wu-maps-to">UC-INSTALL (second contract); Q12; DEC-87 rule 4.</p>
         <p data-item="wu-expected"><code>metadata_drift</code> on the tree is empty; a member left on the repo URL is red; <code>cargo xtask package</code> on the host writes the site into the bundle's homepage (deb control <code>Homepage</code> / rpm <code>URL</code> on Linux, uninstall-entry links on Windows; the macOS dmg has no such field). Reaches users only through the next tag, after the site answers.</p>
         <p data-item="wu-deps">W2 ✅ (the constant), W4 (the deploy that makes it resolve); merges into the epic last; the next tag waits for the live site</p>
@@ -355,7 +357,7 @@ flowchart LR
         <tr><th>Target</th><th>Tier</th><th>Change</th></tr>
         <tr><td><code>docs/decisions/dec-92-…</code> + <code>decisions-index.html</code></td><td>T2</td><td>new: the site's source, build, deploy, privacy rules (next free number verified across all branches and worktrees today)</td></tr>
         <tr><td>DEC-91, DEC-89 (rules 6 and 10)</td><td>T2</td><td>amend as in W5</td></tr>
-        <tr><td>DEC-87 rule 4 + <code>decisions-index.html</code> summary</td><td>T2</td><td>homepage = the site; amended in W6</td></tr>
+        <tr><td>DEC-87 rule 4 + <code>decisions-index.html</code> summary</td><td>T2</td><td>homepage = the site; amended in W5 (the W6 brief moved it), true once W6 merges</td></tr>
         <tr><td><code>docs/use-cases/web-ui.html#uc-install</code></td><td>T2</td><td>the site as an entry point</td></tr>
         <tr><td><code>docs/release-process.html</code></td><td>T1</td><td>three rows; owner's <code>mr commit</code></td></tr>
         <tr><td><code>docs/workflow.html</code></td><td>T1</td><td><code>site/</code> is a code path (Q13); owner's <code>mr commit</code></td></tr>
@@ -363,6 +365,20 @@ flowchart LR
         <tr><td>this plan + WU docs</td><td>T3</td><td>archived to <code>docs/.archive/</code> at close (DEC-3)</td></tr>
       </table>
     </div>
+
+    <h2 id="follow-ups">Follow-ups (recorded by W5)</h2>
+    <table data-c="follow-ups">
+      <tr><th>#</th><th>Item</th><th>From</th><th>Needs</th></tr>
+      <tr><td>F1</td><td>Story drift check: each benefit story's README bullet still exists word for word (in the design, built by neither W2 nor W3)</td><td>W3</td><td>a later code WU</td></tr>
+      <tr><td>F2</td><td>Per-page CSP: <code>404.html</code> without <code>script-src</code>, as the design's Head row says; W2's check wants one exact <code>site::CSP</code> per page</td><td>W3</td><td><span class="badge approval">owner ruling</span>, then a code WU</td></tr>
+      <tr><td>F3</td><td>The verify-doc PostToolUse hook reads <code>site/*.html</code> as governed docs and reports every <code>{{marker}}</code> href as broken (advisory, never blocks)</td><td>W3</td><td>router (hook scope)</td></tr>
+      <tr><td>F4</td><td><code>/cros/i</code> in <code>site/site.js</code> is unanchored: a user agent with <code>cros</code> inside a word (e.g. <code>Microsoft</code>) is read as ChromeOS and falls to the unknown state (full list open: safe, not wrong); anchor it as a word</td><td>W3 review</td><td>a later code WU</td></tr>
+      <tr><td>F5</td><td>Contrast tokens redeclared inside an at-rule (e.g. <code>.night</code> under the dark query) are not checked; none exist today (a stated limit)</td><td>W3</td><td>the next stylesheet change that needs one</td></tr>
+      <tr><td>F6</td><td>No gate on page weight or <code>loading="lazy"</code>: the design's budgets are not checks</td><td>W3</td><td>owner, if wanted</td></tr>
+      <tr><td>F7</td><td><code>xtask/src/site.rs</code> is 2,175 lines: the CSS parser and the contrast/motion checks could become their own module</td><td>W3</td><td>a later refactor</td></tr>
+      <tr><td>F8</td><td>The first live run: the 404 at depth, no cookie, one origin in DevTools Network; the <code>github-pages</code> default rule refusing a <code>v*</code> tag ref</td><td>W3, W4</td><td>owner, after settings #1–#2</td></tr>
+      <tr><td>F9</td><td><code>CLAUDE.md</code> commands line could name <code>cargo xtask site build</code></td><td>distillation</td><td>owner (T0 is edited on request only)</td></tr>
+    </table>
 
     <h2 id="unverified">Not verified in this run</h2>
     <ul data-c="unverified">
