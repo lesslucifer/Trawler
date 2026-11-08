@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-KANBAN
+wu: E-KANBAN.W4
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-router-kanban-visibility-gate-plan.html"
+    tier: T3
+    action: added
+    distills: "W4 requirement, decisions (new check command, prefix match, archive counts, inverse out of scope) and test plan"
+  - path: "docs/work/2026-11-08-router-kanban-visibility-gate-result.html"
+    tier: T3
+    action: added
+    distills: "W4 outcome, the detection-not-prevention scope, deviations, evidence, follow-ups"
+t2_waived: "process tooling for the router, no product use case or decision changes; the board contract lives in .claude/skills/trawler-router/references/board-protocol.md and the epic's DEC is minted at close per the epic plan"
