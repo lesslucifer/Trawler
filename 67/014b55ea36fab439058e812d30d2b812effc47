@@ -1,0 +1,36 @@
+schema: cr/v5
+scope: "WU router-kanban/visibility-gate -> epic/router-kanban"
+epic: E-KANBAN
+wu: E-KANBAN.W4
+branch: wu/router-kanban/visibility-gate
+base: e352e436a3d3bf6e5416a0fd7e953462605e33c3
+head: 67014b55ea36fab439058e812d30d2b812effc47
+diff_sha256: 3612680f70517d241591e4c5a3119000fa9000b678bdfd7f3c91f154c92a25b5
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: opus
+  shards: 1
+  candidates:
+    important: 8
+    nit: 4
+  stage_seconds:
+    finders: 100
+    verifiers: 90
+    total: 230
+  by_finder:
+    correctness: { found: 5, verified: 1 }
+    efficiency:  { found: 3, verified: 1 }
+    altitude:    { found: 3, verified: 2 }
+findings: { found: 11, verified: 4, waived: 0 }
+verified:
+  - { severity: important, finding: "is_work_branch re-encodes mr::infer_level's epic/ and wu/ branch rule in a second module" }
+  - { severity: important, finding: "carded_branches copies observe's and fetch_board's GET-board-or-refuse block, a copy that already drifted once" }
+  - { severity: important, finding: "check's exit-2 arms (git worktree list failing, no board) are a stated contract with no test" }
+waivers: []
+nits:
+  - finding: "check reads every note even when no epic/wu worktree exists"
+    waived: "a guard would turn an unreachable vault or missing board into exit 0 in that state, hiding the heartbeat's offline signal; idle-repo cost only"
+verdict: FAIL
+date: 2026-11-08
