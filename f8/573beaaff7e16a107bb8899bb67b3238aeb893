@@ -1,0 +1,38 @@
+schema: cr/v5
+scope: "WU router-kanban/change-detect -> epic/router-kanban"
+epic: E-KANBAN
+wu: E-KANBAN.W2
+branch: wu/router-kanban/change-detect
+base: 2eea91a0c702f8c95db995113a5e30670e45eea1
+head: f8573beaaff7e16a107bb8899bb67b3238aeb893
+diff_sha256: 2946ffd76932eca5f2068317ff30d5e38b3141b9c6a1c989588479c9bb0d9a8b
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: opus
+  shards: 1
+  candidates:
+    important: 1
+    nit: 5
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "observe runs git log and git status once per watched card, repeating both for cards that share a branch"
+    waived: "one pass per ~10 min heartbeat over a handful of cards on loopback git; one WU card per branch is the convention"
+  - finding: "put in board.rs stamps log lines through watch::format_stamp, so board and watch reference each other and the stamp format lives in the watcher"
+    waived: "the watcher owns the stamp contract - format and parse side by side in one module of the same crate; moving it changes no behaviour"
+  - finding: "a hand-rolled civil-date conversion (days_from_civil, format_stamp, parse_stamp) sits in the watcher module"
+    waived: "its only consumer; xtask carries no date crate and the conversion is pinned by a proptest round-trip and fixed-date cases"
+  - finding: "git worktree list and status -z parsing and the branch-tip time lookup live in watch.rs instead of git.rs (proposed important, refuted to a placement nit)"
+    waived: "same placement as target.rs's own worktree-list parsing and preflight.rs's status check: git.rs runs the commands, each consumer parses its own output"
+  - finding: "a stale card whose uncommitted edit is discarded falls back to its old since and is reported stale a second time"
+    waived: "needs an edit then a discard inside one idle period; the repeat is one extra line about a worker that is in fact idle again"
+  - finding: "a Needs Owner card whose note loses its Owner section (or 404s) reads as an Owner change and restarts the hour"
+    waived: "removing the Owner section is itself an edit to it; the router creates every item note from the four-section template"
+verdict: PASS
+date: 2026-11-08
