@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W4
+branch: HEAD
+tests:
+  unit: { count: 19, covers: "git worktree list --porcelain parsed to branch -> path with detached worktrees skipped; the Branch: line read from plain text and from the web editor's <p> HTML, a mid-sentence Branch: and an empty one ignored, a task without a description naming nothing; findings over injected worktree and reference lists - an orphan only for an epic/* or wu/* worktree no task names (done tasks count, main and other branches ignored), a missing-worktree only for an open task whose branch has no worktree, orphans before missing-worktrees, nothing found empty; check parses and takes no flags" }
+  integration: { count: 23, covers: "xtask::run vikunja check on a tempdir repo with four real git worktrees (epic/x named by an open task, wu/x/done by a done task in HTML, wu/x/new by none, scratch) against a fake Vikunja: exactly one orphan for wu/x/new with its worktree path and one missing-worktree for the open task naming wu/x/gone, exit 1; once wu/x/new's task carries its Branch: line and the gone task is done, exit 0 and nothing printed; only GET requests; a down Vikunja is an error" }
