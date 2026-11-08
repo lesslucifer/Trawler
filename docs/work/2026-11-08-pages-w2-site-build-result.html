@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aefd1d59f34851f0dfb1474" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W2 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W2 result: <code>cargo xtask site build</code> and the checks that hold its output</h1>
+      <p>What W2 built, the contract W3 and W4 build on, how it is proven, and what stays open.</p>
+      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W2</span> · <code>wu/pages/site-build</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w2-site-build-plan.html">W2 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div data-item="outcome">
+<pre class="mermaid">flowchart LR
+  J["release JSON"] -- "downloads(): draft / pre-release / missing kind / newer than the tree → refused" --> V["markers"]
+  R["README · PRIVACY"] -- "pitch_and_sub · section · render (subset)" --> V
+  L["links.rs"] -- "SOURCE_CODE · USER_GUIDE" --> V
+  B["site::BASE_URL"] --> V
+  F["site/ frame"] --> FILL["fill"]
+  V --> FILL
+  FILL --> P{"problems()"}
+  A["ASSETS (favicon, wordmarks, social preview, s1)"] --> P
+  P -- "any line" --> X["refused, --out untouched"]
+  P -- "none" --> O["--out: 8 files"]</pre>
+      <table data-c="outcome">
+        <thead><tr><th>Piece</th><th>Where</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>command</td><td><code>xtask/src/site.rs</code> <code>run</code>, <code>lib.rs</code> USAGE + dispatch</td><td><code>cargo xtask site build --release &lt;json&gt; --out &lt;dir&gt;</code>; <code>&lt;dir&gt;</code> must be empty or absent</td></tr>
+          <tr><td>release → rows</td><td><code>downloads</code>, <code>installer_ids</code>, <code>installer_id</code></td><td>11 rows for a final (<code>dmg-universal</code>, <code>nsis|msi × x64|arm64</code>, <code>appimage|deb|rpm × x64|arm64</code>) from <code>Os::bundles</code> via <code>public_text::installer_kinds(os, version)</code>; arch read by <code>release_manifest::arch_of</code></td></tr>
+          <tr><td>markdown</td><td><code>render</code>, <code>inline</code></td><td>bullets, paragraphs, <code>`code`</code>, <code>**bold**</code>, <code>[text](url)</code> (relative → <code>blob/main/</code>); everything else refused by name</td></tr>
+          <tr><td>base URL</td><td><code>site::BASE_URL</code>, <code>base_path()</code></td><td><code>https://lesslucifer.github.io/Trawler/</code>, held equal to the github.io address of <code>links.rs SOURCE_CODE</code> by a test</td></tr>
+          <tr><td>checks</td><td><code>problems</code></td><td>run by every build and by the tests over the written dir</td></tr>
+          <tr><td>stub frame</td><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code></td><td>every marker used once or more, CSP exact, system fonts, two themes; W3 replaces the markup</td></tr>
+          <tr><td>fixture</td><td><code>xtask/tests/fixtures/site/release-v0.1.0.json</code></td><td>the published v0.1.0 release (<code>gh api …/releases/latest</code>, trimmed to tag, flags and asset names/URLs/sizes)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="contract">Contract for W3 and W4</h2>
+    <table data-c="contract">
+      <thead><tr><th>Rule the frame must keep</th><th>Else</th></tr></thead>
+      <tbody>
+        <tr><td>Markers only from the set: <code>{{pitch}} {{sub}} {{features}} {{privacy}} {{version}} {{release}} {{latest}} {{sha256sums}} {{guide}} {{source}} {{base}} {{path}} {{href:&lt;id&gt;}} {{file:&lt;id&gt;}}</code></td><td><code>no marker {{x}}</code></td></tr>
+        <tr><td>Each page carries the exact <code>site::CSP</code> meta once</td><td>CSP problem</td></tr>
+        <tr><td><code>href</code>/<code>src</code>/<code>srcset</code> written <code>attr="…"</code>; no <code>&lt;script&gt; &lt;iframe&gt; &lt;form&gt; &lt;object&gt; &lt;embed&gt; &lt;style&gt;</code>, no <code>style=</code></td><td>quoting / markup problem</td></tr>
+        <tr><td>Absolute hrefs only to <code>SOURCE_CODE[/…]</code> or <code>BASE_URL…</code>; <code>blob/main/&lt;file&gt;#anchor</code> must exist in the tree</td><td>link problem</td></tr>
+        <tr><td>All 11 download ids linked (any layout, any number of times)</td><td>download-row problem</td></tr>
+        <tr><td>Colour tokens: text as <code>--text*</code>, backgrounds as <code>--bg*</code> on the top-level <code>:root</code> and on <code>@media (prefers-color-scheme: dark) { :root { … } }</code>, <code>#hex</code> values; amber under any other name (e.g. <code>--brand</code>)</td><td>contrast problem</td></tr>
+        <tr><td>New images: add to <code>site::ASSETS</code> (the build copies only listed assets)</td><td>unresolved <code>src</code></td></tr>
+        <tr><td>W4 runs exactly <code>cargo xtask site build --release release.json --out target/site</code> on a clean runner</td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <h2 id="deviations">Deviations</h2>
+    <div data-item="deviations">
+      <table data-c="deviations">
+        <thead><tr><th>From the plan</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Added: a <code>href</code>/<code>src</code>/<code>srcset</code> written other than <code>attr="…"</code> (single-quoted, unquoted, spaced) is red, and every attribute, <code>&lt;link</code>, <code>url(</code> and <code>@import</code> match ignores case</td><td>found in self-review: <code>&lt;img src='https://…'&gt;</code> or <code>SRC=</code> would have passed the no-external check; red test first</td></tr>
+          <tr><td><code>public_text::installer_kinds</code> takes the version; <code>kind_of</code> added; <code>exists_as_named</code> and <code>release_manifest::arch_of</code> made <code>pub(crate)</code></td><td>reuse, not a second kinds table or arch parser</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>Unit</td><td>23 <code>site::tests</code>: subset render and every refused construct, pitch/sub, sections, markers, release refusals (draft, pre-release, missing kind, duplicate id, versionless file, no SHA256SUMS, newer than the tree), each check red on a crafted file set (link, foreign href, tree file/anchor, CSP, external <code>src</code>/<code>srcset</code>/<code>data:</code>/<code>&lt;link&gt;</code>, markup, quoting/case, CSS <code>url()</code>/<code>@import</code>, deny-list, guide link, download kind and tag, contrast in each theme), <code>BASE_URL</code> = github.io of <code>SOURCE_CODE</code>, the frame names no denied tool, USAGE, argument count; <code>public_text</code> 29 green (pre-release kinds added)</td></tr>
+          <tr><td>Integration</td><td>5 in <code>xtask/tests/suite/site.rs</code>: the v0.1.0 fixture builds exactly frame + <code>ASSETS</code>, no <code>docs</code> path, <code>problems</code> empty on the written dir; 11 versioned rows = <code>installer_ids("0.1.0")</code>, title = README pitch, CSP present, no marker left; minus the arm64 msi → <code>v0.1.0 lacks msi-arm64</code> and no <code>--out</code>; draft and pre-release refused; a non-empty <code>--out</code> refused and kept</td></tr>
+          <tr><td>Red first</td><td>the quoting/case test failed before its fix; the rest are new code (module absent before)</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green: 1549 tests, fmt, clippy pedantic</td></tr>
+          <tr><td>Real render</td><td>the fixture build served from <code>target/pages/Trawler/</code> over <code>python3 -m http.server</code>, headless Chrome at 1440 and 390 px: the CSP lets the page's own CSS and images load, the wordmark follows the scheme, every row names its v0.1.0 file</td></tr>
+          <tr><td>Review</td><td><code>cr/v5</code> note on this tip</td></tr>
+          <tr><td>e2e</td><td>waived: the epic's e2e is the live deploy after the owner's settings (epic plan “E2E test plan”)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="hand-try">Hand try</h2>
+    <table data-c="hand-try">
+      <thead><tr><th>Step</th><th>Command</th></tr></thead>
+      <tbody>
+        <tr><td>build under the path Pages serves</td><td><code>cd /Users/nguyenvanluong/Documents/proj/misc/Trawler-pages-w2 &amp;&amp; rm -rf target/pages &amp;&amp; cargo xtask site build --release xtask/tests/fixtures/site/release-v0.1.0.json --out target/pages/Trawler</code></td></tr>
+        <tr><td>serve it (Ctrl-C stops)</td><td><code>cd /Users/nguyenvanluong/Documents/proj/misc/Trawler-pages-w2 &amp;&amp; python3 -m http.server -d target/pages 8765 --bind 127.0.0.1</code></td></tr>
+        <tr><td>open</td><td><code>open http://127.0.0.1:8765/Trawler/</code> and <code>…/Trawler/404.html</code>; DevTools Network shows 127.0.0.1 only</td></tr>
+        <tr><td>see a refusal</td><td><code>cd /Users/nguyenvanluong/Documents/proj/misc/Trawler-pages-w2 &amp;&amp; sed 's/arm64_en-US.msi/arm64_en-US.zip/' xtask/tests/fixtures/site/release-v0.1.0.json &gt; /tmp/r.json &amp;&amp; cargo xtask site build --release /tmp/r.json --out /tmp/site-x</code> → <code>v0.1.0 lacks msi-arm64</code></td></tr>
+      </tbody>
+    </table>
+    <p>Opening <code>index.html</code> over <code>file://</code> is not the served behaviour: the CSP's <code>'self'</code> and the 404's <code>/Trawler/</code> paths need the HTTP layout above.</p>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">No T2 change in W2: DEC-92 (the site is a build of the tree and the latest release, no request outside its origin) and the UC-INSTALL entry point are W5's, which distills the epic. The command line for CLAUDE.md (T0) is proposed to the owner at W5, never edited here.</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Item</th><th>Owner</th></tr></thead>
+        <tbody>
+          <tr><td>W3 replaces the stub markup inside the contract above; new screenshots go into <code>site::ASSETS</code></td><td>W3</td></tr>
+          <tr><td>W3 shots: on a Mac in dark mode headless Chrome renders dark without <code>--force-dark-mode</code>; the light shot must force light (e.g. <code>--blink-settings=preferredColorScheme=1</code>), to be proven there</td><td>W3</td></tr>
+          <tr><td>W4's pages.yml passes <code>gh api …/releases/latest</code> output as <code>--release</code>; the build refuses a pre-release itself</td><td>W4</td></tr>
+          <tr><td>W6: <code>package::HOMEPAGE</code> reads <code>site::BASE_URL</code> (trailing slash; the repo URL today has none)</td><td>W6</td></tr>
+          <tr><td>The OG/twitter <code>content=</code> URLs are not link-checked (meta, not a request); W3 may add <code>og:image</code> to the checks if it wants</td><td>W3</td></tr>
+          <tr><td>Independent review: none needed outside the cr gate (<code>site/</code> is no code path by Q13; the fixture is test data); no <code>.github/</code> change</td><td>router</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

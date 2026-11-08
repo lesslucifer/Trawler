@@ -11,7 +11,12 @@
 </head>
 <body>
   <main id="main">
-    <h1><img alt="Trawler" src="{{path}}wordmark-light.png" width="370" height="96"></h1>
+    <h1>
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="{{path}}wordmark-dark.png">
+        <img alt="Trawler" src="{{path}}wordmark-light.png" width="370" height="96">
+      </picture>
+    </h1>
     <p>This page doesn't exist.</p>
     <p><a href="{{path}}">Trawler's home page</a></p>
   </main>
