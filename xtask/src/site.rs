@@ -6,6 +6,7 @@ use serde::Deserialize;
 
 use crate::package::Os;
 use crate::public_text;
+use crate::walkthrough::escape;
 
 pub const BASE_URL: &str = "https://lesslucifer.github.io/Trawler/";
 pub const CSP: &str = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'\">";
@@ -114,7 +115,7 @@ pub fn downloads(release: &Release, workspace: &str) -> Result<Downloads, String
     let mut files = BTreeMap::new();
     for asset in &release.assets {
         let Some(id) = installer_id(&asset.name)? else { continue };
-        if !asset.name.contains(version) {
+        if !names_version(&asset.name, version) {
             return Err(format!("{} names no version {version}", asset.name));
         }
         if let Some(other) = files.insert(id.clone(), asset.name.clone()) {
@@ -132,13 +133,17 @@ pub fn downloads(release: &Release, workspace: &str) -> Result<Downloads, String
     Ok(Downloads { tag: tag.clone(), version: version.to_string(), files })
 }
 
+fn names_version(file: &str, version: &str) -> bool {
+    let part_of_a_number = |c: char| c.is_ascii_digit() || c == '.';
+    file.match_indices(version).any(|(at, _)| {
+        !file[..at].chars().next_back().is_some_and(part_of_a_number)
+            && !file[at + version.len()..].chars().next().is_some_and(part_of_a_number)
+    })
+}
+
 pub fn str_const(rust: &str, name: &str) -> Option<String> {
     let value = rust.split(&format!("const {name}: &str = \"")).nth(1)?;
     value.split('"').next().map(String::from)
-}
-
-pub fn escape(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
 fn inner<'a>(html: &'a str, open: &str, close: &str) -> Option<(&'a str, &'a str)> {
@@ -150,7 +155,7 @@ fn inner<'a>(html: &'a str, open: &str, close: &str) -> Option<(&'a str, &'a str
 
 fn plain(what: &str, html: &str) -> Result<String, String> {
     let text = html.split_whitespace().collect::<Vec<_>>().join(" ");
-    if text.is_empty() || text.contains(['<', '>']) {
+    if text.is_empty() || text.contains(['<', '>', '&']) {
         return Err(format!("README.md's {what} is not one line of plain text: {text:?}"));
     }
     Ok(text)
@@ -401,11 +406,42 @@ pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>
     Ok(files)
 }
 
+fn starts_an_attribute(html: &str, at: usize) -> bool {
+    !html[..at].ends_with(|c: char| c.is_alphanumeric() || "-_.".contains(c))
+}
+
+/// Every `//` outside an `href` value or a `content` value under `BASE_URL`:
+/// an address in any other attribute or in text may be fetched.
+fn stray_addresses(name: &str, html: &str) -> Vec<String> {
+    let mut problems = Vec::new();
+    for (at, _) in html.match_indices("//") {
+        let before = &html[..at];
+        let attribute = before.rfind('"').and_then(|open| {
+            let named = before[..open].strip_suffix('=')?;
+            let attribute =
+                named.rsplit(|c: char| !(c.is_alphanumeric() || "-:".contains(c))).next()?;
+            Some((attribute.to_ascii_lowercase(), &html[open + 1..]))
+        });
+        let allowed = match &attribute {
+            Some((attribute, _)) if attribute == "href" => true,
+            Some((attribute, value)) if attribute == "content" => value.starts_with(BASE_URL),
+            _ => false,
+        };
+        if !allowed {
+            let address = html[at..].split(['"', '\'', ' ', '<', '>']).next().unwrap_or_default();
+            problems.push(format!(
+                "{name}: {address} is an address outside an href, a request outside the site"
+            ));
+        }
+    }
+    problems
+}
+
 fn attribute_values<'a>(html: &'a str, attribute: &str) -> Vec<&'a str> {
     let opener = format!("{attribute}=\"");
     html.to_ascii_lowercase()
         .match_indices(&opener)
-        .filter(|(at, _)| html[..*at].ends_with(char::is_whitespace))
+        .filter(|(at, _)| starts_an_attribute(html, *at))
         .filter_map(|(at, _)| {
             let start = at + opener.len();
             html[start..].find('"').map(|end| &html[start..start + end])
@@ -419,7 +455,7 @@ fn unquoted_attributes(name: &str, html: &str) -> Vec<String> {
     for attribute in ["href", "src", "srcset"] {
         for (at, _) in lower.match_indices(attribute) {
             let after = &lower[at + attribute.len()..];
-            if lower[..at].ends_with(char::is_whitespace)
+            if starts_an_attribute(&lower, at)
                 && after.trim_start().starts_with('=')
                 && !after.starts_with("=\"")
             {
@@ -530,6 +566,7 @@ fn html_problems(
         problems.push(format!("{name}: the CSP meta is missing, altered or doubled; want {CSP}"));
     }
     problems.extend(unquoted_attributes(name, html));
+    problems.extend(stray_addresses(name, html));
     let lower = html.to_lowercase();
     problems.extend(
         REFUSED_MARKUP
@@ -741,6 +778,9 @@ pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<Str
             if text.to_ascii_lowercase().contains("@import") {
                 problems.push(format!("{name}: carries @import"));
             }
+            if strip_comments(text).contains("//") {
+                problems.push(format!("{name}: an address with // is a request outside the site"));
+            }
             for target in css_urls(text) {
                 if is_absolute(target) {
                     problems.push(format!("{name}: url({target}) is a request outside the site"));
@@ -871,6 +911,10 @@ mod tests {
         names.push("Trawler_0.0.9_amd64.deb");
         let refusal = downloads(&release("v0.1.0", &names), "0.1.0").unwrap_err();
         assert!(refusal.contains("names no version 0.1.0"), "{refusal}");
+        let mut names = without("Trawler_0.1.0_amd64.deb");
+        names.push("Trawler_10.1.0_amd64.deb");
+        let refusal = downloads(&release("v0.1.0", &names), "0.1.0").unwrap_err();
+        assert!(refusal.contains("Trawler_10.1.0_amd64.deb names no version"), "{refusal}");
     }
 
     #[test]
@@ -942,6 +986,7 @@ mod tests {
         );
         assert!(pitch_and_sub("<h3>a <b>b</b></h3><p align=\"center\">c</p>").is_err());
         assert!(pitch_and_sub("<h3>a</h3>").is_err());
+        assert!(pitch_and_sub("<h3>A &amp; B</h3><p align=\"center\">c</p>").is_err());
     }
 
     #[test]
@@ -1089,6 +1134,32 @@ mod tests {
         assert!(found.iter().any(|p| p.contains("outside the site")), "{found:?}");
         let found = problems(&site("", &format!("{CSS}@IMPORT \"x.css\";")), &facts(&repo));
         assert!(found.iter().any(|p| p.contains("@import")), "{found:?}");
+    }
+
+    #[test]
+    fn a_url_glued_to_another_attribute_or_in_any_other_attribute_or_css_string_is_red() {
+        for body in [
+            "<img alt=\"x\"src=\"https://x.test/a.png\">",
+            "<img/src=\"https://x.test/a.png\">",
+            "<img alt=\"x\"src=\"//x.test/a.png\">",
+            "<video poster=\"//x.test/p.png\"></video>",
+            "<a href=\"#top\" ping=\"https://x.test/\">x</a>",
+            "<p>see https://x.test/</p>",
+            "<meta property=\"og:image\" content=\"https://x.test/s.png\">",
+        ] {
+            assert!(!problems_of(body).is_empty(), "{body}");
+        }
+        let body =
+            "<meta property=\"og:image\" content=\"https://lesslucifer.github.io/Trawler/a.png\">";
+        assert_eq!(problems_of(body), Vec::<String>::new());
+        let repo = repo();
+        for css in [
+            "body { background: image-set(\"https://x.test/a.png\" 1x) }",
+            "body { background: -webkit-image-set('//x.test/a.png' 1x) }",
+        ] {
+            let found = problems(&site("", &format!("{CSS}{css}")), &facts(&repo));
+            assert!(found.iter().any(|p| p.contains("outside the site")), "{css}: {found:?}");
+        }
     }
 
     #[test]
