@@ -36,6 +36,7 @@ fn the_v0_1_0_fixture_builds_the_frame_and_the_listed_assets_and_nothing_else() 
         .unwrap()
         .flatten()
         .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| site::ships(name))
         .chain(site::ASSETS.iter().map(|(_, to)| (*to).to_string()))
         .collect();
     expected.sort();
@@ -114,4 +115,56 @@ fn a_non_empty_out_dir_is_refused_and_kept() {
     assert!(refusal.contains("is not empty"), "{refusal}");
     assert_eq!(std::fs::read_to_string(out.path().join("stale.html")).unwrap(), "old");
     assert!(!out.path().join("index.html").exists());
+}
+
+#[test]
+fn every_shot_ships_re_encoded_with_its_source_s_pixels() {
+    let out = tempfile::tempdir().unwrap();
+    build_into(&repo().join(FIXTURE), out.path()).unwrap();
+    for (from, to) in
+        site::ASSETS.iter().filter(|(_, to)| Path::new(to).extension() == Some("png".as_ref()))
+    {
+        let source = std::fs::read(repo().join(from)).unwrap();
+        let shipped = std::fs::read(out.path().join(to)).unwrap();
+        assert!(shipped.len() <= source.len(), "{to} grew");
+        let pixels = |bytes: &[u8]| xtask::icons::decode_png(bytes).unwrap();
+        let (a, b) = (pixels(&source), pixels(&shipped));
+        assert_eq!((a.width, a.height), (b.width, b.height), "{to}");
+        assert!(a.rgba == b.rgba, "{to} changed pixels");
+    }
+}
+
+#[test]
+fn the_page_without_its_script_shows_every_file_and_hides_the_one_button() {
+    let out = tempfile::tempdir().unwrap();
+    build_into(&repo().join(FIXTURE), out.path()).unwrap();
+    let index = std::fs::read_to_string(out.path().join("index.html")).unwrap();
+    for hidden in ["id=\"one\" hidden", "id=\"pick\" hidden"] {
+        assert!(index.contains(hidden), "{hidden}");
+    }
+    let (_, list) = index.split_once("<details class=\"all\" id=\"all\" open>").unwrap();
+    let (list, _) = list.split_once("</details>").unwrap();
+    assert!(list.trim_start().starts_with("<summary>All systems</summary>"));
+    for system in ["macos", "windows-x64", "windows-arm64", "linux-x64", "linux-arm64"] {
+        assert!(list.contains(&format!("id=\"dl-{system}\"")), "dl-{system}");
+    }
+    assert_eq!(list.matches("<article class=\"card\">").count(), 3);
+    assert_eq!(list.matches("<p class=\"first\">").count(), 3);
+    for id in
+        ["get", "get-os", "pick-file", "pick-first", "one-get", "one-os", "one-file", "one-first"]
+    {
+        assert!(index.contains(&format!("id=\"{id}\"")), "{id}");
+    }
+}
+
+#[test]
+fn site_js_passes_its_detection_and_show_tests() {
+    let run = std::process::Command::new("node")
+        .args(["--test", "site/site.test.mjs"])
+        .current_dir(repo())
+        .output()
+        .expect("node runs the site's script tests (cargo test needs Node)");
+    let said = String::from_utf8_lossy(&run.stdout);
+    assert!(run.status.success(), "{said}{}", String::from_utf8_lossy(&run.stderr));
+    assert!(said.contains("# fail 0") || said.contains("ℹ fail 0"), "{said}");
 }
