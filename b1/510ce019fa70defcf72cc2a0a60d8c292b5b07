@@ -1,0 +1,8 @@
+schema: test/v2
+level: working-unit
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W3
+branch: HEAD
+tests:
+  unit: { count: 7, covers: "the transition diff (needs-owner raised with its doer, a pending ask silent unless reminded, answered when the label is gone vs closed when done or unassigned with it on, comments above the watermark in id order with the router's dropped and the watermark advanced), HMAC-SHA256 signing against RFC 4231 case 2 and refusal of a tampered body, wrong key, empty or non-hex signature, webhook-listen flag parsing and refusals, and the secret file created 600 then reused, an empty one refused" }
+  integration: { count: 22, covers: "the real xtask binary running webhook-listen against a fake Vikunja: registration deletes only its own stale hook and sends target, secret and events; the startup reconcile prints an unseen owner comment and a pending ask before listening; a no-change delivery, a router comment and a router no-op print nothing; forged deliveries get 401, an stderr log and no read of their task; an owner comment then answered; a re-label prints needs-owner; a relaunch on the same state re-announces the pending ask and repeats no comment; the asking task deleted prints closed once; GET / answers ok while another connection stalls; a Content-Length over 1 MiB gets 400 without killing the listener; a down Vikunja prints unreachable once then reachable; an unreachable Vikunja at startup is an error" }
