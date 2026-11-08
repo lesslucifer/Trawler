@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-KANBAN
+wu: E-KANBAN.W4
+branch: HEAD
+tests:
+  unit: { count: 49, covers: "orphans: only epic/* or wu/* worktrees no carded branch names, main and other branches ignored, a card without a worktree fine; is_work_branch prefixes; orphan JSON shape, exit 1, unreachable's exit 3 wins; Board::all_cards includes the archive" }
+  integration: { count: 25, covers: "board check through the CLI on a tempdir repo with four real worktrees (epic/x carded, wu/x/done carded from the archive, epic/apidoc whose card has no ## Branch, scratch) against the fake Local REST API: one orphan line for epic/apidoc with its path and exit 1; after its ## Branch is written nothing and exit 0; no PUT; a closed port exits 3 with one line" }
+  e2e: { waived: "WU level: the epic e2e (xtask/tests/suite/e2e_kanban.rs) drives the built binary at epic close" }
