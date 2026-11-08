@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 6d765ad02cb92a44864f78e07f0de60b561ac19a
+base: b45561848bd8dd2e3ff365ad0f8a59edc7a9178c
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-pages-w2-site-build-result.html
+report_sha256: e5ca56242b61d92a353e436f937f0737287afdf4b04c24fcb219724450209b5c
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEDnJuz2VX4WAuF+/J4m3W2Ld5BXG2KXJ5WkWaYkyWLhA3hMciAT25ptaZ
+  6w+rdoZF2Jx4dhXdLMhTgK+Zj/fcgH
+  -----END SSH SIGNATURE-----
