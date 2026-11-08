@@ -1,3 +1,4 @@
+pub mod check;
 pub mod http;
 pub mod listen;
 
@@ -36,6 +37,9 @@ usage:
                                              exist is created and reported; users: vuluu, trawler-router or a numeric id)
   cargo xtask vikunja create --title <text> [--project <id>] [--description <text|->] [--parent <id>] [--relation blocked-by|blocks:<id>]...
                                             (a new task; --parent makes it a subtask of that task)
+  cargo xtask vikunja check                 (one JSON line per epic/* or wu/* worktree no project-3 task's Branch: line names
+                                             (orphan; done tasks count) and per open task whose Branch: has no worktree
+                                             (missing-worktree); exit 1 if any, 0 and nothing printed if none)
   cargo xtask vikunja webhook-listen [--port <p>] [--state <file>] [--secret-file <file>] [--poll <secs>]
                                             (standing: binds 127.0.0.1:<p> (default 3457), registers itself as project 3's webhook
                                              with the secret file's key (default ~/.config/trawler/vikunja-webhook-secret, created 600),
@@ -506,6 +510,7 @@ pub enum Command {
     Read(u64),
     Put(u64, Put),
     Create(Create),
+    Check,
     Listen(listen::Options),
 }
 
@@ -552,7 +557,7 @@ pub fn parse(args: &[&str]) -> Result<Command, String> {
         "read" | "put" => {
             task_id(flags.next().ok_or_else(|| format!("{command} needs a task id\n{USAGE}"))?)?
         }
-        "init" | "show" | "create" => 0,
+        "init" | "show" | "create" | "check" => 0,
         _ => return Err(USAGE.to_string()),
     };
     while let Some(flag) = flags.next() {
@@ -593,6 +598,7 @@ pub fn parse(args: &[&str]) -> Result<Command, String> {
     }
     Ok(match *command {
         "init" => Command::Init,
+        "check" => Command::Check,
         "show" => Command::Show { project: show.0, needs_owner: show.1 },
         "read" => Command::Read(id),
         "put" => {
@@ -616,7 +622,7 @@ fn config_file(name: &str) -> PathBuf {
     home.join(".config/trawler").join(name)
 }
 
-pub fn run(args: &[&str]) -> Result<(i32, String), String> {
+pub fn run(args: &[&str], repo: &Path) -> Result<(i32, String), String> {
     let mut args = args.to_vec();
     let api = take_flag(&mut args, "--api")?.unwrap_or_else(|| DEFAULT_API.to_string());
     let addr: SocketAddr =
@@ -636,6 +642,7 @@ pub fn run(args: &[&str]) -> Result<(i32, String), String> {
         Command::Read(id) => read(&client, id)?,
         Command::Put(id, change) => put(&client, id, &change)?,
         Command::Create(new) => create(&client, &new)?,
+        Command::Check => return check::run(&client, repo),
         Command::Listen(options) => return listen::run(client, &options),
     };
     Ok((0, out))
@@ -844,6 +851,8 @@ mod tests {
         assert_eq!(parse(&["read", "4"]).unwrap(), Command::Read(4));
         assert_eq!(parse(&["init"]).unwrap(), Command::Init);
         assert!(parse(&["init", "--project", "3"]).is_err());
+        assert_eq!(parse(&["check"]).unwrap(), Command::Check);
+        assert!(parse(&["check", "--project", "3"]).is_err());
     }
 
     #[test]
@@ -855,9 +864,14 @@ mod tests {
 
     #[test]
     fn an_unknown_command_prints_usage_before_reading_any_token() {
-        assert_eq!(run(&["--key-file", "/nonexistent/key"]).unwrap_err(), USAGE);
-        assert_eq!(run(&["bogus", "--key-file", "/nonexistent/key"]).unwrap_err(), USAGE);
-        assert!(run(&["--api", "nowhere", "init"]).unwrap_err().contains("expected <ip:port>"));
+        assert_eq!(run(&["--key-file", "/nonexistent/key"], Path::new(".")).unwrap_err(), USAGE);
+        assert_eq!(
+            run(&["bogus", "--key-file", "/nonexistent/key"], Path::new(".")).unwrap_err(),
+            USAGE
+        );
+        assert!(run(&["--api", "nowhere", "init"], Path::new("."))
+            .unwrap_err()
+            .contains("expected <ip:port>"));
     }
 
     #[test]

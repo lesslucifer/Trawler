@@ -85,7 +85,7 @@ impl Server {
         let key = self.key.path().to_str().unwrap();
         let mut all = vec!["--api", self.api.as_str(), "--key-file", key];
         all.extend_from_slice(args);
-        vikunja::run(&all).map(|(code, out)| {
+        vikunja::run(&all, Path::new(".")).map(|(code, out)| {
             assert_eq!(code, 0);
             out
         })
@@ -203,8 +203,10 @@ fn init_reads_the_token_file_and_names_the_project() {
 #[test]
 fn init_without_a_token_file_or_with_a_refused_token_fails_saying_why() {
     let server = Server::start();
-    let missing =
-        vikunja::run(&["--api", &server.api, "--key-file", "/nonexistent/vikunja.key", "init"]);
+    let missing = vikunja::run(
+        &["--api", &server.api, "--key-file", "/nonexistent/vikunja.key", "init"],
+        Path::new("."),
+    );
     assert!(missing
         .unwrap_err()
         .starts_with("cannot read the router token at /nonexistent/vikunja.key"));
@@ -213,7 +215,8 @@ fn init_without_a_token_file_or_with_a_refused_token_fails_saying_why() {
     let wrong = NamedTempFile::new().unwrap();
     std::fs::write(wrong.path(), "other-token").unwrap();
     let key = wrong.path().to_str().unwrap();
-    let refused = vikunja::run(&["--api", &server.api, "--key-file", key, "init"]).unwrap_err();
+    let refused = vikunja::run(&["--api", &server.api, "--key-file", key, "init"], Path::new("."))
+        .unwrap_err();
     assert_eq!(
         refused,
         r#"GET /projects/3: HTTP 401 - check the router token and its permissions: {"code":11,"message":"invalid token"}"#
@@ -617,6 +620,69 @@ fn put_on_a_done_task_notes_that_show_hides_it_unless_this_call_marks_it_done() 
 
 const SECRET: &str = "test-secret";
 
+const ALL_IN_3: &str = "/tasks?filter=project%20%3D%203&sort_by=id&order_by=asc&page=1";
+
+fn check(server: &Server, repo: &Path) -> Result<(i32, String), String> {
+    let key = server.key.path().to_str().unwrap();
+    let args = ["vikunja", "check", "--api", &server.api, "--key-file", key];
+    xtask::run(&args.map(String::from), repo)
+}
+
+#[test]
+fn check_flags_an_untasked_work_worktree_and_an_open_task_without_one_until_both_are_fixed() {
+    let dir = tempfile::TempDir::new().unwrap();
+    let root = dir.path().canonicalize().unwrap();
+    let main = root.join("main");
+    std::fs::create_dir(&main).unwrap();
+    let git = |args: &[&str]| xtask::git::git(&main, args).unwrap();
+    git(&["init", "-q", "-b", "main"]);
+    git(&[
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@test",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "seed",
+    ]);
+    for (branch, name) in
+        [("epic/x", "x"), ("wu/x/done", "x-done"), ("wu/x/new", "x-new"), ("scratch", "s")]
+    {
+        git(&["worktree", "add", "-q", "-b", branch, root.join(name).to_str().unwrap()]);
+    }
+    let server = Server::start();
+    let tasks = |new: &str, gone_done: bool| {
+        json!([
+            {"id": 1, "title": "E-X epic", "done": false, "description": "Branch: epic/x\nintent"},
+            {"id": 2, "title": "E-X.W1 merged", "done": true, "description": "<p>Branch: wu/x/done</p>"},
+            {"id": 3, "title": "E-X.W3 gone", "done": gone_done, "description": "Branch: wu/x/gone"},
+            {"id": 4, "title": "E-X.W2 new", "done": false, "description": new},
+        ])
+    };
+    server.route("GET", ALL_IN_3, 200, &tasks("intent only", false));
+    let (code, out) = check(&server, &main).unwrap();
+    let found: Vec<Value> = out.lines().map(|l| serde_json::from_str(l).unwrap()).collect();
+    assert_eq!(
+        (code, found),
+        (
+            1,
+            vec![
+                json!({"event": "orphan", "branch": "wu/x/new", "worktree": root.join("x-new")}),
+                json!({"event": "missing-worktree", "task_id": 3, "title": "E-X.W3 gone", "branch": "wu/x/gone"}),
+            ]
+        )
+    );
+
+    server.route("GET", ALL_IN_3, 200, &tasks("Branch: wu/x/new", true));
+    assert_eq!(check(&server, &main).unwrap(), (0, String::new()));
+    assert_eq!(server.requests(), [get(ALL_IN_3), get(ALL_IN_3)]);
+
+    server.set_down(true);
+    assert!(check(&server, &main).unwrap_err().starts_with(&format!("GET http://{}", server.api)));
+}
+
 fn comment(id: u64, who: &str, text: &str) -> Value {
     json!({"id": id, "comment": text, "author": {"username": who}})
 }
@@ -852,19 +918,22 @@ fn webhook_listen_refuses_to_start_without_a_reachable_vikunja() {
     std::fs::write(&key, TOKEN).unwrap();
     let dead = format!("127.0.0.1:{}", free_port());
     let (state, secret) = (path("state.json"), path("secret"));
-    let refused = vikunja::run(&[
-        "--api",
-        &dead,
-        "--key-file",
-        &key,
-        "webhook-listen",
-        "--port",
-        "0",
-        "--state",
-        &state,
-        "--secret-file",
-        &secret,
-    ])
+    let refused = vikunja::run(
+        &[
+            "--api",
+            &dead,
+            "--key-file",
+            &key,
+            "webhook-listen",
+            "--port",
+            "0",
+            "--state",
+            &state,
+            "--secret-file",
+            &secret,
+        ],
+        Path::new("."),
+    )
     .unwrap_err();
     assert!(
         refused.starts_with(&format!("GET http://{dead}/api/v1/projects/3/webhooks")),
