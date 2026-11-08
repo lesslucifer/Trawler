@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-APIDOC
+wu: E-APIDOC.W2
+branch: HEAD
+tests:
+  unit: { count: 9, covers: "Link::ApiDocs's address is http://<api>/docs for an owned core and <url>/docs for an attached one, the default address while the core names none; 'api-docs' deserializes and a URL still does not" }
+  integration: { count: 14, covers: "an address becomes the exact six curl lines and four CA URLs; every example's method + path and every CA path exists in the committed src/api/openapi.json (an undocumented one is refused); Settings → API renders the address, the CA URLs and every example; copy writes the exact line; open API docs invokes open_link with api-docs and a refusal shows the address to copy" }
+  e2e: { waived: "WU level; the epic plan's WebDriver flow (Settings → API shows the ephemeral core's address and its list-flows URL answers) runs at epic close" }
