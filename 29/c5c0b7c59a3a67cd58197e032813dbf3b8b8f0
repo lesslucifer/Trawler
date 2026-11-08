@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU orphan-check-and-wiring -> epic/router-vikunja"
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W4
+branch: wu/router-vikunja/orphan-check-and-wiring
+base: 26aa49c7cb60593240c0818d52b1abe7a9b344ad
+head: 29c5c0b7c59a3a67cd58197e032813dbf3b8b8f0
+diff_sha256: 21a5cb6f56aaf2e80ea9bf65905c2f787baa9b55c97d629bd3d00600fd53dccd
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: claude-opus
+  shards: 1
+  candidates:
+    important: 4
+    nit: 5
+  stage_seconds:
+    finders: 108
+    verifiers: 105
+    total: 213
+  by_finder:
+    correctness: { found: 3, verified: 3 }
+    efficiency: { found: 2, verified: 0 }
+    altitude: { found: 4, verified: 0 }
+findings: { found: 4, verified: 3, waived: 0 }
+blocking:
+  - finding: "branch_of stops at the first part starting with Branch: even when it is empty, so <p><strong>Branch:</strong> wu/x/y</p>, <p>Branch: <code>wu/x/y</code></p> or an empty Branch: before a filled one name no branch: a false orphan and a dropped missing-worktree"
+    severity: blocker
+  - finding: "worktrees keeps entries git worktree list marks prunable (directory deleted outside git), so an open task whose worktree directory is gone is never missing-worktree and an orphan points at a path that does not exist"
+    severity: blocker
+  - finding: "the check integration test seeds its repo through xtask::git::git without commit.gpgsign=false or GIT_CONFIG_GLOBAL/SYSTEM=/dev/null, so global signing or a global core.hooksPath fails or hangs the seed commit (hermetic rule)"
+    severity: blocker
+refuted:
+  - "worktrees duplicates a porcelain parser that xtask/src/git.rs or hooks.rs owns: none exists to reuse; hooks.rs and target.rs only grab worktree lines inline for other needs"
+verdict: FAIL
+date: 2026-11-08
