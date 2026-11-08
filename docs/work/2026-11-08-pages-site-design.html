@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aefd1de9f34851f0dfb1478">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W1 site design</title>
+  <style>
+    .fr-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 12px 0 24px; align-items: start; }
+    .fr-row.fr-wide { grid-template-columns: 1fr; }
+    .fr-row.fr-phones { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .fr-cell { min-width: 0; }
+    .fr-lbl { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+    .fr-lbl strong { color: var(--ink); }
+    .fr { overflow: hidden; border: 1px solid var(--line); border-radius: 4px; position: relative; }
+    .fr iframe { border: 0; display: block; transform-origin: 0 0; position: absolute; top: 0; left: 0; }
+    .rec { color: var(--ok); }
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W1 — the landing site design</h1>
+      <p>The one-page site and its 404 as W3 builds them: a mockup in both themes at 390 px and 1440 px, every frame string, the asset list, the tokens with their contrast, and the owner's rulings. Three calls are open; each shows its alternatives side by side and the page below is built on the recommendation.</p>
+      <div class="meta">Round 1 · for owner review · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W3</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="frame">Frame</h2>
+    <table data-c="frame">
+      <tr><th>Constraint</th><th>How this design meets it</th><th>Source</th></tr>
+      <tr><td>No script, no external request</td><td>Two HTML files, one CSS file, local images. No <code>&lt;script&gt;</code>, no web font, no CDN; theme by <code>prefers-color-scheme</code>, no toggle; every choice that would need script (OS detection, a theme switch, tabs) is left out; disclosure uses native <code>&lt;details&gt;</code></td><td>Q3, Q4, Q13 · plan Design</td></tr>
+      <tr><td>System fonts, outlined wordmark</td><td>Text in <code>system-ui</code>, file names in <code>ui-monospace</code>; the wordmark is the generated PNG pair in a <code>&lt;picture&gt;</code>, exactly as the README shows it</td><td>Q9 · DEC-89 rules 2, 7</td></tr>
+      <tr><td>The app's warm tokens; amber is the brand only</td><td>Dark = the app's <code>canvas</code> / <code>ink</code> / <code>ink-body</code> / <code>ink-mute</code> / <code>hairline</code>; light = DEC-89's paper and wordmark ink. Amber appears only inside the mark (wordmark, favicon): <code>site.css</code> carries no amber value and no other chromatic colour</td><td>ui/tailwind.config.js · DEC-89 rule 6 · DEC-19</td></tr>
+      <tr><td>Public text</td><td>One voice (plain, second person, OS labels in bold as shown), English, no other tool named; every repeated fact is filled from the file that owns it (<a href="#copy">Copy</a>, column Source)</td><td>DEC-91 rules 1–2 · Q2, Q5, Q7</td></tr>
+      <tr><td>Contrast ≥ 4.5:1, both themes</td><td>Every text pair ≥ 5.6:1 (<a href="#tokens">Tokens</a>); the focus ring ≥ 13:1 against the page</td><td>brief · plan Design</td></tr>
+      <tr><td>Keyboard focus visible, reduced motion</td><td>A skip link, a 2 px ink ring on <code>:focus-visible</code>; no animation, transition or smooth scroll anywhere, so reduced motion has nothing to stop (<a href="#a11y">Accessibility</a>)</td><td>brief · plan Design</td></tr>
+    </table>
+
+    <h2 id="choices">Open choices</h2>
+    <table data-c="choices">
+      <tr><th>#</th><th>Call</th><th>Options</th><th>Recommendation</th><th>State</th></tr>
+      <tr><td>D1</td><td><a href="#d1-hero">Hero layout</a></td><td>A centred stack · B split · C top bar + left text</td><td class="rec">A</td><td>open · the page is built on A</td></tr>
+      <tr><td>D2</td><td><a href="#d2-download">How the download block groups OS rows</a></td><td>A one table (README's five rows) · B a card per OS, arch rows inside · C a card per OS, one button, other files folded</td><td class="rec">B</td><td>open · the page is built on B</td></tr>
+      <tr><td>D3</td><td><a href="#d3-features">Features presentation</a></td><td>A the list alone · B the list + README's three screens · C the list as cards</td><td class="rec">B</td><td>open · the page is built on B</td></tr>
+    </table>
+    <p>The frames below are the real page rendered in isolation (one iframe each, the CSS in <a href="#markup">Markup</a>), so 390 px and 1440 px reflow as a browser would. Choices D2 and D3 show only their section.</p>
+
+    <h3 id="d1-hero">D1 · Hero layout</h3>
+    <div class="fr-row" data-c="d1-wide">
+      <div class="fr-cell"><p class="fr-lbl"><strong>A · centred stack</strong> <span class="rec">recommended</span> — the README's own order; the screenshot gets the full column, so the request list stays legible</p><div class="fr" data-w="1440" data-theme="dark" data-hero="a" data-only="hero" aria-label="D1 A at 1440 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>B · split</strong> — text left, screenshot right; more fits above the fold, but the shot shrinks to ~55 % and its rows become unreadable</p><div class="fr" data-w="1440" data-theme="dark" data-hero="b" data-only="hero" aria-label="D1 B at 1440 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>C · top bar + left text</strong> — a small wordmark and three links in a bar; reads like a product site, adds a nav that a one-page site repeats in its footer</p><div class="fr" data-w="1440" data-theme="dark" data-hero="c" data-only="hero" aria-label="D1 C at 1440 px, dark"></div></div>
+    </div>
+    <div class="fr-row fr-phones" data-c="d1-phone">
+      <div class="fr-cell"><p class="fr-lbl"><strong>A</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-hero="a" data-only="hero" aria-label="D1 A at 390 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>B</strong> · 390 px (stacks like A)</p><div class="fr" data-w="390" data-theme="dark" data-hero="b" data-only="hero" aria-label="D1 B at 390 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>C</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-hero="c" data-only="hero" aria-label="D1 C at 390 px, dark"></div></div>
+    </div>
+
+    <h3 id="d2-download">D2 · Download block</h3>
+    <div class="fr-row" data-c="d2-wide">
+      <div class="fr-cell"><p class="fr-lbl"><strong>A · one table</strong> — the README's five rows, so both say it the same way; four columns are dense, and under 720 px each row becomes its own card</p><div class="fr" data-w="1440" data-theme="dark" data-dl="a" data-only="download" aria-label="D2 A at 1440 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>B · a card per OS</strong> <span class="rec">recommended</span> — three cards; Windows and Linux list x64 and arm64 inside; the first-open line sits once per OS, where the brief puts it; every file is one click</p><div class="fr" data-w="1440" data-theme="dark" data-dl="b" data-only="download" aria-label="D2 B at 1440 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>C · one button per OS</strong> — the calmest, but it picks x64 for the visitor and folds arm64, .msi, .deb and .rpm behind <em>Other files</em>, which is the guess the plan refused to make</p><div class="fr" data-w="1440" data-theme="dark" data-dl="c" data-only="download" aria-label="D2 C at 1440 px, dark"></div></div>
+    </div>
+    <div class="fr-row fr-phones" data-c="d2-phone">
+      <div class="fr-cell"><p class="fr-lbl"><strong>A</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-dl="a" data-only="download" aria-label="D2 A at 390 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>B</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-dl="b" data-only="download" aria-label="D2 B at 390 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>C</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-dl="c" data-only="download" aria-label="D2 C at 390 px, dark"></div></div>
+    </div>
+
+    <h3 id="d3-features">D3 · Features</h3>
+    <div class="fr-row" data-c="d3-wide">
+      <div class="fr-cell"><p class="fr-lbl"><strong>A · the list alone</strong> — README's seven lines in two columns; the lightest page, but only s1 shows the product</p><div class="fr" data-w="1440" data-theme="dark" data-feat="a" data-only="features" aria-label="D3 A at 1440 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>B · list + three screens</strong> <span class="rec">recommended</span> — the same list, then README's <em>More screens</em> (Setup, Filters, Send again) with its alt text; lazy, so the first view does not grow</p><div class="fr" data-w="1440" data-theme="dark" data-feat="b" data-only="features" aria-label="D3 B at 1440 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>C · cards</strong> — each line in its own card; more presence, but seven one-line cards look empty without icons, and icons are new brand art (a non-goal)</p><div class="fr" data-w="1440" data-theme="dark" data-feat="c" data-only="features" aria-label="D3 C at 1440 px, dark"></div></div>
+    </div>
+    <div class="fr-row fr-phones" data-c="d3-phone">
+      <div class="fr-cell"><p class="fr-lbl"><strong>A</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-feat="a" data-only="features" aria-label="D3 A at 390 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>B</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-feat="b" data-only="features" aria-label="D3 B at 390 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>C</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-feat="c" data-only="features" aria-label="D3 C at 390 px, dark"></div></div>
+    </div>
+
+    <h2 id="mockup">The page — D1 A · D2 B · D3 B</h2>
+    <p>The whole page on the recommendations, filled from v0.1.0. The 390 px dark frame shows the keyboard focus ring on the first button.</p>
+    <div class="fr-row fr-wide" data-c="mockup-1440">
+      <div class="fr-cell"><p class="fr-lbl"><strong>1440 px · light</strong></p><div class="fr" data-w="1440" data-theme="light" aria-label="The page at 1440 px, light"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>1440 px · dark</strong></p><div class="fr" data-w="1440" data-theme="dark" aria-label="The page at 1440 px, dark"></div></div>
+    </div>
+    <div class="fr-row fr-phones" data-c="mockup-390">
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · light</strong></p><div class="fr" data-w="390" data-theme="light" aria-label="The page at 390 px, light"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · dark</strong> · focus on <em>Download for…</em></p><div class="fr" data-w="390" data-theme="dark" data-focus="1" aria-label="The page at 390 px, dark, focus shown"></div></div>
+    </div>
+
+    <h2 id="page-404">The 404 page</h2>
+    <p>Pages serves <code>404.html</code> for any missing path at any depth, so its asset and home links are absolute under <code>/Trawler/</code> (the mock links the full URL).</p>
+    <div class="fr-row" data-c="page-404">
+      <div class="fr-cell"><p class="fr-lbl"><strong>1440 px · light</strong></p><div class="fr" data-w="1440" data-theme="light" data-page="404" aria-label="404 at 1440 px, light"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>1440 px · dark</strong></p><div class="fr" data-w="1440" data-theme="dark" data-page="404" aria-label="404 at 1440 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · light</strong></p><div class="fr" data-w="390" data-theme="light" data-page="404" aria-label="404 at 390 px, light"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · dark</strong></p><div class="fr" data-w="390" data-theme="dark" data-page="404" aria-label="404 at 390 px, dark"></div></div>
+    </div>
+
+    <h2 id="markup">Markup and fill</h2>
+    <p>The source of every frame above sits in this file after <code>&lt;/main&gt;</code>: <code>#t-index</code> and <code>#t-404</code> are the two pages, <code>#t-site-css</code> is <code>site.css</code>, <code>#t-variants-css</code> holds only the losing alternatives (dropped once D1–D3 are ruled), <code>#t-mock-css</code> only forces a theme for the frames. W3 copies the pages and <code>site.css</code>, deletes the elements and rules of the alternatives not chosen, and turns each <code>data-fill</code> into W2's marker (W2 owns the marker syntax).</p>
+    <table data-c="fill">
+      <tr><th>Section · element</th><th>Filled from (W2)</th><th>Frame holds</th></tr>
+      <tr><td><code>.hero h1</code></td><td>README.md, the <code>&lt;h3&gt;</code> pitch</td><td>—</td></tr>
+      <tr><td><code>.hero .sub</code></td><td>README.md, the paragraph under the pitch</td><td>—</td></tr>
+      <tr><td><code>.hero .shot</code> <code>alt</code></td><td>README.md, s1's alt text</td><td><code>src</code>, <code>width="1440" height="800"</code></td></tr>
+      <tr><td><code>#download .meta</code></td><td>release JSON: <code>tag_name</code> (without <code>v</code>), <code>published_at</code> (date part), <code>html_url</code></td><td>“Version”, “release notes”</td></tr>
+      <tr><td><code>#download</code> file links</td><td>release JSON <code>assets[].name</code> per kind <code>package::Os::bundles</code> names for a final; <code>href</code> = <code>releases/download/v‹v›/‹name›</code>; SHA256SUMS the same way</td><td>OS, arch and requirement labels; first-open lines</td></tr>
+      <tr><td><code>#features h2</code> + <code>ul</code></td><td>README.md “What you can do” heading and bullets (subset renderer: text, <code>code</code>, bold, links)</td><td>—</td></tr>
+      <tr><td><code>#features .gallery</code> (D3 B)</td><td>README.md “More screens” table: header cells = captions, images + alt</td><td><code>loading="lazy"</code>, sizes</td></tr>
+      <tr><td><code>#privacy .lead</code></td><td>PRIVACY.md, the paragraph under <code>#</code></td><td>the site sentence and the link</td></tr>
+      <tr><td>every GitHub link</td><td><code>links.rs</code> <code>USER_GUIDE</code> / <code>SOURCE_CODE</code> base: <code>https://github.com/lesslucifer/Trawler/blob/main/‹file›</code></td><td>the file name</td></tr>
+      <tr><td><code>&lt;title&gt;</code>, description, OG</td><td>pitch, sub line, W2's base-URL constant</td><td>“Trawler — ”</td></tr>
+    </table>
+
+    <h2 id="tokens">Tokens and contrast</h2>
+    <p>Dark takes the app's tokens by name; light takes DEC-89's paper and wordmark ink, with two body tones picked for ≥ 4.5:1 (computed with the WCAG 2 formula; W2's contrast test recomputes them from <code>site.css</code>).</p>
+    <table data-c="tokens">
+      <tr><th>Token</th><th>Use</th><th>Light</th><th>Dark (app name)</th><th>Light vs <code>--bg</code></th><th>Dark vs <code>--bg</code></th></tr>
+      <tr><td><code>--bg</code></td><td>page</td><td><code>#f4f1ea</code> paper</td><td><code>#2b2622</code> canvas</td><td>—</td><td>—</td></tr>
+      <tr><td><code>--ink</code></td><td>headings, links, primary button fill, focus ring</td><td><code>#1f1c19</code></td><td><code>#f7f5f0</code> ink</td><td>15.0:1</td><td>13.7:1</td></tr>
+      <tr><td><code>--body</code></td><td>body text</td><td><code>#3d3833</code></td><td><code>#c9c0ad</code> ink-body</td><td>10.3:1</td><td>8.3:1</td></tr>
+      <tr><td><code>--mute</code></td><td>labels (arch, requirement, captions, footer)</td><td><code>#5f5850</code></td><td><code>#aea69c</code> ink-mute</td><td>6.2:1</td><td>6.2:1</td></tr>
+      <tr><td><code>--line</code></td><td>section rules, card and image borders (non-text)</td><td><code>#d6cfc2</code></td><td><code>#3f3a36</code> hairline</td><td>decoration</td><td>decoration</td></tr>
+      <tr><td>primary button</td><td><code>--bg</code> text on <code>--ink</code></td><td colspan="2">inverse of the page</td><td>15.0:1</td><td>13.7:1</td></tr>
+    </table>
+    <p>Not used as text: amber <code>#e0a43a</code> (brand, inside the images only) and deep amber <code>#a8741a</code> (3.6:1 on paper).</p>
+
+    <h2 id="a11y">Accessibility and motion</h2>
+    <table data-c="a11y">
+      <tr><th>Item</th><th>Spec</th></tr>
+      <tr><td>Language, structure</td><td><code>lang="en"</code>; one <code>h1</code> (the pitch); <code>h2</code> per section, <code>h3</code> per OS, <code>h4</code> per arch; landmarks <code>main</code>, <code>footer</code>, <code>nav</code> with <code>aria-label</code></td></tr>
+      <tr><td>Skip link</td><td>“Skip to download” first in the body, off-screen until focused, then shown top-left on <code>--bg</code></td></tr>
+      <tr><td>Focus</td><td><code>:focus-visible</code> → <code>outline: 2px solid var(--ink); outline-offset: 2px</code> on links, buttons and <code>summary</code>; never removed</td></tr>
+      <tr><td>Motion</td><td>None: no <code>transition</code>, <code>animation</code> or <code>scroll-behavior: smooth</code> in <code>site.css</code> (W2 can assert their absence)</td></tr>
+      <tr><td>Images</td><td>Alt from the README; the wordmark's alt is “Trawler”; every image has <code>width</code>/<code>height</code>; below-the-fold images <code>loading="lazy"</code></td></tr>
+      <tr><td>Links</td><td>Underlined, ink, descriptive text (a file link's text is the file name); a button is a styled link, so Enter activates it</td></tr>
+      <tr><td>Narrow screens</td><td>One column under 720 px; file names wrap anywhere, so nothing scrolls sideways at 320 px</td></tr>
+    </table>
+
+    <h2 id="copy">Copy — every frame string</h2>
+    <p>“frame” = hand-written in <code>site/</code>, held by the deny-list test; “filled” = taken at build from the source named. Bold marks OS labels quoted exactly.</p>
+    <table data-c="copy">
+      <tr><th>#</th><th>Where</th><th>String</th><th>Source</th></tr>
+      <tr><td>C1</td><td><code>&lt;title&gt;</code> index</td><td>Trawler — See every HTTP and HTTPS request your apps make.</td><td>frame “Trawler — ” + filled pitch (Q5)</td></tr>
+      <tr><td>C2</td><td><code>meta description</code>, <code>og:description</code></td><td>the pitch · the sub line</td><td>filled README</td></tr>
+      <tr><td>C3</td><td><code>og:title</code>, <code>og:site_name</code></td><td>Trawler</td><td>frame</td></tr>
+      <tr><td>C4</td><td>skip link</td><td>Skip to download</td><td>frame</td></tr>
+      <tr><td>C5</td><td>wordmark <code>alt</code></td><td>Trawler</td><td>frame (README's alt)</td></tr>
+      <tr><td>C6</td><td><code>h1</code></td><td>See every HTTP and HTTPS request your apps make.</td><td>filled README pitch</td></tr>
+      <tr><td>C7</td><td>sub line</td><td>A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</td><td>filled README</td></tr>
+      <tr><td>C8</td><td>primary button</td><td>Download for macOS · Windows · Linux</td><td>frame (the README's link words)</td></tr>
+      <tr><td>C9</td><td>second button</td><td>Read the guide</td><td>frame</td></tr>
+      <tr><td>C10</td><td>s1 <code>alt</code></td><td>Trawler's main window: the list of captured requests, one JSON response open in the inspector</td><td>filled README</td></tr>
+      <tr><td>C11</td><td><code>h2</code></td><td>Download</td><td>frame</td></tr>
+      <tr><td>C12</td><td>under it</td><td>Version ‹0.1.0› · ‹2026-11-07› · <u>release notes</u></td><td>frame words, filled values</td></tr>
+      <tr><td>C13</td><td><code>h3</code></td><td>macOS · Windows · Linux</td><td>frame</td></tr>
+      <tr><td>C14</td><td>macOS requirement</td><td>macOS 11 or later · Apple Silicon and Intel</td><td>frame (= README install row)</td></tr>
+      <tr><td>C15</td><td><code>h4</code></td><td>x64 · arm64</td><td>frame</td></tr>
+      <tr><td>C16</td><td>file links</td><td><code>Trawler_0.1.0_universal.dmg</code> … (the asset name)</td><td>filled release</td></tr>
+      <tr><td>C17</td><td>before a second file</td><td>or</td><td>frame</td></tr>
+      <tr><td>C18</td><td>Windows hint</td><td>Not sure which? <strong>Settings → System → About → System type</strong>.</td><td>frame (plan)</td></tr>
+      <tr><td>C19</td><td>macOS first open</td><td>First open: <strong>Privacy &amp; Security → Open Anyway</strong>. <u>Step by step</u></td><td>frame (= README) · link GUIDE.md#install</td></tr>
+      <tr><td>C20</td><td>Windows first open</td><td>First open: <strong>More info → Run anyway</strong>. <u>Step by step</u></td><td>frame (= README) · link GUIDE.md#install</td></tr>
+      <tr><td>C21</td><td>Linux first open</td><td>No prompt on first open. <u>Install commands</u></td><td>frame (= README “no prompt”) · link GUIDE.md#install</td></tr>
+      <tr><td>C22</td><td>under the cards</td><td>Check your download: <u>SHA256SUMS</u> · <u>how to check</u></td><td>frame · links: the release asset, GUIDE.md#check-your-download</td></tr>
+      <tr><td>C23</td><td>fallback, always present</td><td><u>All files of the latest release, on GitHub</u></td><td>frame · link releases/latest (Q3)</td></tr>
+      <tr><td>C24</td><td><code>h2</code> + list</td><td>What you can do · the seven bullets</td><td>filled README</td></tr>
+      <tr><td>C25</td><td>gallery (D3 B)</td><td>Setup · Filters · Send again, each image's alt</td><td>filled README “More screens”</td></tr>
+      <tr><td>C26</td><td><code>h2</code></td><td>Privacy</td><td>frame</td></tr>
+      <tr><td>C27</td><td>lead</td><td>Trawler keeps your traffic on your machine. It has no account, no analytics, no crash reporting and no telemetry.</td><td>filled PRIVACY.md</td></tr>
+      <tr><td>C28</td><td>after it</td><td>This site keeps the same promise: no cookies, no analytics, nothing loaded from anywhere else.</td><td>frame · backed by W2's CSP and no-external test</td></tr>
+      <tr><td>C29</td><td>link</td><td><u>What leaves your machine and what stays</u></td><td>frame · link PRIVACY.md</td></tr>
+      <tr><td>C30</td><td>footer <code>nav</code> “Project files”</td><td>Guide · Privacy · Changelog · Contributing · Security · Licence · Report an issue · Source code</td><td>frame · blob/main/GUIDE.md, PRIVACY.md, CHANGELOG.md, CONTRIBUTING.md, SECURITY.md, LICENSE; issues/new/choose; the repo</td></tr>
+      <tr><td>C31</td><td>404</td><td><code>&lt;title&gt;</code> Page not found — Trawler · <code>h1</code> This page doesn't exist. · <u>Go to the Trawler home page</u></td><td>frame</td></tr>
+      <tr><td>C32</td><td>D1 C only: top bar <code>nav</code> “Site”</td><td>Download · Guide · Source code</td><td>frame</td></tr>
+      <tr><td>C33</td><td>D2 A only: table head</td><td>System · Download · Also · First open</td><td>frame (= README)</td></tr>
+      <tr><td>C34</td><td>D2 C only: disclosure</td><td>Other files</td><td>frame</td></tr>
+    </table>
+
+    <h2 id="assets">Asset list</h2>
+    <table data-c="assets">
+      <tr><th>Published as</th><th>Copied from</th><th>Bytes</th><th>Used by</th><th>Load</th></tr>
+      <tr><td><code>index.html</code>, <code>404.html</code>, <code>site.css</code></td><td><code>site/</code> (W3), filled by W2</td><td>≤ 30 KB together</td><td>—</td><td>blocking (CSS)</td></tr>
+      <tr><td><code>favicon.svg</code></td><td><code>ui/public/favicon.svg</code></td><td>601</td><td><code>&lt;link rel="icon"&gt;</code>, both pages</td><td>browser</td></tr>
+      <tr><td><code>wordmark-light.png</code> · <code>wordmark-dark.png</code></td><td><code>ui/src-tauri/icons/brand/</code> (740×168, shown at 370×84)</td><td>23,151 · 23,228</td><td>hero, 404 (one per visitor, by theme)</td><td>eager</td></tr>
+      <tr><td><code>s1-main-window.png</code></td><td><code>.github/screenshots/</code> (1440×800)</td><td>262,726</td><td>hero</td><td>eager</td></tr>
+      <tr><td><code>s2-setup-this-machine.png</code> · <code>s3-filter-chips.png</code> · <code>s5-send-again.png</code></td><td><code>.github/screenshots/</code></td><td>81,625 · 58,666 · 228,285</td><td>gallery (D3 B only)</td><td>lazy</td></tr>
+      <tr><td><code>social-preview.png</code></td><td><code>ui/src-tauri/icons/brand/</code> (1280×640)</td><td>47,651</td><td><code>og:image</code>, <code>twitter:image</code> (absolute URL)</td><td>never by the page</td></tr>
+    </table>
+    <p>First view: ≤ 30 KB + 23 KB + 263 KB ≈ 316 KB, inside the plan's 350 KB. Nothing is redrawn: every image is a generated file DEC-89 already owns.</p>
+
+    <h2 id="head">Head</h2>
+    <table data-c="head">
+      <tr><th>Tag</th><th>Value</th></tr>
+      <tr><td>CSP</td><td><code>default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'</code> (meta, both pages)</td></tr>
+      <tr><td>referrer</td><td><code>no-referrer</code></td></tr>
+      <tr><td>colour scheme</td><td><code>&lt;meta name="color-scheme" content="light dark"&gt;</code> so form controls and scrollbars follow the theme</td></tr>
+      <tr><td>canonical · <code>og:url</code></td><td><code>https://lesslucifer.github.io/Trawler/</code> (W2's base-URL constant, Q1)</td></tr>
+      <tr><td>OG / Twitter</td><td><code>og:type website</code>, C2, C3, <code>og:image</code> = base + <code>social-preview.png</code> 1280×640, <code>twitter:card summary_large_image</code></td></tr>
+      <tr><td>404</td><td>same CSP, favicon and CSS by absolute path <code>/Trawler/…</code>; <code>&lt;meta name="robots" content="noindex"&gt;</code></td></tr>
+    </table>
+
+    <h2 id="rulings">Owner rulings</h2>
+    <table data-c="rulings">
+      <tr><th>#</th><th>Ruling</th><th>Who · when</th><th>In this design</th></tr>
+      <tr><td>Q1</td><td>lesslucifer.github.io/Trawler</td><td>owner · 2026-11-08 (plan v2)</td><td>canonical, OG, 404 paths</td></tr>
+      <tr><td>Q3</td><td>build-time release read + always-present releases/latest link</td><td>same</td><td>C12, C16, C23</td></tr>
+      <tr><td>Q4</td><td>no analytics</td><td>same</td><td>CSP, C28</td></tr>
+      <tr><td>Q5</td><td>README pitch exactly</td><td>same</td><td>C1, C6</td></tr>
+      <tr><td>Q6</td><td>link out to blob/main/GUIDE.md</td><td>same</td><td>C9, C19–C22, C30</td></tr>
+      <tr><td>Q7</td><td>English only</td><td>same</td><td><code>lang="en"</code></td></tr>
+      <tr><td>Q9</td><td>system fonts + outlined wordmark</td><td>same</td><td>Frame, Assets</td></tr>
+      <tr><td>Q13</td><td>no script while <code>site/</code> is not a code path</td><td>same</td><td>no OS detection, no toggle</td></tr>
+      <tr><td>D1</td><td>hero layout</td><td>open — router asks the owner</td><td>built on A</td></tr>
+      <tr><td>D2</td><td>download grouping</td><td>open — router asks the owner</td><td>built on B</td></tr>
+      <tr><td>D3</td><td>features presentation</td><td>open — router asks the owner</td><td>built on B</td></tr>
+    </table>
+
+    <h2 id="for-w3">For W3, and not verified here</h2>
+    <table data-c="for-w3">
+      <tr><th>W3 builds</th><th>Checked by</th></tr>
+      <tr><td><code>site/index.html</code>, <code>site/404.html</code>, <code>site/site.css</code> from <code>#t-index</code>, <code>#t-404</code>, <code>#t-site-css</code>; the mock's forced themes become <code>@media (prefers-color-scheme: dark)</code>, already written that way in <code>#t-site-css</code></td><td>W2's link, CSP/no-external, deny-list, contrast and kinds tests</td></tr>
+      <tr><td>The shots at 390 × 844 and 1440 × 900, light and dark, beside these frames in its result</td><td>owner sign-off on W3</td></tr>
+    </table>
+    <p>Not verified: rendering on a real phone and in Safari/Firefox (frames checked in Chrome only); that GitHub's anchor <code>#check-your-download</code> stays stable (W2's link test reads GUIDE.md's headings); the Windows <strong>System type</strong> path on Windows 10 (checked against Windows 11 wording only).</p>
+
+  </main>
+
+  <template id="t-index">
+    <a class="skip" href="#download">Skip to download</a>
+    <header class="v-bar v-hero-c">
+      <div class="wrap bar">
+        <a class="bar-mark" href="https://lesslucifer.github.io/Trawler/"><picture><source media="(prefers-color-scheme: dark)" srcset="../../ui/src-tauri/icons/brand/wordmark-dark.png"><img alt="Trawler" src="../../ui/src-tauri/icons/brand/wordmark-light.png" width="123" height="28"></picture></a>
+        <nav aria-label="Site"><a href="#download">Download</a><a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md">Guide</a><a href="https://github.com/lesslucifer/Trawler">Source code</a></nav>
+      </div>
+    </header>
+    <main>
+      <section class="hero" data-section="hero">
+        <div class="wrap hero-grid">
+          <div class="hero-text">
+            <p class="wordmark"><picture><source media="(prefers-color-scheme: dark)" srcset="../../ui/src-tauri/icons/brand/wordmark-dark.png"><img alt="Trawler" src="../../ui/src-tauri/icons/brand/wordmark-light.png" width="370" height="84"></picture></p>
+            <h1 data-fill="README.md: the pitch">See every HTTP and HTTPS request your apps make.</h1>
+            <p class="sub" data-fill="README.md: the sub line">A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</p>
+            <p class="cta"><a class="btn primary" href="#download">Download for macOS · Windows · Linux</a><a class="btn" href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md">Read the guide</a></p>
+          </div>
+          <img class="shot" src="../../.github/screenshots/s1-main-window.png" width="1440" height="800" alt="Trawler's main window: the list of captured requests, one JSON response open in the inspector" data-fill="README.md: s1 alt">
+        </div>
+      </section>
+
+      <section id="download" data-section="download">
+        <div class="wrap">
+          <h2>Download</h2>
+          <p class="meta">Version <span data-fill="release: tag_name">0.1.0</span> · <span data-fill="release: published_at">2026-11-07</span> · <a href="https://github.com/lesslucifer/Trawler/releases/tag/v0.1.0" data-fill="release: html_url">release notes</a></p>
+
+          <div class="os dl-b">
+            <article class="card">
+              <h3>macOS</h3>
+              <p class="req">macOS 11 or later · Apple Silicon and Intel</p>
+              <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_universal.dmg">Trawler_0.1.0_universal.dmg</a></p>
+              <p class="first">First open: <b>Privacy &amp; Security → Open Anyway</b>. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Windows</h3>
+              <div class="arch">
+                <h4>x64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64-setup.exe">Trawler_0.1.0_x64-setup.exe</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64_en-US.msi">Trawler_0.1.0_x64_en-US.msi</a></p>
+              </div>
+              <div class="arch">
+                <h4>arm64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64-setup.exe">Trawler_0.1.0_arm64-setup.exe</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64_en-US.msi">Trawler_0.1.0_arm64_en-US.msi</a></p>
+              </div>
+              <p class="hint">Not sure which? <b>Settings → System → About → System type</b>.</p>
+              <p class="first">First open: <b>More info → Run anyway</b>. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Linux</h3>
+              <div class="arch">
+                <h4>x64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.AppImage">Trawler_0.1.0_amd64.AppImage</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.deb">Trawler_0.1.0_amd64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.x86_64.rpm">Trawler-0.1.0-1.x86_64.rpm</a></p>
+              </div>
+              <div class="arch">
+                <h4>arm64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_aarch64.AppImage">Trawler_0.1.0_aarch64.AppImage</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64.deb">Trawler_0.1.0_arm64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.aarch64.rpm">Trawler-0.1.0-1.aarch64.rpm</a></p>
+              </div>
+              <p class="first">No prompt on first open. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Install commands</a></p>
+            </article>
+          </div>
+
+          <table class="dl-a">
+            <thead><tr><th>System</th><th>Download</th><th>Also</th><th>First open</th></tr></thead>
+            <tbody>
+              <tr><td>macOS 11 or later · Apple Silicon and Intel</td><td><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_universal.dmg">Trawler_0.1.0_universal.dmg</a></td><td>—</td><td><b>Privacy &amp; Security → Open Anyway</b> · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></td></tr>
+              <tr><td>Windows x64</td><td><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64-setup.exe">Trawler_0.1.0_x64-setup.exe</a></td><td><a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64_en-US.msi">Trawler_0.1.0_x64_en-US.msi</a></td><td><b>More info → Run anyway</b> · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></td></tr>
+              <tr><td>Windows arm64</td><td><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64-setup.exe">Trawler_0.1.0_arm64-setup.exe</a></td><td><a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64_en-US.msi">Trawler_0.1.0_arm64_en-US.msi</a></td><td><b>More info → Run anyway</b> · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></td></tr>
+              <tr><td>Linux x64</td><td><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.AppImage">Trawler_0.1.0_amd64.AppImage</a></td><td><a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.deb">Trawler_0.1.0_amd64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.x86_64.rpm">Trawler-0.1.0-1.x86_64.rpm</a></td><td>no prompt · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Install commands</a></td></tr>
+              <tr><td>Linux arm64</td><td><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_aarch64.AppImage">Trawler_0.1.0_aarch64.AppImage</a></td><td><a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64.deb">Trawler_0.1.0_arm64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.aarch64.rpm">Trawler-0.1.0-1.aarch64.rpm</a></td><td>no prompt · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Install commands</a></td></tr>
+            </tbody>
+          </table>
+
+          <div class="os dl-c">
+            <article class="card">
+              <h3>macOS</h3>
+              <p class="req">macOS 11 or later · Apple Silicon and Intel</p>
+              <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_universal.dmg">Trawler_0.1.0_universal.dmg</a></p>
+              <p class="first">First open: <b>Privacy &amp; Security → Open Anyway</b>. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Windows</h3>
+              <p class="req">x64</p>
+              <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64-setup.exe">Trawler_0.1.0_x64-setup.exe</a></p>
+              <details><summary>Other files</summary><p class="alt"><a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64_en-US.msi">Trawler_0.1.0_x64_en-US.msi</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64-setup.exe">Trawler_0.1.0_arm64-setup.exe</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64_en-US.msi">Trawler_0.1.0_arm64_en-US.msi</a></p></details>
+              <p class="first">First open: <b>More info → Run anyway</b>. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Linux</h3>
+              <p class="req">x64</p>
+              <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.AppImage">Trawler_0.1.0_amd64.AppImage</a></p>
+              <details><summary>Other files</summary><p class="alt"><a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.deb">Trawler_0.1.0_amd64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.x86_64.rpm">Trawler-0.1.0-1.x86_64.rpm</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_aarch64.AppImage">Trawler_0.1.0_aarch64.AppImage</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64.deb">Trawler_0.1.0_arm64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.aarch64.rpm">Trawler-0.1.0-1.aarch64.rpm</a></p></details>
+              <p class="first">No prompt on first open. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Install commands</a></p>
+            </article>
+          </div>
+
+          <p class="after">Check your download: <a href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/SHA256SUMS">SHA256SUMS</a> · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#check-your-download">how to check</a></p>
+          <p class="after"><a href="https://github.com/lesslucifer/Trawler/releases/latest">All files of the latest release, on GitHub</a></p>
+        </div>
+      </section>
+
+      <section id="features" data-section="features">
+        <div class="wrap">
+          <h2 data-fill="README.md: What you can do">What you can do</h2>
+          <ul class="feats" data-fill="README.md: What you can do, bullets">
+            <li>Capture the HTTP and HTTPS traffic of this machine.</li>
+            <li>Capture an iPhone, an Android phone, the iOS Simulator or the Android emulator, set up from one screen.</li>
+            <li>Filter the list with chips such as <code>status:4xx</code> or <code>-method:OPTIONS</code>.</li>
+            <li>Read headers, timing and bodies, with viewers for JSON, XML, HTML, forms and more.</li>
+            <li>Send a request again, edited, or write one from scratch.</li>
+            <li>Export what you captured to HAR, and open a HAR file.</li>
+            <li>Keep capturing with the window closed, from the menu-bar or tray icon.</li>
+          </ul>
+          <div class="gallery" data-fill="README.md: More screens">
+            <figure><img src="../../.github/screenshots/s2-setup-this-machine.png" loading="lazy" width="1440" height="800" alt="The setup screen for this machine, every task done"><figcaption>Setup</figcaption></figure>
+            <figure><img src="../../.github/screenshots/s3-filter-chips.png" loading="lazy" width="1440" height="800" alt="The list filtered by the chips status:4xx and -method:OPTIONS"><figcaption>Filters</figcaption></figure>
+            <figure><img src="../../.github/screenshots/s5-send-again.png" loading="lazy" width="1440" height="800" alt="A request sent again with one header edited, its response shown"><figcaption>Send again</figcaption></figure>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy" data-section="privacy">
+        <div class="wrap">
+          <h2>Privacy</h2>
+          <p class="lead" data-fill="PRIVACY.md: the lead paragraph">Trawler keeps your traffic on your machine. It has no account, no analytics, no crash reporting and no telemetry.</p>
+          <p>This site keeps the same promise: no cookies, no analytics, nothing loaded from anywhere else.</p>
+          <p><a href="https://github.com/lesslucifer/Trawler/blob/main/PRIVACY.md">What leaves your machine and what stays</a></p>
+        </div>
+      </section>
+    </main>
+    <footer data-section="footer">
+      <div class="wrap">
+        <nav aria-label="Project files" class="foot">
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md">Guide</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/PRIVACY.md">Privacy</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/CHANGELOG.md">Changelog</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/CONTRIBUTING.md">Contributing</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/SECURITY.md">Security</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/LICENSE">Licence</a>
+          <a href="https://github.com/lesslucifer/Trawler/issues/new/choose">Report an issue</a>
+          <a href="https://github.com/lesslucifer/Trawler">Source code</a>
+        </nav>
+      </div>
+    </footer>
+  </template>
+
+  <template id="t-404">
+    <main class="nf">
+      <div class="wrap">
+        <p class="wordmark"><a href="https://lesslucifer.github.io/Trawler/"><picture><source media="(prefers-color-scheme: dark)" srcset="../../ui/src-tauri/icons/brand/wordmark-dark.png"><img alt="Trawler" src="../../ui/src-tauri/icons/brand/wordmark-light.png" width="370" height="84"></picture></a></p>
+        <h1>This page doesn't exist.</h1>
+        <p class="cta"><a class="btn primary" href="https://lesslucifer.github.io/Trawler/">Go to the Trawler home page</a></p>
+      </div>
+    </main>
+  </template>
+
+  <script type="text/plain" id="t-site-css">
+:root { color-scheme: light dark; --bg: #f4f1ea; --ink: #1f1c19; --body: #3d3833; --mute: #5f5850; --line: #d6cfc2; }
+@media (prefers-color-scheme: dark) { :root { --bg: #2b2622; --ink: #f7f5f0; --body: #c9c0ad; --mute: #aea69c; --line: #3f3a36; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--body); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, sans-serif; }
+h1, h2, h3, h4 { color: var(--ink); font-weight: 400; margin: 0; }
+h1 { font-size: 40px; line-height: 1.2; }
+h2 { font-size: 28px; line-height: 1.25; margin-bottom: 8px; }
+h3 { font-size: 20px; }
+h4 { font-size: 14px; color: var(--mute); letter-spacing: 0.025em; }
+p { margin: 0; }
+a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+a:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+code, .file { font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; font-size: 14px; }
+.wrap { max-width: 1088px; margin: 0 auto; padding: 0 24px; }
+.skip { position: absolute; left: 16px; top: -64px; background: var(--bg); padding: 8px 12px; }
+.skip:focus { top: 16px; }
+section { padding: 64px 0; border-top: 1px solid var(--line); }
+.hero { border-top: 0; padding: 64px 0 48px; text-align: center; }
+.hero-text { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 48px; }
+.wordmark img { display: block; width: 370px; height: auto; }
+.sub { font-size: 18px; max-width: 640px; }
+.cta { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 8px; }
+.btn { display: inline-block; padding: 10px 16px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); text-decoration: none; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.shot { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.meta { color: var(--mute); margin-bottom: 32px; }
+.os { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; align-items: start; }
+.card { border: 1px solid var(--line); border-radius: 8px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+.arch { display: flex; flex-direction: column; gap: 8px; }
+.file { overflow-wrap: anywhere; }
+.btn.file { font-size: 13px; }
+.req, .alt, .hint, .first { font-size: 14px; }
+.req, .alt { color: var(--mute); }
+.first { border-top: 1px solid var(--line); padding-top: 12px; }
+.after { margin-top: 16px; }
+.feats { margin: 16px 0 0; padding-left: 20px; columns: 2; column-gap: 48px; }
+.feats li { margin-bottom: 8px; break-inside: avoid; }
+.gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 48px; }
+figure { margin: 0; }
+figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+figcaption { color: var(--mute); font-size: 14px; margin-top: 8px; }
+#privacy .wrap { max-width: 768px; }
+.lead { font-size: 20px; color: var(--ink); margin-bottom: 12px; }
+#privacy p + p { margin-top: 12px; }
+footer { border-top: 1px solid var(--line); padding: 32px 0 48px; }
+.foot { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; }
+.nf { min-height: 100vh; display: flex; align-items: center; text-align: center; }
+.nf .wrap { display: flex; flex-direction: column; align-items: center; gap: 24px; }
+@media (max-width: 719px) {
+  .wrap { padding: 0 16px; }
+  h1 { font-size: 28px; }
+  h2 { font-size: 24px; }
+  section { padding: 48px 0; }
+  .hero { padding: 32px 0; }
+  .hero-text { margin-bottom: 32px; }
+  .wordmark img { width: 240px; }
+  .sub { font-size: 16px; }
+  .cta { flex-direction: column; align-self: stretch; }
+  .btn { text-align: center; }
+  .os, .gallery { grid-template-columns: 1fr; }
+  .feats { columns: 1; }
+}
+  </script>
+
+  <script type="text/plain" id="t-variants-css">
+.dl-a, .dl-c, .v-hero-c { display: none; }
+html[data-dl="a"] .dl-b, html[data-dl="c"] .dl-b { display: none; }
+html[data-dl="a"] .dl-a { display: table; }
+html[data-dl="c"] .dl-c { display: grid; }
+.dl-a { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dl-a th { text-align: left; color: var(--mute); font-weight: 400; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.dl-a td { padding: 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.dl-c summary { cursor: pointer; color: var(--ink); font-size: 14px; }
+.dl-c details .alt { margin-top: 8px; }
+html[data-hero="b"] .hero { text-align: left; }
+html[data-hero="b"] .hero-grid { display: grid; grid-template-columns: 5fr 7fr; gap: 48px; align-items: center; max-width: 1392px; }
+html[data-hero="b"] .hero-text { align-items: flex-start; margin-bottom: 0; }
+html[data-hero="b"] .cta { justify-content: flex-start; }
+html[data-hero="c"] .v-hero-c { display: block; border-bottom: 1px solid var(--line); }
+html[data-hero="c"] .bar { display: flex; justify-content: space-between; align-items: center; padding-top: 16px; padding-bottom: 16px; }
+html[data-hero="c"] .bar nav { display: flex; gap: 24px; font-size: 14px; }
+html[data-hero="c"] .bar-mark img { display: block; width: auto; height: 28px; }
+html[data-hero="c"] .hero { text-align: left; }
+html[data-hero="c"] .hero-text { align-items: flex-start; }
+html[data-hero="c"] .hero .wordmark { display: none; }
+html[data-hero="c"] .cta { justify-content: flex-start; }
+html[data-feat="a"] .gallery, html[data-feat="c"] .gallery { display: none; }
+html[data-feat="c"] .feats { columns: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; list-style: none; padding: 0; }
+html[data-feat="c"] .feats li { border: 1px solid var(--line); border-radius: 8px; padding: 24px; margin: 0; }
+@media (max-width: 719px) {
+  html[data-hero="b"] .hero-grid { display: block; }
+  html[data-hero="b"] .hero-text { margin-bottom: 32px; }
+  html[data-hero="b"] .hero, html[data-hero="c"] .hero { text-align: left; }
+  html[data-hero="c"] .bar nav { gap: 16px; }
+  html[data-dl="a"] .dl-a, html[data-dl="a"] .dl-a tbody, html[data-dl="a"] .dl-a tr, html[data-dl="a"] .dl-a td { display: block; }
+  html[data-dl="a"] .dl-a thead { display: none; }
+  html[data-dl="a"] .dl-a tr { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; }
+  html[data-dl="a"] .dl-a td { border: 0; }
+  html[data-feat="c"] .feats { grid-template-columns: 1fr; }
+}
+  </script>
+
+  <script type="text/plain" id="t-mock-css">
+html.dark { --bg: #2b2622; --ink: #f7f5f0; --body: #c9c0ad; --mute: #aea69c; --line: #3f3a36; color-scheme: dark; }
+html.light { --bg: #f4f1ea; --ink: #1f1c19; --body: #3d3833; --mute: #5f5850; --line: #d6cfc2; color-scheme: light; }
+html[data-only] main section, html[data-only] footer, html[data-only] .skip { display: none; }
+html[data-only="hero"] .hero, html[data-only="download"] #download, html[data-only="features"] #features { display: block; border-top: 0; }
+html[data-only="hero"] .v-hero-c { display: none; }
+html[data-only="hero"][data-hero="c"] .v-hero-c { display: block; }
+.focus-demo { outline: 2px solid var(--ink); outline-offset: 2px; }
+  </script>
+
+  <script type="module">
+    const text = (id) => document.getElementById(id).textContent;
+    const css = text('t-site-css') + text('t-variants-css') + text('t-mock-css');
+    const rec = { hero: 'a', dl: 'b', feat: 'b' };
+
+    function build(box) {
+      const d = box.dataset;
+      const width = Number(d.w);
+      const frame = document.createElement('iframe');
+      frame.title = box.getAttribute('aria-label');
+      frame.style.width = width + 'px';
+      frame.addEventListener('load', () => {
+        const doc = frame.contentDocument;
+        const root = doc.documentElement;
+        root.lang = 'en';
+        root.className = d.theme;
+        root.dataset.hero = d.hero || rec.hero;
+        root.dataset.dl = d.dl || rec.dl;
+        root.dataset.feat = d.feat || rec.feat;
+        if (d.only) root.dataset.only = d.only;
+        const style = doc.createElement('style');
+        style.textContent = css;
+        doc.head.append(style);
+        doc.body.innerHTML = document.getElementById(d.page === '404' ? 't-404' : 't-index').innerHTML;
+        doc.querySelectorAll('picture source').forEach((s) => {
+          if (d.theme === 'dark') s.media = 'all'; else s.remove();
+        });
+        doc.querySelectorAll('img[loading]').forEach((img) => img.removeAttribute('loading'));
+        if (d.focus) doc.querySelector('.hero .btn.primary').classList.add('focus-demo');
+        const fit = () => {
+          const scale = Math.min(1, box.clientWidth / width);
+          const height = d.page === '404' ? Math.round(width * 0.5) : root.scrollHeight;
+          frame.style.height = height + 'px';
+          frame.style.transform = 'scale(' + scale + ')';
+          box.style.height = Math.ceil(height * scale) + 'px';
+        };
+        if (d.page === '404') doc.querySelector('.nf').style.minHeight = Math.round(width * 0.5) + 'px';
+        requestAnimationFrame(fit);
+        doc.querySelectorAll('img').forEach((img) => img.addEventListener('load', fit));
+        new ResizeObserver(fit).observe(box);
+      }, { once: true });
+      frame.srcdoc = '<!doctype html><meta charset="utf-8">';
+      box.append(frame);
+    }
+
+    document.querySelectorAll('.fr').forEach(build);
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
