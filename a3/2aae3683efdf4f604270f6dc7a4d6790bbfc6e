@@ -1,0 +1,40 @@
+schema: cr/v5
+scope: "WU router-vikunja/cli-client -> epic/router-vikunja"
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W2
+branch: wu/router-vikunja/cli-client
+base: 13405b154d13114998f6bbfe13199deff19dc632
+head: a32aae3683efdf4f604270f6dc7a4d6790bbfc6e
+diff_sha256: 013245d3df17385746675db0eb3bba3b50c274e5c953475f1712e2ecbc51dcf5
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 4
+  stage_seconds:
+    gate0: 26
+    finders: 36
+    verifiers: 60
+    total: 111
+  by_finder:
+    correctness: { found: 5, verified: 2 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 5, verified: 2, waived: 0 }
+waivers: []
+nits:
+  - finding: "an already-done task put with --done plus a label/assignee change gets no hidden note (verified; re-judged nit from important)"
+    waived: "the owner's brief specifies the note is skipped whenever the same call passes --done; that call's own output already prints 'already done - skipped', so the done state is not hidden"
+  - finding: "--assignee vuluu --assignee 1 sends two assignee PUTs for user 1 (verified nit)"
+    waived: "two spellings of one user in one call is contrived; the router addresses users by name per vikunja-protocol.md and a re-run skips"
+  - finding: "the note also fires when the only change on a done task is --unlabel or --unassign"
+    waived: "intended: the owner's brief names unlabel/unassign changes as triggers, so every label or assignee change on a done task says show will not list it"
+  - finding: "take_flag strips the first --api/--key-file even where it is another flag's value"
+    waived: "same global-flag parsing the board client shipped; a comment reading exactly --api is not a router input"
+  - finding: "a truncated 2xx body after a successful write surfaces as a parse error ending the put"
+    waived: "loopback to the local instance; the error still names the call and the put's earlier lines say what was done, so a re-run skips what holds"
+verdict: PASS
+date: 2026-11-08
