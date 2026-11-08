@@ -1,0 +1,52 @@
+schema: cr/v5
+scope: "WU site-pages -> epic/pages (round 2: round 1 PASSed on 9877b2b0; the tip moved by the docs-only result commit)"
+epic: E-PAGES
+wu: E-PAGES.W3
+branch: wu/pages/site-pages
+base: 3a93c47319845007ec1ce02f51242823dc114c6c
+head: 50997b83cb27c5bddc4c0be8bc3385223ff17da1
+diff_sha256: 76ba4e192fcc453d8ff747313e080ab548d68e5d53d12274ca68ee8b761a345f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 11
+  stage_seconds:
+    finders: 50
+    verifiers: 16
+    total: 131
+  by_finder:
+    correctness: { found: 6, verified: 0 }
+    efficiency:  { found: 2, verified: 0 }
+    altitude:    { found: 4, verified: 0 }
+findings: { found: 12, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "the /cros/i guard is an unanchored substring and would refuse a UA or platform containing e.g. 'Microsoft'"
+    waived: "the design's reference site.js verbatim; no shipping Windows browser's userAgent or platform carries 'Microsoft', and a refusal only falls back to the full list; \\bcros\\b logged as a follow-up"
+  - finding: "a 32-bit armv7l Linux or Windows visitor is offered the x64 build"
+    waived: "no 32-bit build exists, so every pick is wrong for that visitor; the list and Other downloads stay one click away"
+  - finding: "the arm hint's second show() closes Other systems if the visitor opened it in between"
+    waived: "the hint resolves within the same page load, before a visitor can reach the summary; the design's reference behaviour"
+  - finding: "smaller_png drops gAMA/cHRM/sRGB/pHYs; only iCCP keeps the source"
+    waived: "the six shots carry sRGB (the browser default) and no gAMA/cHRM; pixels proven equal by test"
+  - finding: "motion_problems pools a comma-separated multi-animation shorthand's times, over-counting"
+    waived: "it can only refuse, never pass, extra motion; site.css writes one animation per shorthand"
+  - finding: "first_sentence would cut the privacy lead at an abbreviation"
+    waived: "PRIVACY.md's lead holds none; the cut would show in the built page and its shots"
+  - finding: "declarations() is re-run by themes, contrast and motion over the same stylesheet"
+    waived: "one 10 KB stylesheet per build; linear and immaterial"
+  - finding: "smaller_png decodes the whole frame before the cheap bail-outs and holds three pixel copies"
+    waived: "nine assets per build, about 2 s in total; ICC is checked before the decode"
+  - finding: "site.rs holds the HTML/CSS checks beside content assembly in 2,175 lines"
+    waived: "they serve only the site build; a split is a refactor logged as a follow-up"
+  - finding: "site.rs borrows crate::walkthrough::escape"
+    waived: "W2's reuse ruling: one HTML escaper in xtask rather than a second copy"
+  - finding: "notes_write counts site.test.mjs by the it(/test( line rule, not by the runner"
+    waived: "the counter's documented line rule for every JS/TS kind; it counts the 5 declarations and the integration test proves node runs all 18 cases green"
+verdict: PASS
+date: 2026-11-08
