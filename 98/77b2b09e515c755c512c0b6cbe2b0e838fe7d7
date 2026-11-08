@@ -1,0 +1,10 @@
+schema: doc/v1
+epic: E-PAGES
+wu: E-PAGES.W3
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-pages-w3-site-pages-plan.html"
+    tier: T3
+    action: added
+    distills: "the W3 plan: requirement, what W2 left, decisions D1-D8, test plan"
+t2_waived: "the site's T2 truths (DEC-92, UC-INSTALL entry point, DEC-89/91 amendments) are W5's distillation of the whole epic per the epic plan"
