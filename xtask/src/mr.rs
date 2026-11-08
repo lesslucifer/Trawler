@@ -378,7 +378,7 @@ fn prompt_touch(identity: &str, reason: &str) {
 
 /// The branch-name → level regex of the confirm wizard: `wu/…` → wu,
 /// `epic/…` → epic, anything else asks the user.
-fn infer_level(branch: &str) -> Option<&'static str> {
+pub(crate) fn infer_level(branch: &str) -> Option<&'static str> {
     if branch.starts_with("wu/") {
         Some("wu")
     } else if branch.starts_with("epic/") {

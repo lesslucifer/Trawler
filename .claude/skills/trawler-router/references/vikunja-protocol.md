@@ -1,6 +1,6 @@
 # Vikunja protocol (authoritative)
 
-A local Vikunja instance is the router↔owner surface (E-VIKUNJA, owner's rulings in the epic plan). It replaces the Obsidian board (`board-protocol.md` on `epic/router-kanban`); that board's lessons carry over, its columns do not. Until E-VIKUNJA.W2 ships `cargo xtask vikunja`, the raw REST calls below are the interface; once it ships, its `--help` wins over this file for invocations.
+A local Vikunja instance is the router↔owner surface (E-VIKUNJA, owner's rulings in the epic plan). It replaces the Obsidian board (`board-protocol.md` on `epic/router-kanban`); that board's lessons carry over, its columns do not. `cargo xtask vikunja` is the interface (run it bare for its usage, which wins over this file for invocations); raw REST only for what it lacks (end of file). `X` = a checkout that has it: `$M/Trawler` once E-VIKUNJA is on `main`, until then `$M/Trawler-vikunja` (`epic/router-vikunja`).
 
 ## Where
 | Thing | Value |
@@ -33,7 +33,8 @@ It does not survive a reboot or logout, by design: nothing registers persistence
 - Parent/child is hierarchy only; blocking is order only. Never infer order from the hierarchy or hierarchy from a block. Vikunja stores both reciprocally (`subtask`↔`parenttask`, `blocked`↔`blocking`) and enforces neither: the router checks a task's `blocked` list is all `done` before starting it.
 - One project, no buckets. Position, view, sort order and Gantt dates carry no meaning; nothing reads them.
 - `done = true` is set by the router only after checking git: a WU when merged into its epic, an epic when merged into `main` and pushed. Comment the merge sha in the same pass.
-- **Task before branch** (carried from E-KANBAN): create the task → `git worktree add … -b <branch>` → write the `Branch:` line (same turn) → spawn the worker. W4's orphan check is the backstop that detects a skipped step, never prevention.
+- **Task before branch** (carried from E-KANBAN): create the task → `git worktree add … -b <branch>` → write the `Branch:` line (same turn) → spawn the worker. `cargo xtask vikunja check` (every heartbeat tick, Standing processes) is the backstop that detects a skipped step, never prevention.
+- The `Branch:` line is a line starting `Branch:` with a value (plain text, or HTML after the owner edits the description in the web UI: block tags end a line, inline markup such as `<strong>`/`<code>` around it is ignored); it is the only task ↔ branch link. A worktree whose directory was deleted outside git (`prunable`) counts as gone. `put --description` replaces the whole description: send the full text.
 
 ## The needs-owner signal (the only owner queue)
 The owner's queue is exactly: `done = false && assignees in vuluu && labels in 1` — the **Needs me** saved filter. Membership changes only through an explicit label or assignee change — never a position.
@@ -55,6 +56,18 @@ The ask comment is self-contained, rewritten whole for every new ask (never "see
 | marks a task `done` | archival only, never approval: if an ask was open, comment `closed without an explicit approval signal — pending ask discarded, no action taken`, remove the label, unassign |
 | re-adds `needs-owner` | the owner wants the router's attention on that task: read its newest comments |
 
+## The lifecycle as CLI calls (`cd $X && cargo xtask vikunja …`; text from a file on stdin with `-`)
+| Step | Call |
+|---|---|
+| new epic · new WU | `create --title 'E-<CODE> <what>' --description -` · `create --title 'E-<CODE>.W<m> <what>' --parent <epic id> [--relation blocked-by:<id>]` |
+| branch cut | `put <id> --description -` (full text, `Branch: <branch>` first) |
+| 1 Ask | `put <id> --comment - --assignee vuluu --label needs-owner` (the CLI applies comment → assign → label whatever the flag order) |
+| 2' command seen + 3 close | `put <id> --comment 'seen <sha8>' --unlabel needs-owner --unassign vuluu` (unlabel before unassign, always) |
+| 3 Close the ask | `put <id> --comment - --unassign vuluu` |
+| owner marked done with an ask open | `put <id> --comment 'closed without an explicit approval signal — pending ask discarded, no action taken' --unlabel needs-owner --unassign vuluu` |
+| merged | `put <id> --done --comment 'merged <sha8> into <target>'` |
+| read · owner's queue · all open · backstop | `read <id>` · `show --needs-owner` · `show` · `check` |
+
 Every webhook payload carries `doer`; the router ignores events whose doer is `trawler-router` (its own writes). Removing only the assignee and leaving the label is never valid router state: always label first, assignee after.
 
 ## Standing processes
@@ -63,21 +76,31 @@ Same discipline the board watcher ended up with (E-KANBAN postmortem): watching 
 | Process | Owner | Every heartbeat tick | When found dead |
 |---|---|---|---|
 | Vikunja server | router | `curl -sf …/api/v1/info` | relaunch (Run it) the same tick; ping Telegram only if the relaunch fails |
-| Webhook listener | router | `curl -sf -m 5 http://127.0.0.1:3457/` → `ok` | relaunch (Run the listener) the same tick, after the Vikunja server is up; its startup reconcile replays what the gap hid |
+| Webhook listener | router | `curl -sf -m 5 http://127.0.0.1:3457/` → `ok`; its event file under a Monitor | relaunch (Run the listener) the same tick, after the Vikunja server is up; its startup reconcile replays what the gap hid; re-arm the Monitor |
+| Orphan check | router | after both rows above: `cd $X && cargo xtask vikunja check; echo EXIT $?` | — (one-shot) |
 
-Keeping the listener alive is the router's **standing responsibility for the whole session**, exactly like the board watcher was: started at session start, checked every heartbeat tick, relaunched the moment it is found dead — never a one-time check, never only when an ask is open. A dead listener is silent, not loud: nothing else tells the router an owner answered.
+`cargo xtask vikunja check` lists `git worktree list` of the checkout's repo and every project-3 task (done ones too: a merged WU's worktree outlives its task) and prints one JSON line per finding; exit 0 = none (nothing printed) · 1 = findings · 2 = error on stderr (Vikunja down: relaunch it first).
+
+| Line | Means | Router does |
+|---|---|---|
+| `{"branch":"wu/x/y","event":"orphan","worktree":"/abs"}` | an `epic/*` or `wu/*` worktree no task's `Branch:` names | create its task now (a WU under its epic) with the `Branch:` line, or an ask when it cannot tell what it is; one Telegram ping per tick naming the tick's orphans |
+| `{"branch":"wu/x/y","event":"missing-worktree","task_id":9,"title":"…"}` | an open task whose branch has no worktree | git: merged → `put --done` + merge sha; a wrong `Branch:` line → fix it; else an ask |
+
+A finding repeats every tick until fixed. JSON keys print in alphabetical order (listener lines too): match on `"event":"<name>"`, never on the line's prefix.
+
+Keeping the server and the listener alive and running the check is the router's **standing responsibility for the whole session**, exactly like the board watcher was: started at session start, checked every heartbeat tick, relaunched the moment it is found dead — never a one-time check, never only when an ask is open. A dead listener is silent, not loud: nothing else tells the router an owner answered.
 
 Webhooks are latency; the API is the truth. Vikunja delivers each webhook once and never retries (≥ 400 or a 30 s timeout is lost); the listener covers that by reconciling against the API at every start and every 60 s.
 
 ## Run the listener
 ```sh
 L=~/.local/share/vikunja
-cd $M/Trawler && (nohup cargo xtask vikunja webhook-listen >> $L/listener.events 2>> $L/listener.log &)   # start
+cd $X && (nohup cargo xtask vikunja webhook-listen >> $L/listener.events 2>> $L/listener.log &)   # start
 curl -sf -m 5 http://127.0.0.1:3457/                                                                           # status: ok
 pkill -f 'xtask vikunja webhook-listen'                                                                   # stop
 tail -n0 -F $L/listener.events                                                                            # watch (Monitor): one line = one notification
 ```
-Until E-VIKUNJA is on `main`, `cd` into a checkout of `epic/router-vikunja` instead of `$M/Trawler`. At start it binds `127.0.0.1:3457`, replaces its own project-3 webhook (same `target_url`; never a duplicate), reconciles, prints `listening`, then serves until killed. Files: secret `~/.config/trawler/vikunja-webhook-secret` (600, created on first start, re-sent at every registration; never printed), state `~/.config/trawler/vikunja-listener.json` (per task: asking, last comment id seen). Rejected deliveries are logged to stderr. `cargo xtask vikunja` has the flags (`--port`, `--state`, `--secret-file`, `--poll`).
+At start it binds `127.0.0.1:3457`, replaces its own project-3 webhook (same `target_url`; never a duplicate), reconciles, prints `listening`, then serves until killed. Files: secret `~/.config/trawler/vikunja-webhook-secret` (600, created on first start, re-sent at every registration; never printed), state `~/.config/trawler/vikunja-listener.json` (per task: asking, last comment id seen). Rejected deliveries are logged to stderr. `cargo xtask vikunja` has the flags (`--port`, `--state`, `--secret-file`, `--poll`).
 
 | Line (stdout, one JSON object each) | Means | Router does |
 |---|---|---|
@@ -90,7 +113,7 @@ Until E-VIKUNJA is on `main`, `cd` into a checkout of `epic/router-vikunja` inst
 
 Every delivery is only a trigger: the listener re-reads the task and its comments from the API and diffs them against its state, because deliveries arrive out of order and after later writes. `by` is the doer of the delivery that showed the change. Reconcile scope: open tasks of project 3 plus tasks last seen asking; a comment on a done task while the listener was down is not replayed.
 
-## Webhook capability (for W3)
+## Webhook capability
 | Fact | Value |
 |---|---|
 | Enabled | `webhooks.enabled: true` (default; `/info` → `webhooks_enabled: true`) |
@@ -103,7 +126,7 @@ Every delivery is only a trigger: the listener re-reads the task and its comment
 
 Deliveries are sent asynchronously: they arrive out of order and carry the task as read at send time. So the listener matches on state, not event names: `task.updated` / `task.assignee.created` whose task has `vuluu` in `assignees` and `needs-owner` in `labels` = an ask raised; a transition to no `needs-owner` with doer `vuluu` = an answer; `task.comment.created` with doer `vuluu` = an owner comment.
 
-## Raw API (until `cargo xtask vikunja`)
+## Raw API (only for what `cargo xtask vikunja` lacks: a relation on an existing task other than blocked-by/blocks, deleting a task)
 ```sh
 API=http://127.0.0.1:3456/api/v1; H=(-H "Authorization: Bearer $(cat ~/.config/trawler/vikunja.key)" -H 'Content-Type: application/json')
 curl -s -X PUT  $API/projects/3/tasks        "${H[@]}" -d '{"title":"E-X.W1 …","description":"Branch: wu/x/y"}'   # create
