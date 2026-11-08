@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 882c79b86b69174f64fb171fa0e574ef77f991b5
+base: 3ad2a280d7b78cc5ccdd0dab41f17038d35c574d
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-pages-w5-distill-result.html
+report_sha256: cd946c5e36b4161af798d4016358d527e227cd61373b75be509e511e444a54c2
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAECfgW+LRaAOfLE9eRYM4gDte8xXFo1jcJSvMJhQQwAMbOY3CQy/aeRyM/
+  XfA2Gawa4uTWgPWTnRwrY+feR3eroC
+  -----END SSH SIGNATURE-----
