@@ -1,0 +1,16 @@
+schema: mr/v1
+level: working-unit
+tip: 57b882ffd86babb7f54dc2d40eae5138e5b8388f
+base: 14c767d73b75aad5e748b479b4d2a5f0046ad153
+tier: key
+signer: vuluu
+report: docs/work/2026-11-08-router-vikunja-instance-setup-result.html
+report_sha256: ce704beb892f87e781e87b3a03da62eab4b08157b584570074d0b9d4de288e7b
+date: 2026-11-08
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEBvW9ASYggTN2ht3Jm64PnQqoRb/UvaKT44zHNWps8ejYTPy09NieOJBl
+  +GdJjcukVVBchxKxjDpkbU1yUHqvYK
+  -----END SSH SIGNATURE-----
