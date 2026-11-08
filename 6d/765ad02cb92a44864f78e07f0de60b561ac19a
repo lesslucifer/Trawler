@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-PAGES
+wu: E-PAGES.W2
+base: b45561848bd8dd2e3ff365ad0f8a59edc7a9178c
+tip: 6d765ad02cb92a44864f78e07f0de60b561ac19a
+diff_sha256: 0b4bf26429eee984d6d244b7b1c023ec46ba4310c098750bf5164f5cc112662a
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-08
