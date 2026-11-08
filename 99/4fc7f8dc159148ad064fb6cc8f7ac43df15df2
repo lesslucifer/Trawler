@@ -1,0 +1,47 @@
+schema: cr/v5
+scope: "WU orphan-check-and-wiring -> epic/router-vikunja"
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W4
+branch: wu/router-vikunja/orphan-check-and-wiring
+base: 26aa49c7cb60593240c0818d52b1abe7a9b344ad
+head: 994fc7f8dc159148ad064fb6cc8f7ac43df15df2
+diff_sha256: 5676c6f4b5f811c53af58b6d63bdc3aa21b69964c9c8e7bf8709fe52cc7e5d36
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus
+  shards: 1
+  candidates:
+    nit: 2
+  stage_seconds:
+    finders: 173
+    verifiers: 0
+    total: 173
+  by_finder:
+    correctness: { found: 1, verified: 0 }
+    efficiency: { found: 1, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 0, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "the project-3 task query was hand-built twice (check.rs and open_tasks)"
+    fixed: "round 1: one tasks_matching helper in vikunja.rs, open_tasks and the check both call it"
+  - finding: "the open/done predicate was re-derived in check.rs instead of the parent's state()"
+    fixed: "round 1: Reference.open = state(task) == \"open\""
+  - finding: "the orphan filter scans references with any() per worktree, O(worktrees x tasks)"
+    waived: "tens of worktrees by hundreds of tasks, once per 10-minute tick"
+  - finding: "the check reaches into mr::infer_level for the branch-level rule"
+    waived: "it is the workflow's one branch -> level rule, reused rather than copied; moving it out of mr is a refactor outside this WU"
+  - finding: "plain_text is a second tag scanner beside site.rs's tokenizer and ends a tag at the first '>' even inside a quoted attribute"
+    waived: "site.rs parses whole site documents; a Branch: line the editor writes carries no attribute holding '>'"
+  - finding: "Reference.open compares state()'s display label \"open\""
+    waived: "state() and the comparison live in one module and one predicate; a rename there is read in the same file"
+  - finding: "a worktree on a detached HEAD (mid-rebase or bisect) is left out, so its open task reads missing-worktree"
+    waived: "transient; it clears the next tick, and the router checks git before acting on a missing-worktree"
+  - finding: "plain_text searches for '>' past the current line, quadratic in '<' count for long descriptions"
+    waived: "descriptions are a few lines, read once per 10-minute tick"
+  - finding: "a locked worktree whose directory was deleted is never prunable, so it still counts as present"
+    waived: "the router never locks worktrees; a locked one is a deliberate owner act"
+verdict: PASS
+date: 2026-11-09
