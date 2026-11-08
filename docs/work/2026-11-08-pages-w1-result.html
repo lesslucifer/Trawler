@@ -9,7 +9,7 @@
   <header class="doc-hero">
     <div class="inner">
       <h1>E-PAGES.W1 result — the landing site design, round 4</h1>
-      <p>Round 3 built one bold, product-forward page that opens the design doc. Round 4 records the owner's last two picks: request log V1 and screenshots as re-encoded PNG (WebP was picked first, then reversed the same day once its real saving was measured). No choice is left open in the design.</p>
+      <p>Round 3 built one bold, product-forward page that opens the design doc. Round 4 records the owner's picks: request log V1, screenshots as re-encoded PNG (WebP was picked first, then reversed once its real saving was measured), and, from a rendered options picker, a download section with one big button + “Other systems”. No choice is left open in the design.</p>
       <div class="meta">v4 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
     </div>
   </header>
@@ -33,6 +33,7 @@
       <tbody>
         <tr><td>P1 request log = V1, six rows with the app's status colours; V2 dropped</td><td><code>#round4</code>, <code>#rulings</code> P1; <code>#log-variants</code>, the V2 frames, <code>.log.quiet</code> and the mock's variant hook removed; the reduced-motion still strip moved into <code>#page</code>; C15 and <code>#motion</code> name V1 only</td></tr>
         <tr><td>P2 screenshots as re-encoded PNG with the <code>png</code> crate xtask has (WebP first, reversed after the shippable pure-Rust encoder measured −30 %, not −81 %)</td><td><code>#round4</code>, <code>#rulings</code> P2; <code>#assets</code>: PNG list and weights re-measured, no new crate; <code>og:image</code> stays PNG, CSP unchanged</td></tr>
+        <tr><td>P3 download = one big button + “Other systems” (D2 revised; the owner picked it from small rendered options: <code>LOOK=A HERO=B ACCENT=A VOICE=B DOWNLOAD=B RHYTHM=A</code>, every other pick confirming the staged design)</td><td><code>#round4</code>, <code>#rulings</code> D2; <code>#detect</code>: no-script base = the full list open in <code>details#all</code>; detected = <code>#one</code> (one button, file, first-open line) and the list folded under “Other systems”; <code>site.js</code> rewritten (<code>detect()</code> unchanged, <code>show()</code> fills and folds); copy C13, C31, C35, C36, C40, C44, C49; <code>#a11y</code>, <code>#js-tests</code>, <code>#for-w3</code></td></tr>
       </tbody>
     </table>
     <div data-item="outcome">
@@ -66,6 +67,9 @@
           <tr><td>Weights</td><td>round 3's built <code>index.html</code> 15,992 B, <code>site.css</code> 10,086 B, <code>site.js</code> 1,648 B (round 4 only removes the two V2 rules)</td></tr>
           <tr><td>Re-encoded PNG size and losslessness (P2)</td><td>a scratch crate (outside the repo) re-encoded the six shots with <code>png</code> 0.18.1 (RGB, <code>Compression::High</code>, <code>Filter::Adaptive</code>): 887,784 B vs 1,094,511 B (−19 %; round 3 reported 944,663 B); each decoded identical to its source</td></tr>
           <tr><td>Why not WebP</td><td>the shippable pure-Rust <code>image-webp</code> 0.2.4 measured 762,248 B (−30 %), against the −81 % round 3 took from <code>cwebp</code>; the owner reversed P2 to PNG</td></tr>
+          <tr><td>P3 detection, all five states</td><td>headless Chrome render of <code>#detect</code>: macOS, Windows x64, Windows arm64 (hint), Linux x64 and Linux arm64 each show one “Download for ‹system›” button naming the right file, the first-open line, and the list folded under “Other systems”; the frames run the doc's <code>site.js</code> text</td></tr>
+          <tr><td>The new <code>site.js</code></td><td>1,787 B (W2's budget 4,096); <code>node --check</code> passes; names none of W2's 18 refused words, nor <code>innerHTML</code>, <code>location</code>, <code>.src</code> or <code>open(</code></td></tr>
+          <tr><td>W2 unaffected</td><td>read on <code>wu/pages/site-build</code>: its download check accepts any layout (“all 11 download ids linked, any layout”), its <code>site/site.js</code> is a stub, its scan words and budget hold</td></tr>
           <tr><td>The doc renders the page first</td><td>headless Chrome at 1280 px: the 1440 dark frame directly under the doc header, V1 log; 13 frames, 13 iframes in the DOM; the round 4 table and callout render</td></tr>
           <tr><td>No denied name, no invented claim</td><td>new copy names no tool from <code>public_text.rs</code> <code>DENIED_NAMES</code>; each string's source in <code>#copy</code>; log rows are the screenshot fixture's reserved <code>example.*</code> hosts</td></tr>
           <tr><td>Doc layer</td><td>snapshots before this round: design <code>2026-11-08T07-07-27-846Z</code>, result <code>2026-11-08T07-07-29-218Z</code>; no open comments</td></tr>
@@ -83,6 +87,7 @@
         <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
         <tbody>
           <tr><td>The shot re-encode into <code>target/site/</code> and its same-pixels test</td><td>W2</td></tr>
+          <tr><td>P3: build the one-button <code>#one</code> + <code>details#all</code> markup and the round 4 <code>site.js</code>; extend <code>site.test.mjs</code> with the <code>show()</code> assertions (both buttons' <code>href</code>, <code>#one</code>/<code>#pick</code> shown, <code>#all</code> closed and renamed; unknown system leaves the base); W2's checks need no change</td><td>W3</td></tr>
           <tr><td>DEC-89 rule 6: the site as a brand surface where amber may glow (never text, state or control)</td><td>W5, owner <code>mr commit</code></td></tr>
           <tr><td>The plan still says “No OS detection”, Q13 “no” and a script-free page</td><td>router (plan doc on <code>epic/pages</code>)</td></tr>
           <tr><td>Motion, no-inline-style, contrast and story-drift checks; <code>is_code</code> += <code>site/</code>; the <code>site.js</code> scan</td><td>W2</td></tr>
