@@ -75,6 +75,7 @@
       <tbody>
         <tr><td>Where the download block's HTML lives</td><td>in the frame, per-installer markers</td><td>W1/W3 own the layout; the build owns only the facts</td></tr>
         <tr><td>Who runs the checks</td><td>the build itself, then the tests</td><td>W4's deploy cannot ship a red site</td></tr>
+        <tr><td>How pages are read</td><td>one quote-aware tag tokenizer (<code>parse</code>) for every page and svg check</td><td>substring scans were bypassed and falsely refused in review rounds 1–4</td></tr>
         <tr><td>Contrast pairs</td><td>naming convention <code>--text*</code> × <code>--bg*</code></td><td>no CSS engine; amber stays decoration under another name (DEC-89 rule 6)</td></tr>
         <tr><td>Links from <code>links.rs</code></td><td>read as text, like <code>public_text::prefilled_fields</code></td><td>one literal per URL; xtask does not link the app crate</td></tr>
         <tr><td><code>site/</code> a code path</td><td>yes: <code>notes::is_code</code> (Q13 flipped by the owner's script ruling); the code-review skill names it</td><td>the frame carries a script; <code>docs/workflow.html</code>'s path list is T1: its line rides W5's owner <code>mr commit</code></td></tr>
