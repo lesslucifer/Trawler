@@ -401,6 +401,20 @@ pub fn rpm_takes(version: &str) -> bool {
     !version.contains('-')
 }
 
+/// `<major>.<minor>.<patch>[-<n>]` in release order: a pre-release sorts before its final.
+pub(crate) fn version_order(version: &str) -> Result<(u64, u64, u64, u64), String> {
+    let bad = || format!("{version} is not <major>.<minor>.<patch>[-<n>]");
+    let (core, pre) = version.split_once('-').map_or((version, None), |(c, p)| (c, Some(p)));
+    let parts: Vec<u64> =
+        core.split('.').map(|part| part.parse().map_err(|_| bad())).collect::<Result<_, _>>()?;
+    let [major, minor, patch] = parts[..] else { return Err(bad()) };
+    let pre = match pre {
+        None => u64::MAX,
+        Some(n) => n.parse().map_err(|_| bad())?,
+    };
+    Ok((major, minor, patch, pre))
+}
+
 fn msi_takes(version: &str) -> bool {
     let (core, pre) = version.split_once('-').unwrap_or((version, "0"));
     let numeric = |part: &str| !part.is_empty() && part.bytes().all(|b| b.is_ascii_digit());
@@ -568,6 +582,9 @@ mod tests {
             }
         }
         assert!(rpm_takes("0.1.0") && rpm_takes("255.255.65535"));
+        assert!(version_order("0.2.0").unwrap() > version_order("0.2.0-1").unwrap());
+        assert!(version_order("0.10.0").unwrap() > version_order("0.9.9").unwrap());
+        assert!(version_order("0.1").is_err() && version_order("0.1.0-rc.1").is_err());
         assert!(!rpm_takes("0.1.0-2") && !rpm_takes("0.1.0-65535"));
     }
 

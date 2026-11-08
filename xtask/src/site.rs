@@ -25,16 +25,10 @@ const CHECKSUMS: &str = "SHA256SUMS";
 const SYSTEMS: [Os; 3] = [Os::MacOs, Os::Windows, Os::Linux];
 const MIN_CONTRAST: f64 = 4.5;
 const DARK: &str = "@media (prefers-color-scheme: dark)";
-const REFUSED_MARKUP: [&str; 8] = [
-    "<iframe",
-    "<form",
-    "<object",
-    "<embed",
-    "<style",
-    " style=",
-    "javascript:",
-    "http-equiv=\"refresh\"",
-];
+const REFUSED_MARKUP: [&str; 6] =
+    ["<iframe", "<form", "<object", "<embed", "<style", "javascript:"];
+const SHIPPED_KINDS: [&str; 8] = ["html", "css", "js", "svg", "png", "jpg", "webp", "ico"];
+const HEAD_BEFORE_CSP: [&str; 4] = ["!doctype", "html", "head", "meta"];
 const SCRIPT_REFUSES: [&str; 18] = [
     "fetch",
     "XMLHttpRequest",
@@ -108,19 +102,6 @@ pub fn installer_id(file: &str) -> Result<Option<String>, String> {
     Ok(Some(format!("{kind}-{arch}")))
 }
 
-fn version_order(version: &str) -> Result<(u64, u64, u64, u64), String> {
-    let bad = || format!("{version} is not <major>.<minor>.<patch>[-<n>]");
-    let (core, pre) = version.split_once('-').map_or((version, None), |(c, p)| (c, Some(p)));
-    let parts: Vec<u64> =
-        core.split('.').map(|part| part.parse().map_err(|_| bad())).collect::<Result<_, _>>()?;
-    let [major, minor, patch] = parts[..] else { return Err(bad()) };
-    let pre = match pre {
-        None => u64::MAX,
-        Some(n) => n.parse().map_err(|_| bad())?,
-    };
-    Ok((major, minor, patch, pre))
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct Downloads {
     pub tag: String,
@@ -137,7 +118,7 @@ pub fn downloads(release: &Release, workspace: &str) -> Result<Downloads, String
     if release.prerelease || version.contains('-') {
         return Err(format!("{tag} is a pre-release; the site names the latest final"));
     }
-    if version_order(version)? > version_order(workspace)? {
+    if crate::package::version_order(version)? > crate::package::version_order(workspace)? {
         return Err(format!(
             "{tag} is newer than this tree's {workspace}; build the site from a tree that has it"
         ));
@@ -397,7 +378,7 @@ fn has_extension(file: &str, extension: &str) -> bool {
 }
 
 fn is_text(file: &str) -> bool {
-    has_extension(file, "html") || has_extension(file, "css") || has_extension(file, "js")
+    ["html", "css", "js", "svg"].into_iter().any(|extension| has_extension(file, extension))
 }
 
 /// The site's files by name, filled and checked; nothing is written.
@@ -411,6 +392,9 @@ pub fn build(repo: &Path, release_json: &str) -> Result<BTreeMap<String, Vec<u8>
     for entry in frame {
         let path = entry.map_err(|e| e.to_string())?.path();
         let name = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+        if name.starts_with('.') {
+            continue;
+        }
         if !path.is_file() {
             return Err(format!("{FRAME}/{name} is not a file; the frame is flat"));
         }
@@ -471,18 +455,47 @@ fn stray_addresses(name: &str, html: &str) -> BTreeSet<String> {
     problems
 }
 
-fn event_handlers(name: &str, html: &str) -> Vec<String> {
+fn tag_problems(name: &str, html: &str) -> Vec<String> {
     let lower = html.to_ascii_lowercase();
-    let tags = lower.split('<').skip(1).filter_map(|rest| rest.split('>').next());
     let mut problems = Vec::new();
-    for tag in tags {
-        for (at, _) in tag.match_indices("on").filter(|(at, _)| starts_an_attribute(tag, *at)) {
-            let rest = &tag[at..];
-            let length = rest.find(|c: char| !c.is_ascii_alphabetic()).unwrap_or(rest.len());
-            if length > 2 && rest[length..].trim_start().starts_with('=') {
-                problems.push(format!("{name}: an inline handler {}", &rest[..length]));
+    for tag in lower.split('<').skip(1).filter_map(|rest| rest.split('>').next()) {
+        if tag.contains("http-equiv") && tag.contains("refresh") {
+            problems.push(format!("{name}: a meta refresh"));
+        }
+        for (at, _) in tag.match_indices('=') {
+            let named = tag[..at].trim_end();
+            let attribute = named
+                .rsplit(|c: char| !(c.is_ascii_alphanumeric() || "-:_".contains(c)))
+                .next()
+                .unwrap_or_default();
+            if attribute == "style" {
+                problems.push(format!("{name}: a style attribute"));
+            } else if attribute.len() > 2 && attribute.starts_with("on") {
+                problems.push(format!("{name}: an inline handler {attribute}"));
             }
         }
+    }
+    problems
+}
+
+fn heads_the_page(before: &str) -> bool {
+    before.to_ascii_lowercase().split('<').skip(1).all(|tag| {
+        HEAD_BEFORE_CSP.iter().any(|allowed| {
+            tag.strip_prefix(allowed).is_some_and(|rest| rest.starts_with([' ', '>', '\n', '/']))
+        })
+    })
+}
+
+fn svg_problems(name: &str, svg: &str) -> Vec<String> {
+    let lower = svg.to_ascii_lowercase();
+    let mut problems = tag_problems(name, svg);
+    for markup in ["<script", "<foreignobject"] {
+        if lower.contains(markup) {
+            problems.push(format!("{name}: carries {markup}"));
+        }
+    }
+    for href in attribute_values(svg, "href").into_iter().filter(|href| is_absolute(href)) {
+        problems.push(format!("{name}: {href} is a request outside the site"));
     }
     problems
 }
@@ -655,12 +668,15 @@ fn html_problems(
     downloads: &mut Vec<String>,
 ) -> Vec<String> {
     let mut problems = Vec::new();
-    if html.matches("Content-Security-Policy").count() != 1 || !html.contains(CSP) {
-        problems.push(format!("{name}: the CSP meta is missing, altered or doubled; want {CSP}"));
+    let heads = html.find(CSP).is_some_and(|at| heads_the_page(&html[..at]));
+    if html.matches("Content-Security-Policy").count() != 1 || !heads {
+        problems.push(format!(
+            "{name}: the CSP meta is missing, altered, doubled or not first in <head>; want {CSP}"
+        ));
     }
     problems.extend(unquoted_attributes(name, html));
     problems.extend(stray_addresses(name, html));
-    problems.extend(event_handlers(name, html));
+    problems.extend(tag_problems(name, html));
     problems.extend(script_tag_problems(files, name, html));
     let lower = html.to_lowercase();
     problems.extend(
@@ -671,7 +687,9 @@ fn html_problems(
     );
     for tag in link_tags(html) {
         let rel = attribute_values(tag, "rel");
-        let external = attribute_values(tag, "href").into_iter().any(is_absolute);
+        let external = attribute_values(tag, "href")
+            .into_iter()
+            .any(|href| is_absolute(href) && !href.starts_with(BASE_URL));
         let canonical = matches!(rel[..], [rel] if rel.eq_ignore_ascii_case("canonical"));
         if external && !canonical {
             problems.push(format!("{name}: <link{tag}> loads from outside the site"));
@@ -870,6 +888,13 @@ pub fn contrast_problems(file: &str, css: &str) -> Vec<String> {
 pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<String> {
     let mut problems = Vec::new();
     let mut downloads = Vec::new();
+    for name in files.keys() {
+        if !SHIPPED_KINDS.iter().any(|kind| has_extension(name, kind)) {
+            problems.push(format!(
+                "{name}: may not ship; the site holds pages, styles, {SCRIPT} and images"
+            ));
+        }
+    }
     for (name, bytes) in files.iter().filter(|(name, _)| is_text(name)) {
         let Ok(text) = std::str::from_utf8(bytes) else {
             problems.push(format!("{name}: not UTF-8"));
@@ -878,6 +903,8 @@ pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<Str
         problems.extend(public_text::denied_names(name, text));
         if has_extension(name, "html") {
             problems.extend(html_problems(files, facts, name, text, &mut downloads));
+        } else if has_extension(name, "svg") {
+            problems.extend(svg_problems(name, text));
         } else if has_extension(name, "js") {
             if name == SCRIPT {
                 problems.extend(script_problems(name, text));
@@ -1033,9 +1060,6 @@ mod tests {
         assert!(downloads(&release("v0.1.0", &FULL), "0.2.0-1").is_ok());
         let refusal = downloads(&release("v0.1.0", &FULL), "0.1.0-7").unwrap_err();
         assert!(refusal.contains("newer than this tree's 0.1.0-7"), "{refusal}");
-        assert!(version_order("0.2.0").unwrap() > version_order("0.2.0-1").unwrap());
-        assert!(version_order("0.10.0").unwrap() > version_order("0.9.9").unwrap());
-        assert!(version_order("0.1").is_err() && version_order("0.1.0-rc.1").is_err());
     }
 
     #[test]
@@ -1213,7 +1237,7 @@ mod tests {
             ("<script src=\"a.js\"></script>", "site.js"),
             ("<iframe></iframe>", "<iframe"),
             ("<form></form>", "<form"),
-            ("<p style=\"color:red\">x</p>", "style="),
+            ("<p style=\"color:red\">x</p>", "style attribute"),
             ("<meta http-equiv=\"Content-Security-Policy\" content=\"default-src *\">", "CSP"),
         ] {
             let problems = problems_of(body);
@@ -1340,6 +1364,68 @@ mod tests {
         );
         let found = problems_of(&fake);
         assert!(found.iter().any(|p| p.contains("no file of v0.1.0")), "{found:?}");
+    }
+
+    #[test]
+    fn the_csp_must_head_the_page_where_the_browser_applies_it() {
+        let repo = repo();
+        let moved = |page: String| {
+            let mut files = site("", CSS);
+            files.insert("index.html".to_string(), page.into_bytes());
+            problems(&files, &facts(&repo))
+        };
+        let commented = page("").replace(CSP, &format!("<!-- {CSP} -->"));
+        let in_body = page("")
+            .replacen(CSP, "", 1)
+            .replace("<body id=\"top\">", &format!("<body id=\"top\">{CSP}"));
+        let after_link =
+            page("").replacen(CSP, "", 1).replace("site.css\">", &format!("site.css\">{CSP}"));
+        for page in [commented, in_body, after_link] {
+            let found = moved(page.clone());
+            assert!(found.iter().any(|p| p.contains("CSP")), "{page}: {found:?}");
+        }
+        let prefixed =
+            format!("<!DOCTYPE html><html lang=\"en\"><meta charset=\"utf-8\">{}", page(""));
+        assert_eq!(moved(prefixed), Vec::<String>::new());
+    }
+
+    #[test]
+    fn only_pages_styles_the_script_and_images_ship_and_an_svg_runs_nothing() {
+        let repo = repo();
+        for (name, bytes) in [
+            ("x.htm", "<p>x</p>"),
+            ("x.xhtml", "<p>x</p>"),
+            ("x.mjs", "fetch('/')"),
+            ("x.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"><script>alert(1)</script></svg>"),
+            ("y.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" onload=\"go()\"></svg>"),
+            ("z.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\"><image href=\"https://x.test/a.png\"/></svg>"),
+        ] {
+            let mut files = site("", CSS);
+            files.insert(name.to_string(), bytes.as_bytes().to_vec());
+            let found = problems(&files, &facts(&repo));
+            assert!(found.iter().any(|p| p.starts_with(name)), "{name}: {found:?}");
+        }
+        let mut files = site("", CSS);
+        let favicon = std::fs::read(repo.join("ui/public/favicon.svg")).unwrap();
+        files.insert("favicon.svg".to_string(), favicon);
+        assert_eq!(problems(&files, &facts(&repo)), Vec::<String>::new());
+    }
+
+    #[test]
+    fn an_attribute_is_judged_by_its_tag_not_by_prose() {
+        for (body, needle) in [
+            ("<p title=\"x\"style=\"color:red\">x</p>", "style"),
+            ("<meta http-equiv='refresh' content='0'>", "refresh"),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        for body in [
+            "<p>Set style= in your CSS.</p>",
+            "<link rel=\"icon\" href=\"https://lesslucifer.github.io/Trawler/a.png\">",
+        ] {
+            assert_eq!(problems_of(body), Vec::<String>::new(), "{body}");
+        }
     }
 
     #[test]
