@@ -1,4 +1,5 @@
 pub mod http;
+pub mod listen;
 
 use std::fmt::Write as _;
 use std::net::SocketAddr;
@@ -35,6 +36,12 @@ usage:
                                              exist is created and reported; users: vuluu, trawler-router or a numeric id)
   cargo xtask vikunja create --title <text> [--project <id>] [--description <text|->] [--parent <id>] [--relation blocked-by|blocks:<id>]...
                                             (a new task; --parent makes it a subtask of that task)
+  cargo xtask vikunja webhook-listen [--port <p>] [--state <file>] [--secret-file <file>] [--poll <secs>]
+                                            (standing: binds 127.0.0.1:<p> (default 3457), registers itself as project 3's webhook
+                                             with the secret file's key (default ~/.config/trawler/vikunja-webhook-secret, created 600),
+                                             reconciles open tasks, then prints one JSON line per needs-owner, answered, closed,
+                                             comment, unreachable or reachable event until killed; state defaults to
+                                             ~/.config/trawler/vikunja-listener.json, the reconcile poll to 60 s; GET / answers ok)
   every command: [--api <ip:port>] (default 127.0.0.1:3456) [--key-file <path>] (default ~/.config/trawler/vikunja.key)
   only one flag per call may read stdin (-)";
 
@@ -48,7 +55,7 @@ impl Client {
         Self { addr, authorization: format!("Bearer {}", token.trim()) }
     }
 
-    fn send(
+    fn exchange(
         &self,
         method: &str,
         path: &str,
@@ -59,8 +66,16 @@ impl Client {
         if body.is_some() {
             headers.push(("Content-Type", "application/json"));
         }
-        let response =
-            http::request(self.addr, method, &format!("/api/v1{path}"), &headers, &payload)?;
+        http::request(self.addr, method, &format!("/api/v1{path}"), &headers, &payload)
+    }
+
+    fn send(
+        &self,
+        method: &str,
+        path: &str,
+        body: Option<&Value>,
+    ) -> Result<http::Response, String> {
+        let response = self.exchange(method, path, body)?;
         if (200..300).contains(&response.status) {
             Ok(response)
         } else {
@@ -255,9 +270,13 @@ pub fn init(client: &Client, key_file: &Path) -> Result<String, String> {
     ))
 }
 
-pub fn show(client: &Client, project: u64, needs_owner_only: bool) -> Result<String, String> {
+fn open_tasks(client: &Client, project: u64) -> Result<Vec<Value>, String> {
     let filter = http::percent_encode(&format!("done = false && project = {project}"));
-    let tasks = client.get_all(&format!("/tasks?filter={filter}&sort_by=id&order_by=asc"))?;
+    client.get_all(&format!("/tasks?filter={filter}&sort_by=id&order_by=asc"))
+}
+
+pub fn show(client: &Client, project: u64, needs_owner_only: bool) -> Result<String, String> {
+    let tasks = open_tasks(client, project)?;
     let lines: Vec<String> =
         tasks.iter().filter(|task| !needs_owner_only || needs_owner(task)).map(summary).collect();
     Ok(match (lines.is_empty(), needs_owner_only) {
@@ -487,6 +506,7 @@ pub enum Command {
     Read(u64),
     Put(u64, Put),
     Create(Create),
+    Listen(listen::Options),
 }
 
 fn take_flag(args: &mut Vec<&str>, flag: &str) -> Result<Option<String>, String> {
@@ -514,6 +534,9 @@ fn push_once<T: PartialEq>(items: &mut Vec<T>, item: T) {
 
 pub fn parse(args: &[&str]) -> Result<Command, String> {
     let (command, rest) = args.split_first().ok_or_else(|| USAGE.to_string())?;
+    if *command == "webhook-listen" {
+        return listen::parse(rest).map(Command::Listen);
+    }
     let mut stdin_taken = false;
     let mut flags = rest.iter();
     let mut show = (ROUTER_PROJECT, false);
@@ -588,9 +611,9 @@ pub fn parse(args: &[&str]) -> Result<Command, String> {
     })
 }
 
-fn default_key_file() -> PathBuf {
+fn config_file(name: &str) -> PathBuf {
     let home = std::env::var_os("HOME").map_or_else(PathBuf::new, PathBuf::from);
-    home.join(".config/trawler/vikunja.key")
+    home.join(".config/trawler").join(name)
 }
 
 pub fn run(args: &[&str]) -> Result<(i32, String), String> {
@@ -598,7 +621,8 @@ pub fn run(args: &[&str]) -> Result<(i32, String), String> {
     let api = take_flag(&mut args, "--api")?.unwrap_or_else(|| DEFAULT_API.to_string());
     let addr: SocketAddr =
         api.parse().map_err(|_| format!("--api {api}: expected <ip:port>, e.g. {DEFAULT_API}"))?;
-    let key_file = take_flag(&mut args, "--key-file")?.map_or_else(default_key_file, PathBuf::from);
+    let key_file = take_flag(&mut args, "--key-file")?
+        .map_or_else(|| config_file("vikunja.key"), PathBuf::from);
     let command = parse(&args)?;
     let token = std::fs::read_to_string(&key_file)
         .map_err(|e| format!("cannot read the router token at {}: {e}", key_file.display()))?;
@@ -612,6 +636,7 @@ pub fn run(args: &[&str]) -> Result<(i32, String), String> {
         Command::Read(id) => read(&client, id)?,
         Command::Put(id, change) => put(&client, id, &change)?,
         Command::Create(new) => create(&client, &new)?,
+        Command::Listen(options) => return listen::run(client, &options),
     };
     Ok((0, out))
 }
