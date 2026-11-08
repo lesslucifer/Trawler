@@ -1,0 +1,9 @@
+schema: test/v2
+level: working-unit
+epic: E-APIDOC
+wu: E-APIDOC.W1
+branch: HEAD
+tests:
+  unit: { count: 61, covers: "the committed src/api/openapi.json equals the generated document byte for byte; the internal-reference check and that the spec carries no internal id; every ToSchema type's schema accepts the JSON it serializes (BodyView states, FlowView, FlowSummary, FlowPageView, FlowListing, ReachView, envelopes, the six SSE payloads); documented filter keys parse; SSE shapes unchanged over typed payloads; the notice names the bundled Swagger UI" }
+  integration: { count: 6, covers: "/openapi.json is 200 OpenAPI 3.1 equal to the committed copy; its operations are exactly the 21 served, each reaching its handler and every other method on a documented path 405; real responses and an SSE frame validate against their documented schemas; /docs serves vendored Swagger UI with no outside origin and the validator off; docs routes carry the CORS grant" }
+  e2e: { waived: "WU level; the epic's e2e_apidoc suite (epic plan) proves the full flow over run(Config)" }
