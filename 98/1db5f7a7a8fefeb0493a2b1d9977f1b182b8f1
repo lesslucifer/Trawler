@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-PAGES
+wu: E-PAGES.W6
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-pages-w6-homepage-plan.html"
+    tier: T3
+    action: added
+    distills: "W6 requirement, decisions (trailing slash kept, repository/links.rs unchanged, DEC-87 left to W5), test plan"
+  - path: "docs/work/2026-11-08-pages-w6-homepage-result.html"
+    tier: T3
+    action: added
+    distills: "W6 outcome, the bundler fields that read the homepage, red-first evidence, deviations, files outside the cr gate, distillation owed by W5"
+t2_waived: "W5 (E-PAGES distill) owns DEC-87 rule 4's amendment, its index summary and UC-INSTALL's second contract; the W6 brief forbids editing decisions here"
