@@ -1,0 +1,37 @@
+schema: cr/v5
+scope: "WU spec-and-docs -> epic/apidoc"
+epic: E-APIDOC
+wu: E-APIDOC.W1
+branch: wu/apidoc/spec-and-docs
+base: c782af92f6ed4771ddf814d777c274358655b049
+head: 857df6c23898701437efd438e69368d078ef80c2
+diff_sha256: eb70a827e6d0b7af69cf69ac6fb4eba4917c8ab44b3cbc3cf1a115a7220a5727
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    blocker: 0
+    important: 0
+    nit: 5
+  by_finder:
+    correctness: { found: 4, verified: 0 }
+    efficiency:  { found: 0, verified: 0 }
+    altitude:    { found: 1, verified: 0 }
+findings: { found: 5, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "Interface and CaUrls in src/reach.rs derive utoipa::ToSchema, putting a publishing concern below src/api"
+    waived: "they are the serialized types ReachView embeds; a mirror type in src/api would duplicate their fields for no wire change, and the derive is one attribute each"
+  - finding: "the published decode parameter description names 1 and source but wants_decode also accepts true"
+    waived: "v1 descriptions are thin by owner ruling (Q2); the full parameter grammar is the deferred full-surface item recorded in the W1 result"
+  - finding: "PagingQuery.limit documents int32 while the handler parses usize"
+    waived: "a page larger than 2^31-1 rows exceeds any ring the store holds; the documented range is the useful one"
+  - finding: "swagger_ui() takes the first v*.zip read_dir yields, so a second archive could name the wrong version"
+    waived: "utoipa-swagger-ui-vendored publishes exactly one archive per crate version (its lib.rs include_bytes! names one file); the drift test reruns on every lock change"
+  - finding: "the notice test hardcodes 'bundled swagger-ui 5.'"
+    waived: "a major Swagger UI bump is a deliberate dependency change that should make someone look at the notice; the test failing there is the intended prompt"
+verdict: PASS
+date: 2026-11-08
