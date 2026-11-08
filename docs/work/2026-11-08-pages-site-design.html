@@ -24,7 +24,7 @@
     <div class="inner">
       <h1>E-PAGES.W1 — the landing site design</h1>
       <p>The page first: a bold, dark, product-forward launch page with a live request log as its hero, benefit stories with the real app framed as windows, an amber glow, quiet reveals. The spec W2 and W3 build from sits folded below it.</p>
-      <div class="meta">Round 3 · the owner's four picks · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W2, W3</div>
+      <div class="meta">Round 4 · the owner's picks: log V1, lossless WebP · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W2, W3</div>
     </div>
   </header>
   <main>
@@ -37,28 +37,19 @@
     <div class="fr-row fr-phones" data-c="page-390">
       <div class="fr-cell"><p class="fr-lbl"><strong>390 px · dark</strong> · no script</p><div class="fr" data-w="390" data-theme="dark" aria-label="The page at 390 px, dark"></div></div>
       <div class="fr-cell"><p class="fr-lbl"><strong>390 px · light</strong> · no script · focus on <em>Download for…</em></p><div class="fr" data-w="390" data-theme="light" data-focus="1" aria-label="The page at 390 px, light, focus shown"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · dark · reduced motion</strong> · the hero's still strip</p><div class="fr" data-w="390" data-theme="dark" data-only="hero" data-still="1" aria-label="Hero under reduced motion"></div></div>
     </div>
     <div class="fr-row fr-wide" data-c="page-1440-light">
       <div class="fr-cell"><p class="fr-lbl"><strong>1440 px · light</strong> · no script · the hero, the privacy band and the footer stay dark in both themes</p><div class="fr" data-w="1440" data-theme="light" aria-label="The page at 1440 px, light"></div></div>
     </div>
 
-    <h2 id="log-variants">Hero request log: pick one</h2>
-    <p>The one lively element. Both stop after their last row and show a still strip under reduced motion; both use the screenshot fixture's reserved <code>example.*</code> hosts, so nothing names a real service.</p>
-    <table data-c="log-variants">
-      <tr><th></th><th>V1 · six rows, status colours</th><th>V2 · four rows, ink only</th></tr>
-      <tr><td>Reads as</td><td>the app's list: methods and statuses in the app's own meaning colours (GET/2xx ok, POST create, PATCH amend, DELETE/4xx warn)</td><td>a quieter strip; the headline carries the page</td></tr>
-      <tr><td>Plays</td><td>3.95 s</td><td>2.85 s</td></tr>
-      <tr><td>Recommendation</td><td class="rec">this one: colour is what makes a request list read at a glance, and a <code>404</code> in red tells the story the filter section then pays off</td><td></td></tr>
+    <h2 id="round4">Round 4: the owner's two picks</h2>
+    <table data-c="round4">
+      <tr><th>#</th><th>Pick</th><th>Was open as</th><th>In this doc now</th></tr>
+      <tr><td>P1</td><td>request log = <strong>V1</strong>: six rows in the app's status colours</td><td>V1 (recommended) or V2 (four rows, ink only)</td><td>V2, its frames and its <code>.log.quiet</code> rules are gone; <a href="#page">the page</a> carries V1 and its reduced-motion still strip; <a href="#copy">C15</a> and <a href="#motion">Motion</a> name only V1</td></tr>
+      <tr><td>P2</td><td>screenshots published as <strong>lossless WebP</strong></td><td>re-encoded PNG (recommended) or lossless WebP</td><td><a href="#assets">Assets</a>: the encoder crate W2 adds to xtask, the PNGs kept as the source, the page's <code>.webp</code> files, weights re-measured; <a href="#head">Head</a>: <code>og:image</code> stays PNG, the CSP is unchanged</td></tr>
     </table>
-    <div class="fr-row" data-c="log-variants-frames">
-      <div class="fr-cell"><p class="fr-lbl"><strong>V1</strong> · 1440 px · hero</p><div class="fr" data-w="1440" data-theme="dark" data-only="hero" aria-label="Hero log variation 1"></div></div>
-      <div class="fr-cell"><p class="fr-lbl"><strong>V2</strong> · 1440 px · hero</p><div class="fr" data-w="1440" data-theme="dark" data-only="hero" data-variant="quiet" aria-label="Hero log variation 2"></div></div>
-    </div>
-    <div class="fr-row fr-phones" data-c="log-variants-phones">
-      <div class="fr-cell"><p class="fr-lbl"><strong>V1</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-only="hero" aria-label="Hero log variation 1 at 390 px"></div></div>
-      <div class="fr-cell"><p class="fr-lbl"><strong>V2</strong> · 390 px</p><div class="fr" data-w="390" data-theme="dark" data-only="hero" data-variant="quiet" aria-label="Hero log variation 2 at 390 px"></div></div>
-      <div class="fr-cell"><p class="fr-lbl"><strong>V1, reduced motion</strong> · 390 px · the still strip</p><div class="fr" data-w="390" data-theme="dark" data-only="hero" data-still="1" aria-label="Hero under reduced motion"></div></div>
-    </div>
+    <div class="callout warn" data-c="webp-gap"><strong>P2's saving is smaller than round 3 showed.</strong> Round 3's −81 % came from <code>cwebp</code>, a C tool W2 cannot run. The pure-Rust encoder W2 can ship (<code>image-webp</code> 0.2.4) writes the same pixels in <strong>762,248 B, −30 %</strong> (re-encoded PNG: −14 %). The first view does not move (≈ 66 KB: every shot is lazy). Details and the option table in <a href="#assets">Assets</a>.</div>
 
     <h2 id="round3">Round 3: what changed and why</h2>
     <table data-c="round3">
@@ -90,10 +81,12 @@
         <tr><td>D2</td><td>a card per OS as the no-script base + OS detection by one same-origin <code>site.js</code>; an “Other downloads” link stays visible</td><td>same</td><td>kept unchanged: same script, same page contract (<a href="#detect">Detection</a>); the cards are restyled</td></tr>
         <tr><td>D3</td><td>bullets + More screens</td><td>same</td><td><strong>retold</strong> as R4: the bullets become story headings and sentences, the screens become each story's window; no bullet list remains</td></tr>
         <tr><td>R1</td><td>bold product-forward: dark, big headline, the app framed like a real window, a glowing amber accent</td><td>owner · 2026-11-08 (W1 round 3, via the router)</td><td>the hero, privacy band and footer are dark in both themes; amber only as glow (see the DEC-89 row)</td></tr>
-        <tr><td>R2</td><td>hero visual = a moving request log, CSS only, still under reduced motion; the framed screenshot right after as the first benefit</td><td>same</td><td><code>.log</code> in <code>#t-index</code>; two variations, V1 recommended (<a href="#log-variants">above</a>)</td></tr>
+        <tr><td>R2</td><td>hero visual = a moving request log, CSS only, still under reduced motion; the framed screenshot right after as the first benefit</td><td>same</td><td><code>.log</code> in <code>#t-index</code>, V1 (P1)</td></tr>
         <tr><td>R3</td><td>subtle motion: soft reveals, gentle hover; the log is the one lively element; always off under reduced motion</td><td>same</td><td><a href="#motion">Motion</a></td></tr>
         <tr><td>R4</td><td>benefit stories: what you get, then one plain sentence; every line traceable; the tagline stays the README pitch</td><td>same</td><td><a href="#copy">Copy</a> C16–C27</td></tr>
         <tr><td>DEC-89 rule 6</td><td>“amber is a brand colour, never a UI colour”</td><td>R1 asks for an amber glow</td><td>amber appears only as decoration of the brand surface (the glows, the arriving row's edge, the picked card's halo), the way the social card and installer art use it; never text, never a state, never a control's fill. W5 records the site as a brand surface in a DEC-89 amendment (owner <code>mr commit</code>)</td></tr>
+        <tr><td>P1</td><td>request log = V1, six rows with the app's status colours; V2 dropped</td><td>owner · 2026-11-08 (W1 round 4, via the router)</td><td>C15, <a href="#motion">Motion</a>, <code>#t-index</code>; no variation left in <code>site.css</code></td></tr>
+        <tr><td>P2</td><td>screenshots as lossless WebP, not re-encoded PNG</td><td>same</td><td><a href="#assets">Assets</a>: <code>image-webp</code> in xtask (W2), PNG stays the source in <code>.github/screenshots/</code>, plain <code>&lt;img src="*.webp"&gt;</code>; <code>og:image</code> stays <code>social-preview.png</code>; CSP unchanged</td></tr>
       </table>
     </details>
 
@@ -116,7 +109,7 @@
         <tr><td>C12</td><td>under the buttons</td><td>Version ‹0.1.0› · MIT licence · no account</td><td>filled version · README FAQ “MIT licence, no paid tier, no account”</td></tr>
         <tr><td>C13</td><td>detected only</td><td>‹file name› · <u>Other systems</u> · <u>Other downloads</u></td><td>frame words; file name copied from the picked link</td></tr>
         <tr><td>C14</td><td>detected only</td><td>the picked card's C41, C42 or C43, with its link</td><td>copied by the script</td></tr>
-        <tr><td>C15</td><td>request log</td><td>window title “Trawler”; columns Method · Host · Path · Status · Time; six rows (V1): GET www.example.org / 200 84 ms · POST api.example.com /v1/session 200 133 ms · GET api.example.com /v1/orders/9f3c 200 71 ms · GET api.example.com /v1/recommendations 404 33 ms · PATCH api.example.com /v1/cart/items/C-3 200 90 ms · DELETE api.example.com /v1/cart/items/B-7 204 44 ms; <code>aria-label</code> “An example of Trawler's request list: six requests to example hosts”</td><td>frame · rows copied from the s1/s4 screenshot fixture (reserved <code>example.*</code> hosts); column names from the app's list</td></tr>
+        <tr><td>C15</td><td>request log</td><td>window title “Trawler”; columns Method · Host · Path · Status · Time; six rows: GET www.example.org / 200 84 ms · POST api.example.com /v1/session 200 133 ms · GET api.example.com /v1/orders/9f3c 200 71 ms · GET api.example.com /v1/recommendations 404 33 ms · PATCH api.example.com /v1/cart/items/C-3 200 90 ms · DELETE api.example.com /v1/cart/items/B-7 204 44 ms; <code>aria-label</code> “An example of Trawler's request list: six requests to example hosts”</td><td>frame · rows copied from the s1/s4 screenshot fixture (reserved <code>example.*</code> hosts); column names from the app's list</td></tr>
         <tr><td>C16</td><td><code>#features h2</code></td><td>Every request your apps make, in one list.</td><td>frame · GUIDE.md intro “Trawler shows every HTTP and HTTPS request your apps make”</td></tr>
         <tr><td>C17</td><td>under it</td><td>Method, host, path, status and time for each one. Click a request and its headers and body open beside the list — HTTPS too, once your system trusts Trawler's certificate.</td><td>frame · the s1 columns; GUIDE#inspect-a-request “The inspector opens beside the list”; README First run (set up trusts the certificate)</td></tr>
         <tr><td>C18</td><td>s1 <code>alt</code></td><td>Trawler's main window: the list of captured requests, one JSON response open in the inspector</td><td>filled README</td></tr>
@@ -159,7 +152,7 @@
       <table>
         <tr><th>Element</th><th>Motion</th><th>When</th><th>Reduced motion</th></tr>
         <tr><td>Hero text</td><td>fade + rise 16 px, 0.7 s, staggered 0–0.26 s</td><td>once, on load</td><td>none: shown at rest</td></tr>
-        <tr><td>Request log rows</td><td>each row fades in from 8 px above with a 3 px amber edge that fades out; rows start 0.55 s apart from 0.5 s</td><td>once, on load; V1 ends at 3.95 s, V2 at 2.85 s, so no pause control is owed (WCAG 2.2.2: under 5 s)</td><td>none: all rows shown, no edge (frame above)</td></tr>
+        <tr><td>Request log rows</td><td>each row fades in from 8 px above with a 3 px amber edge that fades out; rows start 0.55 s apart from 0.5 s</td><td>once, on load; ends at 3.95 s, so no pause control is owed (WCAG 2.2.2: under 5 s)</td><td>none: all rows shown, no edge (frame above)</td></tr>
         <tr><td>Section content (the s1 window, stories, tiles, privacy lead, download cards)</td><td>fade + rise as it enters the viewport, tied to scroll (<code>animation-timeline: view()</code>)</td><td>browsers with scroll timelines; others show it at rest</td><td>none</td></tr>
         <tr><td>Buttons · story windows</td><td>lift 1–2 px on hover; the primary button gains an amber halo; 0.15–0.3 s</td><td>pointer hover</td><td>none</td></tr>
         <tr><td>Anything else</td><td>nothing: no loop, no <code>infinite</code>, no smooth scroll, no video</td><td colspan="2">—</td></tr>
@@ -280,17 +273,33 @@ if (picked) {
         <tr><td><code>site.js</code></td><td><code>site/</code>, as is</td><td>1,649 (cap 3,072)</td><td>index · <code>defer</code></td></tr>
         <tr><td><code>favicon.svg</code></td><td><code>ui/public/favicon.svg</code></td><td>601</td><td>both pages</td></tr>
         <tr><td><code>wordmark-dark.png</code></td><td><code>ui/src-tauri/icons/brand/</code> (1480×336, shown at 120×27)</td><td>23,228</td><td>top bar, footer, 404 · eager; <code>wordmark-light.png</code> is no longer used: every wordmark sits on a dark band</td></tr>
-        <tr><td>s1, s6, s3, s4, s5, s10</td><td><code>.github/screenshots/</code> (<code>cargo xtask ui screenshots</code>), 1440×800</td><td>262,726 · 96,652 · 58,666 · 238,072 · 228,285 · 210,110 = 1,094,511</td><td>first section + five stories · lazy</td></tr>
-        <tr><td><code>social-preview.png</code></td><td><code>ui/src-tauri/icons/brand/</code></td><td>47,651</td><td><code>og:image</code> only</td></tr>
+        <tr><td><code>s1-main-window.webp</code>, <code>s6-setup-iphone.webp</code>, <code>s3-filter-chips.webp</code>, <code>s4-inspector-headers.webp</code>, <code>s5-send-again.webp</code>, <code>s10-capture-menu.webp</code></td><td>derived by W2's build from <code>.github/screenshots/*.png</code> (<code>cargo xtask ui screenshots</code>, 1440×800), lossless (P2)</td><td>194,228 · 59,796 · 27,026 · 172,770 · 161,022 · 147,406 = 762,248</td><td>first section + five stories · <code>&lt;img src="….webp" width="1440" height="800" loading="lazy"&gt;</code></td></tr>
+        <tr><td><code>social-preview.png</code></td><td><code>ui/src-tauri/icons/brand/</code></td><td>47,651</td><td><code>og:image</code> only, stays PNG</td></tr>
       </table>
-      <p><strong>First view ≈ 66 KB</strong> (≤ 40 + 1.6 + 23 + 0.6), down from round 2's ≈ 319 KB: the hero's picture is now CSS, and no screenshot is above the fold. <strong>The whole page ≈ 1.16 MB</strong> as the shots are today; screenshots are 94 % of it.</p>
-      <table>
-        <tr><th>Tuning the six shots (same pixels, no new art)</th><th>Total</th><th>Cost</th></tr>
-        <tr><td>as committed (RGBA PNG)</td><td>1,094,511</td><td>—</td></tr>
-        <tr><td><strong>re-encoded PNG</strong>: the alpha channel dropped (every pixel is opaque), compression High, adaptive filter, with the <code>png</code> crate xtask already depends on</td><td>944,663 (−14 %)</td><td>none: a few lines where W2 copies the shots</td></tr>
-        <tr><td>lossless WebP (measured with <code>cwebp -lossless -z 9</code>)</td><td>203,148 (−81 %)</td><td>one new crate for the encoder in xtask; every current browser shows WebP</td></tr>
+      <p><strong>First view ≈ 66 KB</strong> (≤ 40 + 1.6 + 23 + 0.6), unchanged: no screenshot is above the fold. <strong>The whole page ≈ 0.81 MB</strong> (round 3's scratch build 15,992 + 10,086 + 1,648 + 601 + 23,228, plus the six WebP shots), down from ≈ 1.16 MB with the PNGs; the shots are 94 % of it.</p>
+      <table data-c="webp-measure">
+        <tr><th>The six shots, measured this round</th><th>Total (B)</th><th>Pixels vs the PNG</th><th>Ships in W2?</th></tr>
+        <tr><td>as committed (RGBA PNG, every pixel opaque)</td><td>1,094,511</td><td>—</td><td>stays the source</td></tr>
+        <tr><td>re-encoded PNG (round 3's recommendation, <code>png</code> crate)</td><td>944,663 (−14 %)</td><td>identical</td><td>no: P2 picked WebP</td></tr>
+        <tr><td><strong>lossless WebP, <code>image-webp</code> 0.2.4</strong>, default params, RGB (the alpha channel dropped, every pixel is opaque)</td><td><strong>762,248 (−30 %)</strong></td><td>identical (decoded and compared)</td><td><strong>yes</strong></td></tr>
+        <tr><td>lossless WebP, <code>cwebp -lossless -z 9 -exact</code> (libwebp 1.x, Homebrew)</td><td>183,654 (−83 %)</td><td>identical</td><td>no: a C tool on no CI runner; a reference for the gap</td></tr>
       </table>
-      <p class="rec">Recommendation: the re-encoded PNG in W2 now (no new dependency, lazy loading keeps the first view at 66 KB); WebP is the upgrade if the owner wants the scroll lighter — an owner call because it adds a dependency.</p>
+      <table data-c="webp-encoder">
+        <tr><th>Encoder for xtask</th><th>Licence</th><th>Verdict</th></tr>
+        <tr><td><strong><code>image-webp</code> 0.2.4</strong> (image-rs; deps <code>byteorder-lite</code>, already in the lock through <code>image</code>, and <code>quick-error</code> 2.0.1)</td><td>MIT OR Apache-2.0</td><td class="rec">the pick: pure Rust, no <code>unsafe</code> needed in our code, already resolvable from the lock's registry</td></tr>
+        <tr><td><code>zenwebp</code> 0.4.6</td><td>AGPL-3.0-only OR commercial</td><td>refused: copyleft</td></tr>
+        <tr><td><code>webp</code> 0.3, <code>webp-rs</code>, <code>webpx</code></td><td>libwebp (BSD-3-Clause) via FFI</td><td>refused: a C build in xtask, not pure Rust</td></tr>
+      </table>
+      <table data-c="webp-consequences">
+        <tr><th>Consequence of P2</th><th>What holds</th></tr>
+        <tr><td>Dependency</td><td>W2 adds <code>image-webp = "0.2"</code> to <code>xtask/Cargo.toml</code>; <code>Cargo.lock</code> gains <code>image-webp</code> and <code>quick-error 2.0.1</code></td></tr>
+        <tr><td>Notices (DEC-88)</td><td>no change: xtask is build tooling, outside the normal-dependency closure of <code>trawler-ui</code> that <code>THIRD-PARTY-NOTICES.txt</code> lists. Checked with a temporary edit: the drift test passed and <code>cargo xtask licenses</code> rewrote the file byte-identical</td></tr>
+        <tr><td>Source of truth</td><td>the PNGs in <code>.github/screenshots/</code> stay committed and unchanged (README and GUIDE show them); no <code>.webp</code> is committed: W2 encodes into <code>target/site/</code> each build</td></tr>
+        <tr><td>Markup</td><td>plain <code>&lt;img src="*.webp"&gt;</code> with <code>width</code>/<code>height</code>, no <code>&lt;picture&gt;</code> fallback: every current browser decodes WebP</td></tr>
+        <tr><td>Social card</td><td><code>og:image</code> stays <code>social-preview.png</code>: link previews need PNG or JPEG</td></tr>
+        <tr><td>CSP</td><td><code>img-src 'self'</code> unchanged: the <code>.webp</code> files are same-origin</td></tr>
+        <tr><td>W2 test</td><td>each published <code>.webp</code> decodes to the same pixels as its PNG (unit, on a small fixture image)</td></tr>
+      </table>
     </details>
 
     <details class="spec" id="head" data-c="head">
@@ -302,7 +311,7 @@ if (picked) {
         <tr><td>script</td><td><code>&lt;script src="site.js" defer&gt;&lt;/script&gt;</code>, last in the index <code>&lt;head&gt;</code>; the only script on the site</td></tr>
         <tr><td>referrer · colour scheme</td><td><code>no-referrer</code> · <code>&lt;meta name="color-scheme" content="light dark"&gt;</code></td></tr>
         <tr><td>canonical · <code>og:url</code></td><td><code>https://lesslucifer.github.io/Trawler/</code></td></tr>
-        <tr><td>OG / Twitter</td><td><code>og:type website</code>, C2, C3, <code>og:image</code> = base + <code>social-preview.png</code> 1280×640, <code>twitter:card summary_large_image</code></td></tr>
+        <tr><td>OG / Twitter</td><td><code>og:type website</code>, C2, C3, <code>og:image</code> = base + <code>social-preview.png</code> 1280×640 (PNG, not WebP: P2), <code>twitter:card summary_large_image</code></td></tr>
         <tr><td>404</td><td>favicon, CSS and wordmark by absolute path <code>/Trawler/…</code>; <code>&lt;meta name="robots" content="noindex"&gt;</code></td></tr>
       </table>
     </details>
@@ -333,7 +342,7 @@ if (picked) {
 
     <details class="spec" id="markup" data-c="markup">
       <summary>Markup and fill</summary>
-      <p>The source of every frame sits in this file after <code>&lt;/main&gt;</code>: <code>#t-index</code> and <code>#t-404</code> are the two pages, <code>#t-site-css</code> is <code>site.css</code>, <code>#t-mock-css</code> only forces a theme, crops sections, stills motion and applies V2 for the frames. W3 copies the pages, <code>site.css</code> and <code>site.js</code>, drops the variation the owner does not pick (V2 is the <code>.log.quiet</code> rules), adds the script tag, and turns each <code>data-fill</code> into W2's marker.</p>
+      <p>The source of every frame sits in this file after <code>&lt;/main&gt;</code>: <code>#t-index</code> and <code>#t-404</code> are the two pages, <code>#t-site-css</code> is <code>site.css</code>, <code>#t-mock-css</code> only forces a theme, crops sections and stills motion for the frames. W3 copies the pages, <code>site.css</code> and <code>site.js</code>, adds the script tag, turns each <code>data-fill</code> into W2's marker, and points each screenshot at its <code>.webp</code> (the frames here load the PNG sources: the <code>.webp</code> files exist only in W2's build).</p>
       <table>
         <tr><th>Element</th><th>Filled from (W2)</th></tr>
         <tr><td><code>.hero h1</code>, footer pitch, <code>.hero .sub</code></td><td>README.md: the <code>&lt;h3&gt;</code> pitch, the paragraph under it</td></tr>
@@ -351,12 +360,12 @@ if (picked) {
       <summary>For W2 and W3, and not verified here</summary>
       <table>
         <tr><th>Builds</th><th>Who</th><th>Checked by</th></tr>
-        <tr><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code> from the templates and the listing, with the picked log variation</td><td>W3</td><td>W2's link, CSP/no-external, no-inline, motion, contrast, deny-list, kinds and scan tests; code review</td></tr>
+        <tr><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code> from the templates and the listing, log V1</td><td>W3</td><td>W2's link, CSP/no-external, no-inline, motion, contrast, deny-list, kinds and scan tests; code review</td></tr>
         <tr><td><code>site/site.test.mjs</code></td><td>W3</td><td>W2's site check</td></tr>
-        <tr><td><code>is_code</code> += <code>site/</code>; the scans; the shot re-encode; the story drift check</td><td>W2</td><td>W2's own tests</td></tr>
+        <tr><td><code>is_code</code> += <code>site/</code>; the scans; the lossless WebP shots (<code>image-webp</code>); the story drift check</td><td>W2</td><td>W2's own tests</td></tr>
         <tr><td>Shots at 390 × 844 and 1440 × 900, light and dark, script off and on, and one with reduced motion</td><td>W3</td><td>owner sign-off on W3</td></tr>
       </table>
-      <p>Not verified: Safari and Firefox rendering and a real phone (frames and shots checked in Chrome only); scroll-driven reveals in Safari (shipped in 26) and their absence in Firefox (content then shows at rest, by design); the detection on real Windows on Arm, Linux arm64, iPadOS and ChromeOS; that GitHub Pages sets no cookie (W4, live); the WebP figure for an in-xtask encoder (measured with <code>cwebp</code>, which a Rust encoder may not match).</p>
+      <p>Not verified: Safari and Firefox rendering and a real phone (frames and shots checked in Chrome only); scroll-driven reveals in Safari (shipped in 26) and their absence in Firefox (content then shows at rest, by design); the detection on real Windows on Arm, Linux arm64, iPadOS and ChromeOS; that GitHub Pages sets no cookie (W4, live); the WebP files in Safari and Firefox (Chrome only).</p>
     </details>
 
   </main>
@@ -600,8 +609,6 @@ code, .file { font-family: var(--mono); font-size: 0.875em; }
 .log .create { color: #e5bf4d; }
 .log .amend { color: #a78bfa; }
 .log .warn { color: #e5484d; }
-.log.quiet .row:nth-child(n+5) { display: none; }
-.log.quiet .row span { color: #c9c0ad; }
 
 .show { padding: 88px 0 24px; text-align: center; }
 .lede { max-width: 680px; margin: 20px auto 0; font-size: clamp(18px, 1.6vw, 21px); }
@@ -748,7 +755,6 @@ html[data-only~="hero"] .hero, html[data-only~="download"] #download { display: 
         style.textContent = css;
         doc.head.append(style);
         doc.body.innerHTML = document.getElementById(d.page === '404' ? 't-404' : 't-index').innerHTML;
-        if (d.variant) doc.querySelector('.log').classList.add(d.variant);
         doc.querySelectorAll('img[loading]').forEach((img) => img.removeAttribute('loading'));
         if (d.focus) doc.querySelector('#get').classList.add('focus-demo');
         if (d.page === '404') doc.querySelector('.nf').style.minHeight = '640px';
