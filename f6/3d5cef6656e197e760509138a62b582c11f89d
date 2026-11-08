@@ -1,0 +1,17 @@
+schema: design/v1
+epic: E-APIDOC
+wu: E-APIDOC.W2
+base: 26cbe54154200e38df4fb02fd900878e8491a475
+design_sha256: d575b48a72aec589f13f180705e03b18e4ee5603c3255b519bca9673fed0b325
+verdict: PASS
+artifacts: [docs/work/2026-11-08-apidoc-w2-settings-api-design-run.html]
+implements:
+  - path: docs/work/2026-11-08-apidoc-w2-settings-api-design-run.html
+    blob: c7701961564650fc27e794b6d20f919529415f5d
+    built: [ui/src/ApiPage.tsx]
+undesigned:
+  - path: ui/src/Settings.tsx
+    why: "mounts the new API page as the sidebar's third entry in the existing PageSidebar pattern; the page itself is the cited design, and the sidebar's shape is unchanged"
+  - path: ui/src/CaptureService.tsx
+    why: "exports its Fact row for the API page to reuse; nothing it renders changes"
+date: 2026-11-08
