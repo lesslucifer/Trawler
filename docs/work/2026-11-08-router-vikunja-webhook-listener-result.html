@@ -16,7 +16,7 @@
   <main>
     <h2 id="outcome">Outcome</h2>
     <div data-item="outcome">
-      <p>Delivered against the requirement. <code>xtask/src/vikunja/listen.rs</code>, wired into <code>cargo xtask vikunja</code>; <code>vikunja-protocol.md</code> now carries "Run the listener" and the relaunch duty.</p>
+      <p>Delivered against the requirement. Review round 1 (FAIL): an unbounded Content-Length could abort the listener — now 400 above 1 MiB. Round 2 (FAIL): one stalled connection held every delivery and the liveness check — now a thread per connection; a deleted asking task vanished silently — now <code>closed</code>. Each fix landed with its regression test first. <code>xtask/src/vikunja/listen.rs</code>, wired into <code>cargo xtask vikunja</code>; <code>vikunja-protocol.md</code> now carries "Run the listener" and the relaunch duty.</p>
       <table data-c="startup">
         <thead><tr><th>Step</th><th>Does</th><th>Why this order</th></tr></thead>
         <tbody>
@@ -24,7 +24,7 @@
           <tr><td>2 bind</td><td><code>127.0.0.1:3457</code> (or <code>--port</code>)</td><td>deliveries now queue in the accept backlog</td></tr>
           <tr><td>3 register</td><td>delete any project-3 hook with this exact <code>target_url</code>, <code>PUT</code> a new one with the secret and 4 events</td><td>secret file and Vikunja can never disagree; a relaunch never duplicates</td></tr>
           <tr><td>4 reconcile (remind)</td><td>open tasks ∪ tasks last seen asking: comments + transitions, every pending ask re-announced</td><td>after subscribing, so no change falls between read and subscription</td></tr>
-          <tr><td>5 serve</td><td>print <code>listening</code>; deliveries synced before they are answered; 60 s reconcile poll in a thread</td><td>a missed delivery is caught within one poll</td></tr>
+          <tr><td>5 serve</td><td>print <code>listening</code>; each connection on its own thread, a delivery synced before it is answered; 60 s reconcile poll in a thread</td><td>a missed delivery is caught within one poll</td></tr>
         </tbody>
       </table>
       <table data-c="lines">
@@ -32,7 +32,7 @@
         <tbody>
           <tr><td><code>needs-owner</code></td><td>not asking → asking (open ∧ <code>vuluu</code> ∧ <code>needs-owner</code>), or still asking at startup</td></tr>
           <tr><td><code>answered</code></td><td>asking → not, label gone</td></tr>
-          <tr><td><code>closed</code></td><td>asking → not, label still on (done or unassigned)</td></tr>
+          <tr><td><code>closed</code></td><td>asking → not, label still on (done or unassigned), or the asking task deleted</td></tr>
           <tr><td><code>comment</code></td><td>comment id above the task's watermark, author not <code>trawler-router</code></td></tr>
           <tr><td><code>unreachable</code> / <code>reachable</code></td><td>the poll fails / recovers, once per outage</td></tr>
           <tr><td><code>listening</code></td><td>startup done; earlier lines came from the reconcile</td></tr>
@@ -59,7 +59,7 @@
       <table data-c="evidence">
         <thead><tr><th>Layer</th><th>What</th></tr></thead>
         <tbody>
-          <tr><td>integration</td><td><code>xtask/tests/suite/vikunja.rs</code>, 3 new: the real binary on a chosen port against W2's fake Vikunja — registration deletes only its own stale hook and sends secret + events; startup prints an unseen owner comment and a pending ask before <code>listening</code>; a no-change delivery, a router comment and a router no-op print nothing; two forged deliveries get 401, an stderr log and no read of their task; the owner's comment then <code>answered</code>; a re-label prints <code>needs-owner</code>; a relaunch on the same state re-announces it and repeats no comment · liveness <code>GET</code>, secret created, a down fake prints <code>unreachable</code> once then <code>reachable</code> · a dead Vikunja at startup is an error</td></tr>
+          <tr><td>integration</td><td><code>xtask/tests/suite/vikunja.rs</code>, 3 new: the real binary on a chosen port against W2's fake Vikunja — registration deletes only its own stale hook and sends secret + events; startup prints an unseen owner comment and a pending ask before <code>listening</code>; a no-change delivery, a router comment and a router no-op print nothing; two forged deliveries get 401, an stderr log and no read of their task; the owner's comment then <code>answered</code>; a re-label prints <code>needs-owner</code>; a relaunch on the same state re-announces it and repeats no comment; the asking task deleted prints <code>closed</code> once · liveness <code>GET</code> answered while another connection stalls, a Content-Length over 1 MiB refused 400 without killing the listener, secret created, a down fake prints <code>unreachable</code> once then <code>reachable</code> · a dead Vikunja at startup is an error</td></tr>
           <tr><td>unit</td><td><code>listen.rs</code> 7: transitions (raise with doer, silent unless reminded, answered vs closed ×2, comment watermark/order/router filter), RFC 4231 case 2 vector + tampered body/key/empty/non-hex signature, flag parsing, secret created 600 then reused, empty refused</td></tr>
           <tr><td>live, 127.0.0.1:3456</td><td>task #17 → <code>put 17 --comment … --assignee vuluu --label needs-owner</code> → <code>{"by":"trawler-router","event":"needs-owner","task_id":17,…}</code> · <code>pkill</code>, relaunch → <code>{"event":"needs-owner","task_id":17,…}</code> then <code>listening</code> with webhook 4 replacing 3 (one hook listed) · <code>put 17 --unlabel needs-owner --unassign vuluu</code> → <code>answered</code> · forged POST → 401 + log line. Webhook 4, tasks #16 (probe) and #17 deleted; no hook left; project 3 empty</td></tr>
         </tbody>

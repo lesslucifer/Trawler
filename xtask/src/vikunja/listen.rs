@@ -240,8 +240,19 @@ impl Watch {
                     .map_err(|e| format!("GET {path}: the response is not JSON: {e}"))?;
                 self.observe(&task, false, by)
             }
-            404 if self.seen.remove(&id).is_some() => save_state(&self.path, &self.seen),
-            404 => Ok(()),
+            404 => match self.seen.remove(&id) {
+                Some(was) => {
+                    if was.asking {
+                        let mut deleted = json!({ "event": "closed", "task_id": id });
+                        if let Some(by) = by {
+                            deleted["by"] = json!(by);
+                        }
+                        emit(&[deleted]);
+                    }
+                    save_state(&self.path, &self.seen)
+                }
+                None => Ok(()),
+            },
             status => Err(refusal("GET", &path, status, &response.body)),
         }
     }
@@ -385,8 +396,10 @@ pub fn run(client: Client, options: &Options) -> Result<(i32, String), String> {
     let polled = Arc::clone(&watch);
     let every = Duration::from_secs(options.poll_secs);
     std::thread::spawn(move || poll_forever(&polled, every));
+    let secret: Arc<str> = secret.into();
     for stream in listener.incoming().flatten() {
-        handle(&stream, &secret, &watch);
+        let (secret, watch) = (Arc::clone(&secret), Arc::clone(&watch));
+        std::thread::spawn(move || handle(&stream, &secret, &watch));
     }
     Ok((0, String::new()))
 }

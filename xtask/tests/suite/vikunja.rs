@@ -797,6 +797,12 @@ fn webhook_listen_registers_reconciles_then_prints_a_line_per_signed_transition(
         json!({"event": "needs-owner", "task_id": 9, "title": "E-X.W9 work"})
     );
     assert_eq!(relaunched.next()["event"], "listening");
+
+    server.route("GET", "/tasks/9", 404, &json!({"code": 4002, "message": "not found"}));
+    assert_eq!(relaunched.deliver("task.updated", 9, "vuluu"), 200);
+    assert_eq!(relaunched.next(), json!({"event": "closed", "task_id": 9, "by": "vuluu"}));
+    assert_eq!(relaunched.deliver("task.updated", 9, "vuluu"), 200);
+    assert_eq!(relaunched.lines.try_recv().ok(), None);
 }
 
 #[test]
@@ -820,6 +826,12 @@ fn webhook_listen_answers_a_liveness_get_and_reports_an_unreachable_vikunja_once
         stream.read_to_string(&mut answer).unwrap();
         assert!(answer.starts_with("HTTP/1.1 400 "), "{answer}");
     }
+    let mut stalled = TcpStream::connect(listener.addr).unwrap();
+    write!(stalled, "POST / HT").unwrap();
+    let started = std::time::Instant::now();
+    assert_eq!(http::request(listener.addr, "GET", "/", &[], "").unwrap().status, 200);
+    assert!(started.elapsed() < Duration::from_secs(3), "{:?}", started.elapsed());
+    drop(stalled);
     let oversized = listener.errors.recv_timeout(Duration::from_secs(20)).unwrap();
     assert!(oversized.ends_with("body over 1048576 bytes"), "{oversized}");
     assert_eq!(http::request(listener.addr, "GET", "/", &[], "").unwrap().status, 200);

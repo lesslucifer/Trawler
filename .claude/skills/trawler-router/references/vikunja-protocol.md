@@ -63,7 +63,7 @@ Same discipline the board watcher ended up with (E-KANBAN postmortem): watching 
 | Process | Owner | Every heartbeat tick | When found dead |
 |---|---|---|---|
 | Vikunja server | router | `curl -sf …/api/v1/info` | relaunch (Run it) the same tick; ping Telegram only if the relaunch fails |
-| Webhook listener | router | `curl -sf http://127.0.0.1:3457/` → `ok` | relaunch (Run the listener) the same tick, after the Vikunja server is up; its startup reconcile replays what the gap hid |
+| Webhook listener | router | `curl -sf -m 5 http://127.0.0.1:3457/` → `ok` | relaunch (Run the listener) the same tick, after the Vikunja server is up; its startup reconcile replays what the gap hid |
 
 Keeping the listener alive is the router's **standing responsibility for the whole session**, exactly like the board watcher was: started at session start, checked every heartbeat tick, relaunched the moment it is found dead — never a one-time check, never only when an ask is open. A dead listener is silent, not loud: nothing else tells the router an owner answered.
 
@@ -73,7 +73,7 @@ Webhooks are latency; the API is the truth. Vikunja delivers each webhook once a
 ```sh
 L=~/.local/share/vikunja
 cd $M/Trawler && (nohup cargo xtask vikunja webhook-listen >> $L/listener.events 2>> $L/listener.log &)   # start
-curl -sf http://127.0.0.1:3457/                                                                           # status: ok
+curl -sf -m 5 http://127.0.0.1:3457/                                                                           # status: ok
 pkill -f 'xtask vikunja webhook-listen'                                                                   # stop
 tail -n0 -F $L/listener.events                                                                            # watch (Monitor): one line = one notification
 ```
@@ -83,7 +83,7 @@ Until E-VIKUNJA is on `main`, `cd` into a checkout of `epic/router-vikunja` inst
 |---|---|---|
 | `{"event":"needs-owner","task_id":9,"title":"…","by":"…"}` | task entered the owner's queue (open ∧ `vuluu` ∧ `needs-owner`); at startup, every ask still pending is re-announced (no `by`) | ping the owner unless it already pinged for this ask |
 | `{"event":"answered",…}` | left the queue with the label gone — the only answer | step 3, unless `by` is `trawler-router` (its own 2') |
-| `{"event":"closed",…}` | left the queue with the label still on (marked done or unassigned) | the done row of the table above |
+| `{"event":"closed",…}` | left the queue with the label still on (marked done or unassigned), or the asking task was deleted (then no `title`) | the done row of the table above |
 | `{"event":"comment","task_id":9,"title":"…","by":"vuluu","text":"…"}` | a comment not written by `trawler-router` (text is Vikunja's HTML) | reply / acknowledge — never a lifecycle step |
 | `{"event":"unreachable","error":"…"}` · `{"event":"reachable"}` | the 60 s reconcile failed / works again (printed once per outage) | relaunch the Vikunja server |
 | `{"event":"listening","port":3457,"webhook_id":4}` | startup finished; lines before it are the reconcile's | — |
