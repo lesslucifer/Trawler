@@ -1,0 +1,39 @@
+schema: cr/v5
+scope: "WU site-build -> epic/pages (round 9)"
+epic: E-PAGES
+wu: E-PAGES.W2
+branch: wu/pages/site-build
+base: b45561848bd8dd2e3ff365ad0f8a59edc7a9178c
+head: 6d765ad02cb92a44864f78e07f0de60b561ac19a
+diff_sha256: 5131fcfb003fddfadafa3da9fea237b37937dca3624eb936212087ac533368af
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 3
+    nit: 2
+  stage_seconds:
+    gate0: 24
+    total: 441
+  by_finder:
+    correctness: { found: 5, verified: 3 }
+    efficiency: { found: 0, verified: 0 }
+    altitude: { found: 0, verified: 0 }
+findings: { found: 5, verified: 3, waived: 0 }
+waivers: []
+nits:
+  - finding: "a backslash-authority value (\\\\host) in a non-URL attribute such as poster or ping passes names_an_address"
+    waived: "beyond the requirement's listed checks (src/srcset/url()/@import, hrefs); CSP default-src 'none' blocks media and connect loads; router trawler-05 ruled no further round for hardening beyond the listed checks; logged as a follow-up in the W2 result"
+  - finding: "a scheme-only string in a CSS image-set() (\"http:host/a.png\") passes the CSS checks"
+    waived: "beyond the listed url()/@import check; CSP img-src 'self' blocks it; router ruling as above; follow-up logged"
+  - finding: "the site.js scan misses cookieStore, caches, openDatabase and navigator.storage"
+    waived: "the owner's required list (fetch, XMLHttpRequest, WebSocket, sendBeacon, EventSource, import(), eval, Function(, document.cookie, localStorage, sessionStorage, size cap) is fully covered; these add local persistence only, no network path under the CSP; router ruling; follow-up logged for W3 when the real script lands"
+  - finding: "svg files are not checked for character references, so an encoded address could hide in an svg attribute"
+    waived: "unverified nit; browsers refuse cross-origin use/paint-server references and the only svg is the generated favicon; follow-up logged"
+  - finding: "names_an_address applies to prose attributes, so alt=\"Press // to search\" is falsely refused"
+    waived: "unverified nit; a loud false refusal the W3 author rewords; fails closed; follow-up logged"
+verdict: PASS
+date: 2026-11-08
