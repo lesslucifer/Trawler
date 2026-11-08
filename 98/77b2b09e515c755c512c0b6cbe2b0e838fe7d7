@@ -1,0 +1,46 @@
+schema: cr/v5
+scope: "WU site-pages -> epic/pages"
+epic: E-PAGES
+wu: E-PAGES.W3
+branch: wu/pages/site-pages
+base: 3a93c47319845007ec1ce02f51242823dc114c6c
+head: 9877b2b09e515c755c512c0b6cbe2b0e838fe7d7
+diff_sha256: 76ba4e192fcc453d8ff747313e080ab548d68e5d53d12274ca68ee8b761a345f
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 3
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 4
+    nit: 8
+  stage_seconds:
+    finders: 56
+    verifiers: 24
+    total: 135
+  by_finder:
+    correctness: { found: 6, verified: 0 }
+    efficiency:  { found: 4, verified: 0 }
+    altitude:    { found: 2, verified: 0 }
+findings: { found: 12, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "an 'Other systems' link targets details#all, which show() has closed, so the click lands on the collapsed summary"
+    waived: "the design spec's D2 round-4 contract: the list folds under Other systems and one click on the summary opens it"
+  - finding: "motion_problems counts no transition time and reads a var() duration as 0"
+    waived: "transitions here run on hover, not on load; the check is a tripwire over a stylesheet of literal times, the 5 s limit is about load motion"
+  - finding: "smaller_png drops gAMA/sRGB/cHRM/pHYs chunks; only an ICC profile keeps the source"
+    waived: "the six shipped shots carry sRGB (the browser default) and no gAMA/cHRM; pixels are proven equal by test; an ICC-profiled source is kept as is"
+  - finding: "first_sentence splits at the first '. ' so an abbreviation or a period inside markup cuts early"
+    waived: "PRIVACY.md's lead has neither; a future lead that breaks it shows in the built page and the shots, and the build stays deterministic"
+  - finding: "declarations() splits at ';' inside url(data:...) or a string"
+    waived: "the stylesheet check already refuses data: and absolute url() and every //, and site.css holds no quoted ';' '{' '}'"
+  - finding: "smaller_png uses deflate only, no palette reduction or filter search"
+    waived: "measured -19 % lossless on the six shots (887,784 B, the design's P2 figure); the owner ruled re-encoded PNG with the png crate, no new crate"
+  - finding: "show() runs twice on an arm64 hint"
+    waived: "the design's reference site.js verbatim; the second call is the hint's whole effect and costs a few DOM writes once"
+  - finding: "the CSS parser and the contrast/motion checks sit inside the 2,175-line site module"
+    waived: "they serve only the site build and share its file walk; a split is a refactor outside this WU, logged as a follow-up"
+verdict: PASS
+date: 2026-11-08
