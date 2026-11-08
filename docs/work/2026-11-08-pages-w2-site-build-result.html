@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>E-PAGES.W2 result: <code>cargo xtask site build</code> and the checks that hold its output</h1>
       <p>What W2 built, the contract W3 and W4 build on, how it is proven, and what stays open.</p>
-      <div class="meta">v1 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W2</span> · <code>wu/pages/site-build</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w2-site-build-plan.html">W2 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+      <div class="meta">v2 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W2</span> · <code>wu/pages/site-build</code> → <code>epic/pages</code> · plan <a href="2026-11-08-pages-w2-site-build-plan.html">W2 plan</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
     </div>
   </header>
   <main>
@@ -48,6 +48,7 @@
         <tr><td>Markers only from the set: <code>{{pitch}} {{sub}} {{features}} {{privacy}} {{version}} {{release}} {{latest}} {{sha256sums}} {{guide}} {{source}} {{base}} {{path}} {{href:&lt;id&gt;}} {{file:&lt;id&gt;}}</code></td><td><code>no marker {{x}}</code></td></tr>
         <tr><td>Each page carries the exact <code>site::CSP</code> meta once</td><td>CSP problem</td></tr>
         <tr><td><code>href</code>/<code>src</code>/<code>srcset</code> written <code>attr="…"</code>; no <code>&lt;script&gt; &lt;iframe&gt; &lt;form&gt; &lt;object&gt; &lt;embed&gt; &lt;style&gt;</code>, no <code>style=</code></td><td>quoting / markup problem</td></tr>
+        <tr><td>Every <code>//</code> in a page sits in an <code>href</code> value or in a <code>content</code> value starting with <code>BASE_URL</code> (og:image, og:url); a stylesheet carries no <code>//</code> at all</td><td>“an address outside an href”</td></tr>
         <tr><td>Absolute hrefs only to <code>SOURCE_CODE[/…]</code> or <code>BASE_URL…</code>; <code>blob/main/&lt;file&gt;#anchor</code> must exist in the tree</td><td>link problem</td></tr>
         <tr><td>All 11 download ids linked (any layout, any number of times)</td><td>download-row problem</td></tr>
         <tr><td>Colour tokens: text as <code>--text*</code>, backgrounds as <code>--bg*</code> on the top-level <code>:root</code> and on <code>@media (prefers-color-scheme: dark) { :root { … } }</code>, <code>#hex</code> values; amber under any other name (e.g. <code>--brand</code>)</td><td>contrast problem</td></tr>
@@ -62,6 +63,7 @@
         <thead><tr><th>From the plan</th><th>Why</th></tr></thead>
         <tbody>
           <tr><td>Added: a <code>href</code>/<code>src</code>/<code>srcset</code> written other than <code>attr="…"</code> (single-quoted, unquoted, spaced) is red, and every attribute, <code>&lt;link</code>, <code>url(</code> and <code>@import</code> match ignores case</td><td>found in self-review: <code>&lt;img src='https://…'&gt;</code> or <code>SRC=</code> would have passed the no-external check; red test first</td></tr>
+          <tr><td>Round 2 (the review's verified blockers): an attribute glued to the one before it (<code>alt="x"src=</code>, <code>&lt;img/src=</code>) is read; the stray-<code>//</code> rule above (covers <code>poster</code>, <code>ping</code>, text, protocol-relative values); a stylesheet's <code>image-set("…")</code> string is caught by the no-<code>//</code> rule. Nits taken: an installer must carry the version as a whole number (<code>Trawler_10.1.0</code> is no 0.1.0 file), a README pitch with an entity is refused rather than double-escaped, <code>walkthrough::escape</code> is reused</td><td>review round 1 FAIL; regression tests red first</td></tr>
           <tr><td><code>public_text::installer_kinds</code> takes the version; <code>kind_of</code> added; <code>exists_as_named</code> and <code>release_manifest::arch_of</code> made <code>pub(crate)</code></td><td>reuse, not a second kinds table or arch parser</td></tr>
         </tbody>
       </table>
@@ -72,12 +74,12 @@
       <table data-c="evidence">
         <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
         <tbody>
-          <tr><td>Unit</td><td>23 <code>site::tests</code>: subset render and every refused construct, pitch/sub, sections, markers, release refusals (draft, pre-release, missing kind, duplicate id, versionless file, no SHA256SUMS, newer than the tree), each check red on a crafted file set (link, foreign href, tree file/anchor, CSP, external <code>src</code>/<code>srcset</code>/<code>data:</code>/<code>&lt;link&gt;</code>, markup, quoting/case, CSS <code>url()</code>/<code>@import</code>, deny-list, guide link, download kind and tag, contrast in each theme), <code>BASE_URL</code> = github.io of <code>SOURCE_CODE</code>, the frame names no denied tool, USAGE, argument count; <code>public_text</code> 29 green (pre-release kinds added)</td></tr>
+          <tr><td>Unit</td><td>24 <code>site::tests</code>: subset render and every refused construct, pitch/sub, sections, markers, release refusals (draft, pre-release, missing kind, duplicate id, versionless or <code>10.1.0</code> file, no SHA256SUMS, newer than the tree), each check red on a crafted file set (link, foreign href, tree file/anchor, CSP, external <code>src</code>/<code>srcset</code>/<code>data:</code>/<code>&lt;link&gt;</code>, a glued attribute, an address in <code>poster</code>/<code>ping</code>/text/a foreign <code>content</code>, markup, quoting/case, CSS <code>image-set</code> strings, CSS <code>url()</code>/<code>@import</code>, deny-list, guide link, download kind and tag, contrast in each theme), <code>BASE_URL</code> = github.io of <code>SOURCE_CODE</code>, the frame names no denied tool, USAGE, argument count; <code>public_text</code> 29 green (pre-release kinds added)</td></tr>
           <tr><td>Integration</td><td>5 in <code>xtask/tests/suite/site.rs</code>: the v0.1.0 fixture builds exactly frame + <code>ASSETS</code>, no <code>docs</code> path, <code>problems</code> empty on the written dir; 11 versioned rows = <code>installer_ids("0.1.0")</code>, title = README pitch, CSP present, no marker left; minus the arm64 msi → <code>v0.1.0 lacks msi-arm64</code> and no <code>--out</code>; draft and pre-release refused; a non-empty <code>--out</code> refused and kept</td></tr>
-          <tr><td>Red first</td><td>the quoting/case test failed before its fix; the rest are new code (module absent before)</td></tr>
-          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green: 1549 tests, fmt, clippy pedantic</td></tr>
+          <tr><td>Red first</td><td>the quoting/case test failed before its fix; round 2's three tests (glued attribute and stray address, <code>10.1.0</code> file, entity in the pitch) failed on <code>70aca4d6</code>; the rest are new code (module absent before)</td></tr>
+          <tr><td>Suite</td><td><code>cargo xtask gate0</code> green: 1550 tests, fmt, clippy pedantic</td></tr>
           <tr><td>Real render</td><td>the fixture build served from <code>target/pages/Trawler/</code> over <code>python3 -m http.server</code>, headless Chrome at 1440 and 390 px: the CSP lets the page's own CSS and images load, the wordmark follows the scheme, every row names its v0.1.0 file</td></tr>
-          <tr><td>Review</td><td><code>cr/v5</code> note on this tip</td></tr>
+          <tr><td>Review</td><td>round 1 on <code>70aca4d6</code>: FAIL (3 finders, 3 verifiers; 2 blockers verified: the glued attribute and the CSS <code>image-set</code> string; the contrast-context claim and both altitude claims refuted), its <code>cr/v5</code> note kept there; round 2: the <code>cr/v5</code> note on this tip</td></tr>
           <tr><td>e2e</td><td>waived: the epic's e2e is the live deploy after the owner's settings (epic plan “E2E test plan”)</td></tr>
         </tbody>
       </table>
