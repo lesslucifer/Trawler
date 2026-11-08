@@ -1,0 +1,18 @@
+schema: doc/v1
+epic: E-KANBAN
+wu: E-KANBAN.W2
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-router-kanban-change-detect-plan.html"
+    tier: T3
+    action: added
+    distills: "E-KANBAN.W2 plan: requirement, event lines, decisions (card-to-branch mapping, log stamp, stale columns, once per period), test plan"
+  - path: "docs/work/2026-11-08-router-kanban-change-detect-result.html"
+    tier: T3
+    action: added
+    distills: "E-KANBAN.W2 result: outcome, exit codes, card-to-worktree mapping, deviations, evidence, follow-ups for W3"
+  - path: "docs/work/2026-11-08-router-kanban-board-client-plan.html"
+    tier: T3
+    action: updated
+    distills: "E-KANBAN.W1 plan: the epic plan cited as the router's untracked file instead of a dead link"
+t2_waived: "no use case changes (process epic); the epic's DEC is minted at epic close per the epic plan's distillation plan"
