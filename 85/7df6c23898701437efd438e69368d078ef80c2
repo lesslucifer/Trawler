@@ -1,0 +1,9 @@
+schema: dod/v1
+level: working-unit
+epic: E-APIDOC
+wu: E-APIDOC.W1
+base: c782af92f6ed4771ddf814d777c274358655b049
+tip: 857df6c23898701437efd438e69368d078ef80c2
+diff_sha256: a0abeacc1b6e0e7ba3c3f132f606d9c84a8a38255cc1ebe94f3fd22fc7df7ffe
+checks: [notes, manifest, review, review-nits, review-base, diff-binding, doc-note, design, manual-review]
+date: 2026-11-08
