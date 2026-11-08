@@ -25,7 +25,21 @@ const LINKS: &str = "ui/src-tauri/src/links.rs";
 const SYSTEMS: [Os; 3] = [Os::MacOs, Os::Windows, Os::Linux];
 const MIN_CONTRAST: f64 = 4.5;
 const DARK: &str = "@media (prefers-color-scheme: dark)";
-const REFUSED_TAGS: [&str; 6] = ["iframe", "form", "object", "embed", "style", "base"];
+const REFUSED_TAGS: [&str; 11] = [
+    "iframe",
+    "form",
+    "object",
+    "embed",
+    "style",
+    "base",
+    "noscript",
+    "noembed",
+    "noframes",
+    "xmp",
+    "plaintext",
+];
+const FOREIGN: [&str; 2] = ["svg", "math"];
+const REFERENCES: [&str; 4] = ["amp;", "quot;", "lt;", "gt;"];
 const SHIPPED_KINDS: [&str; 8] = ["html", "css", "js", "svg", "png", "jpg", "webp", "ico"];
 const HEAD_BEFORE_CSP: [&str; 3] = ["html", "head", "meta"];
 const RAW_TEXT: [&str; 4] = ["script", "style", "title", "textarea"];
@@ -581,33 +595,34 @@ fn parse(html: &str) -> (Vec<Tag<'_>>, Vec<&str>) {
 
 fn read_tag(html: &str, start: usize) -> (Tag<'_>, usize) {
     let name_end = html[start + 1..]
-        .find(|c: char| c.is_whitespace() || c == '/' || c == '>')
+        .find(|c: char| is_html_space(c) || c == '/' || c == '>')
         .map_or(html.len(), |end| start + 1 + end);
     let mut tag =
         Tag { name: html[start..name_end].to_ascii_lowercase(), attributes: Vec::new(), raw: "" };
     let mut rest = &html[name_end..];
     loop {
-        rest = rest.trim_start_matches(|c: char| c.is_whitespace() || c == '/');
+        rest = rest.trim_start_matches(|c: char| is_html_space(c) || c == '/');
         if rest.is_empty() {
             return (tag, html.len());
         }
         if let Some(after) = rest.strip_prefix('>') {
             return (tag, html.len() - after.len());
         }
-        let name_length = rest
-            .find(|c: char| c.is_whitespace() || "/>=".contains(c))
-            .unwrap_or(rest.len())
-            .max(1);
+        let name_length =
+            rest.find(|c: char| is_html_space(c) || "/>=".contains(c)).unwrap_or(rest.len()).max(1);
         let name = rest[..name_length].to_ascii_lowercase();
-        let after_name = rest[name_length..].trim_start();
-        let (value, after) = match after_name.strip_prefix('=').map(str::trim_start) {
+        let after_name = rest[name_length..].trim_start_matches(is_html_space);
+        let (value, after) = match after_name
+            .strip_prefix('=')
+            .map(|value| value.trim_start_matches(is_html_space))
+        {
             Some(quoted) if quoted.starts_with(['"', '\'']) => {
                 let (quote, body) = quoted.split_at(1);
                 let end = body.find(quote).unwrap_or(body.len());
                 (&body[..end], &body[(end + 1).min(body.len())..])
             }
             Some(bare) => {
-                let end = bare.find(|c: char| c.is_whitespace() || c == '>').unwrap_or(bare.len());
+                let end = bare.find(|c: char| is_html_space(c) || c == '>').unwrap_or(bare.len());
                 bare.split_at(end)
             }
             None => ("", after_name),
@@ -647,13 +662,18 @@ fn misread_markup(name: &str, html: &str, tags: &[Tag<'_>]) -> Vec<String> {
     problems
 }
 
-fn encodes_beyond_the_four(value: &str) -> bool {
-    value.match_indices('&').any(|(at, _)| {
-        let rest = &value[at + 1..];
-        let length =
-            rest.find(|c: char| !c.is_ascii_alphanumeric() && c != '#').unwrap_or(rest.len());
-        rest[length..].starts_with(';') && !["amp", "quot", "lt", "gt"].contains(&&rest[..length])
-    })
+fn stray_references(name: &str, html: &str) -> Vec<String> {
+    html.match_indices('&')
+        .filter(|(at, _)| !REFERENCES.iter().any(|reference| html[at + 1..].starts_with(reference)))
+        .map(|(at, _)| {
+            let reference: String = html[at..].chars().take(12).collect();
+            format!("{name}: a character reference other than &amp; &quot; &lt; &gt;: {reference}")
+        })
+        .collect()
+}
+
+fn is_html_space(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\r' | '\x0c')
 }
 
 fn names_an_address(value: &str) -> bool {
@@ -679,7 +699,9 @@ fn tag_problems(name: &str, tags: &[Tag<'_>], refused: &[&str]) -> Vec<String> {
             } else if attribute.len() > 2 && attribute.starts_with("on") {
                 problems.push(format!("{name}: an inline handler {attribute}"));
             }
-            if value.trim_start().to_ascii_lowercase().starts_with("javascript:") {
+            let compact: String =
+                value.chars().filter(|c| !c.is_ascii_control() && !c.is_whitespace()).collect();
+            if compact.to_ascii_lowercase().starts_with("javascript:") {
                 problems.push(format!("{name}: a javascript: address"));
             }
         }
@@ -719,8 +741,9 @@ fn html_problems(
     downloads: &mut Vec<String>,
 ) -> Vec<String> {
     let (tags, text) = parse(html);
-    let mut problems = tag_problems(name, &tags, &REFUSED_TAGS);
+    let mut problems = tag_problems(name, &tags, &[&REFUSED_TAGS[..], &FOREIGN].concat());
     problems.extend(misread_markup(name, html, &tags));
+    problems.extend(stray_references(name, html));
     let csp: Vec<usize> = (0..tags.len())
         .filter(|at| {
             tags[*at].name == "meta"
@@ -760,9 +783,6 @@ fn html_problems(
     };
     for tag in &tags {
         for (attribute, value) in &tag.attributes {
-            if encodes_beyond_the_four(value) {
-                problems.push(format!("{name}: an encoded character in {attribute}=\"{value}\""));
-            }
             let value = unescaped(value);
             match attribute.as_str() {
                 "src" => request(&value, &mut problems),
@@ -946,7 +966,7 @@ fn strip_comments(css: &str) -> String {
     let mut rest = css;
     while let Some(at) = rest.find("/*") {
         kept.push_str(&rest[..at]);
-        rest = rest[at..].find("*/").map_or("", |end| &rest[at + end + 2..]);
+        rest = rest[at + 2..].find("*/").map_or("", |end| &rest[at + 2 + end + 2..]);
     }
     kept + rest
 }
@@ -1022,7 +1042,7 @@ pub fn problems(files: &BTreeMap<String, Vec<u8>>, facts: &Facts<'_>) -> Vec<Str
             if strip_comments(text).contains("//") {
                 problems.push(format!("{name}: an address with // is a request outside the site"));
             }
-            for target in css_urls(text) {
+            for target in css_urls(text).into_iter().filter(|target| !target.starts_with('#')) {
                 if is_absolute(target) {
                     problems.push(format!("{name}: url({target}) is a request outside the site"));
                 } else if let Err(problem) = resolve(files, name, target) {
@@ -1618,6 +1638,44 @@ mod tests {
         let css = ":root { --bg: #ffffff; --text: #000000; }\n@media (prefers-color-scheme: dark) { :root { --bg: #000000; --text: #ffffff; } }\n:root { --text: #111111; }";
         let found = contrast_problems("s.css", css);
         assert!(found.iter().any(|p| p.contains("dark: --text #111111")), "{found:?}");
+    }
+
+    #[test]
+    fn the_page_subset_leaves_a_browser_no_other_reading() {
+        for (body, needle) in [
+            (
+                "<meta http-equiv=\"re&#102resh\" content=\"0;url=&#104ttps:&#47&#47x.test\">",
+                "character reference",
+            ),
+            ("<p>&nbsp;&copy</p>", "character reference"),
+            ("<a x=1\u{a0}y=\"><img src=//x.test/a.png>\">x</a>", "x.test"),
+            (
+                "<noscript><a href=\"</noscript><img src=//x.test/a.png>\">x</a></noscript>",
+                "<noscript>",
+            ),
+            ("<svg><title><img src=//x.test/a.png></title></svg>", "<svg>"),
+            ("<xmp></xmp>", "<xmp>"),
+            (
+                "<a href=\"#top\" title=\"java\tscript:x\" data-x=\"\u{1}javascript:go()\">x</a>",
+                "javascript:",
+            ),
+        ] {
+            let problems = problems_of(body);
+            assert!(problems.iter().any(|p| p.contains(needle)), "{body}: {problems:?}");
+        }
+        assert_eq!(
+            problems_of("<p>Fish &amp; chips &lt;3 &quot;q&quot; &gt;</p>"),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn a_css_comment_or_an_in_page_reference_is_read_as_a_browser_does() {
+        let repo = repo();
+        let css = format!("{CSS}/*/ x */ body {{ filter: url(#blur) }}");
+        assert_eq!(problems(&site("", &css), &facts(&repo)), Vec::<String>::new());
+        let css = format!("{CSS}/*/ x */ body {{ background: url(https://x.test/a.png) }}");
+        assert!(!problems(&site("", &css), &facts(&repo)).is_empty(), "{css}");
     }
 
     #[test]
