@@ -274,9 +274,13 @@ pub fn init(client: &Client, key_file: &Path) -> Result<String, String> {
     ))
 }
 
-fn open_tasks(client: &Client, project: u64) -> Result<Vec<Value>, String> {
-    let filter = http::percent_encode(&format!("done = false && project = {project}"));
+fn tasks_matching(client: &Client, filter: &str) -> Result<Vec<Value>, String> {
+    let filter = http::percent_encode(filter);
     client.get_all(&format!("/tasks?filter={filter}&sort_by=id&order_by=asc"))
+}
+
+fn open_tasks(client: &Client, project: u64) -> Result<Vec<Value>, String> {
+    tasks_matching(client, &format!("done = false && project = {project}"))
 }
 
 pub fn show(client: &Client, project: u64, needs_owner_only: bool) -> Result<String, String> {

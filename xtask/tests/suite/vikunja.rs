@@ -634,7 +634,8 @@ fn check_flags_an_untasked_work_worktree_and_an_open_task_without_one_until_both
     let root = dir.path().canonicalize().unwrap();
     let main = root.join("main");
     std::fs::create_dir(&main).unwrap();
-    let git = |args: &[&str]| xtask::git::git(&main, args).unwrap();
+    let hermetic = [("GIT_CONFIG_GLOBAL", "/dev/null"), ("GIT_CONFIG_SYSTEM", "/dev/null")];
+    let git = |args: &[&str]| xtask::git::git_env(&main, args, &hermetic).unwrap();
     git(&["init", "-q", "-b", "main"]);
     git(&[
         "-c",
@@ -678,6 +679,14 @@ fn check_flags_an_untasked_work_worktree_and_an_open_task_without_one_until_both
     server.route("GET", ALL_IN_3, 200, &tasks("Branch: wu/x/new", true));
     assert_eq!(check(&server, &main).unwrap(), (0, String::new()));
     assert_eq!(server.requests(), [get(ALL_IN_3), get(ALL_IN_3)]);
+
+    std::fs::remove_dir_all(root.join("x")).unwrap();
+    let (code, out) = check(&server, &main).unwrap();
+    assert_eq!(code, 1);
+    assert_eq!(
+        serde_json::from_str::<Value>(&out).unwrap(),
+        json!({"event": "missing-worktree", "task_id": 1, "title": "E-X epic", "branch": "epic/x"})
+    );
 
     server.set_down(true);
     assert!(check(&server, &main).unwrap_err().starts_with(&format!("GET http://{}", server.api)));

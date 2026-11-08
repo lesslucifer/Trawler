@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{json, Value};
 
-use super::{http, id_of, Client, ROUTER_PROJECT};
+use super::{id_of, state, tasks_matching, Client, ROUTER_PROJECT};
 use crate::git::git;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,6 +18,9 @@ pub fn worktrees(porcelain: &str) -> BTreeMap<String, PathBuf> {
     let mut found = BTreeMap::new();
     for block in porcelain.split("\n\n") {
         let field = |name: &str| block.lines().find_map(|l| l.strip_prefix(name));
+        if field("prunable").is_some() {
+            continue;
+        }
         if let (Some(path), Some(branch)) = (field("worktree "), field("branch refs/heads/")) {
             found.insert(branch.to_string(), PathBuf::from(path));
         }
@@ -25,13 +28,34 @@ pub fn worktrees(porcelain: &str) -> BTreeMap<String, PathBuf> {
     found
 }
 
-/// The web editor stores descriptions as HTML (`<p>Branch: …</p>`), the CLI as
-/// plain text, so a line may start right after a tag.
-pub fn branch_of(description: &str) -> Option<&str> {
-    description
-        .split(['\n', '<', '>'])
-        .find_map(|part| part.trim_start().strip_prefix("Branch:"))
-        .and_then(|rest| rest.split_whitespace().next())
+const INLINE_TAGS: [&str; 10] = ["a", "b", "code", "em", "i", "mark", "s", "span", "strong", "u"];
+
+/// The web editor stores descriptions as HTML: block tags end a line, inline
+/// tags (`<strong>Branch:</strong>`, `<code>wu/x/y</code>`) vanish.
+fn plain_text(description: &str) -> String {
+    let mut text = String::new();
+    let mut rest = description;
+    while let Some((before, after)) = rest.split_once('<') {
+        text.push_str(before);
+        let Some((tag, after)) = after.split_once('>') else {
+            text.push('<');
+            rest = after;
+            break;
+        };
+        let name = tag.trim_start_matches('/').split([' ', '/']).next().unwrap_or_default();
+        if !INLINE_TAGS.contains(&name.to_ascii_lowercase().as_str()) {
+            text.push('\n');
+        }
+        rest = after;
+    }
+    text.push_str(rest);
+    text.replace("&nbsp;", " ")
+}
+
+pub fn branch_of(description: &str) -> Option<String> {
+    plain_text(description).lines().find_map(|line| {
+        line.trim_start().strip_prefix("Branch:")?.split_whitespace().next().map(str::to_string)
+    })
 }
 
 fn reference(task: &Value) -> Option<Reference> {
@@ -39,8 +63,8 @@ fn reference(task: &Value) -> Option<Reference> {
     Some(Reference {
         task_id: id_of(task),
         title: task["title"].as_str().unwrap_or_default().to_string(),
-        branch: branch.to_string(),
-        open: task["done"].as_bool() != Some(true),
+        branch,
+        open: state(task) == "open",
     })
 }
 
@@ -63,8 +87,7 @@ pub fn findings(trees: &BTreeMap<String, PathBuf>, references: &[Reference]) -> 
 
 pub fn run(client: &Client, repo: &Path) -> Result<(i32, String), String> {
     let trees = worktrees(&git(repo, &["worktree", "list", "--porcelain"])?);
-    let filter = http::percent_encode(&format!("project = {ROUTER_PROJECT}"));
-    let tasks = client.get_all(&format!("/tasks?filter={filter}&sort_by=id&order_by=asc"))?;
+    let tasks = tasks_matching(client, &format!("project = {ROUTER_PROJECT}"))?;
     let references: Vec<Reference> = tasks.iter().filter_map(reference).collect();
     let found = findings(&trees, &references);
     let lines: Vec<String> = found.iter().map(Value::to_string).collect();
@@ -90,13 +113,32 @@ mod tests {
     }
 
     #[test]
+    fn a_worktree_whose_directory_was_deleted_outside_git_is_no_worktree() {
+        let porcelain = "worktree /r/x\nHEAD abc\nbranch refs/heads/epic/x\n\nworktree /r/gone\nHEAD def\nbranch refs/heads/wu/x/gone\nprunable gitdir file points to non-existent location\n";
+        assert_eq!(worktrees(porcelain), trees(&[("epic/x", "/r/x")]));
+    }
+
+    #[test]
     fn the_branch_line_is_read_from_plain_text_or_the_web_editor_s_html() {
-        assert_eq!(branch_of("Branch: wu/x/y\nintent"), Some("wu/x/y"));
-        assert_eq!(branch_of("intent\n  Branch:epic/x  trailing"), Some("epic/x"));
-        assert_eq!(branch_of("<p>Branch: epic/x</p><p>plan</p>"), Some("epic/x"));
-        assert_eq!(branch_of("the Branch: wu/x/y is cut"), None);
-        assert_eq!(branch_of("Branch:"), None);
-        assert_eq!(branch_of(""), None);
+        let branch = branch_of;
+        assert_eq!(branch("Branch: wu/x/y\nintent").as_deref(), Some("wu/x/y"));
+        assert_eq!(branch("intent\n  Branch:epic/x  trailing").as_deref(), Some("epic/x"));
+        assert_eq!(branch("<p>Branch: epic/x</p><p>plan</p>").as_deref(), Some("epic/x"));
+        assert_eq!(branch("<p>intent</p><p>Branch: epic/x</p>").as_deref(), Some("epic/x"));
+        assert_eq!(branch("intent<br/>Branch: epic/x").as_deref(), Some("epic/x"));
+        assert_eq!(branch("the Branch: wu/x/y is cut"), None);
+        assert_eq!(branch("Branch:"), None);
+        assert_eq!(branch(""), None);
+    }
+
+    #[test]
+    fn inline_markup_around_the_branch_line_or_an_empty_one_before_it_still_names_it() {
+        let branch = branch_of;
+        assert_eq!(branch("<p><strong>Branch:</strong> wu/x/y</p>").as_deref(), Some("wu/x/y"));
+        assert_eq!(branch("<p>Branch: <code>wu/x/y</code></p>").as_deref(), Some("wu/x/y"));
+        assert_eq!(branch("<p>Branch:&nbsp;wu/x/y</p>").as_deref(), Some("wu/x/y"));
+        assert_eq!(branch("Branch:\nBranch: wu/x/y").as_deref(), Some("wu/x/y"));
+        assert_eq!(branch("a < b\nBranch: wu/x/y").as_deref(), Some("wu/x/y"));
     }
 
     #[test]

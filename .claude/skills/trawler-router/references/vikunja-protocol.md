@@ -34,7 +34,7 @@ It does not survive a reboot or logout, by design: nothing registers persistence
 - One project, no buckets. Position, view, sort order and Gantt dates carry no meaning; nothing reads them.
 - `done = true` is set by the router only after checking git: a WU when merged into its epic, an epic when merged into `main` and pushed. Comment the merge sha in the same pass.
 - **Task before branch** (carried from E-KANBAN): create the task → `git worktree add … -b <branch>` → write the `Branch:` line (same turn) → spawn the worker. `cargo xtask vikunja check` (every heartbeat tick, Standing processes) is the backstop that detects a skipped step, never prevention.
-- The `Branch:` line is a line starting `Branch:` (plain text, or a `<p>` after the owner edits the description in the web UI); it is the only task ↔ branch link. `put --description` replaces the whole description: send the full text.
+- The `Branch:` line is a line starting `Branch:` with a value (plain text, or HTML after the owner edits the description in the web UI: block tags end a line, inline markup such as `<strong>`/`<code>` around it is ignored); it is the only task ↔ branch link. A worktree whose directory was deleted outside git (`prunable`) counts as gone. `put --description` replaces the whole description: send the full text.
 
 ## The needs-owner signal (the only owner queue)
 The owner's queue is exactly: `done = false && assignees in vuluu && labels in 1` — the **Needs me** saved filter. Membership changes only through an explicit label or assignee change — never a position.
