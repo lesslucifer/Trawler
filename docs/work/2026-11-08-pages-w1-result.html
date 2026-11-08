@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aefd4099f34851f0dfb14a9" data-artifact="wu-result" data-status="ready">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W1 result</title>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W1 result — the landing site design, round 4</h1>
+      <p>Round 3 built one bold, product-forward page that opens the design doc. Round 4 records the owner's picks: request log V1, screenshots as re-encoded PNG (WebP was picked first, then reversed once its real saving was measured), and, from a rendered options picker, a download section with one big button + “Other systems”. No choice is left open in the design.</p>
+      <div class="meta">v4 · 2026-11-08 · Trawler · T3 WU result · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · design <a href="2026-11-08-pages-site-design.html">W1 site design</a> · epic <a href="2026-11-07-pages-plan.html">E-PAGES</a></div>
+    </div>
+  </header>
+  <main>
+    <h2 id="outcome">Outcome</h2>
+    <div class="diagram" data-c="page-shape">
+      <pre class="mermaid">flowchart TB
+  T["Top bar (dark): wordmark · Features · Privacy · Guide · Download"] --> H["Hero (dark, amber glow): eyebrow · README pitch h1 · sub · Download for ‹system› / Read the guide · version, MIT, no account"]
+  H --> L["Request log: six example.* rows arrive one by one, under 4 s, still under reduced motion"]
+  L --> S1["Every request your apps make, in one list: s1 framed as a window"]
+  S1 --> ST["What you can do: five benefit stories, alternating sides, each with its screenshot · three tiles"]
+  ST --> P["Privacy (dark): PRIVACY lead as the headline · three facts · the CA-key limit · the site's promise"]
+  P --> D["Download: the honest unsigned line · a card per OS · SHA256SUMS · Other downloads"]
+  D --> F["Footer (dark): pitch · project files · MIT © 2026 Vu Luu"]
+  JS["site.js (unchanged, defer, same origin)"] -.-> H
+  JS -.-> D</pre>
+      <div class="caption">The page top to bottom. With the script off it is the same minus the dotted edges.</div>
+    </div>
+    <table data-c="round4">
+      <thead><tr><th>Round 4 pick (owner, 2026-11-08, via the router)</th><th>Where in the design doc</th></tr></thead>
+      <tbody>
+        <tr><td>P1 request log = V1, six rows with the app's status colours; V2 dropped</td><td><code>#round4</code>, <code>#rulings</code> P1; <code>#log-variants</code>, the V2 frames, <code>.log.quiet</code> and the mock's variant hook removed; the reduced-motion still strip moved into <code>#page</code>; C15 and <code>#motion</code> name V1 only</td></tr>
+        <tr><td>P2 screenshots as re-encoded PNG with the <code>png</code> crate xtask has (WebP first, reversed after the shippable pure-Rust encoder measured −30 %, not −81 %)</td><td><code>#round4</code>, <code>#rulings</code> P2; <code>#assets</code>: PNG list and weights re-measured, no new crate; <code>og:image</code> stays PNG, CSP unchanged</td></tr>
+        <tr><td>P3 download = one big button + “Other systems” (D2 revised; the owner picked it from small rendered options: <code>LOOK=A HERO=B ACCENT=A VOICE=B DOWNLOAD=B RHYTHM=A</code>, every other pick confirming the staged design)</td><td><code>#round4</code>, <code>#rulings</code> D2; <code>#detect</code>: no-script base = the full list open in <code>details#all</code>; detected = <code>#one</code> (one button, file, first-open line) and the list folded under “Other systems”; <code>site.js</code> rewritten (<code>detect()</code> unchanged, <code>show()</code> fills and folds); copy C13, C31, C35, C36, C40, C44, C49; <code>#a11y</code>, <code>#js-tests</code>, <code>#for-w3</code></td></tr>
+      </tbody>
+    </table>
+    <div data-item="outcome">
+      <table data-c="outcome">
+        <thead><tr><th>Round 3 requirement (router's brief and the owner's four picks), as now built</th><th>Where in the design doc</th></tr></thead>
+        <tbody>
+          <tr><td>The doc opens with the page, before any table; spec below, collapsible</td><td><code>#page</code>: 1440 dark full width, 390 dark and light, 1440 light; <code>#spec</code>: ten <code>&lt;details&gt;</code> blocks</td></tr>
+          <tr><td>R1 bold product-forward: dark, big headline, the app framed as a window, amber glow</td><td>hero up to 92 px, weight 700, on <code>#1b1916</code>; every screenshot in a window frame; amber only as glow (<code>#rulings</code>, DEC-89 row)</td></tr>
+          <tr><td>R2 a moving request log in CSS, still under reduced motion; the framed screenshot as the first benefit</td><td><code>.log</code>: V1 (P1) and its still strip in <code>#page</code>; s1 in <code>#features</code></td></tr>
+          <tr><td>R3 subtle motion, off under reduced motion</td><td><code>#motion</code>: on-load rise, scroll-tied reveals, hover lift; every rule inside <code>prefers-reduced-motion: no-preference</code>; the log ends at 3.95 s</td></tr>
+          <tr><td>R4 benefit stories, every line traceable, the pitch unchanged</td><td><code>#copy</code> C1–C48 with sources; C16–C29 cite README/GUIDE/PRIVACY/CHANGELOG lines</td></tr>
+          <tr><td>D1, D2, D3 kept or said</td><td><code>#rulings</code>: D1 kept, D2 unchanged (same <code>site.js</code> and contract), D3 retold as R4</td></tr>
+          <tr><td>Constraints: CSP, no external request, no web font, script-off complete, contrast, focus, phone-first, weight</td><td><code>#head</code>, <code>#tokens</code> (log on <code>#141210</code> so <code>warn</code> passes), <code>#a11y</code>, <code>#assets</code> (first view ≈ 66 KB; whole page ≈ 0.94 MB with the re-encoded shots)</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="deviations">Deviations</h2>
+    <p data-item="deviations">The router's message replaced the brief's three directions with one direction on the owner's picks; the doc carried that one plus two log variations (round 4 keeps V1). Three calls made here: the privacy headline is PRIVACY.md's “Trawler keeps your traffic on your machine.”, not “Nothing leaves your machine” (false: the update check and the forwarded traffic leave); the router's sample “in seconds” is dropped (no measured speed); amber is used as glow only, which needs a DEC-89 rule 6 amendment W5 writes (owner <code>mr commit</code>). The hero, privacy band, footer and 404 are dark in both themes, so <code>wordmark-light.png</code> is no longer used. Headings are weight 700: the app's one-weight rule binds <code>ui/</code>, not the site. <code>cargo xtask design-scope</code> finds no design artifact, so no <code>design/v1</code> note is owed. Docs-only WU: the test layers are waived; W2 and W3 carry the tests this design specifies.</p>
+
+    <h2 id="evidence">Evidence</h2>
+    <div data-item="evidence">
+      <table data-c="evidence">
+        <thead><tr><th>Claim</th><th>Proof</th></tr></thead>
+        <tbody>
+          <tr><td>The page works under its real CSP with the real script</td><td>a standalone build from the doc's templates (scratch, not committed): <code>index.html</code> with the exact CSP meta, <code>site.css</code>, <code>site.js</code>, served on an ephemeral local port, driven by headless Chrome over CDP: zero CSP violations, zero script errors (one 404: the favicon the scratch build does not copy)</td></tr>
+          <tr><td>Detection still works</td><td>on this Mac the script picked <code>macos</code>: hero “Download for macOS”, the dmg line and first-open line shown; with scripts disabled the base page shows all three systems</td></tr>
+          <tr><td>The log animates, then stops; still under reduced motion</td><td>a shot at 1.3 s shows two rows in and the amber edge on the arriving one; at 4.5 s all six; with <code>prefers-reduced-motion: reduce</code> emulated, all six at once with no edge</td></tr>
+          <tr><td>No sideways scroll</td><td><code>scrollWidth ≤ innerWidth</code> at 1440, 390 and 320 px, light and dark</td></tr>
+          <tr><td>Contrast</td><td>every text pair computed with the WCAG 2 formula (<code>#tokens</code>); lowest: the app's <code>warn</code> on the log's <code>#141210</code>, 4.77:1</td></tr>
+          <tr><td>Weights</td><td>round 3's built <code>index.html</code> 15,992 B, <code>site.css</code> 10,086 B, <code>site.js</code> 1,648 B (round 4 only removes the two V2 rules)</td></tr>
+          <tr><td>Re-encoded PNG size and losslessness (P2)</td><td>a scratch crate (outside the repo) re-encoded the six shots with <code>png</code> 0.18.1 (RGB, <code>Compression::High</code>, <code>Filter::Adaptive</code>): 887,784 B vs 1,094,511 B (−19 %; round 3 reported 944,663 B); each decoded identical to its source</td></tr>
+          <tr><td>Why not WebP</td><td>the shippable pure-Rust <code>image-webp</code> 0.2.4 measured 762,248 B (−30 %), against the −81 % round 3 took from <code>cwebp</code>; the owner reversed P2 to PNG</td></tr>
+          <tr><td>P3 detection, all five states</td><td>headless Chrome render of <code>#detect</code>: macOS, Windows x64, Windows arm64 (hint), Linux x64 and Linux arm64 each show one “Download for ‹system›” button naming the right file, the first-open line, and the list folded under “Other systems”; the frames run the doc's <code>site.js</code> text</td></tr>
+          <tr><td>The new <code>site.js</code></td><td>1,787 B (W2's budget 4,096); <code>node --check</code> passes; names none of W2's 18 refused words, nor <code>innerHTML</code>, <code>location</code>, <code>.src</code> or <code>open(</code></td></tr>
+          <tr><td>W2 unaffected</td><td>read on <code>wu/pages/site-build</code>: its download check accepts any layout (“all 11 download ids linked, any layout”), its <code>site/site.js</code> is a stub, its scan words and budget hold</td></tr>
+          <tr><td>The doc renders the page first</td><td>headless Chrome at 1280 px: the 1440 dark frame directly under the doc header, V1 log; 13 frames, 13 iframes in the DOM; the round 4 table and callout render</td></tr>
+          <tr><td>No denied name, no invented claim</td><td>new copy names no tool from <code>public_text.rs</code> <code>DENIED_NAMES</code>; each string's source in <code>#copy</code>; log rows are the screenshot fixture's reserved <code>example.*</code> hosts</td></tr>
+          <tr><td>Doc layer</td><td>snapshots before this round: design <code>2026-11-08T07-07-27-846Z</code>, result <code>2026-11-08T07-07-29-218Z</code>; no open comments</td></tr>
+          <tr><td>e2e / integration / unit</td><td>waived: no code changes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="distillation">Distillation</h2>
+    <p data-item="distillation">None at this tier: a design WU produces a T3 proposal. It becomes truth through W2 (<code>is_code</code>, the scans incl. the new motion and no-inline-style checks, the shot re-encode with the <code>png</code> crate), W3 (<code>site/</code> with log V1) and W5 (DEC-92, the DEC-89 rule 6 amendment for the site's amber glow, the DEC-91 amendment, the <code>docs/workflow.html</code> T1 line by owner <code>mr commit</code>).</p>
+
+    <h2 id="follow-ups">Follow-ups</h2>
+    <div data-item="follow-ups">
+      <table data-c="follow-ups">
+        <thead><tr><th>Open</th><th>Owner of it</th></tr></thead>
+        <tbody>
+          <tr><td>The shot re-encode into <code>target/site/</code> and its same-pixels test</td><td>W2</td></tr>
+          <tr><td>P3: build the one-button <code>#one</code> + <code>details#all</code> markup and the round 4 <code>site.js</code>; extend <code>site.test.mjs</code> with the <code>show()</code> assertions (both buttons' <code>href</code>, <code>#one</code>/<code>#pick</code> shown, <code>#all</code> closed and renamed; unknown system leaves the base); W2's checks need no change</td><td>W3</td></tr>
+          <tr><td>DEC-89 rule 6: the site as a brand surface where amber may glow (never text, state or control)</td><td>W5, owner <code>mr commit</code></td></tr>
+          <tr><td>The plan still says “No OS detection”, Q13 “no” and a script-free page</td><td>router (plan doc on <code>epic/pages</code>)</td></tr>
+          <tr><td>Motion, no-inline-style, contrast and story-drift checks; <code>is_code</code> += <code>site/</code>; the <code>site.js</code> scan</td><td>W2</td></tr>
+          <tr><td>Safari and Firefox rendering, a real phone, scroll reveals in Safari; story screenshots are small on a phone (a 1440 px app shot at 358 px wide)</td><td>W3 shots, the owner's look</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    document.querySelectorAll('.diagram').forEach((d) => {
+      const pre = d.querySelector('pre.mermaid');
+      if (pre) d.dataset.mermaidSrc = pre.textContent;
+    });
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true, background: '#181b22' } });
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>

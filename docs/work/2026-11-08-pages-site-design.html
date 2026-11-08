@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en" data-htmldoc-id="6aefd1de9f34851f0dfb1478">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trawler — E-PAGES.W1 site design</title>
+  <style>
+    .fr-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 12px 0 24px; align-items: start; }
+    .fr-row.fr-wide { grid-template-columns: 1fr; }
+    .fr-row.fr-phones { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .fr-cell { min-width: 0; }
+    .fr-lbl { font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+    .fr-lbl strong { color: var(--ink); }
+    .fr { overflow: hidden; border: 1px solid var(--line); border-radius: 4px; position: relative; }
+    .fr iframe { border: 0; display: block; transform-origin: 0 0; position: absolute; top: 0; left: 0; }
+    .rec { color: var(--ok); }
+    details.spec { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 6px; padding: 0 16px; }
+    details.spec > summary { cursor: pointer; padding: 12px 0; font-weight: 600; color: var(--ink); }
+    details.spec[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header class="doc-hero">
+    <div class="inner">
+      <h1>E-PAGES.W1 — the landing site design</h1>
+      <p>The page first: a bold, dark, product-forward launch page with a live request log as its hero, benefit stories with the real app framed as windows, an amber glow, quiet reveals. The spec W2 and W3 build from sits folded below it.</p>
+      <div class="meta">Round 4 · the owner's picks: log V1, re-encoded PNG, one download button · 2026-11-08 · Trawler · T3 design · <span class="badge id">E-PAGES.W1</span> · <code>wu/pages/site-design</code> → <code>epic/pages</code> · plan <a href="2026-11-07-pages-plan.html">E-PAGES (W1, rulings Q1–Q13)</a> · feeds W2, W3</div>
+    </div>
+  </header>
+  <main>
+
+    <h2 id="page">The page</h2>
+    <p>Real HTML and CSS rendered in isolation, one iframe per frame (the source is in <a href="#markup">Markup</a>), so 1440 px and 390 px reflow as a browser would. Reload the doc to see the request log play again: six rows arrive one after another in under four seconds, then it holds still.</p>
+    <div class="fr-row fr-wide" data-c="page-1440-dark">
+      <div class="fr-cell"><p class="fr-lbl"><strong>1440 px · dark</strong> · no script</p><div class="fr" data-w="1440" data-theme="dark" aria-label="The page at 1440 px, dark"></div></div>
+    </div>
+    <div class="fr-row fr-phones" data-c="page-390">
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · dark</strong> · no script</p><div class="fr" data-w="390" data-theme="dark" aria-label="The page at 390 px, dark"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · light</strong> · no script · focus on <em>Download for…</em></p><div class="fr" data-w="390" data-theme="light" data-focus="1" aria-label="The page at 390 px, light, focus shown"></div></div>
+      <div class="fr-cell"><p class="fr-lbl"><strong>390 px · dark · reduced motion</strong> · the hero's still strip</p><div class="fr" data-w="390" data-theme="dark" data-only="hero" data-still="1" aria-label="Hero under reduced motion"></div></div>
+    </div>
+    <div class="fr-row fr-wide" data-c="page-1440-light">
+      <div class="fr-cell"><p class="fr-lbl"><strong>1440 px · light</strong> · no script · the hero, the privacy band and the footer stay dark in both themes</p><div class="fr" data-w="1440" data-theme="light" aria-label="The page at 1440 px, light"></div></div>
+    </div>
+
+    <h2 id="round4">Round 4: the owner's two picks</h2>
+    <table data-c="round4">
+      <tr><th>#</th><th>Pick</th><th>Was open as</th><th>In this doc now</th></tr>
+      <tr><td>P1</td><td>request log = <strong>V1</strong>: six rows in the app's status colours</td><td>V1 (recommended) or V2 (four rows, ink only)</td><td>V2, its frames and its <code>.log.quiet</code> rules are gone; <a href="#page">the page</a> carries V1 and its reduced-motion still strip; <a href="#copy">C15</a> and <a href="#motion">Motion</a> name only V1</td></tr>
+      <tr><td>P2</td><td>screenshots as <strong>re-encoded PNG</strong>, with the <code>png</code> crate xtask already has</td><td>re-encoded PNG (recommended) or lossless WebP</td><td>first picked WebP on round 3's −81 %; reversed the same day after the shippable pure-Rust encoder measured −30 %. <a href="#assets">Assets</a>: PNG shots re-encoded by W2, weights re-measured; no new crate</td></tr>
+      <tr><td>P3</td><td>download block = <strong>one big button + “Other systems”</strong> (D2 revised)</td><td>picked from rendered options: a card per OS with your system highlighted (staged), one big button, an OS switcher</td><td><a href="#detect">Detection</a>: the no-script base is the full file list, open; detected, the section shows one button for your file and folds the list under “Other systems”; <code>site.js</code>, the copy (C13, C35–C36, C40, C44, C49) and the tests owed change; W3 follow-up in <a href="#for-w3">For W2 and W3</a></td></tr>
+      <tr><td>Picker</td><td><code>LOOK=A HERO=B ACCENT=A VOICE=B DOWNLOAD=B RHYTHM=A</code></td><td>the owner saw a small rendered option per choice (2026-11-08)</td><td>every pick but DOWNLOAD confirms the staged design: bold dark look, the moving log, amber glow, benefit-story voice, alternating stories</td></tr>
+    </table>
+
+
+    <h2 id="round3">Round 3: what changed and why</h2>
+    <table data-c="round3">
+      <tr><th>Round 2 read as a technical doc because…</th><th>Round 3</th><th>Owner's pick (via the router)</th></tr>
+      <tr><td>the page itself was quiet: regular-weight headings, no colour, no motion, a bullet list</td><td>700-weight headline up to 88 px on a near-black band, an amber glow, benefit headings that say what you get</td><td>R1 · bold product-forward</td></tr>
+      <tr><td>the hero was a static screenshot under the text</td><td>the hero shows the product working: a request log that fills in row by row, in pure CSS; the real screenshot follows as the first section, framed as a window</td><td>R2 · a moving request log</td></tr>
+      <tr><td>nothing moved, by design</td><td>soft reveals as sections scroll in, a gentle lift on hover; all of it off under reduced motion</td><td>R3 · subtle motion</td></tr>
+      <tr><td>features were seven README bullets in two columns</td><td>five stories, each a benefit heading, one plain sentence and its own screenshot, alternating sides; three tiles for the rest</td><td>R4 · benefit stories</td></tr>
+      <tr><td>the doc opened with rulings and tables</td><td>the doc opens with the page; the spec is folded below</td><td>brief</td></tr>
+    </table>
+    <p>Kept: the README pitch as the headline, word for word (Q5); the headline and the download button first (D1); a card per OS with detection by the same <code>site.js</code> (D2); every claim traceable to README, GUIDE, PRIVACY or CHANGELOG (<a href="#copy">Copy</a>); the CSP, no external request, no web font, the page complete with the script off.</p>
+
+    <h2 id="spec">The spec</h2>
+    <p>Everything W2 and W3 build from. Each block opens on a click.</p>
+
+    <details class="spec" id="rulings" data-c="rulings">
+      <summary>Owner rulings and what they change</summary>
+      <table>
+        <tr><th>#</th><th>Ruling</th><th>Who · when</th><th>In this design</th></tr>
+        <tr><td>Q1</td><td>lesslucifer.github.io/Trawler</td><td>owner · 2026-11-08 (plan v2)</td><td>canonical, OG, 404 paths</td></tr>
+        <tr><td>Q3</td><td>build-time release read + always-present releases/latest link</td><td>same</td><td>C12, C34, C38, C45; detection reads the built page, never the network</td></tr>
+        <tr><td>Q4</td><td>no analytics</td><td>same</td><td>CSP, C31, the <code>site.js</code> scan</td></tr>
+        <tr><td>Q5</td><td>README pitch exactly</td><td>same</td><td>C1, C8, C46</td></tr>
+        <tr><td>Q6</td><td>link out to blob/main/GUIDE.md</td><td>same</td><td>C6, C11, C35, C41–C44, C47</td></tr>
+        <tr><td>Q7</td><td>English only</td><td>same</td><td><code>lang="en"</code></td></tr>
+        <tr><td>Q9</td><td>system fonts + outlined wordmark</td><td>same</td><td>system stacks only; <code>wordmark-dark.png</code> in the top bar and the footer</td></tr>
+        <tr><td>Q13</td><td>yes: <code>site/</code> is a code path (the site has a script)</td><td>owner · 2026-11-08 (W1 round 2, with D2)</td><td>W2 edits <code>is_code</code>; the <code>docs/workflow.html</code> T1 line is W5's owner <code>mr commit</code></td></tr>
+        <tr><td>D1</td><td>centred stack, headline + download first</td><td>owner · W1 round 2</td><td>kept: eyebrow, pitch, sub, buttons, centred; the hero visual under them is now the request log (R2), s1 moves to the first section</td></tr>
+        <tr><td>D2</td><td><s>a card per OS, yours highlighted</s> → one big button for your system + “Other systems”; the no-script base is the full file list; detection by one same-origin <code>site.js</code>; an “Other downloads” link to releases/latest stays visible</td><td>owner · W1 round 2; revised 2026-11-08 (W1 round 4, P3, picked from rendered options)</td><td><a href="#detect">Detection</a>: same <code>detect()</code>, CSP and fixture inputs; <code>show()</code> fills the one-button block and folds the list instead of reordering cards</td></tr>
+        <tr><td>D3</td><td>bullets + More screens</td><td>same</td><td><strong>retold</strong> as R4: the bullets become story headings and sentences, the screens become each story's window; no bullet list remains</td></tr>
+        <tr><td>R1</td><td>bold product-forward: dark, big headline, the app framed like a real window, a glowing amber accent</td><td>owner · 2026-11-08 (W1 round 3, via the router)</td><td>the hero, privacy band and footer are dark in both themes; amber only as glow (see the DEC-89 row)</td></tr>
+        <tr><td>R2</td><td>hero visual = a moving request log, CSS only, still under reduced motion; the framed screenshot right after as the first benefit</td><td>same</td><td><code>.log</code> in <code>#t-index</code>, V1 (P1)</td></tr>
+        <tr><td>R3</td><td>subtle motion: soft reveals, gentle hover; the log is the one lively element; always off under reduced motion</td><td>same</td><td><a href="#motion">Motion</a></td></tr>
+        <tr><td>R4</td><td>benefit stories: what you get, then one plain sentence; every line traceable; the tagline stays the README pitch</td><td>same</td><td><a href="#copy">Copy</a> C16–C27</td></tr>
+        <tr><td>DEC-89 rule 6</td><td>“amber is a brand colour, never a UI colour”</td><td>R1 asks for an amber glow</td><td>amber appears only as decoration of the brand surface (the glows, the arriving row's edge, the primary button's hover halo), the way the social card and installer art use it; never text, never a state, never a control's fill. W5 records the site as a brand surface in a DEC-89 amendment (owner <code>mr commit</code>)</td></tr>
+        <tr><td>P1</td><td>request log = V1, six rows with the app's status colours; V2 dropped</td><td>owner · 2026-11-08 (W1 round 4, via the router)</td><td>C15, <a href="#motion">Motion</a>, <code>#t-index</code>; no variation left in <code>site.css</code></td></tr>
+        <tr><td>P2</td><td>screenshots as re-encoded PNG with the <code>png</code> crate xtask already has; no new crate</td><td>owner · 2026-11-08 (W1 round 4, via the router): WebP first, reversed the same day when the shippable encoder measured −30 %, not −81 %</td><td><a href="#assets">Assets</a>; <code>og:image</code> stays <code>social-preview.png</code>; CSP unchanged</td></tr>
+      </table>
+    </details>
+
+    <details class="spec" id="copy" data-c="copy">
+      <summary>Copy: every string on the page, with its source</summary>
+      <p>“frame” = hand-written in <code>site/</code>, held by the deny-list test; “filled” = taken at build from the file named. Every frame claim cites the fact it restates. <code>site.js</code> adds no string of its own.</p>
+      <table>
+        <tr><th>#</th><th>Where</th><th>String</th><th>Source</th></tr>
+        <tr><td>C1</td><td><code>&lt;title&gt;</code></td><td>Trawler — See every HTTP and HTTPS request your apps make.</td><td>frame “Trawler — ” + filled pitch (Q5)</td></tr>
+        <tr><td>C2</td><td><code>meta description</code>, <code>og:description</code></td><td>the pitch · the sub line</td><td>filled README</td></tr>
+        <tr><td>C3</td><td><code>og:title</code>, <code>og:site_name</code></td><td>Trawler</td><td>frame</td></tr>
+        <tr><td>C4</td><td>skip link</td><td>Skip to download</td><td>frame</td></tr>
+        <tr><td>C5</td><td>wordmark <code>alt</code></td><td>Trawler</td><td>frame (README's alt)</td></tr>
+        <tr><td>C6</td><td>top bar</td><td>Features · Privacy · Guide · <u>Download</u></td><td>frame · <code>#features</code>, <code>#privacy</code>, GUIDE.md, <code>#download</code>; under 720 px only Download shows</td></tr>
+        <tr><td>C7</td><td>eyebrow</td><td>Free and open source · macOS · Windows · Linux</td><td>frame · README sub line “A free, open-source debugging proxy for macOS, Windows and Linux”</td></tr>
+        <tr><td>C8</td><td><code>h1</code></td><td>See every HTTP and HTTPS request your apps make.</td><td>filled README pitch (Q5)</td></tr>
+        <tr><td>C9</td><td>sub line</td><td>A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</td><td>filled README</td></tr>
+        <tr><td>C10</td><td>primary button</td><td>Download for ‹macOS · Windows · Linux›; detected: Download for ‹the picked system's <code>h3</code>›</td><td>frame (README's link words); the script copies the <code>h3</code></td></tr>
+        <tr><td>C11</td><td>second button</td><td>Read the guide</td><td>frame · GUIDE.md</td></tr>
+        <tr><td>C12</td><td>under the buttons</td><td>Version ‹0.1.0› · MIT licence · no account</td><td>filled version · README FAQ “MIT licence, no paid tier, no account”</td></tr>
+        <tr><td>C13</td><td>detected only</td><td>‹file name› · <u>Other systems</u> (→ <code>#all</code>) · <u>Other downloads</u></td><td>frame words; file name copied from the picked link</td></tr>
+        <tr><td>C14</td><td>detected only</td><td>the picked system's C41, C42 or C43, with its link</td><td>copied by the script</td></tr>
+        <tr><td>C15</td><td>request log</td><td>window title “Trawler”; columns Method · Host · Path · Status · Time; six rows: GET www.example.org / 200 84 ms · POST api.example.com /v1/session 200 133 ms · GET api.example.com /v1/orders/9f3c 200 71 ms · GET api.example.com /v1/recommendations 404 33 ms · PATCH api.example.com /v1/cart/items/C-3 200 90 ms · DELETE api.example.com /v1/cart/items/B-7 204 44 ms; <code>aria-label</code> “An example of Trawler's request list: six requests to example hosts”</td><td>frame · rows copied from the s1/s4 screenshot fixture (reserved <code>example.*</code> hosts); column names from the app's list</td></tr>
+        <tr><td>C16</td><td><code>#features h2</code></td><td>Every request your apps make, in one list.</td><td>frame · GUIDE.md intro “Trawler shows every HTTP and HTTPS request your apps make”</td></tr>
+        <tr><td>C17</td><td>under it</td><td>Method, host, path, status and time for each one. Click a request and its headers and body open beside the list — HTTPS too, once your system trusts Trawler's certificate.</td><td>frame · the s1 columns; GUIDE#inspect-a-request “The inspector opens beside the list”; README First run (set up trusts the certificate)</td></tr>
+        <tr><td>C18</td><td>s1 <code>alt</code></td><td>Trawler's main window: the list of captured requests, one JSON response open in the inspector</td><td>filled README</td></tr>
+        <tr><td>C19</td><td>stories kicker <code>h2</code></td><td>What you can do</td><td>filled README heading</td></tr>
+        <tr><td>C20</td><td>story 1</td><td><strong>Your phone and simulators, from one screen.</strong> Capture an iPhone, an Android phone, the iOS Simulator or the Android emulator. Pick the device and the setup screen shows each step.</td><td>README bullet 2; GUIDE#capture-another-device; s6 · alt filled from GUIDE</td></tr>
+        <tr><td>C21</td><td>story 2</td><td><strong>Find the failing request.</strong> Filter by status, method, host or any text: <code>status:4xx</code> keeps the failures, <code>-method:OPTIONS</code> leaves those requests out.</td><td>README bullet 3; GUIDE#filter-the-list (chip table); s3 · alt filled from README</td></tr>
+        <tr><td>C22</td><td>story 3</td><td><strong>Read every header and every body.</strong> Headers, timing and bodies, with viewers for JSON, XML, HTML, forms and more. Copy any request as a curl command.</td><td>README bullet 4; GUIDE#inspect-a-request (copy as curl); s4 · alt filled from GUIDE</td></tr>
+        <tr><td>C23</td><td>story 4</td><td><strong>Change it. Send it again.</strong> Replay a request with its method, address, a header or the body edited, or write one from scratch. The answer shows beside it.</td><td>README bullet 5; GUIDE#send-a-request-again (steps 2–3); s5 · alt filled from README</td></tr>
+        <tr><td>C24</td><td>story 5</td><td><strong>Keep what you captured.</strong> Captured requests live in memory and are gone when you quit. Export them to HAR, and open a HAR file or a curl command later.</td><td>README bullet 6; GUIDE#export-and-import; s10 · alt filled from GUIDE</td></tr>
+        <tr><td>C25</td><td>tile</td><td><strong>Capture with the window closed.</strong> Trawler stays in the menu bar or the system tray and keeps capturing.</td><td>README bullet 7; GUIDE#keep-capturing</td></tr>
+        <tr><td>C26</td><td>tile</td><td><strong>Updates from inside the app.</strong> Trawler asks before installing, and installs only a release signed by the project.</td><td>README FAQ “How do updates work?”; CHANGELOG 0.1.0 “Every update is signed”</td></tr>
+        <tr><td>C27</td><td>tile</td><td><strong>Native on macOS, Windows and Linux.</strong> MIT licence, no paid tier, no account.</td><td>README FAQ (“native on macOS, Windows and Linux”; “Is it free?”)</td></tr>
+        <tr><td>C28</td><td><code>#privacy h2</code> + lead</td><td>Trawler keeps your traffic on your machine. · It has no account, no analytics, no crash reporting and no telemetry.</td><td>filled PRIVACY.md lead, split after its first sentence</td></tr>
+        <tr><td>C29</td><td>three tiles</td><td><strong>In memory, gone when you quit.</strong> Captured requests stay in memory on your machine. Export to HAR to keep them. · <strong>Two requests of its own.</strong> An update check to GitHub when it opens, at most once a day, which you can turn off; and the setup screen's test request to example.com when you click it. · <strong>Only this machine, until you allow another.</strong> Trawler listens only on this machine until you allow another device.</td><td>README Privacy bullets 1–2; PRIVACY.md “Other devices” row</td></tr>
+        <tr><td>C30</td><td>the limit, where it bites</td><td>Trawler's certificate key is stored unencrypted in your app data folder. Remove the certificate when you stop using Trawler.</td><td>README Privacy bullet 3 (DEC-91 rule 1: limits stated where they bite)</td></tr>
+        <tr><td>C31</td><td>this site</td><td>This site keeps the same promise: no analytics, no cookies, no tracking, and nothing loaded from any other site. One small script picks your system's download; it reads only what your browser reports about your system, and stores and sends nothing. GitHub hosts this page and sees your IP address, as any web host does.</td><td>frame (round 2's C31) · backed by W2's CSP, no-external and scan tests; PRIVACY.md “GitHub sees your IP address”</td></tr>
+        <tr><td>C32</td><td>link</td><td><u>What leaves your machine and what stays</u></td><td>frame · PRIVACY.md</td></tr>
+        <tr><td>C33</td><td><code>#download h2</code></td><td>Download Trawler</td><td>frame</td></tr>
+        <tr><td>C34</td><td>under it</td><td>Version ‹0.1.0› · ‹2026-11-07› · <u>release notes</u></td><td>frame words, filled values</td></tr>
+        <tr><td>C35</td><td>the honest line</td><td>Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher the first time you open it. The line under each download says what to click. <u>Step by step</u></td><td>README “First open on macOS and Windows” + FAQ · GUIDE.md#install</td></tr>
+        <tr><td>C36</td><td>system <code>h3</code> in the list</td><td>macOS · Windows · Linux</td><td>frame</td></tr>
+        <tr><td>C37</td><td>macOS requirement</td><td>macOS 11 or later · Apple Silicon and Intel</td><td>frame (= README install row)</td></tr>
+        <tr><td>C38</td><td><code>h4</code> · file links · “or”</td><td>x64 · arm64 · <code>Trawler_0.1.0_universal.dmg</code> … · or</td><td>frame · filled release asset names</td></tr>
+        <tr><td>C39</td><td>Windows hint</td><td>Not sure which? <strong>Settings → System → About → System type</strong>.</td><td>frame (plan)</td></tr>
+        <tr><td>C40</td><td>the list's <code>summary</code></td><td>All systems (no script, unknown system) · Other systems (detected)</td><td>frame; the script swaps the words</td></tr>
+        <tr><td>C41</td><td>macOS first open</td><td>First open: <strong>Privacy &amp; Security → Open Anyway</strong>. <u>Step by step</u></td><td>frame (= README) · GUIDE.md#install</td></tr>
+        <tr><td>C42</td><td>Windows first open</td><td>First open: <strong>More info → Run anyway</strong>. <u>Step by step</u></td><td>frame (= README) · GUIDE.md#install</td></tr>
+        <tr><td>C43</td><td>Linux first open</td><td>No prompt on first open. <u>Install commands</u></td><td>frame (= README) · GUIDE.md#install</td></tr>
+        <tr><td>C44</td><td>under the list</td><td>Check your download: <u>SHA256SUMS</u> · <u>how to check</u></td><td>frame · the release asset, GUIDE.md#check-your-download</td></tr>
+        <tr><td>C45</td><td>always present</td><td><u>Other downloads: every file of the latest release, on GitHub</u></td><td>frame · releases/latest (Q3, D2)</td></tr>
+        <tr><td>C46</td><td>footer</td><td>the pitch · MIT © 2026 Vu Luu</td><td>filled README pitch · README “Contributing · Security · Licence”</td></tr>
+        <tr><td>C47</td><td>footer <code>nav</code> “Project files”</td><td>Guide · Privacy · Changelog · Contributing · Security · Licence · Report an issue · Source code</td><td>frame · blob/main files, issues/new/choose, the repo</td></tr>
+        <tr><td>C49</td><td>the one-button block, detected only</td><td>Download for ‹system› (C10's words) · ‹file name› · the system's C41, C42 or C43</td><td>copied by the script, like C10, C13, C14</td></tr>
+        <tr><td>C48</td><td>404</td><td><code>&lt;title&gt;</code> Page not found — Trawler · <code>h1</code> This page doesn't exist. · <u>Go to the Trawler home page</u></td><td>frame</td></tr>
+      </table>
+      <p>Left out on purpose: “Nothing leaves your machine” (false: the update check goes to GitHub and captured requests go where they were going; PRIVACY.md says “keeps your traffic on your machine”, so the page says that); “in seconds” and any other speed, count or comparison (nothing measures it); testimonials, logos, other tools' names (DEC-91 rule 2).</p>
+    </details>
+
+    <details class="spec" id="motion" data-c="motion">
+      <summary>Motion</summary>
+      <table>
+        <tr><th>Element</th><th>Motion</th><th>When</th><th>Reduced motion</th></tr>
+        <tr><td>Hero text</td><td>fade + rise 16 px, 0.7 s, staggered 0–0.26 s</td><td>once, on load</td><td>none: shown at rest</td></tr>
+        <tr><td>Request log rows</td><td>each row fades in from 8 px above with a 3 px amber edge that fades out; rows start 0.55 s apart from 0.5 s</td><td>once, on load; ends at 3.95 s, so no pause control is owed (WCAG 2.2.2: under 5 s)</td><td>none: all rows shown, no edge (frame above)</td></tr>
+        <tr><td>Section content (the s1 window, stories, tiles, privacy lead, download cards)</td><td>fade + rise as it enters the viewport, tied to scroll (<code>animation-timeline: view()</code>)</td><td>browsers with scroll timelines; others show it at rest</td><td>none</td></tr>
+        <tr><td>Buttons · story windows</td><td>lift 1–2 px on hover; the primary button gains an amber halo; 0.15–0.3 s</td><td>pointer hover</td><td>none</td></tr>
+        <tr><td>Anything else</td><td>nothing: no loop, no <code>infinite</code>, no smooth scroll, no video</td><td colspan="2">—</td></tr>
+      </table>
+      <p>Every <code>animation</code> and <code>transition</code> in <code>site.css</code> sits inside <code>@media (prefers-reduced-motion: no-preference)</code>, and every rest state is the visible one, so a browser that runs no animation shows the whole page. W2 asserts both.</p>
+    </details>
+
+    <details class="spec" id="detect" data-c="detect">
+      <summary>Download detection (D2, revised in round 4: one button + Other systems)</summary>
+      <p>A tiny same-origin script, no network request, no tracking, no storage. It reads what the browser reports (<code>navigator.userAgentData.platform</code>, <code>navigator.platform</code>, <code>navigator.userAgent</code>, <code>navigator.maxTouchPoints</code>, and on Chromium the one async hint <code>architecture</code>), picks one download, fills the two buttons with it, and changes nothing else.</p>
+      <table>
+        <tr><th>System</th><th>What a browser can tell</th><th>Primary (the hero button and the download button)</th><th>Where the others sit</th></tr>
+        <tr><td><strong>macOS</strong></td><td>That it is a Mac; not Apple Silicon from Intel (Safari reports <code>MacIntel</code> on both)</td><td><code>Trawler_‹v›_universal.dmg</code>: one file serves both chips</td><td>none; “macOS 11 or later · Apple Silicon and Intel” stays in the list</td></tr>
+        <tr><td><strong>Windows</strong></td><td>That it is Windows. Arch only on Chromium, through <code>getHighEntropyValues(['architecture'])</code> (async, absent in Firefox and Safari)</td><td><code>‹v›_x64-setup.exe</code> at once; promoted to <code>‹v›_arm64-setup.exe</code> only when the hint answers <code>"arm"</code></td><td>under “Other systems”: the other arch, each <code>.msi</code> on its “or” line, the “Not sure which?” hint</td></tr>
+        <tr><td><strong>Linux</strong></td><td>That it is Linux, and arm64 when the UA or <code>navigator.platform</code> says <code>aarch64</code>/<code>arm64</code> (or the hint says <code>"arm"</code>); never the distribution</td><td><code>‹v›_amd64.AppImage</code> / <code>‹v›_aarch64.AppImage</code>: any distribution, no password to install or update</td><td>under “Other systems”: <code>.deb</code> and <code>.rpm</code> on the “or” line; “Install commands” → GUIDE#install</td></tr>
+        <tr><td>Phone, tablet, ChromeOS, anything else</td><td>Android, iPhone, iPad (also <code>MacIntel</code> with touch points), <code>CrOS</code>, <code>userAgentData.mobile</code>, an empty platform</td><td colspan="2">unknown: the page stays as with the script off</td></tr>
+      </table>
+      <table>
+        <tr><th>State</th><th>Hero button</th><th>Hero line under it</th><th>Download section</th></tr>
+        <tr><td>no script · unknown</td><td>Download for macOS · Windows · Linux → <code>#download</code></td><td>hidden</td><td>no big button; the list open under “All systems”: macOS · Windows · Linux, x64 before arm64</td></tr>
+        <tr><td><code>macos</code> · <code>windows-x64</code> · <code>windows-arm64</code> · <code>linux-x64</code> · <code>linux-arm64</code></td><td>Download for ‹system› → that file</td><td>the file name · Other systems · Other downloads, then the card's first-open line</td><td>one big “Download for ‹system›” button, the file name and the first-open line; the list folded under “Other systems”, one click opens it</td></tr>
+      </table>
+      <p>Nothing moves: the list keeps its order in every state, so tab and reading order never change. The fold is a native <code>&lt;details&gt;</code>: it opens without a script, and the script only closes it. A missing <code>dl-*</code> id makes <code>show</code> return without a change.</p>
+      <div class="fr-row fr-phones">
+        <div class="fr-cell"><p class="fr-lbl"><strong>macos</strong> · 390 · light</p><div class="fr" data-w="390" data-theme="light" data-state="macos" data-only="hero download" aria-label="Detected macOS"></div></div>
+        <div class="fr-cell"><p class="fr-lbl"><strong>windows-x64</strong> · 390 · dark</p><div class="fr" data-w="390" data-theme="dark" data-state="windows-x64" data-only="hero download" aria-label="Detected Windows x64"></div></div>
+        <div class="fr-cell"><p class="fr-lbl"><strong>windows-arm64</strong> (hint) · 390 · light</p><div class="fr" data-w="390" data-theme="light" data-state="windows-arm64" data-only="hero download" aria-label="Detected Windows arm64"></div></div>
+        <div class="fr-cell"><p class="fr-lbl"><strong>linux-x64</strong> · 390 · dark</p><div class="fr" data-w="390" data-theme="dark" data-state="linux-x64" data-only="hero download" aria-label="Detected Linux x64"></div></div>
+        <div class="fr-cell"><p class="fr-lbl"><strong>linux-arm64</strong> · 390 · light</p><div class="fr" data-w="390" data-theme="light" data-state="linux-arm64" data-only="hero download" aria-label="Detected Linux arm64"></div></div>
+      </div>
+      <div class="fr-row fr-wide">
+        <div class="fr-cell"><p class="fr-lbl"><strong>windows-x64</strong> · 1440 · light</p><div class="fr" data-w="1440" data-theme="light" data-state="windows-x64" data-only="hero download" aria-label="Detected Windows x64 at 1440 px"></div></div>
+      </div>
+      <h3 id="site-js">site.js</h3>
+      <p>The reference W3 copies (revised in round 4; size below). A classic <code>defer</code> script: module scripts never run on a <code>file://</code> origin. It writes only <code>href</code>, <code>textContent</code>, <code>hidden</code> and the list's <code>open</code>. The frames run exactly this text.</p>
+      <pre><code id="site-js-src">function detect(nav) {
+  const ua = (nav.userAgent || '') + ' ' + (nav.platform || '');
+  const data = nav.userAgentData;
+  const os = ((data &amp;&amp; data.platform) || nav.platform || '').toLowerCase();
+  if ((data &amp;&amp; data.mobile) || /android|iphone|ipad|ipod|cros/i.test(ua)) return null;
+  if (os.includes('mac')) return nav.maxTouchPoints &gt; 1 ? null : 'macos';
+  const arch = /aarch64|arm64|armv8/i.test(ua) ? 'arm64' : 'x64';
+  if (os.includes('win')) return 'windows-' + arch;
+  if (os.includes('linux')) return 'linux-' + arch;
+  return null;
+}
+
+function show(key) {
+  const block = document.getElementById('dl-' + key);
+  if (!block) return;
+  const system = block.closest('.card');
+  const file = block.querySelector('a.file');
+  const first = system.querySelector('.first');
+  for (const id of ['get', 'one-get']) document.getElementById(id).href = file.href;
+  for (const id of ['get-os', 'one-os']) document.getElementById(id).textContent = system.querySelector('h3').textContent;
+  for (const id of ['pick-file', 'one-file']) document.getElementById(id).textContent = file.textContent;
+  for (const id of ['pick-first', 'one-first']) document.getElementById(id).replaceChildren(...first.cloneNode(true).childNodes);
+  document.getElementById('pick').hidden = false;
+  document.getElementById('one').hidden = false;
+  const all = document.getElementById('all');
+  all.open = false;
+  all.querySelector('summary').textContent = 'Other systems';
+}
+
+const picked = detect(navigator);
+if (picked) {
+  show(picked);
+  const data = navigator.userAgentData;
+  if (picked !== 'macos' &amp;&amp; data &amp;&amp; data.getHighEntropyValues) {
+    data.getHighEntropyValues(['architecture']).then((hint) =&gt; {
+      if (hint.architecture === 'arm') show(picked.replace('x64', 'arm64'));
+    }, () =&gt; {});
+  }
+}</code></pre>
+      <p>The page's side of the contract: blocks <code>dl-macos</code>, <code>dl-windows-x64</code>, <code>dl-windows-arm64</code>, <code>dl-linux-x64</code>, <code>dl-linux-arm64</code> (class <code>arch</code>, first link <code>a.file</code>) inside a <code>.card</code> with an <code>h3</code> and a <code>.first</code> line, all inside <code>details#all</code> (open in the markup, with a <code>summary</code>); the download section's hidden <code>#one</code> with <code>#one-get</code>, <code>#one-os</code>, <code>#one-file</code>, <code>#one-first</code>; the hero's <code>#get</code> / <code>#get-os</code> and the hidden <code>#pick</code> with <code>#pick-file</code> and <code>#pick-first</code>. Only download systems carry the class <code>card</code>; feature and privacy boxes are <code>tile</code>.</p>
+    </details>
+
+    <details class="spec" id="tokens" data-c="tokens">
+      <summary>Colour and contrast</summary>
+      <p>WCAG 2 ratios against the surface each text sits on; W2's contrast test recomputes them from <code>site.css</code>.</p>
+      <table>
+        <tr><th>Token</th><th>Use</th><th>Light</th><th>Dark</th><th><code>.night</code> bands (both themes)</th></tr>
+        <tr><td><code>--bg</code></td><td>surface</td><td><code>#f4f1ea</code> paper</td><td><code>#2b2622</code> canvas</td><td><code>#1b1916</code> (DEC-89 social canvas)</td></tr>
+        <tr><td><code>--ink</code></td><td>headings, links, primary button fill, focus ring</td><td><code>#1f1c19</code> · 15.0</td><td><code>#f7f5f0</code> · 13.7</td><td><code>#f7f5f0</code> · 16.1</td></tr>
+        <tr><td><code>--body</code></td><td>body text</td><td><code>#3d3833</code> · 10.3 (9.4 on tiles)</td><td><code>#c9c0ad</code> · 8.3 (6.9 on tiles)</td><td><code>#c9c0ad</code> · 9.7 (8.3 on tiles)</td></tr>
+        <tr><td><code>--mute</code></td><td>eyebrow, labels, meta, captions</td><td><code>#5f5850</code> · 6.2 (5.7 on tiles)</td><td><code>#aea69c</code> · 6.2 (5.2 on tiles)</td><td><code>#aea69c</code> · 7.3 (6.2 on tiles)</td></tr>
+        <tr><td><code>--raise</code></td><td>tiles, cards</td><td><code>#ece7dc</code></td><td><code>#383330</code> canvas-soft</td><td><code>#2b2622</code></td></tr>
+        <tr><td><code>--line</code></td><td>borders (decoration)</td><td><code>#d6cfc2</code></td><td><code>#3f3a36</code> hairline</td><td><code>#3f3a36</code></td></tr>
+        <tr><td><code>--glow</code></td><td>amber decoration only</td><td colspan="2"><code>#e0a43a</code> at 22 %</td><td><code>#e0a43a</code> at 30 %</td></tr>
+      </table>
+      <table>
+        <tr><th>Request log (fixed, on <code>#141210</code>)</th><th>Value</th><th>Ratio</th></tr>
+        <tr><td>row text · column labels · title bar text (on <code>#383330</code>)</td><td><code>#c9c0ad</code> · <code>#aea69c</code> · <code>#f7f5f0</code></td><td>10.4 · 7.8 · 11.4</td></tr>
+        <tr><td>ok (GET, 2xx) · create (POST) · amend (PATCH) · warn (DELETE, 4xx)</td><td>the app's <code>#4cc38a</code> · <code>#e5bf4d</code> · <code>#a78bfa</code> · <code>#e5484d</code></td><td>8.4 · 10.5 · 6.8 · 4.8</td></tr>
+      </table>
+      <p>The log's body is <code>#141210</code>, not the app's canvas, because the app's <code>warn</code> reads 3.8:1 on <code>#2b2622</code>; on <code>#141210</code> every status passes 4.5:1.</p>
+    </details>
+
+    <details class="spec" id="a11y" data-c="a11y">
+      <summary>Accessibility</summary>
+      <table>
+        <tr><th>Item</th><th>Spec</th></tr>
+        <tr><td>Structure</td><td><code>lang="en"</code>; landmarks <code>header</code> (top bar), <code>main</code>, <code>footer</code>; one <code>h1</code> (the pitch); <code>h2</code> per section, <code>h3</code> per story, tile and OS, <code>h4</code> per arch</td></tr>
+        <tr><td>Request log</td><td>a <code>figure</code> with <code>role="img"</code> and a label (C15): a screen reader hears one sentence, not 36 cells; it carries no information the page needs</td></tr>
+        <tr><td>Skip link · focus</td><td>“Skip to download” first; <code>:focus-visible</code> → 2 px <code>--ink</code> outline, 3 px offset, on every link and button, light or dark band</td></tr>
+        <tr><td>Motion</td><td><a href="#motion">Motion</a>: everything off under reduced motion; nothing loops; the log ends under 5 s</td></tr>
+        <tr><td>Targets</td><td>buttons at least 44 px tall (48 px for the hero pair)</td></tr>
+        <tr><td>Images</td><td>alt from README/GUIDE; <code>width</code>/<code>height</code> on each; every screenshot <code>loading="lazy"</code> (none is in the first view)</td></tr>
+        <tr><td>Download list</td><td>a native <code>&lt;details&gt;</code>/<code>&lt;summary&gt;</code>: keyboard and screen readers get its open state for free; open in the markup, so a page without the script shows every file</td></tr>
+        <tr><td>Narrow screens</td><td>written phone-first: one column, the log drops Host and Time, file names wrap anywhere; nothing scrolls sideways at 320 px</td></tr>
+      </table>
+    </details>
+
+    <details class="spec" id="assets" data-c="assets">
+      <summary>Assets and page weight</summary>
+      <table>
+        <tr><th>Published as</th><th>Copied from</th><th>Bytes</th><th>Used by · load</th></tr>
+        <tr><td><code>index.html</code>, <code>404.html</code>, <code>site.css</code></td><td><code>site/</code> (W3), filled by W2</td><td>≤ 40 KB together (the doc's templates: ≈ 26 KB)</td><td>blocking (CSS)</td></tr>
+        <tr><td><code>site.js</code></td><td><code>site/</code>, as is</td><td>1,787 (cap 3,072)</td><td>index · <code>defer</code></td></tr>
+        <tr><td><code>favicon.svg</code></td><td><code>ui/public/favicon.svg</code></td><td>601</td><td>both pages</td></tr>
+        <tr><td><code>wordmark-dark.png</code></td><td><code>ui/src-tauri/icons/brand/</code> (1480×336, shown at 120×27)</td><td>23,228</td><td>top bar, footer, 404 · eager; <code>wordmark-light.png</code> is no longer used: every wordmark sits on a dark band</td></tr>
+        <tr><td>s1, s6, s3, s4, s5, s10 (<code>.png</code>, same names)</td><td><code>.github/screenshots/</code> (<code>cargo xtask ui screenshots</code>, 1440×800), re-encoded by W2's build (P2)</td><td>219,795 · 69,281 · 37,703 · 199,063 · 189,310 · 172,632 = 887,784</td><td>first section + five stories · <code>loading="lazy"</code></td></tr>
+        <tr><td><code>social-preview.png</code></td><td><code>ui/src-tauri/icons/brand/</code></td><td>47,651</td><td><code>og:image</code> only</td></tr>
+      </table>
+      <p><strong>First view ≈ 66 KB</strong> (≤ 40 + 1.8 + 23 + 0.6): no screenshot is above the fold. <strong>The whole page ≈ 0.94 MB</strong> (round 3's scratch build 15,992 + 10,086 + 1,648 + 601 + 23,228, plus the six re-encoded shots), down from ≈ 1.15 MB with the committed PNGs; the shots are 95 % of it.</p>
+      <table data-c="png-measure">
+        <tr><th>The six shots (P2), measured this round</th><th>Total (B)</th><th>Pixels</th></tr>
+        <tr><td>as committed: RGBA PNG, every pixel opaque</td><td>1,094,511</td><td>—</td></tr>
+        <tr><td><strong>re-encoded</strong> with <code>png</code> 0.18.1 (xtask's): alpha dropped (RGB 8-bit), <code>Compression::High</code>, <code>Filter::Adaptive</code></td><td><strong>887,784 (−19 %)</strong></td><td>identical (decoded and compared)</td></tr>
+      </table>
+      <p>The committed PNGs stay as they are (README and GUIDE show them); W2 writes the re-encoded copies into <code>target/site/</code> each build and tests that each decodes to its source's pixels.</p>
+    </details>
+
+    <details class="spec" id="head" data-c="head">
+      <summary>Head and CSP</summary>
+      <table>
+        <tr><th>Tag</th><th>Value</th></tr>
+        <tr><td>CSP, index</td><td><code>default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'</code> (meta). No inline style attribute or <code>&lt;style&gt;</code> anywhere: every animation delay is a selector in <code>site.css</code></td></tr>
+        <tr><td>CSP, 404</td><td><code>default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'</code>: no script</td></tr>
+        <tr><td>script</td><td><code>&lt;script src="site.js" defer&gt;&lt;/script&gt;</code>, last in the index <code>&lt;head&gt;</code>; the only script on the site</td></tr>
+        <tr><td>referrer · colour scheme</td><td><code>no-referrer</code> · <code>&lt;meta name="color-scheme" content="light dark"&gt;</code></td></tr>
+        <tr><td>canonical · <code>og:url</code></td><td><code>https://lesslucifer.github.io/Trawler/</code></td></tr>
+        <tr><td>OG / Twitter</td><td><code>og:type website</code>, C2, C3, <code>og:image</code> = base + <code>social-preview.png</code> 1280×640 (PNG), <code>twitter:card summary_large_image</code></td></tr>
+        <tr><td>404</td><td>favicon, CSS and wordmark by absolute path <code>/Trawler/…</code>; <code>&lt;meta name="robots" content="noindex"&gt;</code></td></tr>
+      </table>
+    </details>
+
+    <details class="spec" id="js-tests" data-c="js-tests">
+      <summary>Tests W2 and W3 owe</summary>
+      <table>
+        <tr><th>Check</th><th>Refused when</th><th>Who</th></tr>
+        <tr><td><code>site.js</code> network</td><td>any of <code>fetch</code>, <code>XMLHttpRequest</code>, <code>WebSocket</code>, <code>WebTransport</code>, <code>sendBeacon</code>, <code>EventSource</code>, <code>RTCPeerConnection</code>, <code>import(</code>, <code>Worker</code>, <code>serviceWorker</code>, <code>://</code></td><td>W2 scan</td></tr>
+        <tr><td><code>site.js</code> code from strings</td><td><code>eval</code>, <code>Function(</code>, string timers, <code>innerHTML</code>, <code>outerHTML</code>, <code>insertAdjacentHTML</code>, <code>document.write</code></td><td>W2 scan</td></tr>
+        <tr><td><code>site.js</code> storage, side-effect requests, size</td><td><code>document.cookie</code>, <code>cookieStore</code>, <code>localStorage</code>, <code>sessionStorage</code>, <code>indexedDB</code>, <code>caches</code>; <code>createElement</code>, <code>new Image</code>, <code>.src</code>, <code>srcset</code>, <code>location</code>, <code>open(</code>; over 3,072 bytes</td><td>W2 scan</td></tr>
+        <tr><td>Pages</td><td>anything but one <code>&lt;script src="site.js" defer&gt;</code> in the index; an inline script, <code>&lt;style&gt;</code>, <code>style=</code> or <code>on…=</code>; a script in the 404; a CSP that differs from <a href="#head">Head</a></td><td>W2</td></tr>
+        <tr><td>Motion</td><td>an <code>animation</code>, <code>transition</code> or <code>animation-timeline</code> outside <code>@media (prefers-reduced-motion: no-preference)</code>; <code>infinite</code>; <code>scroll-behavior: smooth</code>; the last log row's delay + duration over 5 s</td><td>W2, over <code>site.css</code></td></tr>
+        <tr><td>Contrast</td><td>any text pair in <a href="#tokens">Colour</a> under 4.5:1, the log's included</td><td>W2</td></tr>
+        <tr><td>Behaviour</td><td><code>site/site.test.mjs</code>: <code>node:test</code> + <code>node:vm</code>, the 14 fixture cases of round 2 (Safari/Chrome Mac, iPad desktop site, Edge x64/Arm, hint refused, Firefox Windows/Linux x64/arm64, Chrome Linux arm64, Android, iPhone, ChromeOS, nothing reported), asserting the <code>dl-*</code> ids asked; and over a DOM stub, <code>show()</code>: both buttons take the picked file's <code>href</code>, <code>#one</code> and <code>#pick</code> unhidden, <code>#all</code> closed and its summary “Other systems”; an unknown system leaves <code>#one</code> hidden and <code>#all</code> open</td><td>W3 builds, W2's check runs it</td></tr>
+      </table>
+      <p>The scan is a tripwire; the CSP is the enforcement (the browser refuses every connection and every foreign image).</p>
+    </details>
+
+    <details class="spec" id="page-404" data-c="page-404">
+      <summary>The 404 page</summary>
+      <p>Dark in both themes, like the hero. Its links and assets are absolute under <code>/Trawler/</code> (the mock links the full URL). No script.</p>
+      <div class="fr-row">
+        <div class="fr-cell"><p class="fr-lbl"><strong>1440 px</strong></p><div class="fr" data-w="1440" data-theme="dark" data-page="404" aria-label="404 at 1440 px"></div></div>
+        <div class="fr-cell"><p class="fr-lbl"><strong>390 px</strong></p><div class="fr" data-w="390" data-theme="light" data-page="404" aria-label="404 at 390 px"></div></div>
+      </div>
+    </details>
+
+    <details class="spec" id="markup" data-c="markup">
+      <summary>Markup and fill</summary>
+      <p>The source of every frame sits in this file after <code>&lt;/main&gt;</code>: <code>#t-index</code> and <code>#t-404</code> are the two pages, <code>#t-site-css</code> is <code>site.css</code>, <code>#t-mock-css</code> only forces a theme, crops sections and stills motion for the frames. W3 copies the pages, <code>site.css</code> and <code>site.js</code>, adds the script tag, turns each <code>data-fill</code> into W2's marker, and points each screenshot at its re-encoded copy in <code>target/site/</code>.</p>
+      <table>
+        <tr><th>Element</th><th>Filled from (W2)</th></tr>
+        <tr><td><code>.hero h1</code>, footer pitch, <code>.hero .sub</code></td><td>README.md: the <code>&lt;h3&gt;</code> pitch, the paragraph under it</td></tr>
+        <tr><td><code>.facts-line</code> version, <code>#download .meta</code></td><td>release JSON <code>tag_name</code>, <code>published_at</code>, <code>html_url</code></td></tr>
+        <tr><td><code>#download</code> file links, SHA256SUMS</td><td>release JSON <code>assets[].name</code> per kind; <code>releases/download/v‹v›/‹name›</code></td></tr>
+        <tr><td><code>.stories h2</code></td><td>README.md “What you can do” heading</td></tr>
+        <tr><td>screenshot <code>alt</code></td><td>README.md (s1, s3, s5) and GUIDE.md (s4, s6, s10) image alts</td></tr>
+        <tr><td><code>#privacy h2</code> + <code>.lead</code></td><td>PRIVACY.md lead paragraph, split after its first sentence</td></tr>
+        <tr><td>every GitHub link</td><td><code>links.rs</code> base <code>https://github.com/lesslucifer/Trawler/blob/main/‹file›</code></td></tr>
+      </table>
+      <p>Story and tile text is frame copy (held by the deny-list test and by a drift check W2 adds: each story's cited README bullet still exists word for word, so a README change flags the story that restates it).</p>
+    </details>
+
+    <details class="spec" id="for-w3" data-c="for-w3">
+      <summary>For W2 and W3, and not verified here</summary>
+      <table>
+        <tr><th>Builds</th><th>Who</th><th>Checked by</th></tr>
+        <tr><td><code>site/index.html</code>, <code>404.html</code>, <code>site.css</code>, <code>site.js</code> from the templates and the listing, log V1</td><td>W3</td><td>W2's link, CSP/no-external, no-inline, motion, contrast, deny-list, kinds and scan tests; code review</td></tr>
+        <tr><td><code>site/site.test.mjs</code></td><td>W3</td><td>W2's site check</td></tr>
+        <tr><td>P3 (D2 revised): the one-button <code>#one</code> + <code>details#all</code> markup, the round 4 <code>site.js</code>, and the fixture test's new <code>show()</code> assertions (<a href="#js-tests">Tests</a>). W2's checks need no change: its download check accepts any layout, the scan words and the 4,096-byte budget hold, and its <code>site/site.js</code> is still a stub</td><td>W3</td><td>W2's site check; code review</td></tr>
+        <tr><td><code>is_code</code> += <code>site/</code>; the scans; the shot re-encode (<code>png</code> crate); the story drift check</td><td>W2</td><td>W2's own tests</td></tr>
+        <tr><td>Shots at 390 × 844 and 1440 × 900, light and dark, script off and on, and one with reduced motion</td><td>W3</td><td>owner sign-off on W3</td></tr>
+      </table>
+      <p>Not verified: Safari and Firefox rendering and a real phone (frames and shots checked in Chrome only); scroll-driven reveals in Safari (shipped in 26) and their absence in Firefox (content then shows at rest, by design); the detection on real Windows on Arm, Linux arm64, iPadOS and ChromeOS; that GitHub Pages sets no cookie (W4, live).</p>
+    </details>
+
+  </main>
+
+  <template id="t-index">
+    <a class="skip" href="#download">Skip to download</a>
+    <header class="top night" data-section="top">
+      <div class="wrap top-in">
+        <a class="brand" href="https://lesslucifer.github.io/Trawler/"><img alt="Trawler" src="../../ui/src-tauri/icons/brand/wordmark-dark.png" width="120" height="27"></a>
+        <nav aria-label="Site">
+          <a class="nav-x" href="#features">Features</a>
+          <a class="nav-x" href="#privacy">Privacy</a>
+          <a class="nav-x" href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md">Guide</a>
+          <a class="btn primary small" href="#download">Download</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <section class="hero night" data-section="hero">
+        <div class="wrap">
+          <div class="hero-text">
+            <p class="eyebrow">Free and open source · macOS · Windows · Linux</p>
+            <h1 data-fill="README.md: the pitch">See every HTTP and HTTPS request your apps make.</h1>
+            <p class="sub" data-fill="README.md: the sub line">A free, open-source debugging proxy for macOS, Windows and Linux. Capture this machine, your phone or a simulator, read each request and send it again — everything stays on your machine.</p>
+            <p class="cta"><a class="btn primary" id="get" href="#download">Download for <span id="get-os">macOS · Windows · Linux</span></a><a class="btn" href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md">Read the guide</a></p>
+            <p class="facts-line">Version <span data-fill="release: tag_name">0.1.0</span> · MIT licence · no account</p>
+            <div class="pick" id="pick" hidden>
+              <p><span class="file" id="pick-file"></span> · <a href="#all">Other systems</a> · <a href="https://github.com/lesslucifer/Trawler/releases/latest">Other downloads</a></p>
+              <p id="pick-first"></p>
+            </div>
+          </div>
+          <div class="stage">
+            <figure class="window log" role="img" aria-label="An example of Trawler's request list: six requests to example hosts">
+              <div class="window-bar"><span></span><span></span><span></span><b>Trawler</b></div>
+              <div class="log-head"><span>Method</span><span class="h">Host</span><span>Path</span><span>Status</span><span class="t">Time</span></div>
+              <div class="log-rows">
+                <div class="row"><span class="ok">GET</span><span class="h">www.example.org</span><span class="p">/</span><span class="ok">200</span><span class="t">84 ms</span></div>
+                <div class="row"><span class="create">POST</span><span class="h">api.example.com</span><span class="p">/v1/session</span><span class="ok">200</span><span class="t">133 ms</span></div>
+                <div class="row"><span class="ok">GET</span><span class="h">api.example.com</span><span class="p">/v1/orders/9f3c</span><span class="ok">200</span><span class="t">71 ms</span></div>
+                <div class="row"><span class="ok">GET</span><span class="h">api.example.com</span><span class="p">/v1/recommendations</span><span class="warn">404</span><span class="t">33 ms</span></div>
+                <div class="row"><span class="amend">PATCH</span><span class="h">api.example.com</span><span class="p">/v1/cart/items/C-3</span><span class="ok">200</span><span class="t">90 ms</span></div>
+                <div class="row"><span class="warn">DELETE</span><span class="h">api.example.com</span><span class="p">/v1/cart/items/B-7</span><span class="ok">204</span><span class="t">44 ms</span></div>
+              </div>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section class="show" id="features" data-section="features">
+        <div class="wrap">
+          <h2 class="big">Every request your apps make, in one list.</h2>
+          <p class="lede">Method, host, path, status and time for each one. Click a request and its headers and body open beside the list — HTTPS too, once your system trusts Trawler's certificate.</p>
+          <div class="stage">
+            <div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="../../.github/screenshots/s1-main-window.png" loading="lazy" width="1440" height="800" alt="Trawler's main window: the list of captured requests, one JSON response open in the inspector" data-fill="README.md: s1 alt"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="stories" data-section="stories">
+        <div class="wrap">
+          <h2 class="eyebrow" data-fill="README.md: What you can do">What you can do</h2>
+          <article class="story">
+            <div class="story-text"><h3>Your phone and simulators, from one screen.</h3><p>Capture an iPhone, an Android phone, the iOS Simulator or the Android emulator. Pick the device and the setup screen shows each step.</p></div>
+            <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="../../.github/screenshots/s6-setup-iphone.png" loading="lazy" width="1440" height="800" alt="The setup screen for an iPhone: the address allowed, the certificate step open"></div></div>
+          </article>
+          <article class="story">
+            <div class="story-text"><h3>Find the failing request.</h3><p>Filter by status, method, host or any text: <code>status:4xx</code> keeps the failures, <code>-method:OPTIONS</code> leaves those requests out.</p></div>
+            <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="../../.github/screenshots/s3-filter-chips.png" loading="lazy" width="1440" height="800" alt="The list filtered by the chips status:4xx and -method:OPTIONS"></div></div>
+          </article>
+          <article class="story">
+            <div class="story-text"><h3>Read every header and every body.</h3><p>Headers, timing and bodies, with viewers for JSON, XML, HTML, forms and more. Copy any request as a curl command.</p></div>
+            <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="../../.github/screenshots/s4-inspector-headers.png" loading="lazy" width="1440" height="800" alt="A request's headers in the inspector, HTTP/2 on both sides"></div></div>
+          </article>
+          <article class="story">
+            <div class="story-text"><h3>Change it. Send it again.</h3><p>Replay a request with its method, address, a header or the body edited, or write one from scratch. The answer shows beside it.</p></div>
+            <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="../../.github/screenshots/s5-send-again.png" loading="lazy" width="1440" height="800" alt="A request sent again with one header edited, its response shown"></div></div>
+          </article>
+          <article class="story">
+            <div class="story-text"><h3>Keep what you captured.</h3><p>Captured requests live in memory and are gone when you quit. Export them to HAR, and open a HAR file or a curl command later.</p></div>
+            <div class="stage"><div class="window"><div class="window-bar"><span></span><span></span><span></span></div><img src="../../.github/screenshots/s10-capture-menu.png" loading="lazy" width="1440" height="800" alt="The ⋮ menu open over the list"></div></div>
+          </article>
+          <div class="tiles">
+            <div class="tile"><h3>Capture with the window closed.</h3><p>Trawler stays in the menu bar or the system tray and keeps capturing.</p></div>
+            <div class="tile"><h3>Updates from inside the app.</h3><p>Trawler asks before installing, and installs only a release signed by the project.</p></div>
+            <div class="tile"><h3>Native on macOS, Windows and Linux.</h3><p>MIT licence, no paid tier, no account.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="night" id="privacy" data-section="privacy">
+        <div class="wrap">
+          <p class="eyebrow">Privacy</p>
+          <h2 class="big" data-fill="PRIVACY.md: lead, first sentence">Trawler keeps your traffic on your machine.</h2>
+          <p class="lead" data-fill="PRIVACY.md: lead, the rest">It has no account, no analytics, no crash reporting and no telemetry.</p>
+          <div class="tiles">
+            <div class="tile"><h3>In memory, gone when you quit.</h3><p>Captured requests stay in memory on your machine. Export to HAR to keep them.</p></div>
+            <div class="tile"><h3>Two requests of its own.</h3><p>An update check to GitHub when it opens, at most once a day, which you can turn off; and the setup screen's test request to example.com when you click it.</p></div>
+            <div class="tile"><h3>Only this machine, until you allow another.</h3><p>Trawler listens only on this machine until you allow another device.</p></div>
+          </div>
+          <p class="fine">Trawler's certificate key is stored unencrypted in your app data folder. Remove the certificate when you stop using Trawler.</p>
+          <p class="fine">This site keeps the same promise: no analytics, no cookies, no tracking, and nothing loaded from any other site. One small script picks your system's download; it reads only what your browser reports about your system, and stores and sends nothing. GitHub hosts this page and sees your IP address, as any web host does.</p>
+          <p class="fine"><a href="https://github.com/lesslucifer/Trawler/blob/main/PRIVACY.md">What leaves your machine and what stays</a></p>
+        </div>
+      </section>
+
+      <section id="download" data-section="download">
+        <div class="wrap">
+          <h2 class="big">Download Trawler</h2>
+          <p class="meta">Version <span data-fill="release: tag_name">0.1.0</span> · <span data-fill="release: published_at">2026-11-07</span> · <a href="https://github.com/lesslucifer/Trawler/releases/tag/v0.1.0" data-fill="release: html_url">release notes</a></p>
+          <p class="honest">Trawler isn't signed with a paid certificate, so macOS and Windows warn that they don't know the publisher the first time you open it. The line under each download says what to click. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+          <div class="one" id="one" hidden>
+            <p><a class="btn primary huge" id="one-get" href="#all">Download for <span id="one-os"></span></a></p>
+            <p class="file" id="one-file"></p>
+            <p class="one-first" id="one-first"></p>
+          </div>
+          <details class="all" id="all" open>
+            <summary>All systems</summary>
+          <div class="os">
+            <article class="card">
+              <h3>macOS</h3>
+              <p class="req">macOS 11 or later · Apple Silicon and Intel</p>
+              <div class="arch" id="dl-macos">
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_universal.dmg">Trawler_0.1.0_universal.dmg</a></p>
+              </div>
+              <p class="first">First open: <b>Privacy &amp; Security → Open Anyway</b>. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Windows</h3>
+              <div class="arch" id="dl-windows-x64">
+                <h4>x64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64-setup.exe">Trawler_0.1.0_x64-setup.exe</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_x64_en-US.msi">Trawler_0.1.0_x64_en-US.msi</a></p>
+              </div>
+              <div class="arch" id="dl-windows-arm64">
+                <h4>arm64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64-setup.exe">Trawler_0.1.0_arm64-setup.exe</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64_en-US.msi">Trawler_0.1.0_arm64_en-US.msi</a></p>
+              </div>
+              <p class="hint">Not sure which? <b>Settings → System → About → System type</b>.</p>
+              <p class="first">First open: <b>More info → Run anyway</b>. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Step by step</a></p>
+            </article>
+            <article class="card">
+              <h3>Linux</h3>
+              <div class="arch" id="dl-linux-x64">
+                <h4>x64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.AppImage">Trawler_0.1.0_amd64.AppImage</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_amd64.deb">Trawler_0.1.0_amd64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.x86_64.rpm">Trawler-0.1.0-1.x86_64.rpm</a></p>
+              </div>
+              <div class="arch" id="dl-linux-arm64">
+                <h4>arm64</h4>
+                <p><a class="btn primary file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_aarch64.AppImage">Trawler_0.1.0_aarch64.AppImage</a></p>
+                <p class="alt">or <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler_0.1.0_arm64.deb">Trawler_0.1.0_arm64.deb</a> · <a class="file" href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/Trawler-0.1.0-1.aarch64.rpm">Trawler-0.1.0-1.aarch64.rpm</a></p>
+              </div>
+              <p class="first">No prompt on first open. <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#install">Install commands</a></p>
+            </article>
+          </div>
+          </details>
+          <p class="after">Check your download: <a href="https://github.com/lesslucifer/Trawler/releases/download/v0.1.0/SHA256SUMS">SHA256SUMS</a> · <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md#check-your-download">how to check</a></p>
+          <p class="after"><a href="https://github.com/lesslucifer/Trawler/releases/latest">Other downloads: every file of the latest release, on GitHub</a></p>
+        </div>
+      </section>
+    </main>
+    <footer class="night" data-section="footer">
+      <div class="wrap foot-in">
+        <div class="foot-brand">
+          <img alt="Trawler" src="../../ui/src-tauri/icons/brand/wordmark-dark.png" width="120" height="27">
+          <p data-fill="README.md: the pitch">See every HTTP and HTTPS request your apps make.</p>
+        </div>
+        <nav aria-label="Project files" class="foot">
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/GUIDE.md">Guide</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/PRIVACY.md">Privacy</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/CHANGELOG.md">Changelog</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/CONTRIBUTING.md">Contributing</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/SECURITY.md">Security</a>
+          <a href="https://github.com/lesslucifer/Trawler/blob/main/LICENSE">Licence</a>
+          <a href="https://github.com/lesslucifer/Trawler/issues/new/choose">Report an issue</a>
+          <a href="https://github.com/lesslucifer/Trawler">Source code</a>
+        </nav>
+        <p class="legal">MIT © 2026 Vu Luu</p>
+      </div>
+    </footer>
+  </template>
+
+  <template id="t-404">
+    <main class="nf night">
+      <div class="wrap">
+        <p><a class="brand" href="https://lesslucifer.github.io/Trawler/"><img alt="Trawler" src="../../ui/src-tauri/icons/brand/wordmark-dark.png" width="240" height="54"></a></p>
+        <h1>This page doesn't exist.</h1>
+        <p class="cta"><a class="btn primary" href="https://lesslucifer.github.io/Trawler/">Go to the Trawler home page</a></p>
+      </div>
+    </main>
+  </template>
+
+  <script type="text/plain" id="t-site-css">
+:root { color-scheme: light dark; --bg: #f4f1ea; --ink: #1f1c19; --body: #3d3833; --mute: #5f5850; --line: #d6cfc2; --raise: #ece7dc; --glow: rgb(224 164 58 / 0.22); --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+@media (prefers-color-scheme: dark) { :root { --bg: #2b2622; --ink: #f7f5f0; --body: #c9c0ad; --mute: #aea69c; --line: #3f3a36; --raise: #383330; } }
+.night { --bg: #1b1916; --ink: #f7f5f0; --body: #c9c0ad; --mute: #aea69c; --line: #3f3a36; --raise: #2b2622; --glow: rgb(224 164 58 / 0.34); color-scheme: dark; background: var(--bg); color: var(--body); }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--body); font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, Cantarell, sans-serif; }
+h1, h2, h3, h4 { color: var(--ink); margin: 0; font-weight: 700; letter-spacing: -0.015em; }
+p, figure { margin: 0; }
+a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+code, .file { font-family: var(--mono); font-size: 0.875em; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+.skip { position: absolute; left: 16px; top: -64px; z-index: 2; background: var(--bg); padding: 8px 12px; }
+.skip:focus { top: 16px; }
+.btn { display: inline-block; min-height: 48px; padding: 12px 24px; line-height: 22px; text-align: center; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); font-weight: 600; text-decoration: none; }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.btn.small { min-height: 44px; padding: 11px 18px; font-size: 15px; }
+.eyebrow { font: 600 12px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--mute); }
+.big { font-size: clamp(34px, 5vw, 60px); line-height: 1.06; letter-spacing: -0.025em; }
+.stage { position: relative; isolation: isolate; }
+.stage::before { content: ""; position: absolute; z-index: -1; inset: -18% -10%; background: radial-gradient(closest-side, var(--glow), transparent); pointer-events: none; }
+.window { overflow: hidden; border: 1px solid #3f3a36; border-radius: 12px; background: #2b2622; box-shadow: 0 24px 64px rgb(0 0 0 / 0.35); text-align: left; }
+.window-bar { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; background: #383330; border-bottom: 1px solid #3f3a36; }
+.window-bar span { width: 10px; height: 10px; border-radius: 50%; background: #5f5850; }
+.window-bar b { margin-left: 8px; color: #f7f5f0; font: 600 13px system-ui, sans-serif; }
+.window img { display: block; width: 100%; height: auto; }
+
+.top-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 14px; padding-bottom: 14px; }
+.brand img { display: block; width: 120px; height: auto; }
+.top nav { display: flex; align-items: center; gap: 28px; font-size: 15px; }
+.nav-x { display: none; color: var(--body); text-decoration: none; }
+.nav-x:hover { color: var(--ink); text-decoration: underline; }
+
+.hero { overflow: hidden; padding: 32px 0 72px; text-align: center; }
+.hero-text { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.hero h1 { max-width: 12em; font-size: clamp(42px, 7.4vw, 92px); line-height: 1.02; letter-spacing: -0.035em; }
+.sub { max-width: 640px; font-size: clamp(18px, 1.7vw, 21px); }
+.cta { display: flex; flex-direction: column; align-self: stretch; gap: 12px; margin-top: 8px; }
+.facts-line { color: var(--mute); font-size: 14px; }
+.pick { display: flex; flex-direction: column; gap: 4px; max-width: 640px; color: var(--mute); font-size: 14px; }
+.pick .file { overflow-wrap: anywhere; }
+.hero .stage { max-width: 940px; margin: 48px auto 0; }
+
+.log { background: #141210; font: 13px/1.4 var(--mono); }
+.log-head, .row { display: grid; grid-template-columns: 56px minmax(0, 1fr) 52px; gap: 12px; align-items: baseline; padding: 9px 16px; }
+.log-head { color: #aea69c; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; border-bottom: 1px solid #3f3a36; }
+.row { color: #c9c0ad; border-bottom: 1px solid #221f1c; }
+.row:last-child { border-bottom: 0; }
+.log .h, .log .t { display: none; }
+.row .p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log .ok { color: #4cc38a; }
+.log .create { color: #e5bf4d; }
+.log .amend { color: #a78bfa; }
+.log .warn { color: #e5484d; }
+
+.show { padding: 88px 0 24px; text-align: center; }
+.lede { max-width: 680px; margin: 20px auto 0; font-size: clamp(18px, 1.6vw, 21px); }
+.show .stage { margin-top: 56px; }
+
+.stories { padding: 72px 0 96px; }
+.stories > .wrap > h2 { text-align: center; }
+.story { display: grid; gap: 28px; align-items: center; margin-top: 64px; }
+.story h3 { font-size: clamp(28px, 3.4vw, 44px); line-height: 1.08; letter-spacing: -0.025em; }
+.story p { max-width: 30em; margin-top: 14px; font-size: 18px; }
+.story code { color: var(--ink); }
+.tiles { display: grid; gap: 16px; margin-top: 72px; }
+.tile { padding: 24px; border-radius: 16px; background: var(--raise); }
+.tile h3 { font-size: 20px; line-height: 1.25; letter-spacing: -0.01em; }
+.tile p { margin-top: 8px; font-size: 16px; }
+
+#privacy { padding: 96px 0; text-align: center; background: radial-gradient(60% 45% at 50% 0%, var(--glow), transparent 70%), var(--bg); }
+#privacy .big { max-width: 14em; margin: 14px auto 0; }
+.lead { max-width: 640px; margin: 18px auto 0; font-size: clamp(18px, 1.7vw, 21px); }
+#privacy .tiles { margin-top: 56px; text-align: left; }
+.fine { max-width: 720px; margin: 20px auto 0; color: var(--mute); font-size: 15px; }
+
+#download { padding: 96px 0; }
+.meta { margin-top: 12px; color: var(--mute); }
+.honest { max-width: 720px; margin-top: 16px; font-size: 16px; }
+.os { display: grid; gap: 16px; align-items: start; margin-top: 20px; }
+.card { display: flex; flex-direction: column; gap: 12px; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--raise); }
+.card h3 { font-size: 24px; }
+.one { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 40px; }
+.btn.huge { min-height: 64px; padding: 20px 40px; font-size: 20px; line-height: 24px; }
+.one-first { color: var(--mute); font-size: 15px; }
+.all { margin-top: 40px; }
+.all > summary { width: fit-content; cursor: pointer; color: var(--ink); font-weight: 600; }
+.all > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 6px; }
+.one:not([hidden]) + .all { margin-top: 28px; }
+.arch { display: flex; flex-direction: column; gap: 8px; }
+h4 { color: var(--mute); font: 600 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.file { overflow-wrap: anywhere; }
+.btn.file { min-height: 44px; padding: 11px 16px; border-radius: 10px; font-size: 13px; }
+.req, .alt, .hint, .first { font-size: 14px; }
+.req, .alt { color: var(--mute); }
+.first { padding-top: 12px; border-top: 1px solid var(--line); }
+.after { margin-top: 16px; font-size: 15px; }
+
+footer { padding: 56px 0 40px; }
+.foot-in { display: grid; gap: 28px; }
+.foot-brand img { display: block; width: 120px; height: auto; }
+.foot-brand p { margin-top: 10px; color: var(--mute); font-size: 15px; }
+.foot { display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 15px; }
+.foot a { color: var(--body); text-decoration: none; }
+.foot a:hover { color: var(--ink); text-decoration: underline; }
+.legal { color: var(--mute); font-size: 14px; }
+
+.nf { display: flex; align-items: center; min-height: 100vh; text-align: center; }
+.nf .wrap { display: flex; flex-direction: column; align-items: center; gap: 28px; }
+.nf .brand img { width: 240px; }
+.nf h1 { font-size: clamp(34px, 5vw, 56px); letter-spacing: -0.025em; }
+.nf .cta { align-self: auto; }
+
+@media (min-width: 720px) {
+  .wrap { padding: 0 32px; }
+  .nav-x { display: inline; }
+  .eyebrow { font-size: 13px; letter-spacing: 0.08em; }
+  .cta { flex-direction: row; justify-content: center; align-self: auto; }
+  .log { font-size: 14px; }
+  .log-head, .row { grid-template-columns: 72px 176px minmax(0, 1fr) 64px 64px; padding: 10px 24px; }
+  .log .h, .log .t { display: block; }
+  .tiles { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 960px) {
+  .story { grid-template-columns: 5fr 7fr; gap: 72px; margin-top: 120px; }
+  .story:nth-of-type(even) { grid-template-columns: 7fr 5fr; }
+  .story:nth-of-type(even) .stage { order: -1; }
+  .os { grid-template-columns: repeat(3, 1fr); }
+  .foot-in { grid-template-columns: 1fr 2fr; align-items: start; }
+  .legal { grid-column: 2; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  @keyframes arrive {
+    0% { opacity: 0; transform: translateY(-8px); box-shadow: inset 3px 0 0 #e0a43a; }
+    40% { opacity: 1; transform: none; box-shadow: inset 3px 0 0 #e0a43a; }
+    100% { box-shadow: inset 3px 0 0 transparent; }
+  }
+  .hero-text > *, .hero .stage { animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .hero h1 { animation-delay: 0.06s; }
+  .hero .sub { animation-delay: 0.12s; }
+  .hero .cta { animation-delay: 0.18s; }
+  .hero .facts-line { animation-delay: 0.22s; }
+  .hero .stage { animation-delay: 0.26s; }
+  .log .row { animation: arrive 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+  .log .row:nth-child(1) { animation-delay: 0.5s; }
+  .log .row:nth-child(2) { animation-delay: 1.05s; }
+  .log .row:nth-child(3) { animation-delay: 1.6s; }
+  .log .row:nth-child(4) { animation-delay: 2.15s; }
+  .log .row:nth-child(5) { animation-delay: 2.7s; }
+  .log .row:nth-child(6) { animation-delay: 3.25s; }
+  .btn { transition: transform 0.15s ease, box-shadow 0.15s ease; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.primary:hover { box-shadow: 0 0 0 5px var(--glow); }
+  .story .window { transition: transform 0.3s ease; }
+  .story .window:hover { transform: translateY(-2px); }
+  @supports (animation-timeline: view()) {
+    .show .lede, .show .stage, .story, .tile, #privacy .big, #privacy .lead, .card {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+  }
+}
+  </script>
+
+  <script type="text/plain" id="t-mock-css">
+html.theme-dark { --bg: #2b2622; --ink: #f7f5f0; --body: #c9c0ad; --mute: #aea69c; --line: #3f3a36; --raise: #383330; color-scheme: dark; }
+html.theme-light { --bg: #f4f1ea; --ink: #1f1c19; --body: #3d3833; --mute: #5f5850; --line: #d6cfc2; --raise: #ece7dc; color-scheme: light; }
+html.still *, html.still *::before { animation: none !important; transition: none !important; }
+html[data-only] .top, html[data-only] main > section, html[data-only] footer, html[data-only] .skip { display: none; }
+html[data-only~="hero"] .hero, html[data-only~="download"] #download { display: block; }
+.focus-demo { outline: 2px solid var(--ink); outline-offset: 3px; }
+  </script>
+
+  <script type="module">
+    const text = (id) => document.getElementById(id).textContent;
+    const css = text('t-site-css') + text('t-mock-css');
+    const siteJs = text('site-js-src');
+    const hint = (architecture) => () => Promise.resolve({ architecture });
+    const states = {
+      'macos': { platform: 'MacIntel', maxTouchPoints: 0, userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15' },
+      'windows-x64': { platform: 'Win32', maxTouchPoints: 0, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0', userAgentData: { platform: 'Windows', mobile: false, getHighEntropyValues: hint('x86') } },
+      'windows-arm64': { platform: 'Win32', maxTouchPoints: 0, userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0', userAgentData: { platform: 'Windows', mobile: false, getHighEntropyValues: hint('arm') } },
+      'linux-x64': { platform: 'Linux x86_64', maxTouchPoints: 0, userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:132.0) Gecko/20100101 Firefox/132.0' },
+      'linux-arm64': { platform: 'Linux aarch64', maxTouchPoints: 0, userAgent: 'Mozilla/5.0 (X11; Linux aarch64; rv:132.0) Gecko/20100101 Firefox/132.0' },
+    };
+
+    function build(box) {
+      const d = box.dataset;
+      const width = Number(d.w);
+      const frame = document.createElement('iframe');
+      frame.title = box.getAttribute('aria-label');
+      frame.style.width = width + 'px';
+      frame.addEventListener('load', () => {
+        const doc = frame.contentDocument;
+        const root = doc.documentElement;
+        root.lang = 'en';
+        root.className = 'theme-' + d.theme + (d.still ? ' still' : '');
+        if (d.only) root.dataset.only = d.only;
+        const style = doc.createElement('style');
+        style.textContent = css;
+        doc.head.append(style);
+        doc.body.innerHTML = document.getElementById(d.page === '404' ? 't-404' : 't-index').innerHTML;
+        doc.querySelectorAll('img[loading]').forEach((img) => img.removeAttribute('loading'));
+        if (d.focus) doc.querySelector('#get').classList.add('focus-demo');
+        if (d.page === '404') doc.querySelector('.nf').style.minHeight = '640px';
+        const fit = () => {
+          const scale = Math.min(1, box.clientWidth / width);
+          const height = root.scrollHeight;
+          frame.style.height = height + 'px';
+          frame.style.transform = 'scale(' + scale + ')';
+          box.style.height = Math.ceil(height * scale) + 'px';
+        };
+        if (d.state) {
+          new frame.contentWindow.Function('navigator', siteJs)(states[d.state]);
+          setTimeout(fit, 50);
+        }
+        requestAnimationFrame(fit);
+        doc.querySelectorAll('img').forEach((img) => img.addEventListener('load', fit));
+        new ResizeObserver(fit).observe(box);
+      }, { once: true });
+      frame.srcdoc = '<!doctype html><meta charset="utf-8">';
+      box.append(frame);
+    }
+
+    document.querySelectorAll('.fr').forEach(build);
+  </script>
+  <script type="module" src="https://htmldoc.wfomobile.com/htmldoc.js"></script>
+</body>
+</html>
