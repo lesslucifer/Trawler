@@ -1,0 +1,41 @@
+schema: cr/v5
+scope: "WU router-kanban/board-client -> epic/router-kanban"
+epic: E-KANBAN
+wu: E-KANBAN.W1
+branch: wu/router-kanban/board-client
+base: c782af92f6ed4771ddf814d777c274358655b049
+head: ecb7612844b302364212f926f018d650d9b43e40
+diff_sha256: 3907e75946ef373db6a74969c397465670389f74ce4c70459895753f1dc76558
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 0
+  verifier_model: opus
+  shards: 1
+  candidates:
+    nit: 6
+  stage_seconds:
+    gate0: 70
+    finders: 82
+    total: 128
+  by_finder:
+    correctness: { found: 2, verified: 0 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 3, verified: 0 }
+findings: { found: 6, verified: 0, waived: 0 }
+waivers: []
+nits:
+  - finding: "http.rs request() reads the response with read_to_end, no size cap"
+    waived: "loopback CLI against the operator's own Local REST API port; the 10s read timeout bounds a stall and board/item notes are small"
+  - finding: "put dry-runs put_card on a fetched board before the note write, one extra GET per card change"
+    waived: "deliberate since review round 2: a refused card must leave no note written; one loopback GET"
+  - finding: "board.rs holds the CLI, the Vault client and the JSON view in one module"
+    waived: "same shape as the other xtask subcommand modules; Vault, fetch_board and board_json are pub for W2 without the CLI"
+  - finding: "board/http.rs is a second raw TcpStream HTTP client beside smoke.rs"
+    waived: "smoke.rs's helper is a status probe with no auth, preconditions, ETag or chunked body; merging would widen both, and reuse is a retired dimension (DEC-50)"
+  - finding: "a line starting with three backticks that is an inline code span reads as an opening fence"
+    waived: "rare in router/owner notes; the effect is loud - writes to that file are refused with a fix line - never a silent write; listed as a follow-up in the WU result"
+  - finding: "take_flag consumes a --title/--log value that is literally --api or --key-file"
+    waived: "the router never passes those literals as text; the command fails loudly on the bad --api value instead of writing"
+verdict: PASS
+date: 2026-11-08
