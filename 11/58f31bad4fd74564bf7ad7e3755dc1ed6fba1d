@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU router-vikunja/cli-client -> epic/router-vikunja"
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W2
+branch: wu/router-vikunja/cli-client
+base: 13405b154d13114998f6bbfe13199deff19dc632
+head: 1158f31bad4fd74564bf7ad7e3755dc1ed6fba1d
+diff_sha256: ba131644ed10d7334aa2933333001fef0d2d67103a03963f894954a514bc98fa
+dimensions: [correctness, efficiency]
+fleet:
+  finders: 2
+  verifiers: 1
+  verifier_model: claude-opus-5-5
+  shards: 1
+  candidates:
+    important: 1
+    nit: 2
+  stage_seconds:
+    gate0: 1
+    finders: 48
+    verifiers: 17
+    total: 91
+  by_finder:
+    correctness: { found: 3, verified: 1 }
+    efficiency:  { found: 0, verified: 0 }
+findings: { found: 3, verified: 1, waived: 0 }
+blockers:
+  - finding: "put --unassign <numeric id> matches only assignee usernames, so it reports 'not assigned - skipped' and leaves the user assigned, though the usage accepts a numeric id for users (xtask/src/vikunja.rs:372-379)"
+verdict: FAIL
+date: 2026-11-08
