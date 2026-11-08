@@ -1,0 +1,30 @@
+schema: cr/v5
+scope: "WU router-kanban/board-client -> epic/router-kanban"
+epic: E-KANBAN
+wu: E-KANBAN.W1
+branch: wu/router-kanban/board-client
+base: c782af92f6ed4771ddf814d777c274358655b049
+head: 7c2cac3956327fcae39815572072902ad74fb4d2
+diff_sha256: 6ca5b0707a835b3702cba18371008ab29595aeaee0ea69c762c5fe3e05c0d293
+dimensions: [correctness, efficiency, altitude]
+fleet:
+  finders: 3
+  verifiers: 2
+  verifier_model: opus
+  shards: 1
+  candidates:
+    important: 3
+    nit: 5
+  stage_seconds:
+    finders: 61
+    verifiers: 42
+    total: 103
+  by_finder:
+    correctness: { found: 7, verified: 3 }
+    efficiency:  { found: 1, verified: 0 }
+    altitude:    { found: 0, verified: 0 }
+findings: { found: 8, verified: 3, waived: 0 }
+waivers: []
+nits: []
+verdict: FAIL
+date: 2026-11-08
