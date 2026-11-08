@@ -1,0 +1,14 @@
+schema: doc/v1
+epic: E-VIKUNJA
+wu: E-VIKUNJA.W4
+branch: HEAD
+changes:
+  - path: "docs/work/2026-11-08-router-vikunja-orphan-check-and-wiring-plan.html"
+    tier: T3
+    action: added
+    distills: "E-VIKUNJA.W4's requirement, the check's flow, the choices (done tasks count, inverse for open tasks, Branch: format, error on unreachable, infer_level), expected result and test plan"
+  - path: "docs/work/2026-11-08-router-vikunja-orphan-check-and-wiring-result.html"
+    tier: T3
+    action: added
+    distills: "what vikunja check shipped and its lines, what each router skill file now says, deviations (all tasks, inverse built, no board language existed here, reference files touched), unit/integration/live evidence, review round 1's three fixes, follow-ups (adoption of the 7 untasked worktrees, W3's gaps, epic e2e)"
+t2_waived: "router tooling inside an epic in flight: the check's lines and the router's Vikunja duties live in the trawler-router and router-agent skill files (infrastructure) and its usage in cargo xtask vikunja; the epic's decision record is minted at epic close"
