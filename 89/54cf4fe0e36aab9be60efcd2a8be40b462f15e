@@ -1,0 +1,16 @@
+schema: mr/v1
+level: epic
+tip: 8954cf4fe0e36aab9be60efcd2a8be40b462f15e
+base: 14c767d73b75aad5e748b479b4d2a5f0046ad153
+tier: key
+signer: vuluu
+report: docs/.archive/2026-11-09-router-vikunja-epic-result.html
+report_sha256: 67e3c3feabdbd977127561e72bca9813053f0740c7387e9a0570285257090b9e
+date: 2026-11-09
+sig: |
+  -----BEGIN SSH SIGNATURE-----
+  U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgZW98EV8CGNqlJ/EB1neW1plg6e
+  hZPVlzmTO12y61NwYAAAAKdHJhd2xlci1tcgAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gt
+  ZWQyNTUxOQAAAEC0fgAUQPIL0BE6d127OsQt0oizHV7FSF/9R+dlYtxYT91shDEpIoVFwF
+  Q18XAoYserf7jcdqCBUkgIFxqvG3sN
+  -----END SSH SIGNATURE-----
