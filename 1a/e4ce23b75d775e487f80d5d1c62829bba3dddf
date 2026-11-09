@@ -1,0 +1,12 @@
+schema: doc/v1
+branch: 1ae4ce23
+changes:
+  - path: "docs/decisions/dec-93-the-owner-answers-on-a-vikunja-task-by-removing-its-label.html"
+    tier: T2
+    action: deleted
+    distills: "the owner answers a Vikunja task by removing its label (E-VIKUNJA's router-protocol decision)"
+    distilled_to: ["none: E-VIKUNJA's merge into main is reverted pending real-world validation via E-APIDOC; DEC-93 returns when the epic re-merges"]
+  - path: "docs/decisions/decisions-index.html"
+    tier: T2
+    action: updated
+    distills: "drops the DEC-93 row to match the revert; the index's v25 bump (2026-11-09) is also undone to v24 (2026-11-08)"
