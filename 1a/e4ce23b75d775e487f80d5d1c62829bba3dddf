@@ -1,0 +1,5 @@
+schema: test/v2
+level: commit
+branch: 1ae4ce23
+tests:
+  unit: { waived: "pure revert of commit 5038b02b (itself fully gated, dod/v1 green); no new logic introduced, nothing new to cover" }
