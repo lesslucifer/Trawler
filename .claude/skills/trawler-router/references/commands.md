@@ -1,6 +1,6 @@
 # Trawler command templates
 
-`M=/Users/nguyenvanluong/Documents/proj/misc` · `WT=$M/Trawler-<slug>` · main checkout `$M/Trawler`. Owner commands go into the task's ask comment (never chat), never run by the router; full 40-char sha, absolute `cd`. Vikunja calls (`X`, every `cargo xtask vikunja` invocation, the listener's start/stop/watch): `vikunja-protocol.md`; not repeated here. Spawn: `router-agent` worker-ops template with `-n trawler-<area>-<phase> --model claude-opus-5-5 --permission-mode auto`.
+`M=/Users/nguyenvanluong/Documents/proj/misc` · `WT=$M/Trawler-<slug>` · main checkout `$M/Trawler`. Owner commands are printed, never run by the router; full 40-char sha, absolute `cd`. Spawn: `router-agent` worker-ops template with `-n trawler-<area>-<phase> --model claude-opus-5-5 --permission-mode auto`.
 
 ```sh
 # Router: verify (read-only)
@@ -10,7 +10,6 @@ for r in test doc cr design mr; do echo "$r: $(git notes --ref=$r show HEAD 2>&1
 cargo xtask verify-dod wu HEAD --target epic/<slug>     # only 8·manual-review red
 actionlint .github/workflows/*.yml; echo actionlint=$?  # when workflows changed
 git -C $M/Trawler log --oneline -3 main; git -C $M/Trawler rev-parse main origin/main; git tag | tail -3
-# Owner commands below go into the ask comment's ```sh block, in order
 # Owner: rule-bearing doc (router first checks `git diff --cached --name-only`)
 cd $WT && cargo xtask mr commit -m $'<E-CODE.Wn>: <subject>\n\n<body; apostrophes as \'>' --as vuluu
 # Owner: WU (the epic branch must not be checked out in another worktree)
@@ -27,7 +26,7 @@ cd $WT && git push origin <branch> && gh workflow run ci.yml --ref <branch>
 # Router: watch (one background command; filter by sha)
 until id=$(gh run list --workflow ci.yml --branch <br> --limit 1 --json databaseId,status,headSha -q '.[0] | select(.status=="completed" and (.headSha|startswith("<sha8>"))) | .databaseId') && [ -n "$id" ]; do sleep 45; done; echo "RUN $id"; gh run view $id --json conclusion,jobs -q '.jobs[]|"\(.name): \(.conclusion)"'
 gh run list --workflow release.yml -L 3 --json databaseId,headBranch,status,conclusion -q '.[]|"\(.databaseId) \(.headBranch) \(.status) \(.conclusion)"'
-# Router: watch each staged owner action (run_in_background; name it in the ask's "Watching: …"; on fire: label off + `seen <sha8>`, close the ask); T = full tip
+# Router: watch each staged owner action (run_in_background; say "Watching: …"); T = full tip
 until git -C $WT notes --ref=mr show $T >/dev/null 2>&1; do sleep 20; done; echo "SIGNED $T"   # mr confirm
 until [ "$(git -C $WT rev-parse HEAD)" != $T ]; do sleep 20; done; echo "COMMITTED"           # mr commit
 until git -C $M/Trawler merge-base --is-ancestor $T <target branch>; do sleep 20; done; echo MERGED
@@ -38,9 +37,7 @@ id=$(grep -o 'data-htmldoc-id="[^"]*"' <doc> | cut -d'"' -f2); n0=<open count>; 
 # Router: heartbeat = CronCreate cron "*/10 * * * *", recurring, prompt = router-agent worker-ops heartbeat + Trawler refs:
 #   workers `ps -axo pid,command | grep -E 'claude.* -p ' | grep -o -E '\-n trawler-[a-z0-9-]+ .*--model [a-z0-9-]+'`; worktrees `git worktree list`
 #   + per row branch/tip/status/notes; runs `gh run list -L 5`; drafts `gh release list -L 3`; briefs in <router dir>/briefs
-#   + step 0 (vikunja-protocol.md "Standing processes"): Vikunja `curl -sf …/api/v1/info`, listener `curl -sf -m 5 http://127.0.0.1:3457/`,
-#     each relaunched if dead; then `cd $X && cargo xtask vikunja check; echo EXIT $?`
-# Worker: a parallel WU worktree (its task first, the Branch: line right after: vikunja-protocol.md "Task before branch")
+# Worker: a parallel WU worktree
 git -C $M/Trawler worktree add ../Trawler-<short> -b wu/<epic-slug>/<slug> epic/<slug>
 # Router: retire a closed worktree (merged, clean, no process; keep the branch: notes live on it)
 cd $M && b=$(git -C Trawler-<slug> branch --show-current); git -C Trawler merge-base --is-ancestor $b main && echo merged
