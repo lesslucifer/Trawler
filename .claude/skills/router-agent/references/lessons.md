@@ -2,12 +2,14 @@
 
 Source: Trawler router session `55b6f381-a069-4829-95ef-a1256099dbac` (renamed trawler-8f → trawler-6a → trawler-05), 2026-11-05/06; its JSONL is under `~/.claude/projects/<project dir>/`. The router ran on `claude-sonnet-5-5` throughout. Repo facts re-checked against `main` 1da1cf41. Format: what happened → rule.
 
+Since E-VIKUNJA (2026-11-08) the owner surface is a task tracker: where a lesson below says message, push, terminal or "What you need to do now:", the rule now lands as the task's ask comment (owner assigned + needs-owner label), and a push is a one-line ping (SKILL.md "Tracker loop"). The lessons stand; only the medium changed. The Obsidian board tried in between (E-KANBAN, `board-protocol.md` on `epic/router-kanban`) was dropped for lossy column signals.
+
 ## Top 10 (ranked by cost of the failures they prevent)
-1. Send the push in the same turn as the ask and say "Sent (id N)"; never promise a future message. (A7)
+1. Raise the ask (comment, assign, label) in the same turn you decide it, and ping on its `needs-owner` line; never promise a future one. (A7)
 2. Read the real state (git, origin, tags, runs) before every instruction and watch it after: the owner may already have acted; never wait to be told. (A10, B5, B6, C10)
 3. Verify third-party behaviour a design depends on in source at the pinned version; PLAUSIBLE is a lead. (B3, B4)
 4. Pass the model explicitly on every worker and review; check yours and theirs at start. (B7)
-5. One current task per message, ending "What you need to do now:"; self-contained; never point back, even on a re-ask. (A1–A5, A8, A13, A14)
+5. One current task per ask comment; self-contained; never point back, even on a changed ask. (A1–A5, A8, A13, A14)
 6. Headless workers: fresh per phase, `ls`-checked durable brief, one non-stop run, no mid-run questions, current router name. (C1–C4, C6)
 7. Never do the work, never launder a denial: the owner runs `mr`, merges, pushes, tags. (C5, D1, D2)
 8. Independent read-only Opus review of everything outside the gate before the owner signs. (B7, G2)

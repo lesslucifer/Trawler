@@ -10,7 +10,7 @@
     <div class="inner">
       <h1>Decisions Index</h1>
       <p>Routing table for decision records (T2 · why). Read this first, open only the relevant topic file.</p>
-      <div class="meta">v24 · 2026-11-08 · Trawler</div>
+      <div class="meta">v25 · 2026-11-09 · Trawler</div>
     </div>
   </header>
   <main>
@@ -1123,6 +1123,16 @@
             no request outside its origin (exact CSP meta, one same-origin <code>site.js</code> ≤ 4,096 B with no network or storage, no analytics);
             one voice with the root markdown; <code>pages.yml</code> deploys on push to <code>main</code>, a published final and dispatch, nothing else
             (a promoted pre-release, a tag without <code>pages.yml</code>, an older-line patch need a dispatch); <code>site/</code> is a code path</td>
+          <td><span class="badge auto">active</span></td>
+        </tr>
+        <tr>
+          <td><a href="dec-93-the-owner-answers-on-a-vikunja-task-by-removing-its-label.html"><code>dec-93-the-owner-answers-on-a-vikunja-task-by-removing-its-label.html</code></a></td>
+          <td><span class="badge id">DEC-93</span></td>
+          <td><strong>The owner answers on a Vikunja task, by removing its label.</strong> The router↔owner surface is one local Vikunja
+            project (epic = task, WU = subtask, blocking = order only, no buckets); an ask is comment → assign <code>vuluu</code> → <code>needs-owner</code>,
+            and only the label's removal answers (done = archival); task before branch, the <code>Branch:</code> line the only link,
+            <code>cargo xtask vikunja check</code> the backstop; the server and the signed-webhook listener are standing processes held by the heartbeat;
+            the protocol lives in <code>vikunja-protocol.md</code>; router tooling, succeeds the abandoned E-KANBAN board</td>
           <td><span class="badge auto">active</span></td>
         </tr>
       </tbody>

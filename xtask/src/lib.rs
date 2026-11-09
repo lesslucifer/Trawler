@@ -20,6 +20,7 @@ pub mod smoke;
 pub mod tally;
 pub mod target;
 pub mod ui;
+pub mod vikunja;
 pub mod walkthrough;
 pub mod wizard;
 
@@ -67,7 +68,8 @@ usage:
   cargo xtask ui specimens [--check]                          (compile the collection for design files; --check renders each over file://)
   cargo xtask ui walkthrough                                  (film the setup screen on every host x platform → target/walkthrough/: a video per reel + index.html)
   cargo xtask ui screenshots                                  (the README and guide screenshots from the scenario build → .github/screenshots/)
-  cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)";
+  cargo xtask debug serve [--port <n>]                        (workflow-notes view, default :48027)
+  cargo xtask vikunja init|show|read|put|create|check|webhook-listen (the router's Vikunja tasks through its REST API with the router token; cargo xtask vikunja for its usage)";
 
 pub fn repo_root() -> Result<PathBuf, String> {
     git(Path::new("."), &["rev-parse", "--show-toplevel"]).map(PathBuf::from)
@@ -106,6 +108,7 @@ pub fn run(args: &[String], repo: &Path) -> Result<(i32, String), String> {
         ["site", rest @ ..] => site::run(rest, repo),
         ["ui", rest @ ..] => ui::run(rest, repo),
         ["debug", "serve", rest @ ..] => debug::serve(rest, repo),
+        ["vikunja", rest @ ..] => vikunja::run(rest, repo),
         _ => Err(USAGE.to_string()),
     }
 }
